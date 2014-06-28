@@ -24,4 +24,27 @@ Angsd is the process of the merging of different programs, below is a short desc
 9) The theta estimator along with the tajima was then implemented (almost submitted).
 
 
+------------
+The website 'http://www.popgen.dk/angsd' is the main resource for this program
+------------
+Some source files in this program hasn't been written by us bare have been taken from other opensource/public domain projects.
+
+
+1)
+k*.* files are from the klib which is written by heng li
+
+2)
+the files fet,razip,bgzf,faidx are full unmodified copies, copyright etc can be found in the header of those files.
+
+3)
+soap_likes.*, contains snippets of code from the SNPsoap package
+bams.*,baq_adjustMapQ  contains snippets of code from the 'SAMtools' project.
+
+
+Don't hesitate to contact us if you believe there are problems with copyright or somebody should be credited
+
+Thorfinn Sand Korneliussen
+thorfinn@binf.ku.dk
+29 june 2014
+
 
