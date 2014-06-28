@@ -1,0 +1,27 @@
+
+thorfinn Sand 12/12/12 thorfinn@binf.ku
+anders albrechtsen 12/12/12 albrecht@binf.ku.dk
+
+Angsd is the process of the merging of different programs, below is a short description.
+
+
+1) A simple program to estimate the MAF based on files containing the counts of allleles (-doPhat). Used in (yu li 2009)
+
+2) An implementation of (suyeon kim 2011). GL/error estimation based on counts of alleles along with proper GL MAF estimators and case/control association
+
+3) To perform genomewide analysis a .soap file was reader was made and this was merged with 1) and 2). At this time the program was called 'dirtySoap'. Name was choosen, since it was a hack that used soap files.
+
+4) A program called realSFS (nielsen 2012) to estimate the SFS was implemented and used text representation of glfv3. This was extended to read glfv2 and binary glv3.
+
+5) The glfv3 reader from 4) was used to implement the score statistic of (skotte 2012).
+
+6) The programs from 3) 4) 5) was merged. Program was still called dirtySoap
+
+7) We extended the dirtySoap with the mpileup reading from samtools 1.17 and called the program angsd. This was implemented with the samtool beeing invoked from inside angsd.
+
+8) We made a native bam reader (inspired and based on the samtools program (heng li)) along with the GATK,soapSNP GL model.
+
+9) The theta estimator along with the tajima was then implemented (almost submitted).
+
+
+
