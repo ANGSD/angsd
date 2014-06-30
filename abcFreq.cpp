@@ -148,9 +148,9 @@ void abcFreq::getOptions(argStruct *arguments){
     double pre = SNP_pval;
     //    fprintf(stderr,"ind:%f :%p: \t",SNP_pval,chisq3);
     if(SNP_pval <=1){
-      if(doMaf ==2)
+      if(abs(doMaf) ==2)
 	SNP_pval = chisq3->invcdf(1-SNP_pval);
-      if(doMaf ==1)
+      if(abs(doMaf) ==1)
 	SNP_pval = chisq1->invcdf(1-SNP_pval);
     }
     doSNP =1 ;
