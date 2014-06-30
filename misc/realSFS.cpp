@@ -32,6 +32,7 @@
 
 #include "bfgs.h"
 
+#include "realSFS_saf2.cpp"
 
 
 const char*fname1 = NULL;
@@ -900,16 +901,20 @@ int main_2dsfs(int argc,char **argv){
 
 int main_1dsfs(int argc,char **argv){
   if(argc<2){
-    fprintf(stderr,"Must supply afile.sfs and number of chromosomes\n");
+    fprintf(stderr,"Must supply afile.saf and number of chromosomes\n");
     return 0;
   }
   fname1 = *(argv++);
   chr1 = atoi(*(argv++));
   argc-=2;
-
-
+ 
   getArgs(argc,argv);
-  if(nSites==-1)
+
+  //hook for new EJ banded version
+  if(isNewFormat(fname1))
+    return main_1dsfs_v2(fname1,chr1,nSites,nThreads,sfsfname,tole,maxIter);
+
+ if(nSites==-1)
     nSites=calcNsites(fname1,chr1);
 
   fprintf(stderr,"fname1:%s nChr:%d startsfs:%s nThreads:%d tole=%f maxIter=%d nSites=%d\n",fname1,chr1,sfsfname,nThreads,tole,maxIter,nSites);
