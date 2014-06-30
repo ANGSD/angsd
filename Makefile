@@ -1,11 +1,17 @@
-
+PLATFORM=$(shell uname )
 FLAGS=-O3 -D_USE_KNETFILE
 
 
 CFLAGS += $(FLAGS)
 CXXFLAGS += $(FLAGS)
 
-all: angsd misc
+ifeq ($(PLATFORM),Darwin)
+	PRG=angsd misc
+else
+	PRG=angsd angsd.static misc
+endif
+
+all: $(PRG)
 
 .PHONY: misc clean
 
@@ -28,6 +34,8 @@ OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
 angsd: $(OBJ)
 	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread
+
+angsd.static: $(OBJ)
 	$(CXX) $(FLAGS)  -o angsd.static *.o -lz -lpthread --static
 
 clean:
