@@ -41,3 +41,6 @@ angsd.static: $(OBJ)
 clean:
 	rm  -f *.o *.d angsd angsd.static *~
 	make -C misc/ clean
+
+test:
+	
