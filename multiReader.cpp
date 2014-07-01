@@ -75,6 +75,13 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_GLF;
     args->infile = tmp;
     args->nams.push_back(args->infile);
+    char *tmp_fai = NULL;
+    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
+    if(tmp_fai==NULL){
+      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -glf input\n");
+      exit(0);
+
+    }
     return;
   }
 
