@@ -826,6 +826,9 @@ int main_2dsfs(int argc,char **argv){
   chr2 = atoi(*(argv++));
   argc -=2;
   getArgs(argc,argv);
+  if(nSites==-1)
+    nSites=calcNsites(fname1,chr1);
+
   fprintf(stderr,"fname1:%sfname2:%s chr1:%d chr2:%d startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",fname1,fname2,chr1,chr2,sfsfname,nThreads,tole,maxIter,nSites);
   float bytes_req_megs = sizeof(double)*(chr1+1)*nSites/1024/1024 + sizeof(double)*(chr2+1)*nSites/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
