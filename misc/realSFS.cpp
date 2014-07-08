@@ -48,7 +48,7 @@ int nThreads =4;
 double tole = 1e-6;
 int maxIter = 1e2;
 int SIG_COND =1;
-size_t nSites = -1;
+size_t nSites = 0;
 int doBFGS = 0;//defaults is to use EM-optimization
 int calcLike =0;//if a sfs input file has been supplied, should we just print the likelihood
 int noGrad = 0;//should we use gradients for the bfgs.
@@ -826,7 +826,7 @@ int main_2dsfs(int argc,char **argv){
   chr2 = atoi(*(argv++));
   argc -=2;
   getArgs(argc,argv);
-  if(nSites==-1)
+  if(nSites==0)
     nSites=calcNsites(fname1,chr1);
 
   fprintf(stderr,"fname1:%sfname2:%s chr1:%d chr2:%d startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",fname1,fname2,chr1,chr2,sfsfname,nThreads,tole,maxIter,nSites);
@@ -845,7 +845,7 @@ int main_2dsfs(int argc,char **argv){
   fprintf(stderr,"nSites in pop1: %zu nSites in pop2: %zu\n",p1.size(),p2.size());
 #endif
 
-  if(nSites==-1){
+  if(nSites==0){
     if(calcNsites(fname1,chr1)!=calcNsites(fname2,chr2)){
       fprintf(stderr,"Problem with number of sites in file: %s and %s\n",fname1,fname2);
       exit(0);
@@ -923,7 +923,7 @@ int main_1dsfs(int argc,char **argv){
   if(isNewFormat(fname1))
     return main_1dsfs_v2(fname1,chr1,nSites,nThreads,sfsfname,tole,maxIter);
 
- if(nSites==-1)
+ if(nSites==0)
     nSites=calcNsites(fname1,chr1);
 
   fprintf(stderr,"fname1:%s nChr:%d startsfs:%s nThreads:%d tole=%f maxIter=%d nSites=%lu\n",fname1,chr1,sfsfname,nThreads,tole,maxIter,nSites);
