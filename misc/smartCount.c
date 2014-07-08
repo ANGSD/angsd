@@ -331,7 +331,7 @@ char sample(int a,int b,int c,int d){
   for(int i=0;i<3;i++)
     if(dr>=tmp[i]&&dr<tmp[i+1])
       return i;
-
+  return 0;
 }
 
 int doAnal(perChr *pc,int nInd){
@@ -400,7 +400,7 @@ int doAnal(perChr *pc,int nInd){
     }
   }
   
-
+  return 0;
 }
 
 
@@ -488,6 +488,7 @@ int treemixer(int argc,char **argv){
     
     
   }
+  return 0;
 }
 
 

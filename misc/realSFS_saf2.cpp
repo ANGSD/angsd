@@ -36,5 +36,5 @@ int main_1dsfs_v2(const char * fname, int nchr,int nsites,int nthreads,char *sta
   
 
 
-
+  return 0;
 }

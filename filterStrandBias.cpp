@@ -39,6 +39,7 @@ char *calcStuff(funkyPars *p){
 
       
 }
+  return 0;
 }
 
 void fsb::run(funkyPars *p){

@@ -122,7 +122,7 @@ double em3(double *x,double **liks,int seqdepth,int maxIter,double tole,int &itr
     itr++;
   }
   //fprintf(stderr,"itr=%d like=%f par=(%f,%f,%f,%f)\n",itr,likev,x[0],x[1],x[2],x[3]);
-
+  return 0;
 }
 
 

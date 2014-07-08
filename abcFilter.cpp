@@ -74,7 +74,7 @@ filt *filt_read(const char *fname){
   std::map<int,asdf_dats>::const_iterator it;
   //  fprintf(stderr,"nCols: %d\n",ret->nCols);
   for(it=ret->offs.begin();0&&it!=ret->offs.end();++it)
-    fprintf(stderr,"id:%d offs:%ld len:%d\n",it->first,it->second.offs,it->second.len);
+    fprintf(stderr,"id:%d offs:%lld len:%d\n",it->first,it->second.offs,it->second.len);
   fprintf(stderr,"\t-> [%s] nChr: %zu loaded from binary filter file\n",__FILE__,ret->offs.size());
   if(ret->nCols==4)
     fprintf(stderr,"\t-> Filterfile contains major/minor information\n");
