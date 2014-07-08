@@ -48,7 +48,7 @@ int nThreads =4;
 double tole = 1e-6;
 int maxIter = 1e2;
 int SIG_COND =1;
-int nSites = -1;
+size_t nSites = -1;
 int doBFGS = 0;//defaults is to use EM-optimization
 int calcLike =0;//if a sfs input file has been supplied, should we just print the likelihood
 int noGrad = 0;//should we use gradients for the bfgs.
@@ -93,12 +93,12 @@ Matrix<double> alloc(size_t x,size_t y){
   ret.x=x;
   ret.y=y;
   ret.mat= new double*[x];
-  for(int i=0;i<x;i++)
+  for(size_t i=0;i<x;i++)
     ret.mat[i]=new double[y];
   return ret;
 }
-void dalloc(Matrix<double> &ret,int x){
-  for(int i=0;i<x;i++)
+void dalloc(Matrix<double> &ret,size_t x){
+  for(size_t i=0;i<x;i++)
     delete [] ret.mat[i];
   delete [] ret.mat;
 }
@@ -170,11 +170,11 @@ gzFile getGz(const char *pname){
 
 
 
-void readGL(gzFile fp,int nSites,int nChr,Matrix<double> &ret){
+void readGL(gzFile fp,size_t nSites,int nChr,Matrix<double> &ret){
   //  fprintf(stderr,"[%s] fname:%s nSites:%d nChr:%d\n",__FUNCTION__,fname,nSites,nChr);
   ret.x=nSites;
   ret.y=nChr+1;
-  int i;
+  size_t i;
   for(i=0;SIG_COND&&i<nSites;i++){
     int bytes_read = gzread(fp,ret.mat[i],sizeof(double)*(nChr+1));
 
@@ -185,7 +185,7 @@ void readGL(gzFile fp,int nSites,int nChr,Matrix<double> &ret){
     if(bytes_read==0)
       break;
     
-    for(int j=0;j<nChr+1;j++)
+    for(size_t j=0;j<nChr+1;j++)
       ret.mat[i][j] = exp(ret.mat[i][j]);
   }
   
@@ -814,7 +814,7 @@ void print(Matrix<double> &mat,FILE *fp){
 
 int main_2dsfs(int argc,char **argv){
   if(argc==1){
-    fprintf(stderr,"./emOptim2 2dsfs pop1 pop2 nChr1 nChr2 [-start FNAME -P nThreds -tole tole -maxIter ] (only works for single chromsomes)\n");
+    fprintf(stderr,"./emOptim2 2dsfs pop1 pop2 nChr1 nChr2 [-start FNAME -P nThreds -tole tole -maxIter ] (only works if the two saf files covers the same region)\n");
     return 0;
   }
   argv++;
@@ -826,8 +826,14 @@ int main_2dsfs(int argc,char **argv){
   chr2 = atoi(*(argv++));
   argc -=2;
   getArgs(argc,argv);
-  fprintf(stderr,"fname1:%sfname2:%s chr1:%d chr2:%d startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%d\n",fname1,fname2,chr1,chr2,sfsfname,nThreads,tole,maxIter,nSites);
-
+  fprintf(stderr,"fname1:%sfname2:%s chr1:%d chr2:%d startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",fname1,fname2,chr1,chr2,sfsfname,nThreads,tole,maxIter,nSites);
+  float bytes_req_megs = sizeof(double)*(chr1+1)*nSites/1024/1024 + sizeof(double)*(chr2+1)*nSites/1024/1024;
+  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
+  //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
+  fprintf(stderr,"The choice of -nSites will require: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+  if(fsize(fname1)>getTotalSystemMemory()){
+    fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
+  }
 
 #if 0
   //read in positions, not used, YET...
@@ -917,13 +923,13 @@ int main_1dsfs(int argc,char **argv){
  if(nSites==-1)
     nSites=calcNsites(fname1,chr1);
 
-  fprintf(stderr,"fname1:%s nChr:%d startsfs:%s nThreads:%d tole=%f maxIter=%d nSites=%d\n",fname1,chr1,sfsfname,nThreads,tole,maxIter,nSites);
+  fprintf(stderr,"fname1:%s nChr:%d startsfs:%s nThreads:%d tole=%f maxIter=%d nSites=%lu\n",fname1,chr1,sfsfname,nThreads,tole,maxIter,nSites);
   float bytes_req_megs = sizeof(double)*(chr1+1)*nSites/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
   fprintf(stderr,"The choice of -nSites will require: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
   if(fsize(fname1)>getTotalSystemMemory()){
-    fprintf(stderr,"Looks like you will allocate to much memory, consider starting the program with a lower -nSites argument\n");
+    fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
   }
   dim=chr1+1;
 
