@@ -1,5 +1,5 @@
 ###this code is horrible. But it works. 
-
+bases=c("A","C","G","T")
 require(parallel)
 
 like<-function(x,error,d,freq,eps){ 
