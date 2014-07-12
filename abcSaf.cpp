@@ -36,6 +36,7 @@ void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"\t-anc\t\t\t%s (ancestral fasta)\n",anc);
   fprintf(argFile,"\t-noTrans\t\t%d (remove transitions)\n",noTrans);
   fprintf(argFile,"\t-pest\t\t\t%s (prior SFS)\n",pest);
+  fprintf(argFile,"NB:\n\t  If -pest is supplied in addition to -doSaf then the output will then be posterior probability of the sample allelefrequency for each site\n");
 }
 
 double lbico(double n, double k){
