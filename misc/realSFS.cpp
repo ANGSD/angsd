@@ -733,11 +733,22 @@ void emStep2_master(double *post){
 }
 
 
+int really_kill =3;
+int VERBOSE = 1;
 void handler(int s) {
-  fprintf(stderr,"Caught SIGNAL: %d will try to exit nicely (no more threads are created, we will wait for the current threads to finish)\n",s);
-  SIG_COND=0;
-}
 
+  if(VERBOSE)
+    fprintf(stderr,"\n\t-> Caught SIGNAL: Will try to exit nicely (no more threads are created.\n\t\t\t  We will wait for the current threads to finish)\n");
+  
+  if(--really_kill!=3)
+  fprintf(stderr,"\n\t-> If you really want angsd to exit uncleanly ctrl+c: %d more times\n",really_kill+1);
+  fflush(stderr);
+  if(!really_kill)
+    exit(0);
+  VERBOSE=0;
+  SIG_COND=0;
+
+}
 
 
 
@@ -826,18 +837,17 @@ int main_2dsfs(int argc,char **argv){
   chr2 = atoi(*(argv++));
   argc -=2;
   getArgs(argc,argv);
-  if(nSites==0)
-    nSites=calcNsites(fname1,chr1);
-
+  if(nSites==0){
+    if(fsize(fname1)+fsize(fname2)>getTotalSystemMemory())
+      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
+     nSites=calcNsites(fname1,chr1);
+  }
   fprintf(stderr,"fname1:%sfname2:%s chr1:%d chr2:%d startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",fname1,fname2,chr1,chr2,sfsfname,nThreads,tole,maxIter,nSites);
-  float bytes_req_megs = sizeof(double)*(chr1+1)*nSites/1024/1024 + sizeof(double)*(chr2+1)*nSites/1024/1024;
+  float bytes_req_megs = nSites*(sizeof(double)*(chr1+1) + sizeof(double)*(chr2+1)+2*sizeof(double*))/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-  fprintf(stderr,"The choice of -nSites will require: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
-  if(fsize(fname1)>getTotalSystemMemory()){
-    fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
-  }
-
+  fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+  
 #if 0
   //read in positions, not used, YET...
   std::vector<int> p1 = getPosi(fname1);
@@ -923,17 +933,17 @@ int main_1dsfs(int argc,char **argv){
   if(isNewFormat(fname1))
     return main_1dsfs_v2(fname1,chr1,nSites,nThreads,sfsfname,tole,maxIter);
 
- if(nSites==0)
+  if(nSites==0){//if no -nSites is specified
+    if(fsize(fname1)>getTotalSystemMemory())
+      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
     nSites=calcNsites(fname1,chr1);
-
+  }
   fprintf(stderr,"fname1:%s nChr:%d startsfs:%s nThreads:%d tole=%f maxIter=%d nSites=%lu\n",fname1,chr1,sfsfname,nThreads,tole,maxIter,nSites);
-  float bytes_req_megs = sizeof(double)*(chr1+1)*nSites/1024/1024;
+  float bytes_req_megs = nSites*(sizeof(double)*(chr1+1)+sizeof(double*))/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-  fprintf(stderr,"The choice of -nSites will require: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
-  if(fsize(fname1)>getTotalSystemMemory()){
-    fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
-  }
+  fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+
   dim=chr1+1;
 
   Matrix<double> GL1=alloc(nSites,dim);
