@@ -5,7 +5,7 @@
   anders albrecht@binf.ku.dk made this.
 
   part of angsd
-  ans -> anc dec 7 2013, added -ref -ancb
+  ans -> anc dec 7 2013, added -ref -anc
 */
 
 #include <cmath>
@@ -49,6 +49,7 @@ void abcAncError::getOptions(argStruct *arguments){
 }
 
 abcAncError::abcAncError(const char *outfiles,argStruct *arguments,int inputtype){
+  tsk_outname=NULL;
   doAncError=0;
   currentChr=-1;
   refName=NULL;
@@ -74,6 +75,10 @@ abcAncError::abcAncError(const char *outfiles,argStruct *arguments,int inputtype
   const char* postfix;
   postfix=".ancError";
   outfile = aio::openFile(outfiles,postfix);
+  //put the name of the outputfile into tsk_outname
+  tsk_outname=(char*)malloc(strlen(outfiles)+strlen(postfix)+1);
+  sprintf(tsk_outname,"%s%s",outfiles,postfix);
+  
   const char* postfix2;
   postfix2=".ancErrorChr";
   outfile2 = aio::openFile(outfiles,postfix2);
@@ -100,7 +105,7 @@ abcAncError::~abcAncError(){
 
   if(doAncError==0)
     return;
-
+  fprintf(stderr,"\t-> To generate nice plots type in \'Rscript ANGSDDIR/R/estError.R file=%s\'\n",tsk_outname);
   if(doAncError==1){
     for(int i=0;i<nInd;i++){
       for(int j=0;j<125;j++)
@@ -119,6 +124,7 @@ abcAncError::~abcAncError(){
 
   if(outfile) fclose(outfile);
   if(outfile2) fclose(outfile2);
+  free(tsk_outname);
 }
 
 

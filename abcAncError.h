@@ -16,7 +16,7 @@ private:
 
   void model1(funkyPars *pars);
   void model2(funkyPars *pars);
-
+  char *tsk_outname;
 public:
   abcAncError(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcAncError();
