@@ -104,7 +104,7 @@ abcAncError::~abcAncError(){
   free(refName);free(ancName);
 
   if(doAncError==0)
-    return;
+    return; 
   fprintf(stderr,"\t-> To generate nice plots type in \'Rscript ANGSDDIR/R/estError.R file=%s\'\n",tsk_outname);
   if(doAncError==1){
     for(int i=0;i<nInd;i++){
