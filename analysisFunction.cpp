@@ -636,13 +636,6 @@ FILE *aio::getFILE(const char*fname,const char* mode){
   }
   return fp;
 }
-/*
-FILE *aio::openFile(const char* a,const char* b,int i){
-  char ary[5000];
-  snprintf(ary,5000,"%s%d",b,i);
-  return aio::openFile(a,ary);  
-}
-*/
 
 gzFile aio::getGz(const char*fname,const char* mode){
   int writeFile = 0;
