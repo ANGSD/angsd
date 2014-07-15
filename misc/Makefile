@@ -4,10 +4,13 @@ CXX=g++
 FLAGS=-O3 -D_USE_KNETFILE
 
 
-all: supersim thetaStat realSFS msToGlf smartCount
+all: supersim thetaStat realSFS msToGlf smartCount printIcounts
 
 bfgs.o: bfgs.c bfgs.h
 	$(CC) $(FLAGS) -c bfgs.c -Wno-vexing-parse
+
+printIcounts: printIcounts.c
+	$(CC) $(FLAGS) printIcounts.c -o printIcounts -lz
 
 supersim: supersim.cpp rbeta.cpp
 	$(CXX) $(FLAGS) supersim.cpp -lz -o supersim
@@ -23,4 +26,4 @@ msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm
 
 clean:
-	rm  -f *.o supersim emOptim emOptim2 msToGlf thetaStat smartCount realSFS *~
+	rm  -f *.o supersim emOptim emOptim2 msToGlf thetaStat smartCount realSFS printIcounts *~
