@@ -11,9 +11,6 @@
 #include "abcCounts.h"
 #include "kstring.h"
 
-
-
-
 void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"---------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doCounts\t%d\t(Count the number A,C,G,T. All sites, All samples)\n",doCounts);
@@ -33,7 +30,9 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"\t  2: seqdepth persample\t\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  3: A,C,G,T sum over samples\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  4: A,C,G,T sum every sample\t%s,%s\n",postfix1,postfix2);
-  fprintf(argFile,"\t-iCounts\t%d (Internal format for dumping binary single chrs)\n",iCounts);
+  fprintf(argFile,"\t-iCounts\t%d (Internal format for dumping binary single chrs,1=simple,2=advanced)\n",iCounts);
+  fprintf(argFile,"\t-qfile\t%s\t(Onlyfor -iCounts 2)\n",qfileFname);
+  fprintf(argFile,"\t-ffile\t%s\t(Onlyfor -iCounts 2)\n",ffileFname);
 }
 
 int calcSum(suint *counts,int len){
@@ -109,12 +108,42 @@ void abcCounts::getOptions(argStruct *arguments){
    fprintf(stderr,"iCounts only for single chromosomes and single samples");
    exit(0);
  }
-
+ ffileFname = angsd::getArg("-ffile",ffileFname,arguments);
+ qfileFname = angsd::getArg("-qfile",qfileFname,arguments);
  
+ if(ffileFname&&iCounts!=2){
+   fprintf(stderr,"-ffile is only used for -iCounts 2\n");
+   exit(0);
+ }
+ if(qfileFname&&iCounts!=2){
+   fprintf(stderr,"-qfile is only used for -iCounts 2\n");
+   exit(0);
+ }
+ int tmp=-1;
+ tmp = angsd::getArg("-minQ",tmp,arguments);
+ if(iCounts==2 && qfileFname && tmp==-1){
+   fprintf(stderr,"Must fix -minQ 0 when using -qfile \n");
+   exit(0);
+ }
 
 }
 //constructor
 abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
+  const char *delim = "\t\n ";
+  ffileFname=qfileFname=NULL;
+  for(int i=0;i<255;i++)
+    lookup[i]=-1;
+  lookup['A'] = 0;
+  lookup['C'] = 1;
+  lookup['G'] = 2;
+  lookup['T'] = 3;
+  lookup['N'] = 4;
+  lookup['a'] = 5;
+  lookup['c'] = 6;
+  lookup['g'] = 7;
+  lookup['t'] = 8;
+  lookup['n'] = 4;
+
   oFileIcounts = Z_NULL;
   iCounts =0;
   nInd=arguments->nInd;
@@ -150,9 +179,63 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   getOptions(arguments);
   if(doCounts==0)
     shouldRun[index] = 0;
+
+
+
+
   oFiles=strdup(outfiles);
   printArg(arguments->argumentFile);
   
+  if(qfileFname){
+    FILE *infileP=NULL;
+    if(!((infileP=fopen(qfileFname,"r")))){
+      fprintf(stderr,"\t-> Problem openingfile: %s\n",qfileFname);
+      exit(0);
+    }
+    int line=0;
+    char buf[LENS];
+    while(fgets(buf,LENS,infileP)){
+      if(line==4){ // new: to make sure qCutoff order corresponds with lookup
+	qCutoff[line]=0;
+	line++;
+      }
+      qCutoff[line]=atoi(strtok(buf,delim));
+      fprintf(stdout,"%d\n",qCutoff[line]);
+      fflush(stdout);
+      line++;
+    }
+    fclose(infileP);
+  }else{
+    for(int i=0;i<9;i++)
+      qCutoff[i] = MINQ;//<-from abc.h
+
+  }
+  if(ffileFname){
+    FILE *infileP=NULL;
+    if(!((infileP=fopen(ffileFname,"r")))){
+      fprintf(stderr,"\t-> Problem openingfile: %s\n",qfileFname);
+      exit(0);
+    }
+
+    int line=0;
+    char buf[LENS];
+    while(fgets(buf,LENS,infileP)){
+      if(line==4){ // new: to make sure qCutoff order corresponds with lookup
+	fCutoff[line]=1;
+	line++;
+      }
+      fCutoff[line]=atof(strtok(buf,delim));
+      fprintf(stdout,"%f\n",fCutoff[line]);
+      fflush(stdout);
+      line++;
+    }
+    fclose(infileP);
+
+  }else{
+    for(int i=0;i<9;i++)
+      fCutoff[i] = 1;
+  }
+
   //  oFileCountsPos = oFileCountsBin = oFileQs = NULL;
   oFileCountsPos = oFileCountsBin =  Z_NULL;
 
@@ -339,7 +422,7 @@ void abcCounts::print(funkyPars *pars){
       globCount[sum]++;
     } 
   }
-  if(iCounts){
+  if(iCounts==1){
     for(int s=0;s<pars->numSites;s++) {
       if(pars->keepSites[s]==0)
 	continue; 
@@ -353,7 +436,50 @@ void abcCounts::print(funkyPars *pars){
 
     }
   }
+  if(iCounts==2){
+
+    for(int s=0;s<pars->chk->nSites;s++){
+      //      fprintf(stderr,"TT: %d %d\n",pars->chk->nd[s][0].l2,pars->chk->nd[s][0].deletion);
+      if(pars->keepSites[s]==0||pars->chk->nd[s][0].l2||pars->chk->nd[s][0].deletion)
+	continue;
+      ////BELOW IS SOLELY TO KEEP format similar
+      if(0&&s<pars->chk->nSites-1&&pars->chk->nd[s+1][0].deletion)
+	continue;
+      ////THE ABOVE IS SOLELY TO KEEP FORMAT SIMILAR
+
+      int count[4]={0,0,0,0};
+      //loop over persample reads
+      for(int l=0;l<pars->chk->nd[s][0].l;l++){
+	int allele = refToInt[pars->chk->nd[s][0].seq[l]];
+	int tmp=lookup[pars->chk->nd[s][0].seq[l]];
+#if 0
+	fprintf(stderr,"l:%d b:%c qs:%d\n",l,pars->chk->nd[s][0].seq[l],pars->chk->nd[s][0].qs[l]);
+#endif
+	if(allele==4)//skip of 'n'/'N'
+	  continue;
+
+	if(qfileFname&&pars->chk->nd[s][0].qs[l]<=qCutoff[tmp]) //skip if we are using qscores and we are below
+	  continue;
+	  
+	// if q score bin to sample from: count if sampled 
+	if(pars->chk->nd[s][0].qs[l]==qCutoff[tmp]+1){
+	  double x =drand48();
+	  //fprintf(stderr,"skipping\n");
+	  if(x>=fCutoff[tmp])
+	    count[tmp%5]++;
+	}else // if in q score bigger: always count 
+	  count[tmp%5]++;
+	
+      }
+      if(1||count[0]+ count[1]+count[2]+count[3]){
+	int p = pars->posi[s]+1;
+	gzwrite(oFileIcounts,&p,sizeof(int)); // new
+	gzwrite(oFileIcounts,count,sizeof(int)*4); // new
+      }
+    }
+  }
 }
+
 
 
 void abcCounts::clean(funkyPars *pars){
@@ -369,7 +495,7 @@ void abcCounts::clean(funkyPars *pars){
 suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites){
   //  fprintf(stderr,"nsamples:%d\n",chk->nSamples);
   suint **cnts = new suint*[chk->nSites];
-  if(minQfile==NULL){
+  if(minQfile==NULL) {
     for(int s=0;s<chk->nSites;s++){
       cnts[s] = new suint[4*chk->nSamples];
       if(keepSites[s]==0)

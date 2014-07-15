@@ -6,6 +6,9 @@ private:
   const char* postfix3;//.qs
   const char* postfix4;//.depthSample
   const char* postfix5;//.depthGlobal
+  
+  char *qfileFname;
+  char *ffileFname;
   char *oFiles;
   int dumpCounts;
   int iCounts;
@@ -35,8 +38,9 @@ private:
 
   size_t **depthCount;
   size_t *globCount;
-
-
+  unsigned char lookup[256];
+  int qCutoff[9];
+  double fCutoff[9];
 public:
 
   
