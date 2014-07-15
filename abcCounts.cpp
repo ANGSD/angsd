@@ -105,7 +105,7 @@ void abcCounts::getOptions(argStruct *arguments){
    exit(0);
  }
  if(iCounts!=0&&arguments->nInd!=1){
-   fprintf(stderr,"iCounts only for single chromosomes and single samples");
+   fprintf(stderr,"iCounts only for single chromosomes and single samples\n");
    exit(0);
  }
  ffileFname = angsd::getArg("-ffile",ffileFname,arguments);

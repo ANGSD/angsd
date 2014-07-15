@@ -274,6 +274,8 @@ multiReader::multiReader(int argc,char**argv){
 
   args->revMap = revMap;
   setArgsBam(args);
+  if(fname==NULL)
+    return;
   gz=gzopen(fname,"r");   
 
   switch(type){
