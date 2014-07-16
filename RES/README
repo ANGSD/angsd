@@ -1,0 +1,48 @@
+This file describes how the 'hapmap' and mappability files used by angsd is generated
+
+##download
+wget http://hapmap.ncbi.nlm.nih.gov/downloads/frequencies/2010-08_phaseII+III/allele_freqs_chrX_CEU_r28_nr.b36_fwd.txt.gz
+wget http://hapmap.ncbi.nlm.nih.gov/downloads/frequencies/2010-08_phaseII+III/allele_freqs_chr21_CEU_r28_nr.b36_fwd.txt.gz
+
+#with the md5sum
+a105316eaa2ebbdb3f8d62a9cb10a2d5  allele_freqs_chr21_CEU_r28_nr.b36_fwd.txt.gz
+5a0f920951ce2ded4afe2f10227110ac  allele_freqs_chrX_CEU_r28_nr.b36_fwd.txt.gz
+
+
+##create dummy bed file to use the liftover tools
+gunzip -c allele_freqs_chrX_CEU_r28_nr.b36_fwd.txt| awk '{print $2" "$3-1" "$3" "$11" "$12" "$4" "$14}'|sed 1d >allele.txt
+
+##do the liftover
+liftOver allele.txt /opt/liftover/hg18ToHg19.over.chain.gz hit nohit
+
+##now remove invarible sites, and redundant columns
+cut -f1,3 --complement hit |grep -v -P "\t1.0"|grep -v -P "\t0\t"|gzip -c  >HapMapchrX.gz
+
+
+##create dummy bed file to use the liftover tools
+gunzip -c allele_freqs_chr21_CEU_r28_nr.b36_fwd.txt| awk '{print $2" "$3-1" "$3" "$11" "$12" "$4" "$14}'|sed 1d >allele.txt
+
+##do the liftover
+liftOver allele.txt /opt/liftover/hg18ToHg19.over.chain.gz hit nohit
+
+##now remove invarible sites, and redundant columns
+cut -f1,3 --complement hit |grep -v -P "\t1.0"|grep -v -P "\t0\t"|gzip -c  >HapMapchr21.gz
+
+
+#######
+##download 100kmer mappability
+wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig
+
+#md5sum
+a1b1a8c99431fedf6a3b4baef028cca4  wgEncodeCrgMapabilityAlign100mer.bigWig
+
+##download convert program
+wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/bigWigToBedGraph
+
+##convert
+./bigWigToBedGraph wgEncodeCrgMapabilityAlign100mer.bigWig chrX -chrom=chrX
+./bigWigToBedGraph wgEncodeCrgMapabilityAlign100mer.bigWig chr21 -chrom=chr21
+
+##only keep unique regions and discard the chr* column
+grep -P "\t1$" chr21 |cut -f2-3 |gzip -c >chr21.unique.gz
+grep -P "\t1$" chrX |cut -f2-3 |gzip -c >chrX.unique.gz
