@@ -131,8 +131,9 @@ double sb3(int cnts[4]){
 }
 
 
-void abcFilterSNP::printArg(FILE *fp){
-  fprintf(fp,"doSnpStat=%d\n",doSnpStat);
+void abcFilterSNP::printArg(FILE *argFile){
+   fprintf(argFile,"-----BETA---------------\n%s:\n",__FILE__);
+  fprintf(argFile,"doSnpStat=%d\n",doSnpStat);
 
 }
 void abcFilterSNP::run(funkyPars *pars){
@@ -205,11 +206,7 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 
   //from command line
   doSnpStat=angsd::getArg("-doSnpStat",doSnpStat,arguments);
-  if(doSnpStat==-999){
-    doSnpStat=0;
-    printArg(stderr);
-    exit(0);
-  }
+
   if(doSnpStat==0)
     return;
   int domajmin=0;
@@ -230,6 +227,14 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputtype){
   doSnpStat=0;
   outfileZ = Z_NULL;
+  if(arguments->argc==2){
+    if(!strcasecmp(arguments->argv[1],"-doSnpStat")||!strcasecmp(arguments->argv[1],"-doPost")){
+      printArg(stdout);
+      exit(0);
+    }else
+      return;
+  }
+
   getOptions(arguments);
   printArg(arguments->argumentFile);
   if(doSnpStat==0){

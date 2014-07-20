@@ -9,7 +9,7 @@
 
 */
 
-#define VERSION 0.608
+#define VERSION 0.610
 double VERS = VERSION;
 
 #include <cassert>
@@ -211,8 +211,11 @@ int main(int argc, char** argv){
      multiReader mr(argc,argv);
      args = mr.getargs();
      
-     init(args);//program dies here after printing info
-     return 0;
+     init(args);//program dies here after printing info, if a match is found
+     fprintf(stderr,"\nUnknown argument supplied: \'%s\'\n\n",argv[1]);
+     printProgInfo(stderr);
+     exit(0);//important otherwise the abc classes will try to clean up, which doesnt make sense in this context
+     //     return 0;
    }
 
    multiReader *mr= new multiReader(argc,argv);
