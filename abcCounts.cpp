@@ -92,12 +92,12 @@ void abcCounts::getOptions(argStruct *arguments){
   }
 
   if(doDepth!=0&&doCounts==0){
-    fprintf(stderr,"Must supply -doCounts 1 if you want depth distribution");
+    fprintf(stderr,"Must supply -doCounts 1 if you want depth distribution\n");
     exit(0);
   }
 
  if(doQsDist!=0&&doCounts==0){
-    fprintf(stderr,"Must supply -doCounts 1 if you want qscore distribution");
+    fprintf(stderr,"Must supply -doCounts 1 if you want qscore distribution"\n);
     exit(0);
   }
  if(iCounts!=0&&doCounts==0){
