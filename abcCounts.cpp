@@ -97,7 +97,7 @@ void abcCounts::getOptions(argStruct *arguments){
   }
 
  if(doQsDist!=0&&doCounts==0){
-    fprintf(stderr,"Must supply -doCounts 1 if you want qscore distribution"\n);
+    fprintf(stderr,"Must supply -doCounts 1 if you want qscore distribution\n");
     exit(0);
   }
  if(iCounts!=0&&doCounts==0){
