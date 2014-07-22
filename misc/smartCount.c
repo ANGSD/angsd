@@ -107,6 +107,56 @@ khash_t(s) *getMap(const char *fname){
   return h;
 }
 
+
+void stats(int arc,char**argv){
+
+  char *base = *argv;
+  char* outnames_bin = append(base,BIN);
+  char* outnames_idx = append(base,IDX);
+  fprintf(stderr,"Assuming binfile:%s and indexfile:%s\n",outnames_bin,outnames_idx);
+
+  int clen;
+  if(!fexists(outnames_idx)){
+    fprintf(stderr,"Problem opening file: %s\n",outnames_idx);
+    exit(0);
+  }
+  khash_t(s) *h = NULL;
+  h =  kh_init(s);
+  FILE *fp = fopen(outnames_idx,"r");
+  while(fread(&clen,sizeof(int),1,fp)) {
+  
+    char *chr =(char*) malloc(clen+1);
+    int hasRead =fread(chr,1,clen,fp); 
+  
+    if(clen!=hasRead){
+      fprintf(stderr,"Problem with reading chr: clen:%d hasread:%d\n",clen,hasRead);
+      exit(0);
+    }
+    chr[clen] = '\0';
+    fprintf(stderr,"chrname is \'%s\'\t",chr);
+    datum d;
+    if(1!=fread(&d.nSites,sizeof(int),1,fp)){
+      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,outnames_idx);
+      exit(0);
+    }
+    fprintf(stderr," length is %d\n",d.nSites);
+    if(1!=fread(&d.fpos,sizeof(int64_t),1,fp)){
+      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,outnames_idx);
+      exit(0);
+    }
+    
+    int ret;
+    khiter_t iter = kh_put(s,h,chr,&ret);
+    if(ret!=1){
+      fprintf(stderr,"\t-> Duplicate key: chr:%s",chr);
+      exit(0);
+    }
+    kh_value(h,iter) =d;
+  }
+  fclose(fp);
+  //return h;
+}
+
 typedef struct{
   char *chr;
   int l;
@@ -159,7 +209,6 @@ void getPerChr(BGZF *fp,perChr *ret){
 
 
 void print_main(perChr *pc,FILE *fp) {
-  return ;
   for(int i=0;i<pc->l;i++)
     fprintf(fp,"%s\t%d\t%d\t%d\t%d\t%d\n",pc->chr,i+1,pc->counts[0][i],pc->counts[1][i],pc->counts[2][i],pc->counts[3][i]);
 }
@@ -176,7 +225,6 @@ int print(int argc, char**argv){
   fprintf(stderr,"Assuming binfile:%s and indexfile:%s\n",outnames_bin,outnames_idx);
   
   khash_t(s) *h = getMap(outnames_idx);
-  //writemap(stderr,mm);
   BGZF *fp = bgzf_open(outnames_bin,"r");
 
   --argc;++argv;
@@ -205,7 +253,7 @@ int print(int argc, char**argv){
 
     khiter_t iter=kh_get(s,h,chr);
     if(iter==kh_end(h)){
-      fprintf(stderr,"Problem finding chr: %s in index\n",chr);
+      fprintf(stderr,"Problem finding chr: \'%s\' in index\n",chr);
       exit(0);
 
     }
@@ -220,7 +268,7 @@ int print(int argc, char**argv){
 
     if(pc->l==0)
       break;
-    //    fprintf(stderr,"pc.chr=%s pc.nSites=%d firstpos=%d lastpos=%d\n",pc->chr,pc->nSites,pc->posi[0],pc->posi[pc->nSites-1]);
+    fprintf(stderr,"pc.chr=%s pc.nSites=%d \n",pc->chr,pc->l);
     print_main(pc,stdout);
     if(chr!=NULL)
       break;
@@ -494,12 +542,14 @@ int treemixer(int argc,char **argv){
 
 int main(int argc,char **argv){
   if(argc==1){
-    fprintf(stderr,"./smartCount [print extract treemixer]\n");
+    fprintf(stderr,"./smartCount [stats print extract treemixer]\n");
     return 0;
   }
   //  fprintf(stderr,"zlibversion=%s zlibversion=%s file:%s\n",ZLIB_VERSION,zlib_version,__FILE__);
   --argc,++argv;
-  if(strcmp(*argv,"print")==0){
+  if(!strcmp(*argv,"stats")){
+    stats(--argc,++argv);
+  }else if(strcmp(*argv,"print")==0){
     print(--argc,++argv);
   }else if(strcmp(*argv,"extract")==0){
     extract(--argc,++argv,stdout);
