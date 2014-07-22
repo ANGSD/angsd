@@ -1,4 +1,4 @@
-###this code is horrible. But it works. 
+##this code is horrible. But it works. 
 bases=c("A","C","G","T")
 require(parallel)
 
@@ -88,7 +88,7 @@ estCont<-function(x,jack=FALSE,max=0.1,mc.cores){
 }
 
 mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
-    hapPos<-hapMap_save$V2
+    hapPos<-hapMap_save$V1
     
     pos<-r_save[,1]
     {
@@ -173,13 +173,16 @@ mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
      cat("\n-----------------------\n major and minor bases - Method2:\n")
      print(mat4)
     ## get frequencies
-    hapMap<-hapMap_save[(hapMap_save[,2]+0 )%in%r[snps,1],] ##<- + zero because of hg18/hg19
-    table(bases[wmax[snps]]==hapMap$V7|bases[wmax[snps]]==hapMap$V8)
-    flip<-bases[wmax[snps]]==hapMap$V8
-    hapMap$matchAF<-hapMap$V9
-    hapMap$matchAF[flip]<-1-hapMap$matchAF[flip]
-    freq<-hapMap$matchAF #frequency of the none benny allele
-    freq[hapMap$V6=="-"]<-1-freq[hapMap$V6=="-"]
+    hapMap<-hapMap_save[(hapMap_save[,1]+0 )%in%r[snps,1],] ##<- + zero because of hg18/hg19
+    if(TRUE){
+        table(bases[wmax[snps]]==hapMap$V5|bases[wmax[snps]]==hapMap$V2)
+        flip<-bases[wmax[snps]]==hapMap$V2
+        hapMap$matchAF<-hapMap$V3
+        hapMap$matchAF[flip]<-1-hapMap$matchAF[flip]
+        freq<-hapMap$matchAF #frequency of the none benny allele
+        freq[hapMap$V4=="-"]<-1-freq[hapMap$V4=="-"]
+    }
+##    freq <-1- hapMap[,5]
     obj<-list(error=error,error2=error2,d=d,freq=freq,wmax=wmax,snps=snps,snps1=snps1,mat=mat,mat2=mat2,mat3=mat3,mat4=mat4,controlSNP=controlSNP,r=r)
 }
 
@@ -194,26 +197,32 @@ readDat<-function(fileName,maxDepth,minDepth,nSites=1e8){
   r_save
 }
 
-readHap<-function(MinDist=10,filename) {
-    hapMap_save<-read.table(filename)
-    hapMap_save<-hapMap_save[order(hapMap_save[,2]),]
-    hapMap_save<-hapMap_save[-which(diff(hapMap_save[,2])<MinDist),]
+readHap<-function(MinDist=10,hapFile) {
+    hapMap_save<-read.table(hapFile,as.is=T)
+    hapMap_save<-hapMap_save[order(hapMap_save[,1]),]
+    hapMap_save<-hapMap_save[-which(diff(hapMap_save[,1])<MinDist),]
     
     return(hapMap_save)
 }
 
 controlSNP<-c(-4:-1,1:4)
 
-
-##mapFile="../RES/map100.chrX.bz2"
-##countFile="/space/anders/ida/idaSjov/kostenkitest/contamination/out/V1countKostinki.USER.bam.X.gz"
-##hapFile="../RES/hapMapCeuXlift.map.bz2/"
-##fileName <- "angsdput.icnts.gz"
-
+if(FALSE){
+    mapFile = NULL
+    hapFile = NULL
+    countFile = NULL
+    minDepth=2
+    maxDepth=20
+    mc.cores=10
+    mapFile="../RES/map100.chrX.gz"
+    countFile="../angsdput.icnts.gz"
+    hapFile="../RES/hapMapCeuXlift.map"
+    fileName <- "../angsdput.icnts.gz"
+}
 doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores){
  
     temp<-read.table(mapFile)
-    map100<-unlist(apply(temp[,2:3],1,function(x) seq(x[1],x[2],by=1)))
+    map100<-unlist(apply(temp[,1:2],1,function(x) seq(x[1],x[2],by=1)))
     r_save<-readDat(countFile,maxDepth,minDepth)
 
     maxPos<-154900000
@@ -224,7 +233,7 @@ doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores){
     r_save<-r_save[keep,]
 
     
-    hapMap_save<-readHap(filename=hapFile)
+    hapMap_save<-readHap(hapFile=hapFile)
     res<-mismatch(r_save,hapMap_save,controlSNP)
     res$mat3
     
@@ -305,6 +314,13 @@ if(length(args)==0){
     cat(" Arguments: output prefix\n")
     q("no")
 }
-
+if(FALSE){
+    mapFile="RES/chrX.unique.gz"
+    hapFile="RES/HapMapChrX.gz"
+    countFile="angsdput.icnts.gz"
+    minDepth=2
+    maxDepth=20
+    mc.cores=10
+}
 
 doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores))

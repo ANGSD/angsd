@@ -174,15 +174,12 @@ mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
      print(mat4)
     ## get frequencies
     hapMap<-hapMap_save[(hapMap_save[,2]+0 )%in%r[snps,1],] ##<- + zero because of hg18/hg19
-    if(TRUE){
-       # table(bases[wmax[snps]]==hapMap$V7|bases[wmax[snps]]==hapMap$V8)
-        flip<-bases[wmax[snps]]==hapMap$V4
-        hapMap$matchAF<-hapMap$V5
-        hapMap$matchAF[flip]<-1-hapMap$matchAF[flip]
-        freq<-hapMap$matchAF #frequency of the none benny allele
-       # freq[hapMap$V6=="-"]<-1-freq[hapMap$V6=="-"]
-    }
-##    freq <-1- hapMap[,5]
+    table(bases[wmax[snps]]==hapMap$V7|bases[wmax[snps]]==hapMap$V8)
+    flip<-bases[wmax[snps]]==hapMap$V8
+    hapMap$matchAF<-hapMap$V9
+    hapMap$matchAF[flip]<-1-hapMap$matchAF[flip]
+    freq<-hapMap$matchAF #frequency of the none benny allele
+    freq[hapMap$V6=="-"]<-1-freq[hapMap$V6=="-"]
     obj<-list(error=error,error2=error2,d=d,freq=freq,wmax=wmax,snps=snps,snps1=snps1,mat=mat,mat2=mat2,mat3=mat3,mat4=mat4,controlSNP=controlSNP,r=r)
 }
 
@@ -207,18 +204,12 @@ readHap<-function(MinDist=10,filename) {
 
 controlSNP<-c(-4:-1,1:4)
 
-if(FALSE){
-    mapFile = NULL
-    hapFile = NULL
-    countFile = NULL
-    minDepth=2
-    maxDepth=20
-    mc.cores=10
-    mapFile="../RES/map100.chrX.gz"
-    countFile="../angsdput.icnts.gz"
-    hapFile="../RES/hapMapCeuXlift.map"
-    fileName <- "../angsdput.icnts.gz"
-}
+
+##mapFile="../RES/map100.chrX.bz2"
+##countFile="/space/anders/ida/idaSjov/kostenkitest/contamination/out/V1countKostinki.USER.bam.X.gz"
+##hapFile="../RES/hapMapCeuXlift.map.bz2/"
+##fileName <- "angsdput.icnts.gz"
+
 doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores){
  
     temp<-read.table(mapFile)
