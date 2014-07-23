@@ -284,7 +284,7 @@ int print(int argc, char**argv){
 }
 int extract(int argc, char**argv,FILE *fpout) {
   if(argc!=2){
-    fprintf(stderr,"print FILE.bam FILE.bim \n");
+    fprintf(stderr,"print FILE.bam sites.txt (sites.txt is chr pos) \n");
     exit(0);
   }
   char *base = *argv;
