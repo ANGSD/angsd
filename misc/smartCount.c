@@ -337,7 +337,7 @@ int extract(int argc, char**argv,FILE *fpout) {
       exit(0);
     }
 
-    fprintf(fpout,"%s\t%d",pc->chr,p+1);
+    fprintf(fpout,"%s\t%d",chr,p+1);
     if(inflate==0)
       for(int i=0;i<4;i++)
 	fprintf(fpout,"\t%d",(int)pc->counts[i][p]);
