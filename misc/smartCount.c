@@ -109,7 +109,10 @@ khash_t(s) *getMap(const char *fname){
 
 
 void stats(int arc,char**argv){
-
+  if(arc==0){
+    fprintf(stderr,"./smartCount stats filename.bam\n");
+    return;
+  }
   char *base = *argv;
   char* outnames_bin = append(base,BIN);
   char* outnames_idx = append(base,IDX);
@@ -284,8 +287,8 @@ int print(int argc, char**argv){
 }
 int extract(int argc, char**argv,FILE *fpout) {
   if(argc!=2){
-    fprintf(stderr,"print FILE.bam sites.txt (sites.txt is chr pos) \n");
-    exit(0);
+    fprintf(stderr,"./smartCount extract filename.bam sites.txt (sites.txt is chr pos) \n");
+    return 0;
   }
   char *base = *argv;
   char* outnames_bin = append(base,BIN);
