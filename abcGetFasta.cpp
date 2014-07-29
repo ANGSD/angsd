@@ -38,6 +38,7 @@ perFasta *init(const char *fname){
   free(strtsk);
     
   perFasta *r= new perFasta;
+  r->fastaname=NULL;
   r->fai = NULL;
   r->seqs = NULL;
   r->curChr = -1;
@@ -50,7 +51,7 @@ perFasta *init(const char *fname){
     fprintf(stderr,"[%s:%s] error reading fai file:%s\n",__FILE__,__FUNCTION__,fname);
     exit(0);
   }
-  
+  r->fastaname=strdup(fname);
   return r;
 }
 
@@ -70,6 +71,7 @@ void abcGetFasta::printArg(FILE *argFile){
 void destroy(perFasta *f){
   fai_destroy(f->fai);
   free(f->seqs);
+  free(f->fastaname);
   delete f;
   f=NULL;
 }
@@ -111,12 +113,13 @@ char *abcGetFasta::loadChr(perFasta *f, char*chrName,int chrId){
   f->curChr = chrId;
   f->seqs = faidx_fetch_seq(f->fai, chrName, 0, 0x7fffffff, &f->chrLen);
   if(f->seqs==NULL){
-    fprintf(stderr,"[%s] Error loading fasta info from chr:%s alleles \n",__FUNCTION__,chrName);  
+    fprintf(stderr,"\n[%s] Error loading fasta info from chr:\'%s\' \n",__FUNCTION__,chrName);
+    f->chrLen=0;
   }
   //  fprintf(stderr,"[%s] done\n",__FUNCTION__);
   if(f->chrLen!=header->l_ref[chrId]){
-    fprintf(stderr,"Problem with length of fastafile vs length of chr in BAM header\n");
-    fprintf(stderr,"Chromosome name: \'%s\' length from BAM header:%d length from fai file:%d\n",chrName,header->l_ref[chrId],f->chrLen);
+    fprintf(stderr,"\t-> Problem with length of fastafile vs length of chr in BAM header\n");
+    fprintf(stderr,"\t-> Chromosome name: \'%s\' length from BAM header:%d length from fai file:%d\n",chrName,header->l_ref[chrId],f->chrLen);
     extern int SIG_COND;
     SIG_COND = 0;
   }

@@ -92,7 +92,7 @@ void init(argStruct *arguments){
 
 
 void destroy(){
-  fprintf(stderr,"\t-> Calling destroy\n");
+  //  fprintf(stderr,"\t-> Calling destroy\n");
   while(1){
     pthread_mutex_lock(&counterMut);
     if(curRunning==0&&printer.contains()==0)

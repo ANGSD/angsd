@@ -57,7 +57,7 @@ int parse_region(char *extra,const aHead *hd,int &ref,int &start,int &stop,const
   aMap::const_iterator it;
    if(strrchr(extra,':')==NULL){//only chromosomename
      if((it = revMap->find(extra))==revMap->end()){
-       fprintf(stderr,"[%s.%s():%d] Problems finding chromo:%s\n",__FILE__,__FUNCTION__,__LINE__,extra);
+       fprintf(stderr,"[%s.%s():%d] Problems finding chromosome: \'%s\'\n",__FILE__,__FUNCTION__,__LINE__,extra);
        fflush(stderr);
        exit(0);
        return -1;
@@ -70,7 +70,7 @@ int parse_region(char *extra,const aHead *hd,int &ref,int &start,int &stop,const
 
    char *tok = strtok(extra,":");
    if((it =revMap->find(tok))==revMap->end()){
-       fprintf(stderr,"[%s.%s():%d] (-r) Problems finding chromo:%s\n",__FILE__,__FUNCTION__,__LINE__,extra);
+       fprintf(stderr,"[%s.%s():%d] (-r) Problems finding chromosome: \'%s\'\n",__FILE__,__FUNCTION__,__LINE__,extra);
        fflush(stderr);
        exit(0);
        return -1;

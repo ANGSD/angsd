@@ -5,6 +5,7 @@
 #include "shared.h"//ONLY USED for reference stuff in mpileup output.
 //generic struct for holding the faidx, the mutex and the actual data.
 typedef struct{
+  char *fastaname;
   pthread_mutex_t aMut;//mutex will be locked unlocked whenever we do something
   faidx_t *fai;//contains the faidx structure
   char *seqs;//contains the reference for the current chr;
