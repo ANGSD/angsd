@@ -598,16 +598,6 @@ void abcCounts::run(funkyPars *pars){
       size_t totSum = calcSum(pars->counts[s],4*nInd);
       if(totSum>setMaxDepth)
 	pars->keepSites[s]=0;
-      else{
-	suint *ps = pars->counts[s];
-	for(int i=0;i<pars->nInd;i++){
-	  int iSum = ps[i*4]+ps[i*4+1]+ps[i*4+2]+ps[i*4+3];
-	  if(totSum>iSum){
-	    pars->keepSites[s]=0;
-	    break;
-	  }
-	}
-      }
     }
   }
   //fprintf(stderr,"minDepth=%d nInd=%d pars->numsites=%d\n",minDepth,nInd,pars->numSites);
