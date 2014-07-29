@@ -21,8 +21,12 @@
 
 //this will initialize our data
 perFasta *init(const char *fname){
-  //  fprintf(stderr,"[%s.%s:%d] %s\n",__FILE__,__FUNCTION__,__LINE__,fname);
+
   fprintf(stderr,"\t-> Reading fasta: %s\n",fname);
+  if(aio::fexists(fname)==0){
+    fprintf(stderr,"\t-> fastafile: \'%s\' doesn't exists, will exit\n",fname);
+    exit(0);
+  }
   //check that fa hasn't been updated
   char *strtsk=NULL;
   strtsk = (char*)calloc(strlen(fname) + 5, 1);
