@@ -37,7 +37,7 @@ filt *filt_read(const char *fname){
   ret->bg =NULL;
   ret->fp =NULL;
   ret->keeps = ret->major = ret->minor=NULL;
-  ret->nCols =0;
+  ret->hasMajMin =0;
   ret->curLen =0;
   char *bin_name=append(fname,BIN);
   char *idx_name=append(fname,IDX);
@@ -64,19 +64,21 @@ filt *filt_read(const char *fname){
       fprintf(stderr,"Problem reading chunk from binary file:\n");
       exit(0);
     }
-    if(1!=fread(&ret->nCols,sizeof(int),1,ret->fp)){
+    if(1!=fread(&ret->hasMajMin,sizeof(int),1,ret->fp)){
       fprintf(stderr,"Problem reading chunk from binary file:\n");
       exit(0);
     }
     ret->offs[chrId]=tmp;
   }
   
+#if 0
   std::map<int,asdf_dats>::const_iterator it;
-  //  fprintf(stderr,"nCols: %d\n",ret->nCols);
+  fprintf(stderr,"hasMajoMin: %d\n",ret->hasMajMin);
   for(it=ret->offs.begin();0&&it!=ret->offs.end();++it)
     fprintf(stderr,"id:%d offs:%lld len:%d\n",it->first,it->second.offs,it->second.len);
+#endif
   fprintf(stderr,"\t-> [%s] nChr: %zu loaded from binary filter file\n",__FILE__,ret->offs.size());
-  if(ret->nCols==4)
+  if(ret->hasMajMin==1)
     fprintf(stderr,"\t-> Filterfile contains major/minor information\n");
   
   delete [] bin_name;
@@ -88,12 +90,18 @@ filt *filt_read(const char *fname){
 
 
 
-void filt_gen(const char *fname,const aMap * revMap,const aHead *hd){
-  fprintf(stderr,"\t-> Filterfile: %s supplied will generate binary representations...\n",fname);
-  std::map<const char*,int,ltstr>::const_iterator it;
-  for(it= revMap->begin();0&&it!=revMap->end();++it)
-    fprintf(stderr,"%s->%d->%d\n",it->first,it->second,hd->l_ref[it->second]);
+void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCutoff){
+  fprintf(stderr,"\t-> Filterfile: %s supplied will generate binary representations... \n",fname);
+  if(bedCutoff>0)
+    fprintf(stderr,"\t-> Assuming that filter file is a bedfile\n");
+
   
+  std::map<const char*,int,ltstr>::const_iterator it;
+#if 0
+  for(it= revMap->begin();it!=revMap->end();++it)
+    fprintf(stderr,"%s->%d->%d\n",it->first,it->second,hd->l_ref[it->second]);
+#endif
+
   gzFile gz = Z_NULL;
   gz = gzopen(fname,"r");
   if(gz==Z_NULL){
@@ -109,44 +117,54 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd){
   FILE *fp =NULL;
   fp=fopen(outnames_idx,"w");
   
-  
-
-
-
-
-
   std::map <int,char> mm;//simple structure to check that input has been sorted by chr/contig
   char *ary = NULL;
   char *major = NULL;
   char *minor = NULL;
   int last=-1;
   int nCols = -1;
+  int hasMajMin=0;
   char buf[LENS];
 
   extern int SIG_COND;
   while(SIG_COND && gzgets(gz,buf,LENS)){
     char chr[LENS] ;int id=-1;
-    int posi=-1;
     char maj='N';
     char min='N';
     
-    int nRead=sscanf(buf,"%s\t%d\t%c\t%c\n",chr,&posi,&maj,&min);
-    assert(posi>0);
-    posi--;
+    int nRead=0;
+    int posS=-1;int posE=-1;
+    float score;
+  
+    if(bedCutoff==0)
+      nRead=sscanf(buf,"%s\t%d\t%c\t%c\n",chr,&posS,&maj,&min);
+    else
+      nRead=sscanf(buf,"%s\t%d\t%d\t%f\n",chr,&posS,&posE,&score);
+    assert(posS>0);
+   
+    if(bedCutoff==0)
+      posS--;
     if(nRead!=2&&nRead!=4){
       fprintf(stderr,"\t-> Filterfile must have either 2 columns or 4 columns\n");
+      SIG_COND=0;goto cleanup;
       exit(0);
     }
-    if(posi<0){
-      fprintf(stderr,"\t-> Problem with entry in filterfile\n");
+    if(posS<0||((bedCutoff)>0&&(posE<posS))){
+      fprintf(stderr,"\t-> Problem with entry in filterfile: col2:%d col3:%d\n",posS,posE);
       fprintf(stderr,"\t-> Offending line looks like:\'%s\'\n",buf);
+      SIG_COND=0;goto cleanup;
+      exit(0);
     }
     
     assert(nRead!=0);
-    if(nCols==-1)
+    if(nCols==-1){
       nCols=nRead;
+      if(nCols==4)
+	hasMajMin = 1;
+    }
 #if 0
-    fprintf(stderr,"nRead=%d: %s %d %c %c\n",nRead,chr,posi,maj,min);
+    fprintf(stderr,"nRead=%d: %s %d %c %c\n",nRead,chr,posS,maj,min);
+    fprintf(stderr,"nRead=%d: %s %d %d %f\n",nRead,chr,posS,posE,score);
     exit(0);
 #endif    
     it = revMap->find(chr);
@@ -156,12 +174,13 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd){
     }else
       id=it->second;
     
+    
     /*
       1. if we have observed a chromo change then dump data
       2. realloc
       3. plug in values
       (need to check that we have alloced a data <=> last!=-1)
-     */
+    */
     if(last!=-1 &&last!=id){
       //      fprintf(stderr,"writing index: last=%d id=%d\n",last,id);
       assert(ary!=NULL);
@@ -172,7 +191,7 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd){
       fwrite(&hd->l_ref[last],1,sizeof(int),fp);
       fwrite(&nCols,1,sizeof(int),fp);
       bgzf_write(cfpD,ary,hd->l_ref[last]);//write len of chr
-      if(nCols==4){
+      if(hasMajMin){
 	bgzf_write(cfpD,major,hd->l_ref[last]);//write len of chr
 	bgzf_write(cfpD,minor,hd->l_ref[last]);//write len of chr
       }
@@ -190,23 +209,29 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd){
       ary=new char[hd->l_ref[last]];
       memset(ary,0,hd->l_ref[last]);
       //      fprintf(stderr,"chr: %s id=%d len=%d\n",chr,last,hd->l_ref[last]);
-      if(nCols==4){
+      if(hasMajMin){
 	major=new char[hd->l_ref[last]];
 	memset(major,0,hd->l_ref[last]);
 	minor=new char[hd->l_ref[last]];
 	memset(minor,0,hd->l_ref[last]);
       }
       
-    }else
-      if(posi > hd->l_ref[id]){
-	fprintf(stderr,"Position in filter file:%s is after end of chromosome? Will exit\n",fname);
-	exit(0);
+    }
+    if(posS > hd->l_ref[id]){
+      fprintf(stderr,"Position in filter file:%s is after end of chromosome? Will exit\n",fname);
+      exit(0);
+    }
+    if(bedCutoff>0){
+      assert(posS<posE);
+      for(int ii=posS;ii<posE;ii++)
+	ary[ii]=1;
+    }else{
+      ary[posS] = 1;
+      if(hasMajMin){
+	major[posS] = refToInt[maj];
+	minor[posS] = refToInt[min];
       }
-      ary[posi] = 1;
-      if(nCols==4){
-	major[posi] = refToInt[maj];
-	minor[posi] = refToInt[min];
-      }
+    }
   }
   if(last!=-1){
     //fprintf(stderr,"writing index\n");
@@ -216,9 +241,9 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd){
     fwrite(&last,1,sizeof(int),fp);
     fwrite(&retVal,1,sizeof(int64_t),fp);
     fwrite(&hd->l_ref[last],1,sizeof(int),fp);
-    fwrite(&nCols,1,sizeof(int),fp);
+    fwrite(&hasMajMin,1,sizeof(int),fp);
     bgzf_write(cfpD,ary,hd->l_ref[last]);//write len of chr
-    if(nCols==4){
+    if(hasMajMin){
       bgzf_write(cfpD,major,hd->l_ref[last]);//write len of chr
       bgzf_write(cfpD,minor,hd->l_ref[last]);//write len of chr
     }
@@ -226,6 +251,7 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd){
 
   fprintf(stderr,"\t-> Filtering complete: Observed: %zu different chromosomes from file:%s\n",mm.size(),fname);
   mm.clear();
+ cleanup:
   if(gz) gzclose(gz);
   if(fp) fclose(fp);
   if(cfpD) bgzf_close(cfpD);
@@ -241,14 +267,14 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd){
 
 
 
-filt *filt_init(const char *fname,const aMap* revMap,const aHead *hd){
+filt *filt_init(const char *fname,const aMap* revMap,const aHead *hd,float bedCutoff){
   char *bin_name=append(fname,BIN);
   char *idx_name=append(fname,IDX);
   //First
 
 
   if(!aio::fexists(bin_name)||!aio::fexists(idx_name))
-    filt_gen(fname,revMap,hd);
+    filt_gen(fname,revMap,hd,bedCutoff);
   delete [] bin_name;
   delete [] idx_name;
   extern int SIG_COND;
@@ -276,6 +302,7 @@ abcFilter::~abcFilter(){
 
 
 abcFilter::abcFilter(argStruct *arguments){
+  bedCutoff = 0; //<- indicates that we don't assume bed
   //below if shared for all analysis classes
   shouldRun[index] = 1;
   header = arguments->hd;
@@ -306,26 +333,30 @@ abcFilter::abcFilter(argStruct *arguments){
 
 void abcFilter::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
-  fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr tab pos))\n",fname);
+  fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos))\n",fname);
+  fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos major minor))\n",fname);
+  fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr posStart posStop mapScore))\n",fname);
   fprintf(argFile,"\t-minInd\t\t%d\tOnly use site if atleast minInd of samples has data\n",minInd);
-  fprintf(argFile,"\tYou can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");
+  fprintf(argFile,"\t-minBed\t\t%f\tDiscard regions with a mappability lower than this value\n",bedCutoff);
+  fprintf(argFile,"\t1) You can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");
+  fprintf(argFile,"\t2) You can also supply a bed file containing regions to use last column is a mappability score.\n\tSet this to a value differet from zero will then assume the input file is a bedfile. \n");
 }
 
 void abcFilter::getOptions(argStruct *arguments){
   fname=angsd::getArg("-sites",fname,arguments);
-
+  bedCutoff=angsd::getArg("-minBEd",bedCutoff,arguments);
   if(fname!=NULL)  
-    fl = filt_init(fname,revMap,header);
+    fl = filt_init(fname,revMap,header,bedCutoff);
   if(fl!=NULL)
     fprintf(stderr,"\t-> [%s] -sites is still beta, use at own risk...\n",__FILE__);
 
 
   //1=bim 2=keep
   doMajorMinor = angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
-  if(doMajorMinor==3 && fl!=NULL&& fl->nCols!=4){
+  if(doMajorMinor==3 && fl!=NULL&& fl->hasMajMin!=4){
     fprintf(stderr,"\t-> Must supply -sites with a file containing major and minor if -doMajorMinor 3\n");
   }
-  if(doMajorMinor!=3 && fl!=NULL&& fl->nCols==4){
+  if(doMajorMinor!=3 && fl!=NULL&& fl->hasMajMin==4){
     fprintf(stderr,"\t-> Filter file contains major/minor information to use these in analysis supper \'-doMajorMinor 3\'\n");
   }
   
@@ -343,7 +374,7 @@ void abcFilter::run(funkyPars *p){
   }
 
 
-  if(fl!=NULL && fl->nCols==4){
+  if(fl!=NULL && fl->hasMajMin==4){
     //    fprintf(stderr,"aloocating for major and minor\n");
     p->major = new char [p->numSites];
     p->minor = new char [p->numSites];
@@ -360,7 +391,7 @@ void abcFilter::run(funkyPars *p){
 	//	fprintf(stderr,"Plugging inf vals std\n");
 	p->keepSites[s] =0;
       }
-      if(p->keepSites[s] && fl->nCols==4){
+      if(p->keepSites[s] && fl->hasMajMin==4){
 	//fprintf(stderr,"Plugging inf vals std majorminor\n");
 	p->major[s] = fl->major[p->posi[s]];
 	p->minor[s] = fl->minor[p->posi[s]];
@@ -411,7 +442,7 @@ void abcFilter::readSites(int refId) {
     if(header->l_ref[refId]> fl->curLen){
       fl->keeps=(char*) realloc(fl->keeps,header->l_ref[refId]);
       fl->curLen = header->l_ref[refId];
-      if(fl->nCols==4){
+      if(fl->hasMajMin==1){
 	fl->major=(char*) realloc(fl->major,header->l_ref[refId]);
 	fl->minor=(char*) realloc(fl->minor,header->l_ref[refId]);
       }
@@ -424,7 +455,7 @@ void abcFilter::readSites(int refId) {
     fl->keeps=(char*) realloc(fl->keeps,it->second.len);
   bgzf_read(fl->bg,fl->keeps,it->second.len);
 
-  if(fl->nCols==4){
+  if(fl->hasMajMin==1){
     if(it->second.len>fl->curLen) {
       fl->major = (char*) realloc(fl->major,it->second.len);
       fl->minor = (char*) realloc(fl->minor,it->second.len);

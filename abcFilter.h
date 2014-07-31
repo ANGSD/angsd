@@ -13,7 +13,7 @@ typedef struct{
   char *keeps;
   char *major;
   char *minor;
-  int nCols;
+  int hasMajMin;
   int curLen;//<-length of the char arrays;
 }filt;
 
@@ -30,6 +30,7 @@ class abcFilter : public abc{
   int minInd;
   //  int nInd;
   int curChr;
+  float bedCutoff;
 public:
   void readSites(int refId);
   //none optional stuff
