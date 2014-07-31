@@ -6,6 +6,7 @@
 #include "bgzf.h"
 #include "khash.h"
 #include "kvec.h"
+#include <libgen.h>
 #define LENS  4096
 
 const char * BIN= ".counts.bin";
@@ -440,7 +441,7 @@ int doAnal(perChr *pc,int nInd){
 	continue;
 
 #if 1
-      fprintf(stdout,"%s\t%d",pc[0].chr,s+1);
+      //      fprintf(stdout,"%s\t%d",pc[0].chr,s+1);
       for(int i=0;i<nInd;i++)
 	if(res[i]==first)
 	  fprintf(stdout,"\t1,0");
@@ -458,15 +459,38 @@ int doAnal(perChr *pc,int nInd){
 
 int treemixer(int argc,char **argv){
   if(argc==0){
-    fprintf(stderr,"treemixer bam.list [-r chrName]\n");
-    exit(0);
+    fprintf(stderr,"./smartCounts treemixer -bam FILE.list -bin/-idx FILE.list -r chrName\n");
+    fprintf(stderr,"FILE.list should be either a list of bam or a list of bins/idxs");
+    
   }
+  char *flis = NULL;
+  char *reg = NULL;
+  int type =0;
+  while(*argv){
+    if(!strcmp("-r",*argv))
+      reg=strdup(*++argv);
+    else if(!strcmp("-bin",*argv)||!strcmp("-idx",*argv)){
+      flis=strdup(*++argv);
+    }
+    else if(!strcmp("-bam",*argv)){
+      flis=strdup(*++argv);
+      type++;
+    }
+    ++argv;
+  }
+  fprintf(stderr,"reg:%s flis:%s\n",reg,flis );
+  if(!flis){
+    fprintf(stderr,"Must supply -bin/idx or bam\n");
+    return 0;
+  }
+
+
   kvec_t(finfo) alls;
   kv_init(alls);
   FILE *fp=NULL;
   //  fprintf(stderr,"argc:%d argv[0]=%s\n",argc,argv[0]);
-  if(NULL==((fp=fopen(argv[0],"r")))){
-    fprintf(stderr,"Problem opening filelise: %s\n",argv[1]);
+  if(NULL==((fp=fopen(flis,"r")))){
+    fprintf(stderr,"Problem opening filelise: %s\n",flis);
     exit(0);
   }
   char *buf = malloc(LENS);
@@ -478,28 +502,37 @@ int treemixer(int argc,char **argv){
     tmp.fname = NULL;
     tmp.fp = NULL;
     tmp.hash = NULL;
-    char* outnames_bin = append(base,BIN);
-    char* outnames_idx = append(base,IDX);
+    char* outnames_bin=NULL;
+    char *outnames_idx=NULL;
+
+    if(type==1){
+      outnames_bin = append(base,BIN);
+      outnames_idx = append(base,IDX);
+    }else{
+      outnames_bin = strdup(base);
+      outnames_idx = strdup(base);
+      strcpy(outnames_bin+strlen(outnames_bin)-3,"bin");
+      strcpy(outnames_idx+strlen(outnames_idx)-3,"idx");
+    }
+    // fprintf(stderr,"obin:%s oidX:%s\n",outnames_bin,outnames_idx);
     tmp.fp=bgzf_open(outnames_bin,"r");
     tmp.hash = getMap(outnames_idx);
     tmp.fname = strdup(base);
+    fprintf(stdout,"%s\t",basename(tmp.fname));
     kv_push(finfo,alls,tmp);
   }
+  fprintf(stdout,"\n");
   fprintf(stderr,"bamlist contains: %zu files\n",kv_size(alls));
-  #if 0
+#if 0// this prints out the assoc array
   for(uint i =0;i<kv_size(alls);i++){
     finfo tmp = kv_A(alls,i);
     fprintf(stderr,"%u %s %p %p\n",i,tmp.fname,tmp.fp,tmp.hash);
   }
-  #endif
+#endif
   
   --argc;++argv;
 
-  char *chr = NULL;
-  if(argc>1&&strcmp(*argv,"-r")==0)
-    chr = strdup(argv[1]);
-  //  fprintf(stderr,"argc:%d argv[0]=%s chr:%s\n",argc,argv[0],chr);
-
+  char *chr = reg;
 
   if(chr!=NULL){
     for(uint i =0;i<kv_size(alls);i++) {
