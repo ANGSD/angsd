@@ -91,29 +91,21 @@ mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
     hapPos<-hapMap_save$V1
     
     pos<-r_save[,1]
-    {
-        if(!noNA){#any
-            keepSites<-pos%in%hapPos
-            for(c in controlSNP)
-                keepSites<-((pos+c)%in%hapPos)|keepSites
-            r<-r_save[keepSites,]
-        }
-        else{
-            keepSites<-pos%in%hapPos
-            for(c in controlSNP)
-                keepSites[keepSites]<-((pos[keepSites]+c)%in%pos)&keepSites[keepSites]
-            w<-which(keepSites)
-            keep<-sort(c(w,unlist(sapply(w,function(x) x+controlSNP))))
-            r<-r_save[keep,]
-        }
-    }
+   
+    keepSites<-pos%in%hapPos
+    for(c in controlSNP)
+        keepSites[keepSites]<-((pos[keepSites]+c)%in%pos)&keepSites[keepSites]
+    w<-which(keepSites)
+    keep<-sort(c(w,unlist(sapply(w,function(x) x+controlSNP))))
+    r<-r_save[keep,]
+
    
     ##all
     snps<-(r[,1])%in%hapPos
     snps1<-!snps
  
     d<-rowSums(r[,-1])
-    max<-pmax(r[,2],r[,3],r[,4],r[,5])
+    max<-apply(r[,-1],1,max)
     wmax<-apply(r[,-1],1,which.max)
     error<-d-max
     set.seed(1)
@@ -144,7 +136,7 @@ mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
    colnames(mat2)<-c("SNP site","adjacent site")
    rownames(mat2)<-c("minor base","major base")
 
-     print(mat2)
+    print(mat2)
     print(f<-fisher.test(mat2))
     
   
@@ -236,6 +228,7 @@ doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores){
     hapMap_save<-readHap(hapFile=hapFile)
     res<-mismatch(r_save,hapMap_save,controlSNP)
     res$mat3
+
     
 
     est <-estCont(res,jack=T,mc.cores=mc.cores) 

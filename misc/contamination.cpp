@@ -4,9 +4,12 @@
 #include <zlib.h>
 #include <ctype.h>
 
-const char *hapfile=NULL,mapfile=NULL,icounts=NULL;
+const char *hapfile=NULL,*mapfile=NULL,*icounts=NULL;
 
 typedef unsigned char uchar;
+
+
+
 
 uchar flip(uchar c){
   c = toupper(c);
@@ -21,6 +24,7 @@ uchar flip(uchar c){
 }
 
 int main(int argc,char**argv){
-  hapfile="../RES/hapMapCeuXlift.map.gz";
-
+  hapfile="../RES/HapMapChrX.gz";
+  icounts="../angsdput.icntz.gz";
+  mapfile="../RES/chrX.unique.gz";
 }
