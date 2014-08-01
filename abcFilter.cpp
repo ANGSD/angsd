@@ -127,6 +127,7 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCut
   char buf[LENS];
 
   extern int SIG_COND;
+ 
   while(SIG_COND && gzgets(gz,buf,LENS)){
     char chr[LENS] ;int id=-1;
     char maj='N';
@@ -140,8 +141,9 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCut
       nRead=sscanf(buf,"%s\t%d\t%c\t%c\n",chr,&posS,&maj,&min);
     else
       nRead=sscanf(buf,"%s\t%d\t%d\t%f\n",chr,&posS,&posE,&score);
-    assert(posS>0);
    
+    assert(posS>=0);
+
     if(bedCutoff==0)
       posS--;
     if(nRead!=2&&nRead!=4){
@@ -159,9 +161,13 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCut
     assert(nRead!=0);
     if(nCols==-1){
       nCols=nRead;
-      if(nCols==4)
+      if(nCols==4&&bedCutoff==0)
 	hasMajMin = 1;
+      if(hasMajMin==1)
+	fprintf(stderr,"\t-> Filterfile contains major/minor information\n");
+  
     }
+
 #if 0
     fprintf(stderr,"nRead=%d: %s %d %c %c\n",nRead,chr,posS,maj,min);
     fprintf(stderr,"nRead=%d: %s %d %d %f\n",nRead,chr,posS,posE,score);
@@ -223,6 +229,8 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCut
     }
     if(bedCutoff>0){
       assert(posS<posE);
+      if(score<bedCutoff)			
+	continue;
       for(int ii=posS;ii<posE;ii++)
 	ary[ii]=1;
     }else{
