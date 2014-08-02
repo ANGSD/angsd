@@ -73,16 +73,21 @@ bool operator < (const pair& v1, const pair& v2)
   }
 
 int *bamSortedIds = NULL;
-bufReader *initializeBufReaders2(const std::vector<char *> &vec){
+bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError){
   bufReader *ret = new bufReader[vec.size()];
 
   for(size_t i =0;i<vec.size();i++)
     ret[i] = initBufReader2(vec[i]);
   //now all readers are inialized, lets validate the header is the same
   for(size_t i=1;i<vec.size();i++)
-    if(compHeader(ret[0].hd,ret[i].hd))
-      printErr();
-
+    if(compHeader(ret[0].hd,ret[i].hd)){
+      fprintf(stderr,"Difference in BAM headers for \'%s\' and \'%s\'\n",vec[0],vec[i]);
+      fprintf(stderr,"HEADER BAM1\n");
+      printHd(ret[0].hd,stderr);
+      printHd(ret[i].hd,stderr);
+      if(exitOnError)
+	exit(0);
+    }
  
   
   pair *val_keys = new pair[vec.size()];
@@ -222,7 +227,8 @@ int bammer_main(argStruct *args){
   gf=(abcGetFasta *) allMethods[1];
 
   //read bamfiles
-  bufReader *rd = initializeBufReaders2(args->nams);
+  extern int checkBamHeaders;
+  bufReader *rd = initializeBufReaders2(args->nams,checkBamHeaders);
 
   extern int maxThreads;
   

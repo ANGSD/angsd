@@ -489,7 +489,7 @@ void dalloc (sglPool &ret){
 
 
 /*
-  compare all entries in the 2 headers, if difference return 0;
+  compare all entries in the 2 headers, if difference return 1;
 */
 int compHeader(aHead *hd1,aHead *hd2){
   if(0){
@@ -500,16 +500,16 @@ int compHeader(aHead *hd1,aHead *hd2){
   }
   if(hd1->n_ref!=hd2->n_ref){
     fprintf(stderr,"Difference in BAM headers: Problem with number of chromosomes in header\n");
-    exit(0);
+    return 1;
   }
   for(int i=0;i<hd1->n_ref;i++){
     if(strcasecmp(hd1->name[i],hd2->name[i])!=0){
       fprintf(stderr,"Difference in BAM headers: Problem with chromosome ordering");
-      exit(0);
+      return 1;
     }
     if(hd1->l_ref[i]!=hd2->l_ref[i]){
       fprintf(stderr,"Difference in BAM headers: Problem with length of chromosomes");
-      exit(0);
+      return 1;
     }
   }
   return 0;

@@ -17,7 +17,7 @@ int minQ = MINQ;
 int trim = 0;
 int adjustMapQ =0;
 int baq =0;
-
+int checkBamHeaders = 1;
 char *regfile = NULL;
 char *regfiles = NULL;
 
@@ -70,6 +70,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (as SAMtools), supply -ref\n",baq);
   fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
+  fprintf(argFile,"\t-checkBamHeaders\t%d\tExit if difference in BAM headers\n",checkBamHeaders);
   fprintf(argFile,"\n");
   fprintf(argFile,"Examples for region specification:\n");
   fprintf(argFile,"\t\tchr:\t\tUse entire chromosome: chr\n");
@@ -77,9 +78,9 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t\tchr:-stop\tUse region from beginning of chromosome: chr to stop\n");
   fprintf(argFile,"\t\tchr:start-stop\tUse region from start to stop from chromosome: chr\n");
   fprintf(argFile,"\t\tchr:site\tUse single site on chromosome: chr\n");
-  fprintf(argFile,"Will include read if:\n\tincludeflag:[%d] ",includeflags);
+  fprintf(argFile,"Will include read if:\n\tincludeflag:[%d] (beta)",includeflags);
   printFlagInfo(argFile,includeflags);
-  fprintf(argFile,"Will discard read if:\n\tdiscardflag:[%d] ",discardflags);
+  fprintf(argFile,"Will discard read if:\n\tdiscardflag:[%d] (beta)",discardflags);
   printFlagInfo(argFile,discardflags);
   
 }
