@@ -15,7 +15,7 @@ printIcounts: printIcounts.c
 supersim: supersim.cpp rbeta.cpp
 	$(CXX) $(FLAGS) supersim.cpp -lz -o supersim
 
-contamination: contamination
+contamination: contamination.cpp 
 	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination
 
 realSFS: realSFS.cpp
