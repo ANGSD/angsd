@@ -921,7 +921,7 @@ int main_1dsfs(int argc,char **argv){
   argc-=2;
  
   getArgs(argc,argv);
-
+  dim=chr1+1;
   //hook for new EJ banded version
   if(isNewFormat(fname1))
     return main_1dsfs_v2(fname1,chr1,nSites,nThreads,sfsfname,tole,maxIter);
@@ -937,7 +937,7 @@ int main_1dsfs(int argc,char **argv){
   //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
   fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
 
-  dim=chr1+1;
+  
 
   Matrix<double> GL1=alloc(nSites,dim);
   gzFile gz1=getGz(fname1);  
