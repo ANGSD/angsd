@@ -30,7 +30,7 @@ class abcFilter : public abc{
   int minInd;
   //  int nInd;
   int curChr;
-  float bedCutoff;
+  int isBed;
 public:
   void readSites(int refId);
   //none optional stuff

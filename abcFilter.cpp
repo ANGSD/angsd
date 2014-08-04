@@ -90,9 +90,9 @@ filt *filt_read(const char *fname){
 
 
 
-void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCutoff){
+void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,int isBed){
   fprintf(stderr,"\t-> Filterfile: %s supplied will generate binary representations... \n",fname);
-  if(bedCutoff>0)
+  if(isBed)
     fprintf(stderr,"\t-> Assuming that filter file is a bedfile\n");
 
   
@@ -137,21 +137,21 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCut
     int posS=-1;int posE=-1;
     float score;
   
-    if(bedCutoff==0)
+    if(isBed==0)
       nRead=sscanf(buf,"%s\t%d\t%c\t%c\n",chr,&posS,&maj,&min);
     else
       nRead=sscanf(buf,"%s\t%d\t%d\t%f\n",chr,&posS,&posE,&score);
    
     assert(posS>=0);
 
-    if(bedCutoff==0)
+    if(isBed==0)
       posS--;
     if(nRead!=2&&nRead!=4){
       fprintf(stderr,"\t-> Filterfile must have either 2 columns or 4 columns\n");
       SIG_COND=0;goto cleanup;
       exit(0);
     }
-    if(posS<0||((bedCutoff)>0&&(posE<posS))){
+    if(posS<0||((isBed)>0&&(posE<posS))){
       fprintf(stderr,"\t-> Problem with entry in filterfile: col2:%d col3:%d\n",posS,posE);
       fprintf(stderr,"\t-> Offending line looks like:\'%s\'\n",buf);
       SIG_COND=0;goto cleanup;
@@ -161,7 +161,7 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCut
     assert(nRead!=0);
     if(nCols==-1){
       nCols=nRead;
-      if(nCols==4&&bedCutoff==0)
+      if(nCols==4&&isBed==0)
 	hasMajMin = 1;
       if(hasMajMin==1)
 	fprintf(stderr,"\t-> Filterfile contains major/minor information\n");
@@ -227,9 +227,9 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCut
       fprintf(stderr,"Position in filter file:%s is after end of chromosome? Will exit\n",fname);
       exit(0);
     }
-    if(bedCutoff>0){
+    if(isBed>0){
       assert(posS<posE);
-      if(score<bedCutoff)			
+      if(score<isBed)			
 	continue;
       for(int ii=posS;ii<posE;ii++)
 	ary[ii]=1;
@@ -275,14 +275,14 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,float bedCut
 
 
 
-filt *filt_init(const char *fname,const aMap* revMap,const aHead *hd,float bedCutoff){
+filt *filt_init(const char *fname,const aMap* revMap,const aHead *hd,int isBed){
   char *bin_name=append(fname,BIN);
   char *idx_name=append(fname,IDX);
   //First
 
 
   if(!aio::fexists(bin_name)||!aio::fexists(idx_name))
-    filt_gen(fname,revMap,hd,bedCutoff);
+    filt_gen(fname,revMap,hd,isBed);
   delete [] bin_name;
   delete [] idx_name;
   extern int SIG_COND;
@@ -310,7 +310,7 @@ abcFilter::~abcFilter(){
 
 
 abcFilter::abcFilter(argStruct *arguments){
-  bedCutoff = 0; //<- indicates that we don't assume bed
+  isBed = 0; //<- indicates that we don't assume bed
   //below if shared for all analysis classes
   shouldRun[index] = 1;
   header = arguments->hd;
@@ -345,16 +345,16 @@ void abcFilter::printArg(FILE *argFile){
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos major minor))\n",fname);
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr posStart posStop mapScore))\n",fname);
   fprintf(argFile,"\t-minInd\t\t%d\tOnly use site if atleast minInd of samples has data\n",minInd);
-  fprintf(argFile,"\t-minBed\t\t%f\tDiscard regions with a mappability lower than this value\n",bedCutoff);
+  fprintf(argFile,"\t-isBed\t\t%d\t-sites file is a bed file\n",isBed);
   fprintf(argFile,"\t1) You can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");
   fprintf(argFile,"\t2) You can also supply a bed file containing regions to use last column is a mappability score.\n\tSet this to a value differet from zero will then assume the input file is a bedfile. \n");
 }
 
 void abcFilter::getOptions(argStruct *arguments){
   fname=angsd::getArg("-sites",fname,arguments);
-  bedCutoff=angsd::getArg("-minBEd",bedCutoff,arguments);
+  isBed=angsd::getArg("-isBed",isBed,arguments);
   if(fname!=NULL)  
-    fl = filt_init(fname,revMap,header,bedCutoff);
+    fl = filt_init(fname,revMap,header,isBed);
   if(fl!=NULL)
     fprintf(stderr,"\t-> [%s] -sites is still beta, use at own risk...\n",__FILE__);
 
