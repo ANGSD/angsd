@@ -129,23 +129,26 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,int isBed){
   extern int SIG_COND;
  
   while(SIG_COND && gzgets(gz,buf,LENS)){
+    if(buf[0]=='#')
+      continue;
     char chr[LENS] ;int id=-1;
     char maj='N';
     char min='N';
     
     int nRead=0;
     int posS=-1;int posE=-1;
-    float score;
+    char fourthCol[LENS];
   
     if(isBed==0)
       nRead=sscanf(buf,"%s\t%d\t%c\t%c\n",chr,&posS,&maj,&min);
     else
-      nRead=sscanf(buf,"%s\t%d\t%d\t%f\n",chr,&posS,&posE,&score);
+      nRead=sscanf(buf,"%s\t%d\t%d\t%s\n",chr,&posS,&posE,fourthCol);
    
     assert(posS>=0);
 
     if(isBed==0)
       posS--;
+  
     if(nRead!=2&&nRead!=4){
       fprintf(stderr,"\t-> Filterfile must have either 2 columns or 4 columns\n");
       SIG_COND=0;goto cleanup;
@@ -229,8 +232,6 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,int isBed){
     }
     if(isBed>0){
       assert(posS<posE);
-      if(score<isBed)			
-	continue;
       for(int ii=posS;ii<posE;ii++)
 	ary[ii]=1;
     }else{
