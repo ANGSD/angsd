@@ -31,7 +31,7 @@
 #endif
 
 #include "bfgs.h"
-
+#include "realSFS.h"
 #include "realSFS_saf2.cpp"
 
 
@@ -54,13 +54,6 @@ int calcLike =0;//if a sfs input file has been supplied, should we just print th
 int noGrad = 0;//should we use gradients for the bfgs.
 pthread_t *thd=NULL;
 
-
-template <typename T>
-struct Matrix{
-  size_t x;
-  size_t y;
-  T** mat;
-};
 
 
 int fexists(const char* str){

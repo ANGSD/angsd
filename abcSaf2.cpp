@@ -1,7 +1,7 @@
 /*
   This is a modified version of the code recieved by EUNJUNG HAN from jnovembre lab.
 This is a banded version of the dynamic algorithm used for calculating the sample allele frequncy, or multisample GLs or site likelihoods.
-
+xs
 
  */
 
@@ -29,12 +29,12 @@ double lbico(double n, double k);
 void abcSaf2::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doSaf2\t\t%d\n",doSaf2);
-  fprintf(argFile,"\t1: perform multisample GL estimation EUNJUNG VERSION(cite that, more info )\n");
+  fprintf(argFile,"\t1: perform multisample GL estimation using algorithms of Han, Sinsheimer, Novembre (2014).\n");
   fprintf(argFile,"\t-underFlowProtect\t%d\n",underFlowProtect);
   fprintf(argFile,"\t-fold\t\t\t%d (deprecated)\n",fold);
   fprintf(argFile,"\t-anc\t\t\t%s (ancestral fasta)\n",anc);
   fprintf(argFile,"\t-noTrans\t\t%d (remove transitions)\n",noTrans);
-  fprintf(argFile,"\t-mode\t\t\t%d (Dynamic programming algorithm to compute site likelihood vectors)\n\t0: original dynamic programming (default)\n\t1: rescaled dynamic programming\n\t2: adaptive K-restricted dynamic programming\n",mode); //[EJ]
+  //  fprintf(argFile,"\t-mode\t\t\t%d 0: Han et al (2014) dynamic adaptive K-restricted dynamic programming (default, recommended)\n\n\t1: Han et al (2014) rescaled dynamic programming\n\t2: Han et al (2014) adaptive K-restricted dynamic programming\n\t",mode); //[EJ]
 }
 
 
@@ -43,10 +43,10 @@ void abcSaf2::getOptions(argStruct *arguments){
 
   noTrans = angsd::getArg("-noTrans",noTrans,arguments);
   mode = angsd::getArg("-mode",mode,arguments); //[EJ]
-    
+
   int GL = 0;
   GL = angsd::getArg("-GL",GL,arguments);
-  
+
   underFlowProtect=angsd::getArg("-underFlowProtect",underFlowProtect,arguments);
   fold=angsd::getArg("-fold",fold,arguments);
   char *sim1 = NULL;
@@ -73,25 +73,28 @@ void abcSaf2::getOptions(argStruct *arguments){
 }
 
 abcSaf2::abcSaf2(const char *outfiles,argStruct *arguments,int inputtype){
-  const char *SAF = ".saf";
+  const char *SAF = ".saf.gz";
   const char *SFSPOS =".saf.pos.gz";
 
   //default
   underFlowProtect = 0;
   fold =0;
   isSim =0;
+  outputBanded=1;
+  outputGz=1;
+
   //from command line
   anc=NULL;
-  
+
   noTrans = 0;
-  
-  mode=0; //0,1,2 [EJ]
+
+  mode=0; //0,1,2,3 [EJ]
   doSaf2=0;
-  
-  outfileSFS = NULL;
+
+  outfileSFS = Z_NULL;
   outfileSFSPOS = Z_NULL;
-  
-  
+
+
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSaf2")){
       printArg(stdout);
@@ -104,7 +107,7 @@ abcSaf2::abcSaf2(const char *outfiles,argStruct *arguments,int inputtype){
 
   getOptions(arguments);
 
-  printArg(arguments->argumentFile);  
+  printArg(arguments->argumentFile);
   if(doSaf2==0){
     shouldRun[index] =0;
     return;
@@ -114,35 +117,55 @@ abcSaf2::abcSaf2(const char *outfiles,argStruct *arguments,int inputtype){
     newDim = arguments->nInd+1;
 
   if(doSaf2==1){
-    outfileSFS =  aio::openFile(outfiles,SAF);
+    outfileSFS =  aio::openFileGz(outfiles,SAF,GZOPT);
+    // Output tag at start to mark as saf version 2 (banded)
+    char buf[8]="safv2";
+    gzwrite(outfileSFS,buf,8);
+
     outfileSFSPOS =  aio::openFileGz(outfiles,SFSPOS,GZOPT);
   }
-   
+
 }
 
 
 abcSaf2::~abcSaf2(){
 
-  if(outfileSFS) fclose(outfileSFS);;
+  if(outfileSFS) gzclose(outfileSFS);;
   if(outfileSFSPOS) gzclose(outfileSFSPOS);
 }
+
+
+
+/*double& GetLike(realRes2 * r, const int site, const int i){
+
+  // Check to make sure the desired value of i is in bounds, keeping offset in mind
+  assert( ( (i-r->offset[site]) >= 0)  && (i-r->offset[site]) < r->Kval[site]);
+  // Return value
+  return r->pLikes[site][(i-r->offset[site])];
+
+  }*/
+
 
 void abcSaf2::run(funkyPars  *p){
   if(p->numSites==0||(doSaf2==0 ))
     return;
   if(doSaf2!=1){
-    fprintf(stderr,"\t-> Error -doSaf22 is only implemented for simple SFS estimation\n");
+    fprintf(stderr,"\t-> Error -doSaf2 is only implemented for simple SFS estimation\n");
     exit(0);
   }
-  
+
+
+
   realRes2 *r = new realRes2;
   r->oklist=new char[p->numSites];
+  r->Kval=new int[p->numSites];
+  r->offset=new int[p->numSites];
   memset(r->oklist,0,p->numSites);
   r->pLikes=new double*[p->numSites];
-  p->extras[index] = r;
-  
+
   algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans);
-  
+  p->extras[index] = r;
+
 }
 
 void abcSaf2::clean(funkyPars *p){
@@ -151,7 +174,7 @@ void abcSaf2::clean(funkyPars *p){
   if(doSaf2==3)
     return;
   realRes2 *r=(realRes2 *) p->extras[index];
-  
+
   //  realRes2 *r=(realRes2 *) p->extras[index];
   int id=0;
   for(int i=0;i<p->numSites;i++)
@@ -163,6 +186,8 @@ void abcSaf2::clean(funkyPars *p){
 
 }
 
+
+
 void abcSaf2::print(funkyPars *p){
   if(p->numSites==0||(doSaf2==0))
     return;
@@ -170,10 +195,69 @@ void abcSaf2::print(funkyPars *p){
   if(doSaf2==1){
     realRes2 *r=(realRes2 *) p->extras[index];
     int id=0;
-    void printFull(funkyPars *p,int index,FILE *outfileSFS,gzFile outfileSFSPOS,char *chr,int newDim);
-    printFull(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId],newDim);
-  }   
+    if(outputBanded)
+      printSparse(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId]);
+  }
 }
+
+
+// Added by JN
+void abcSaf2::printSparse(funkyPars *p,int index,gzFile outfileSFS,gzFile outfileSFSPOS,char *chr){
+
+  realRes2 *r=(realRes2 *) p->extras[index];
+  int id=0;
+  int myCounter=0;
+  if(outputGz){
+
+
+
+
+    // One loop to get number of ok sites per chunk
+    for(int i=0;i<p->numSites;i++)
+      if(r->oklist[i]==1)
+        myCounter++;
+
+    // output numSites
+    fprintf(stderr,"\nOutputting sparse version of saf file with %d ok sites out of %d\n",myCounter,p->numSites);
+
+    gzwrite(outfileSFS,&myCounter,sizeof(int));
+
+    // output site likelihoods in banded format
+    for(int i=0;i<p->numSites;i++){
+
+      if(r->oklist[i]==1){
+        gzwrite(outfileSFS,&r->offset[i],sizeof(int));
+        gzwrite(outfileSFS,&r->Kval[i],sizeof(int));
+        gzwrite(outfileSFS,r->pLikes[id++],sizeof(double)*r->Kval[i]);
+      }
+
+    }
+
+
+  }
+  /*else{  // deprecated before it even saw the light of day... moved to gz output
+    // Loop over sites printing likelihood
+    for(int s=0; s<p->numSites;s++){
+      if(r->oklist[s]==1){
+        fwrite(&r->offset[s],sizeof(int),1, outfileSFS);
+        fwrite(&r->Kval[s],sizeof(int),1, outfileSFS);
+        fwrite(r->pLikes[id++],sizeof(double),r->Kval[s],outfileSFS);
+      }
+    }
+    }*/
+
+  kstring_t kbuf;kbuf.s=NULL;kbuf.l=kbuf.m=0;
+  for(int i=0;i<p->numSites;i++)
+    if(r->oklist[i]==1)
+      ksprintf(&kbuf,"%s\t%d\t%d\t%d\t%d\t%d\n",chr,p->posi[i]+1,r->offset[i],r->Kval[i],i,p->numSites);
+    else if (r->oklist[i]==2)
+      fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
+
+  gzwrite(outfileSFSPOS,kbuf.s,kbuf.l);
+  free(kbuf.s);
+
+}
+
 
 
 //---------------------------------------------------------------------------------------------------------------------------//
@@ -181,17 +265,17 @@ void abcSaf2::print(funkyPars *p){
 inline double getLikelihoods(double *L012, double *like, int i, int AA_offset, int Aa_offset, int aa_offset,int underFlowProtect) __attribute__((always_inline));
  double getLikelihoods(double *L012, double *like, int i, int AA_offset, int Aa_offset, int aa_offset,int underFlowProtect){
     double GAA,GAa,Gaa,mymax;
-    
+
     // genotye likelihhods (het prob is multiplied by 2) in log space
     GAA = like[i*10+AA_offset];
     GAa = like[i*10+Aa_offset]+log(2.0);
     Gaa = like[i*10+aa_offset];
-    
+
     // normalize
     if (Gaa > GAa && Gaa > GAA) mymax = Gaa;
     else if (GAa > GAA)         mymax = GAa;
     else                        mymax = GAA;
-    
+
     if(mymax<MINLIKE){
         Gaa = 0;
         GAa = 0;
@@ -203,7 +287,7 @@ inline double getLikelihoods(double *L012, double *like, int i, int AA_offset, i
         GAA=GAA-mymax;
         //totmax = totmax + mymax;
     }
-    
+
     if(underFlowProtect==0){//no protection
       L012[0]=exp(Gaa);      L012[1]=exp(GAa);      L012[2]=exp(GAA);
     }
@@ -224,7 +308,7 @@ double findMax(double *array, int start, int end){
   return mmax;
 }
 
-void dynamic(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_offset, int aa_offset, int underFlowProtect){
+void dynamic(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_offset, int aa_offset, int underFlowProtect,realRes2 *r,int siteid){
     int nChr=2*nInd;
     int nBins=nChr+1;
     double mymax,totmax;
@@ -232,11 +316,11 @@ void dynamic(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_off
     double hj[nBins];
     for(int i=0;i<nBins;i++) hj[i]=.0;
     totmax=0.0;
-    
+
     // Update hj for j=0
     mymax=getLikelihoods(hj,like,0,AA_offset,Aa_offset,aa_offset,underFlowProtect);
     totmax+=mymax;
-    
+
     // Update hj for j>0
     for(int j=1 ; j<nInd ;j++) {//for each individual...
         mymax=getLikelihoods(L012,like,j,AA_offset,Aa_offset,aa_offset,underFlowProtect);
@@ -248,12 +332,19 @@ void dynamic(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_off
         hj[1] = L012[0]*hj[1]+L012[1]*hj[0];
         hj[0] = L012[0]*hj[0];
     } //end of individulas; if underflow protect then hj is in logspace
-    
+
     // Normalize hj - log(hj[i])=log(Zn[i]/(2n,i)) + Add it to sumMinors (in normal space)
     for(int i=0;i<nBins;i++) sumMinors[i] += exp(log(hj[i])-lbico(nChr,i)+totmax);
+
+    // Set offset and Kval
+    r->offset[siteid]=0;
+    r->Kval[siteid]=nBins;
+
 }
 
-void dynamicAdaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_offset, int aa_offset, int underFlowProtect){
+void dynamicAdaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_offset, int aa_offset, int underFlowProtect,realRes2 *r,int siteid){
+
+  //fprintf(stderr,"[%s]\n",__FUNCTION__);
 
     double epsilon=0.000001; //10^(-6)
     int nchrom=2*nInd;
@@ -265,33 +356,33 @@ void dynamicAdaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, i
     double hj[nBins];
     for(int i=0;i<nBins;i++) hj[i]=.0;
     totmax=0.0;
-    
+
     // Update hj for j=0
     mymax=getLikelihoods(hj,like,0,AA_offset,Aa_offset,aa_offset,underFlowProtect);
     totmax+=mymax;
 
     from=0; to=2;
-    
+
     // Update hj for i>0
     for(int j=1 ; j<nInd ;j++) {
         mymax=getLikelihoods(L012,like,j,AA_offset,Aa_offset,aa_offset,underFlowProtect);
         totmax+=mymax;
         nChr=2*(j+1);
-     	GT=0; 
+     	GT=0;
 	l1=L012[1]/2.0;
         if(l1>L012[0] && l1>L012[2]) GT=1;
         else if(L012[2]>L012[0] && L012[2]>l1) GT=2;
-  
-        
+
+
         // range
         fromOld=from;
         from+=GT; to+=GT;
-        
+
         // Check point (left boundary)
         if(from>0){
             if(from>1) checkVal = L012[2]*hj[from-2]+L012[1]*hj[from-1]+L012[0]*hj[from];
             else       checkVal = L012[0]*hj[1]+L012[1]*hj[0];
-            
+
             while(checkVal>epsilon) {
                 from--;
                 if(from==0) break;
@@ -299,17 +390,17 @@ void dynamicAdaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, i
                 else       checkVal = L012[0]*hj[1]+L012[1]*hj[0];
             }
         }
-        
+
         // Check point (right boundary)
         if(to<nChr){
             checkVal = L012[2]*hj[to-2]+L012[1]*hj[to-1]+L012[0]*hj[to];
             while(checkVal>epsilon) {
                 to++;
                 if(to==nChr) break;
-                checkVal = L012[2]*hj[to-2]+L012[1]*hj[to-1]+L012[0]*hj[to];            
+                checkVal = L012[2]*hj[to-2]+L012[1]*hj[to-1]+L012[0]*hj[to];
 	    }
         }
-	
+
         //update
         From=fmax(2,from);
         for(int k=to; k>=From;k--){
@@ -325,14 +416,20 @@ void dynamicAdaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, i
             fromOld++;
         }
     }
-    
+
     // Add it to sumMinors (in normal space)
     for(int k=from; k<=to; k++) sumMinors[k] += exp(log(hj[k])-lbico(nchrom,k)+totmax);
+
+    // Store the offset and Kval
+    r->offset[siteid]=from;
+    r->Kval[siteid]=to-from;
+
+
 }
 
 
 
-void rescaledDynamic(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_offset, int aa_offset, int underFlowProtect){
+void rescaledDynamic(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_offset, int aa_offset, int underFlowProtect,realRes2 *r,int siteid){
     int nChrom=2*nInd;
     int nBins=nChrom+1;
     int nChr;
@@ -349,7 +446,7 @@ void rescaledDynamic(double *like, double *sumMinors, int nInd,int AA_offset, in
     hj[1] /=2.0;
     totmax+=mymax;
     nChr=2;
-    
+
     // Update hj for i>0
     rescalingFactor=0;
     for(int j=1 ; j<nInd ;j++) {
@@ -376,10 +473,15 @@ void rescaledDynamic(double *like, double *sumMinors, int nInd,int AA_offset, in
      // Rescale hj + Add it to sumMinors (in normal space)
     for(int k=0; k<nBins; k++)
         sumMinors[k] += exp(log(hj[k])+totmax+rescalingFactor);
+
+    // Store the offset and Kval
+    r->offset[siteid]=0;
+    r->Kval[siteid]=nBins;
+
 }
 
 
-void adaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_offset, int aa_offset, int underFlowProtect){
+void adaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_offset, int aa_offset, int underFlowProtect,realRes2 *r,int siteid){
     //fprintf(stderr,"Adaptive K algorithm\n");
     double epsilon=1e-6; //10^(-6)
     int nBins=2*nInd+1;
@@ -389,14 +491,14 @@ void adaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_o
     // Initialize hj
     double hj[nBins];    for(int i=0;i<nBins;i++) hj[i]=.0;
     totmax=0.0;
-    
+
     // Update hj for j=0
     mymax=getLikelihoods(hj,like,0,AA_offset,Aa_offset,aa_offset,underFlowProtect);
     hj[1] /= 2.0;
     totmax+=mymax;
     nChr=2;
     from=0; to=2;
-    
+
     // Update hj for i>0
     rescalingFactor=0;
     for(int j=1 ; j<nInd ;j++) {
@@ -410,23 +512,23 @@ void adaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_o
         mymax=getLikelihoods(L012,like,j,AA_offset,Aa_offset,aa_offset,underFlowProtect);
         totmax+=mymax;
         nChr=2*(j+1); denom=1.0/(nChr*(nChr-1));
-        
-	GT=0; 
+
+	GT=0;
 	l1=L012[1]/2.0;
         if(l1>L012[0] && l1>L012[2]) GT=1;
         else if(L012[2]>L012[0] && L012[2]>l1) GT=2;
-        
+
         // range
         fromOld=from;
         from+=GT; to+=GT;
-        
+
         // Check point (left boundary)
         if(from>0){
             if(from>1)
                 checkVal = ((nChr-from)*(nChr-from-1)*L012[0]*hj[from]+from*(nChr-from)*L012[1]*hj[from-1]+from*(from-1)*L012[2]*hj[from-2])*denom;
             else
                 checkVal = ((nChr-2)*L012[0]*hj[1]+L012[1]*hj[0])/nChr;
-                
+
             while(checkVal>epsilon) {
                     from--;
                     if(from==0) break;
@@ -436,7 +538,7 @@ void adaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_o
                         checkVal = ((nChr-2)*L012[0]*hj[1]+L012[1]*hj[0])/nChr;
             }
         }
-        
+
         // Check point (right boundary)
         if(to<nChr){
             checkVal = ((nChr-to)*(nChr-to-1)*L012[0]*hj[to]+to*(nChr-to)*L012[1]*hj[to-1]+to*(to-1)*L012[2]*hj[to-2])*denom;
@@ -447,7 +549,7 @@ void adaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_o
             }
         }
         //fprintf(stderr,"%d: %d - %d\n",j+1,from,to);
-        
+
         //update
         From=fmax(2,from);
         for(int k=to; k>=From;k--){
@@ -463,21 +565,26 @@ void adaptiveK(double *like, double *sumMinors, int nInd,int AA_offset, int Aa_o
             fromOld++;
         }
     }
-    
+
     // Rescale hj + Add it to sumMinors (in normal space)
     for(int k=from; k<=to; k++)
         sumMinors[k] += exp(log(hj[k])+totmax+rescalingFactor);
+
+    // Store the offset and Kval
+    r->offset[siteid]=from;
+    r->Kval[siteid]=to-from;
+
 }
 
 void abcSaf2::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes2 *r,int noTrans) {
-    // fprintf(stderr,"[%s]\n",__FUNCTION__);
+  //fprintf(stderr,"[%s]\n",__FUNCTION__);
     int myCounter =0;
     if(anc==NULL||liks==NULL){
         fprintf(stderr,"problems receiving data in [%s] will exit (likes=%p||ancestral=%p)\n",__FUNCTION__,liks,anc);
         exit(0);
     }
     double sumMinors[2*numInds+1];  //the sum of the 3 different minors
-    
+
     for(int it=0; it<nsites; it++) {//loop over sites
         double *like = liks[it]; //[EJ]
         int major_offset = anc[it];
@@ -488,7 +595,7 @@ void abcSaf2::algoJoint(double **liks,char *anc,int nsites,int numInds,int under
         //set the resultarray to zeros
         for(int sm=0 ; sm<(2*numInds+1) ; sm++ )
             sumMinors[sm] = 0;
-        
+
         //loop through the 3 different minors
         for(int minor_offset=0;minor_offset<4;minor_offset++) {
             if(minor_offset == major_offset)
@@ -499,22 +606,25 @@ void abcSaf2::algoJoint(double **liks,char *anc,int nsites,int numInds,int under
                 if((major_offset==1&&minor_offset==3)||(major_offset==3&&minor_offset==1))
                     continue;
             }
-           
+
             //hook for only calculating one minor
             int Aa_offset = angsd::majorminor[minor_offset][major_offset];//0-9
             int AA_offset = angsd::majorminor[minor_offset][minor_offset];//0-9
             int aa_offset = angsd::majorminor[major_offset][major_offset];//0-9
-            //      fprintf(stderr,"%d:%d\t%d\t%d\n",major_offset,Aa_offset,AA_offset,aa_offset);
-            
-            //--------------part two ------------------------//
-            if(mode==0)      dynamic(like,sumMinors,numInds,AA_offset,Aa_offset,aa_offset,underFlowProtect);          //[EJ]
-	    else if(mode==1) rescaledDynamic(like,sumMinors,numInds,AA_offset,Aa_offset,aa_offset,underFlowProtect);  //[EJ]
 
-	    else if(mode==2) adaptiveK(like,sumMinors,numInds,AA_offset,Aa_offset,aa_offset,underFlowProtect);        //[EJ]
-            else if(mode==3) dynamicAdaptiveK(like,sumMinors,numInds,AA_offset,Aa_offset,aa_offset,underFlowProtect);        //[EJ]
+            //fprintf(stderr,"%d:%d\t%d\t%d\n",major_offset,Aa_offset,AA_offset,aa_offset);
+
+            //--------------part two ------------------------//
+            if(mode==0)  dynamicAdaptiveK(like,sumMinors,numInds,AA_offset,Aa_offset,aa_offset,underFlowProtect,r,it);        //[EJ]
+	    else if(mode==1) rescaledDynamic(like,sumMinors,numInds,AA_offset,Aa_offset,aa_offset,underFlowProtect,r,it);  //[EJ]
+	    else if(mode==2) adaptiveK(like,sumMinors,numInds,AA_offset,Aa_offset,aa_offset,underFlowProtect,r,it);        //[EJ]
+            else if(mode==3) dynamic(like,sumMinors,numInds,AA_offset,Aa_offset,aa_offset,underFlowProtect,r,it); // Original DP[EJ]
+            // Note: ordering reset by JN such that default is mode 0, but modes
+            // 1,2,3 are "easter eggs"
+
             //------------- end of part two -----------------------------------------------//
 #if 0
-            for(int ii=0;ii<10*numInds;ii++) fprintf(stdout,"%f\t",liks[it][ii]);
+            for(int ii=0;ii<1*numInds;ii++) fprintf(stdout,"%f\t",liks[it][ii]);
 #endif
         }
 
@@ -524,11 +634,14 @@ void abcSaf2::algoJoint(double **liks,char *anc,int nsites,int numInds,int under
          1. log scaling everyting
          2. rescaling to the most likely in order to avoid underflows in the optimization
          3. we might do a fold also.
-         
+
          */
-        
+
+        //fprintf(stderr,"it: %d\n",it);
+
         if(fold) {
             int newDim = numInds+1;
+
             for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
                 sumMinors[i] = log(sumMinors[i] + sumMinors[2*numInds-i]);//THORFINN NEW
             sumMinors[newDim-1] = log(sumMinors[newDim-1])+log(2.0);
@@ -537,8 +650,18 @@ void abcSaf2::algoJoint(double **liks,char *anc,int nsites,int numInds,int under
                 r->oklist[it] = 2;
             else{
                 r->oklist[it] = 1;
-                r->pLikes[myCounter] =new double[numInds+1];
-                memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(numInds+1));
+
+                if(outputBanded){
+                  // [JN] For banded output format we need not use as
+                  // much memory.  This is compact version.
+                  // Declare mem for only Kval worth values
+                  // Copy only banded area of sumMinors over
+                  r->pLikes[myCounter] = new double[(r->Kval[it])];
+                  memcpy(r->pLikes[myCounter],&sumMinors[r->offset[it]],sizeof(double)*(r->Kval[it]));
+                }else{ // original
+                  r->pLikes[myCounter] =new double[numInds+1];
+                  memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(numInds+1));
+                }
                 myCounter++;
             }
         }else{
@@ -549,11 +672,17 @@ void abcSaf2::algoJoint(double **liks,char *anc,int nsites,int numInds,int under
                 r->oklist[it] = 2;
             else{
                 r->oklist[it] = 1;
-                r->pLikes[myCounter] =new double[2*numInds+1];
-                memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
+
+                if(outputBanded){ // See note above in folded section
+                  r->pLikes[myCounter] = new double[(r->Kval[it])];
+                  memcpy(r->pLikes[myCounter],&sumMinors[r->offset[it]],sizeof(double)*(r->Kval[it]));
+                }else{ // original
+                  r->pLikes[myCounter] =new double[2*numInds+1];
+                  memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
+                }
                 myCounter++;
             }
-        
+
 	    #if 0
             // [EJ] Print output to STD ERR
             fprintf(stdout,"%d\t",it+1);//[EJ]
@@ -563,6 +692,6 @@ void abcSaf2::algoJoint(double **liks,char *anc,int nsites,int numInds,int under
 	    #endif
 	}
     }
-    
+
 }
 

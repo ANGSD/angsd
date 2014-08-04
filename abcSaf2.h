@@ -1,13 +1,21 @@
 
-typedef struct{
+#include <assert.h>
+ typedef struct{
   char *oklist;//<- {0,1,2}, length=numSites, 0 don't keep 1 do keep 2 error
-  double **pLikes;
+  int *offset;  // Will hold the per site offset value for where the band of
+                 // non-zero values begins [JN]
+  int *Kval;    // Will hold the length of the band for that site. [JN]
+  double **pLikes;  // Will hold likleihood values for that section of the band
 }realRes2;
+
+//double &GetLike(const int site, const int n);
 
 
 class abcSaf2 : public abc{
   int doSaf2;
-  FILE *outfileSFS;
+  bool outputBanded; // [JN]
+  bool outputGz;
+  gzFile outfileSFS;
   gzFile outfileSFSPOS;
   int underFlowProtect;
   int fold;
@@ -15,9 +23,12 @@ class abcSaf2 : public abc{
   int noTrans;
   char *anc;
 
+
   int mode; //[EJ]
   int newDim;
   void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes2 *r,int noTrans);
+
+
 public:
   //none optional stuff
   FILE *outfile;
@@ -28,7 +39,8 @@ public:
   void clean(funkyPars *pars);
   void print(funkyPars *pars);
   void printArg(FILE *argFile);
+  void printSparse(funkyPars *p,int index,gzFile outfileSFS,gzFile outfileSFSPOS,char *chr);
 
-  
+
 };
 
