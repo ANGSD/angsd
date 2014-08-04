@@ -218,7 +218,7 @@ void abcSaf2::printSparse(funkyPars *p,int index,gzFile outfileSFS,gzFile outfil
         myCounter++;
 
     // output numSites
-    fprintf(stderr,"\nOutputting sparse version of saf file with %d ok sites out of %d\n",myCounter,p->numSites);
+    //fprintf(stderr,"\nOutputting sparse version of saf file with %d ok sites out of %d\n",myCounter,p->numSites);
 
     gzwrite(outfileSFS,&myCounter,sizeof(int));
 
