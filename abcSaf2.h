@@ -14,7 +14,6 @@
 class abcSaf2 : public abc{
   int doSaf2;
   bool outputBanded; // [JN]
-  bool outputGz;
   gzFile outfileSFS;
   gzFile outfileSFSPOS;
   int underFlowProtect;

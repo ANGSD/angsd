@@ -18,7 +18,7 @@ supersim: supersim.cpp rbeta.cpp
 contamination: contamination.cpp 
 	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination
 
-realSFS: realSFS.cpp
+realSFS: realSFS.cpp realSFS_saf2.cpp
 	$(CXX) $(FLAGS) realSFS.cpp bfgs.cpp -o realSFS -lz -lpthread -Wno-write-strings
 	cp realSFS emOptim2
 smartCount:	smartCount.c ../bgzf.o ../knetfile.o

@@ -85,7 +85,9 @@ int main_1dsfs_v2(const char * fname1, int chr1,long int nSites,int nThreads,cha
   Matrix<double> GL1;
   GL1=alloc(nSites,dim);
   gz1=getGz(fname1);
-
+  // Skip filetype safv2 string
+  gzseek(gz1,8*sizeof(char),SEEK_SET);
+  
 
   double *sfs=new double[dim];
 
@@ -98,6 +100,11 @@ int main_1dsfs_v2(const char * fname1, int chr1,long int nSites,int nThreads,cha
     }else{
       readGL(gz1,nSites,chr1,GL1);
     }
+#if 0
+    for(int s=0;s<GL1.x;s++)
+      fwrite(GL1.mat[s],sizeof(double),GL1.y,stdout);
+    exit(0);
+#endif
 
     if(GL1.x==0)
       break;
@@ -153,98 +160,61 @@ int main_1dsfs_v2(const char * fname1, int chr1,long int nSites,int nThreads,cha
 // Note the new format encodes Nsites per "chunk"
 // so we need to loop through chunks summing Nsites
 size_t calcNsitesBanded(const char *fname,int nChr){
-
-  size_t nbytes = fexists(fname)?fsize(fname):0;
-  int nSites;
+  size_t nSites=0;
   int offset;
   int len;
-  int nSitesTotal=0;
-  int ReadBytes;
   gzFile gz=Z_NULL;
-
-  gz=gzopen(fname,"r");
+  if(((gz=gzopen(fname,"r")))==Z_NULL){
+    fprintf(stderr,"Problem opening file: \'%s\'\n",fname);
+    exit(0);
+  }
 
   // Skip filetype safv2 string.
   gzseek(gz,8*sizeof(char),SEEK_SET);
-
-  // Begin reading chunks
-  while(gzread(gz,&nSites,sizeof(int))==sizeof(int)){
-    //gzread(gz,&nSites,sizeof(int));
-    //fprintf(stdout,"nSites = %d\n",nSites);
-    nSitesTotal+=nSites;
-    for(int i=0;i<nSites;i++){
-      gzread(gz,&offset,sizeof(int));
-      //fprintf(stdout,"Site %d of %d Offset = %d\n",i+1, nSites,offset);
-      gzread(gz,&len,sizeof(int));
-      //fprintf(stdout,"Site %d of %d Length = %d\n",i+1,nSites,len);
-      gzseek(gz,len*sizeof(double),SEEK_CUR);
-      //fprintf(stdout,"Site %d of %d Skipping over vector...\n",i+1,nSites);
-    }
+  while(gzread(gz,&offset,sizeof(int))){
+    gzread(gz,&len,sizeof(int));
+    gzseek(gz,len*sizeof(double),SEEK_CUR);
+    nSites++;
   }
 
-  if(nSitesTotal<=0){
-    fprintf(stderr,"saffile: %s looks broken?\n",fname);
-    exit(0);
-  }
-  return nSitesTotal;
+  return nSites;
 }
 
 
 void readGLBanded(gzFile gz,size_t nSites,int nChr,Matrix<double> &ret){
-
-  int nSitesPerChunk;
+  size_t s=0;
   int offset;
   int len;
-  int bytesread;
-  //  fprintf(stderr,"[%s] fname:%s nSites:%d nChr:%d\n",__FUNCTION__,fname,nSites,nChr);
-  ret.x=nSites;
+  ret.x=s;
   ret.y=nChr+1;
 
 
-  // Skip filetype safv2 string
-  gzseek(gz,8*sizeof(char),SEEK_SET);
 
-  size_t i=0;
+
   // While still reading in all sites
-  while(SIG_COND&&i<nSites){
-
-    // Read in the start of a chunk
-    bytesread=gzread(gz,&nSitesPerChunk,sizeof(int));
-    if(bytesread!=sizeof(int)){
-      fprintf(stderr,"Problem reading chunk from file, please check input.  Note thus far have read %lu of total of %lu sites.\n",i,nSites);
-      exit(0);
-    }
-
-    // For each site within a chunk
-    for(int c=0;c<nSitesPerChunk;c++){
-      gzread(gz,&offset,sizeof(int));
+  while(SIG_COND&&s<nSites&&gzread(gz,&offset,sizeof(int))){
+      
       gzread(gz,&len,sizeof(int));
 
       // Initialize all values below offset
-      for(int j=0;j<offset;j++)
-        ret.mat[i][j]=0.0;
+      for(int i=0;i<offset;i++)
+        ret.mat[s][i]=0.0;
 
       // Set the len values starting from offset based on file
-      gzread(gz,&ret.mat[i][offset],sizeof(double)*len);
+      gzread(gz,ret.mat[s]+offset,sizeof(double)*len);
       // Exponentiate values in band
-      for(int j=offset;j<offset+len;j++)
-        ret.mat[i][j]=exp(ret.mat[i][j]);
+      for(int i=offset;i<offset+len;i++)
+        ret.mat[s][i]=exp(ret.mat[s][i]);
 
       // Initialize all values to the "right" of the band
-      for(int j=offset+len;j<nChr+1;j++)
-        ret.mat[i][j]=0.0;
+      for(int i=offset+len;i<nChr+1;i++)
+        ret.mat[s][i]=0.0;
 
-      //if(i>1666269)
-      //  for(size_t j=0;j<nChr+1;j++){
-      //    fprintf(stdout,"%lu %lu %g\n",i+c,j,ret.mat[i][j]);
-      //  }
-
-    }
-    // increment site counter
-    i+=nSitesPerChunk;
+      s++;
   } // Finish loop
-
-
+  fprintf(stderr,"done reading ret.x=s=%zu\n",s );
+  ret.x=s;
+  //if we killed program lets exit
   if(SIG_COND==0)
     exit(0);
 

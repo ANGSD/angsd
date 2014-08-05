@@ -81,7 +81,6 @@ abcSaf2::abcSaf2(const char *outfiles,argStruct *arguments,int inputtype){
   fold =0;
   isSim =0;
   outputBanded=1;
-  outputGz=1;
 
   //from command line
   anc=NULL;
@@ -206,46 +205,17 @@ void abcSaf2::printSparse(funkyPars *p,int index,gzFile outfileSFS,gzFile outfil
 
   realRes2 *r=(realRes2 *) p->extras[index];
   int id=0;
-  int myCounter=0;
-  if(outputGz){
-
-
-
-
-    // One loop to get number of ok sites per chunk
-    for(int i=0;i<p->numSites;i++)
-      if(r->oklist[i]==1)
-        myCounter++;
-
-    // output numSites
-    //fprintf(stderr,"\nOutputting sparse version of saf file with %d ok sites out of %d\n",myCounter,p->numSites);
-
-    gzwrite(outfileSFS,&myCounter,sizeof(int));
-
-    // output site likelihoods in banded format
-    for(int i=0;i<p->numSites;i++){
-
-      if(r->oklist[i]==1){
-        gzwrite(outfileSFS,&r->offset[i],sizeof(int));
-        gzwrite(outfileSFS,&r->Kval[i],sizeof(int));
-        gzwrite(outfileSFS,r->pLikes[id++],sizeof(double)*r->Kval[i]);
-      }
-
+ 
+  // output site likelihoods in banded format
+  for(int i=0;i<p->numSites;i++){
+    if(r->oklist[i]==1){
+      gzwrite(outfileSFS,&r->offset[i],sizeof(int));
+      gzwrite(outfileSFS,&r->Kval[i],sizeof(int));
+      gzwrite(outfileSFS,r->pLikes[id++],sizeof(double)*r->Kval[i]);
     }
-
-
+    
   }
-  /*else{  // deprecated before it even saw the light of day... moved to gz output
-    // Loop over sites printing likelihood
-    for(int s=0; s<p->numSites;s++){
-      if(r->oklist[s]==1){
-        fwrite(&r->offset[s],sizeof(int),1, outfileSFS);
-        fwrite(&r->Kval[s],sizeof(int),1, outfileSFS);
-        fwrite(r->pLikes[id++],sizeof(double),r->Kval[s],outfileSFS);
-      }
-    }
-    }*/
-
+    
   kstring_t kbuf;kbuf.s=NULL;kbuf.l=kbuf.m=0;
   for(int i=0;i<p->numSites;i++)
     if(r->oklist[i]==1)
