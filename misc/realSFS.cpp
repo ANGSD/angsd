@@ -33,7 +33,7 @@
 #include "bfgs.h"
 #include "realSFS.h"
 #include "realSFS_saf2.cpp"
-
+#define LENS 4096
 
 const char*fname1 = NULL;
 const char*fname2 = NULL;//only used for 2dsfs
@@ -52,6 +52,7 @@ size_t nSites = 0;
 int doBFGS = 0;//defaults is to use EM-optimization
 int calcLike =0;//if a sfs input file has been supplied, should we just print the likelihood
 int noGrad = 0;//should we use gradients for the bfgs.
+int isList = 0;
 pthread_t *thd=NULL;
 
 
@@ -67,15 +68,35 @@ size_t fsize(const char* fname){
   stat(fname,&st);
   return st.st_size;
 }
-
-size_t calcNsites(const char *fname,int nChr){
-  
+size_t subfun(const char *fname,int nChr){
   size_t nbytes = fexists(fname)?fsize(fname):0;
   if(nbytes %(sizeof(double)*(nChr+1))){
     fprintf(stderr,"saffile: %s looks broken?\n",fname);
     exit(0);
   }
   return nbytes/sizeof(double)/(nChr+1);
+}
+
+size_t calcNsites(const char *fname,int nChr){
+  //  fprintf(stderr,"[%s] fname: %s nChr: %d isList:%d\n",__FUNCTION__,fname,nChr,isList);
+  if(isList==0)
+    return subfun(fname,nChr);
+  else{
+    gzFile gz=getGz(fname);
+    char buf[LENS];
+    size_t tot=0;
+    while(gzgets(gz,buf,LENS)){
+      //  fprintf(stderr,"buf:%s\n",buf);
+      for(char *tok = strtok(buf,"\n\t ");tok!=NULL;tok=strtok(NULL,"\n\t ")){
+	if(tok[0]=='#')
+	  continue;
+	size_t per_file = subfun(buf,nChr);
+	tot+=per_file;
+      }
+    }
+    gzclose(gz);
+    return tot;
+  }
 }
 
 
@@ -157,7 +178,10 @@ gzFile getGz(const char *pname){
     fprintf(stderr,"Problem opening file: %s\n",pname);
     exit(0);
   }
-  gzFile fp = gzopen(pname,"r");
+  gzFile fp = Z_NULL;
+  if(((fp=gzopen(pname,"r")))==Z_NULL){
+    fprintf(stderr,"Problem opening file: \'%s\'\n",pname);
+  }
   return fp;
 } 
 
@@ -183,6 +207,33 @@ void readGL(gzFile fp,size_t nSites,int nChr,Matrix<double> &ret){
   }
   
   ret.x=i;
+  if(SIG_COND==0)
+    exit(0);
+  
+}
+
+void readGL2(gzFile fp,size_t nSites,int nChr,Matrix<double> &ret){
+  //  fprintf(stderr,"[%s] fname:%s nSites:%d nChr:%d\n",__FUNCTION__,fname,nSites,nChr);
+  ret.y=nChr+1;
+  char buf[LENS];
+  size_t i=0;
+  while(gzgets(fp,buf,LENS)){
+    //strange construct for strtok, because firstcall if with buf, rest with NULL
+    for(char *tok = strtok(buf,"\t\n ");tok!=NULL;tok=strtok(NULL,"\t\n ")){
+      if(tok[0]=='#')
+	continue;
+      gzFile gz = getGz(buf);
+    
+      while(SIG_COND&&gzread(gz,ret.mat[i],sizeof(double)*(nChr+1))){
+	for(size_t j=0;j<nChr+1;j++)
+	  ret.mat[i][j] = exp(ret.mat[i][j]);
+	i++;
+      }
+      fprintf(stderr,"Done reading file: \'%s\'\n",buf);
+      gzclose(gz);
+      ret.x=i;
+    }
+  }
   if(SIG_COND==0)
     exit(0);
   
@@ -264,6 +315,7 @@ void readSFS(const char*fname,int hint,double *ret){
   fclose(fp);
 }
 
+
 void getArgs(int argc,char **argv){
   if(argc==0)
     return;
@@ -273,23 +325,25 @@ void getArgs(int argc,char **argv){
   }
   while(*argv){
     //  fprintf(stderr,"%s\n",*argv);
-    if(!strcmp(*argv,"-tole"))
+    if(!strcasecmp(*argv,"-tole"))
       tole = atof(*(++argv));
-    else  if(!strcmp(*argv,"-P"))
+    else  if(!strcasecmp(*argv,"-P"))
       nThreads = atoi(*(++argv));
-    else  if(!strcmp(*argv,"-maxIter"))
+    else  if(!strcasecmp(*argv,"-maxIter"))
       maxIter = atoi(*(++argv));
-    else  if(!strcmp(*argv,"-nSites"))
+    else  if(!strcasecmp(*argv,"-nSites"))
       nSites = atoi(*(++argv));
-    else  if(!strcmp(*argv,"-use-BFGS"))
+    else  if(!strcasecmp(*argv,"-use-BFGS"))
       doBFGS = atoi(*(++argv));
-    else  if(!strcmp(*argv,"-calcLike"))
+    else  if(!strcasecmp(*argv,"-calcLike"))
       calcLike = atoi(*(++argv));
-    else  if(!strcmp(*argv,"-noGrad"))
+    else  if(!strcasecmp(*argv,"-noGrad"))
       noGrad = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-isList"))
+      isList = atoi(*(++argv));
     
     
-    else  if(!strcmp(*argv,"-start")){
+    else  if(!strcasecmp(*argv,"-start")){
       sfsfname = *(++argv);
     }else{
       fprintf(stderr,"Unknown arg: %s\n",*argv);
@@ -833,6 +887,7 @@ int main_2dsfs(int argc,char **argv){
   if(nSites==0){
     if(fsize(fname1)+fsize(fname2)>getTotalSystemMemory())
       fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
+    //this doesnt make sense if ppl supply a filelist containing safs
      nSites=calcNsites(fname1,chr1);
   }
   fprintf(stderr,"fname1:%sfname2:%s chr1:%d chr2:%d startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",fname1,fname2,chr1,chr2,sfsfname,nThreads,tole,maxIter,nSites);
@@ -866,8 +921,14 @@ int main_2dsfs(int argc,char **argv){
   
   double *sfs = new double[dim];
   while(1){
-    readGL(gz1,nSites,chr1,GL1);
-    readGL(gz2,nSites,chr2,GL2);
+    if(isList ==0){
+      readGL(gz1,nSites,chr1,GL1);
+      readGL(gz2,nSites,chr2,GL2);
+    }else{
+      readGL2(gz1,nSites,chr1,GL1);
+      readGL2(gz2,nSites,chr2,GL2);
+    }
+      
     assert(GL1.x==GL2.x);
     if(GL1.x==0)
       break;
@@ -900,6 +961,8 @@ int main_2dsfs(int argc,char **argv){
       fprintf(stdout,"\n");
     }
 #endif
+    if(isList==1)
+      break;
   }
   dalloc(GL1,nSites);
   dalloc(GL2,nSites);
@@ -929,6 +992,7 @@ int main_1dsfs(int argc,char **argv){
   if(nSites==0){//if no -nSites is specified
     if(fsize(fname1)>getTotalSystemMemory())
       fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
+    //this doesnt make sense if ppl supply a filelist containing safs
     nSites=calcNsites(fname1,chr1);
   }
   fprintf(stderr,"fname1:%s nChr:%d startsfs:%s nThreads:%d tole=%f maxIter=%d nSites=%lu\n",fname1,chr1,sfsfname,nThreads,tole,maxIter,nSites);
@@ -943,8 +1007,11 @@ int main_1dsfs(int argc,char **argv){
   gzFile gz1=getGz(fname1);  
   double *sfs=new double[dim];
   
-  while(1){
-    readGL(gz1,nSites,chr1,GL1);
+  while(1) {
+    if(isList==0)
+      readGL(gz1,nSites,chr1,GL1);
+    else
+      readGL2(gz1,nSites,chr1,GL1);
     if(GL1.x==0)
       break;
     fprintf(stderr,"dim(GL1)=%zu,%zu\n",GL1.x,GL1.y);
@@ -988,6 +1055,8 @@ int main_1dsfs(int argc,char **argv){
     fprintf(stdout,"\n");
     fflush(stdout);
 #endif
+    if(isList==1)
+      break;
   }
   dalloc(GL1,nSites);
   gzclose(gz1);
@@ -1026,7 +1095,7 @@ int main(int argc,char **argv){
 
   }
 
-  if(!strcmp(*argv,"2dsfs"))
+  if(!strcasecmp(*argv,"2dsfs"))
     main_2dsfs(argc,argv);
   else
     main_1dsfs(argc,argv);
