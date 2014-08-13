@@ -26,9 +26,6 @@ private:
   std::map<char*,int> mMap;
   int isSim;
   int nInd;
-  int nInd2;
-  int from;
-  int to;
   int minQ;
   argStruct *args;
   aMap *revMap;

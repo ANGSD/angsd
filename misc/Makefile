@@ -4,7 +4,7 @@ CXX=g++
 FLAGS=-O3 -D_USE_KNETFILE
 
 
-all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination
+all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl
 
 bfgs.o: bfgs.c bfgs.h
 	$(CC) $(FLAGS) -c bfgs.c -Wno-vexing-parse
@@ -17,6 +17,8 @@ supersim: supersim.cpp rbeta.cpp
 
 contamination: contamination.cpp 
 	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination
+splitgl: splitgl.c
+	$(CC) $(FLAGS) splitgl.c -lz -o splitgl
 
 realSFS: realSFS.cpp realSFS_saf2.cpp
 	$(CXX) $(FLAGS) realSFS.cpp bfgs.cpp -o realSFS -lz -lpthread -Wno-write-strings

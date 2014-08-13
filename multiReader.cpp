@@ -174,8 +174,6 @@ void multiReader::printArg(FILE *argFile){
   fprintf(argFile,"\t-pileup\t%s\t(pileup Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-intName=%d\t(Assume First column is chr_position)\n",intName);
   fprintf(argFile,"\t-isSim=%d\t(Assume First column is chr_position)\n",isSim);
-  fprintf(argFile,"\t-from=%d\t(Assume First column is chr_position)\n",from);
-  fprintf(argFile,"\t-to=%d\t(Assume First column is chr_position)\n",to);
   fprintf(argFile,"\t-nInd=%d\t(Assume First column is chr_position)\n",nInd);
   fprintf(argFile,"\t-minQ=%d\t(minium q only used in pileupreader)\n",minQ);
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
@@ -192,8 +190,6 @@ void multiReader::getOptions(argStruct *arguments){
   intName=angsd::getArg("-intName",intName,arguments);
   isSim=angsd::getArg("-isSim",intName,arguments);
   nInd=angsd::getArg("-nInd",nInd,arguments);
-  from=angsd::getArg("-from",from,arguments);
-  to=angsd::getArg("-to",to,arguments);
   arguments->nInd = nInd;
   //read fai if suppplied (used by other than native bam readers)
   
@@ -214,8 +210,6 @@ multiReader::multiReader(int argc,char**argv){
   minQ = MINQ;
 
   nInd =0;
-  nInd2=-1;
-  from =to=-1;
   isSim =0;
   args=NULL;
   args = setArgStruct(argc,argv);
@@ -284,7 +278,7 @@ multiReader::multiReader(int argc,char**argv){
     break;
   }
   case INPUT_GLF:{
-    myglf = new glfReader(args->nInd,nInd2,from,to,gz,isSim);
+    myglf = new glfReader(args->nInd,gz,isSim);
     break;
   }
   case INPUT_BEAGLE:{
