@@ -33,7 +33,8 @@ struct Gamma : Gauleg18 {
 };
 
   double gammln(const double xx);
-};
+}
+
 struct Chisqdist : chisq::Gamma {
   double nu,fac;
   Chisqdist(double nnu) : nu(nnu) {

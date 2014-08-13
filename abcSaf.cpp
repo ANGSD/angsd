@@ -800,7 +800,7 @@ void print_array(FILE *fp,double *ary,int len,int doLogTransform){
 void abcSaf::run(funkyPars  *p){
   if(p->numSites==0||(doSaf==0 ))
     return;
-  //  fprintf(stderr,"-doSaf:%d\n",doSaf);
+  //  fprintf(stderr,"-doSaf:%d -p->nind:%d\n",doSaf,p->nInd);exit(0);
   if(doSaf>0&&doSaf!=3){
     realRes *r = new realRes;
     r->oklist=new char[p->numSites];
@@ -932,7 +932,7 @@ void abcSaf::print(funkyPars *p){
     realRes *r=(realRes *) p->extras[index];
     int id=0;
     //first addprior if this has been supplied
-    if(prior!=NULL){
+    if(prior!=NULL) {
       for(int s=0; s<p->numSites;s++) {
 	double *workarray = NULL;
       if(r->oklist[s]==1)
@@ -954,10 +954,10 @@ void abcSaf::print(funkyPars *p){
     }
  
 
-  if(doThetas==0)
-    printFull(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId],newDim);
-  else 
-    calcThetas(p,index,prior,theta_fp);
+    if(doThetas==0)
+      printFull(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId],newDim);
+    else 
+      calcThetas(p,index,prior,theta_fp);
   }   
 }
 
