@@ -71,6 +71,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders\t%d\tExit if difference in BAM headers\n",checkBamHeaders);
+
   fprintf(argFile,"\n");
   fprintf(argFile,"Examples for region specification:\n");
   fprintf(argFile,"\t\tchr:\t\tUse entire chromosome: chr\n");
