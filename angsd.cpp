@@ -9,7 +9,7 @@
 
 */
 
-#define VERSION 0.610
+#define VERSION 0.612
 double VERS = VERSION;
 
 #include <cassert>
