@@ -233,7 +233,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   //print header
   for(int yi=0;yi<ymat.y;yi++){
     if(doAsso==2)
-      gzprintf(MultiOutfile[yi],"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thighHe\thighHo\n");
+      gzprintf(MultiOutfile[yi],"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
     else
       gzprintf(MultiOutfile[yi],"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\n");
   }
@@ -270,7 +270,7 @@ void abcAsso::clean(funkyPars *pars){
 
   delete[] assoc->stat;
   
-
+  delete[]  assoc->highWt;
   delete[]  assoc->highHe;
   delete[]  assoc->highHo;
   
@@ -299,6 +299,7 @@ assoStruct *allocAssoStruct(){
   
   assoc->stat=NULL;
   assoc->keepInd=NULL;
+  assoc->highWt = NULL;
   assoc->highHe = NULL;
   assoc->highHo = NULL;
   
@@ -319,6 +320,7 @@ void abcAsso::run(funkyPars *pars){
     frequencyAsso(pars,assoc);
   }
   else if(doAsso==2){
+    assoc->highWt=new int[pars->numSites];
     assoc->highHe=new int[pars->numSites];
     assoc->highHo=new int[pars->numSites];
 
@@ -703,6 +705,7 @@ double abcAsso::normScoreEnv(double *post,int numInds, double *y, double *ytilde
   double *Ex = angsd::allocArray<double>(numInds,0);
   double *Ex2 = angsd::allocArray<double>(numInds,0);
   double U=0;
+  int highWT=0;
   int highHE=0;
   int highHO=0;
   
@@ -736,12 +739,15 @@ double abcAsso::normScoreEnv(double *post,int numInds, double *y, double *ytilde
     
     //Vab<-Vab+1/var*Ex[tal]*cbind(Xe[tal,])
     
+    if(post[i*3+0]>0.90)
+      highWT++;
     if(post[i*3+1]>0.90)
       highHE++;
-    if(post[i*3+0]>0.90||post[i*3+2]>0.90)
+    if(post[i*3+2]>0.90)
       highHO++;
   }//recursion done
   
+  assoc->highWt[s] = highWT;
   assoc->highHe[s] = highHE;
   assoc->highHo[s] = highHO;
   
@@ -796,7 +802,15 @@ double abcAsso::normScoreEnv(double *post,int numInds, double *y, double *ytilde
   
   double lrt =pow(U,2)/I;
 
-  if((highHE < minHigh) || (highHO<minHigh) )
+  int nGeno=0;
+  if(highWT >= minHigh)
+    nGeno++;
+  if(highHE >= minHigh)
+    nGeno++;
+  if(highHO >= minHigh)
+    nGeno++;
+
+  if(nGeno<2)
     lrt=-999;//set_snan(lrt);
   if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount)
     lrt=-999;//set_snan(lrt);      set_snan(lrt);
@@ -851,6 +865,7 @@ double abcAsso::binomScoreEnv(double *post,int numInds, double *y, double *ytild
   int rankProb=0;
 
   double U=0;
+  int highWT=0;
   int highHE=0;
   int highHO=0;
   double sumEx=0;
@@ -878,11 +893,14 @@ double abcAsso::binomScoreEnv(double *post,int numInds, double *y, double *ytild
 
     //Vba<-Vba+yTilde[i]*(1-yTilde[i])*A[i,]*Ex[i]
 
+    if(post[i*3+0]>0.9)
+      highWT++;
     if(post[i*3+1]>0.9)
       highHE++;
-    if(post[i*3+0]>0.9||post[i*3+2]>0.9)
+    if(post[i*3+2]>0.9)
       highHO++;
   }//recursion done
+  assoc->highWt[s] = highWT;
   assoc->highHe[s] = highHE;
   assoc->highHo[s] = highHO;
  
@@ -915,7 +933,14 @@ double abcAsso::binomScoreEnv(double *post,int numInds, double *y, double *ytild
 
     double lrt =pow(U,2)/I;
 
-    if(highHE <minHigh||highHO <minHigh)
+    int nGeno=0;
+    if(highWT >= minHigh)
+      nGeno++;
+    if(highHE >= minHigh)
+      nGeno++;
+    if(highHO >= minHigh)
+      nGeno++;
+    if(nGeno<2)
       lrt=-999;
     //freq*numInds*2 is the expected number of minor alleles
     if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount)
@@ -954,7 +979,7 @@ void abcAsso::printDoAsso(funkyPars *pars){
 	continue;
      } 
       if(doAsso==2){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d\t%d\n",header->name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highHe[s],assoc->highHo[s]);
+	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
 
       }else{
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",header->name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s]);

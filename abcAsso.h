@@ -5,6 +5,7 @@ typedef struct{
   double **stat;
   int **keepInd;
   int *highHe;
+  int *highWt;
   int *highHo;
 }assoStruct;
 
