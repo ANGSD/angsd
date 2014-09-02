@@ -9,8 +9,7 @@
 
 */
 
-#define VERSION 0.612
-double VERS = VERSION;
+
 
 #include <cassert>
 #include<iostream>//for printing time
@@ -23,7 +22,7 @@ double VERS = VERSION;
 #include "shared.h"
 #include "multiReader.h"
 
-
+double VERS = VERSION;
 extern std::vector <char *> dumpedFiles;
 
 int SIG_COND =1;//if we catch signal then quit program nicely
