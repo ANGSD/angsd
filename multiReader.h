@@ -2,6 +2,7 @@
 #pragma once
 #include <map>
 #include "glfReader.h"
+#include "vcfReader.h"
 #include "beagleReader.h"
 #include "argStruct.h"
 #include "mpileup.h"
@@ -15,6 +16,7 @@ private:
   int bytesPerLine;
   int nLines;
   glfReader *myglf;
+  vcfReader *myvcf;
   beagle_reader *bglObj;
   mpileup *mpil;
   char *fname;
