@@ -66,6 +66,7 @@ void setInputType(argStruct *args){
   fprintf(stderr,"glf:%d\n",INPUT_GLF);
   fprintf(stderr,"blg:%d\n",INPUT_BEAGLE);
   fprintf(stderr,"plp:%d\n",INPUT_PILEUP);
+  fprintf(stderr,"vcf:%d\n",INPUT_VCF);
 #endif
 
 
@@ -84,7 +85,21 @@ void setInputType(argStruct *args){
     }
     return;
   }
+  tmp=NULL;
+  tmp = angsd::getArg("-vcf",tmp,args);
+  if(tmp!=NULL){
+    args->inputtype=INPUT_VCF;
+    args->infile = tmp;
+    args->nams.push_back(args->infile);
+    char *tmp_fai = NULL;
+    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
+    if(tmp_fai==NULL){
+      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -vcf input\n");
+      exit(0);
 
+    }
+    return;
+  }
   tmp = angsd::getArg("-pileup",tmp,args);
   if(tmp!=NULL){
     args->inputtype=INPUT_PILEUP;
@@ -170,11 +185,12 @@ void multiReader::printArg(FILE *argFile){
   fprintf(argFile,"-nLines=%d\n",nLines);
   fprintf(argFile,"-bytesPerLine=%d\n",bytesPerLine);
   fprintf(argFile,"\t-beagle\t%s\t(Beagle Filename (can be .gz))\n",fname);
+  fprintf(argFile,"\t-vcf\t%s\t(vcf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-glf\t%s\t(glf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-pileup\t%s\t(pileup Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-intName=%d\t(Assume First column is chr_position)\n",intName);
   fprintf(argFile,"\t-isSim=%d\t(Assume First column is chr_position)\n",isSim);
-  fprintf(argFile,"\t-nInd=%d\t(Assume First column is chr_position)\n",nInd);
+  fprintf(argFile,"\t-nInd=%d\t(Number of individuals)\n",nInd);
   fprintf(argFile,"\t-minQ=%d\t(minium q only used in pileupreader)\n",minQ);
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
 }
@@ -187,10 +203,12 @@ void multiReader::getOptions(argStruct *arguments){
   fname=angsd::getArg("-pileup",fname,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
   fname=angsd::getArg("-glf",fname,arguments);
+  fname=angsd::getArg("-vcf",fname,arguments);
   intName=angsd::getArg("-intName",intName,arguments);
   isSim=angsd::getArg("-isSim",intName,arguments);
   nInd=angsd::getArg("-nInd",nInd,arguments);
   arguments->nInd = nInd;
+
   //read fai if suppplied (used by other than native bam readers)
   
   fai=angsd::getArg("-fai",fai,arguments);
@@ -200,7 +218,7 @@ void multiReader::getOptions(argStruct *arguments){
 
 
 multiReader::multiReader(int argc,char**argv){
-
+  myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;
   fai = NULL;
   bytesPerLine = 33554432 ;//2^15 about 33 megs perline/persites should be enough
   nLines=50;
@@ -226,7 +244,7 @@ multiReader::multiReader(int argc,char**argv){
   type = args->inputtype;
 
   if(args->argc==2){
-    if((!strcasecmp(args->argv[1],"-beagle"))||!strcasecmp(args->argv[1],"-glf")||(!strcasecmp(args->argv[1],"-pileup"))){
+    if((!strcasecmp(args->argv[1],"-beagle"))||!strcasecmp(args->argv[1],"-glf")||(!strcasecmp(args->argv[1],"-pileup"))||(!strcasecmp(args->argv[1],"-vcf"))){
       printArg(stdout);
       exit(0);
     }else if ((!strcasecmp(args->argv[1],"-bam"))|| (!strcasecmp(args->argv[1],"-b"))){
@@ -237,7 +255,6 @@ multiReader::multiReader(int argc,char**argv){
       return;
   }
   getOptions(args);
-
   if(fai){
     hd=getHeadFromFai(fai);
   }else{
@@ -256,9 +273,9 @@ multiReader::multiReader(int argc,char**argv){
 
 
 
-  if((type==INPUT_PILEUP||type==INPUT_GLF)){
+  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_VCF)){
     if(nInd==0){
-      fprintf(stderr,"\t-> Must supply -nInd when using raw GLF files\n");
+      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-pileup/-vcf files\n");
       exit(0);
     }
   }else
@@ -279,6 +296,10 @@ multiReader::multiReader(int argc,char**argv){
   }
   case INPUT_GLF:{
     myglf = new glfReader(args->nInd,gz,isSim);
+    break;
+  }
+  case INPUT_VCF:{
+    myvcf = new vcfReader(args->nInd,gz,bytesPerLine,args->revMap);
     break;
   }
   case INPUT_BEAGLE:{
@@ -349,6 +370,10 @@ funkyPars *multiReader::fetch(){
     fp = myglf->fetch(nLines); 
     break;
   }
+  case INPUT_VCF:{
+    fp = myvcf->fetch(nLines); 
+    break;
+  }
   case INPUT_BEAGLE:{
     fp = bglObj->fetch(nLines); 
     break;
@@ -360,7 +385,15 @@ funkyPars *multiReader::fetch(){
   }
     
   default:{
-    fprintf(stderr,"whats up\n");
+    fprintf(stderr,"Unkown inputformat: %d\n",type);
+#if 1
+  fprintf(stderr,"bam:%d\n",INPUT_BAM);
+  fprintf(stderr,"glf:%d\n",INPUT_GLF);
+  fprintf(stderr,"blg:%d\n",INPUT_BEAGLE);
+  fprintf(stderr,"plp:%d\n",INPUT_PILEUP);
+  fprintf(stderr,"vcf:%d\n",INPUT_VCF);
+#endif
+
     exit(0);
     break;
   }

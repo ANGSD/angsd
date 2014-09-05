@@ -17,8 +17,8 @@ typedef unsigned int suint;
 #define GZOPT "w6h"
 // struct for covar class - classy
 
-enum{INPUT_BAM,INPUT_GLF,INPUT_BEAGLE,INPUT_PILEUP};
-
+enum{INPUT_BAM,INPUT_GLF,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF};
+#define VERSION 0.613
 
 typedef struct {
 

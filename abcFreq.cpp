@@ -107,7 +107,7 @@ void abcFreq::getOptions(argStruct *arguments){
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
   doPost=angsd::getArg("-doPost",doPost,arguments);
   GL=angsd::getArg("-GL",GL,arguments);
-  if(inputtype!=INPUT_GLF&&(doPost &&GL==0)){
+  if(inputtype!=INPUT_VCF&&inputtype!=INPUT_GLF&&(doPost &&GL==0)){
     fprintf(stderr,"\t-> Potential problem: You are required to choose a genotype likelihood model (-GL) for estimating genotypes posteriors.\n");
     exit(0);
   } 
