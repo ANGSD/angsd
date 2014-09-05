@@ -45,6 +45,7 @@ namespace angsd {
   double addProtect3(double a,double b, double c);
   Matrix<double> getMatrix(const char *name,int doBinary,int lens);
   int fexists(const char* str);
+  double sigm(double x);
   double **get3likes(funkyPars *pars);
   double **get3likesRescale(funkyPars *pars);
   double **get3likes(funkyPars *pars,int *keepInd);
@@ -54,6 +55,7 @@ namespace angsd {
   void deleteMatrix(Matrix<double> mat);
   void printMatrix(Matrix<double> mat,FILE *file);
   void logrescale(double *ary,int len);
+  void svd_inverse(double mat[],int xLen, int yLen);
   std::vector<char*> getFilenames(const char * name,int nInd);
 
 

@@ -18,6 +18,8 @@
 #include "abcFreq.h"
 #include "abcAsso.h"
 
+
+
 void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doAsso\t%d\n",doAsso);
@@ -519,6 +521,14 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
 
 void abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
 
+  /*
+    linear regression. Fits a linear model. 
+    res is the predicted values  (eta) = X%*%coef
+    Y is the responce
+    covMatrix is the design matrix (nInd x nEnv)
+    nInd is the number of individuals
+    nEnv is the number of predictors (including the intersept)
+  */
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
 
@@ -550,7 +560,7 @@ void abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
   angsd::matinv(XtX, nEnv, nEnv, workspace);
 
 
-  //get (inv(t(X)%*%X))%*%(t(X)%*%y)
+  //get (inv(t(X)%*%X))%*%(t(X)%*%y) //this is the coef!
  for(int x=0;x<nEnv;x++)//col X
    for(int y=0;y<nEnv;y++)//row Xt
       invXtX_Xt_y[x]+=XtX[y*nEnv+x]*Xt_y[y];
@@ -563,6 +573,131 @@ void abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
      for(int x=0;x<nEnv;x++)
        res[j]+=covMatrix[x*nInd+j]*invXtX_Xt_y[x];
  
+}
+
+void abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
+
+  double tol = 1e-6;
+  /*
+    logistic regression. Fits a logistic regression model. 
+    res is the estimated coefficients
+    Y is the responce
+    covMatrix is the design matrix (nInd x nEnv)
+    nInd is the number of individuals
+    nEnv is the number of predictors (including the intersept)
+    // R code
+    getFitBin<-function(y,X){
+        b<-rep(0,ncol(X))#estimates
+	for(i in 1:20){ 
+	    eta  <- as.vector(1/(1+exp(-(X%*%b))))
+	    change<-solve(t(X*eta*(1-eta)) %*% X ) %*% t(X) %*% ( y - eta )
+	    b<-b+ change
+	    if(sum(abs(change))<1e-6)
+	        break
+	    }
+
+	b
+    }
+    ///////
+    coef<-getFitBin(y,X)
+    yTilde <- sigm(X%*%coef)
+  */
+  
+  if(doPrint)
+    fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
+
+
+  
+  double coef[nEnv];
+  double eta[nInd];
+  double Xt_y[nEnv];
+  double invXtX_Xt_y[nEnv];
+  double XtX[nEnv*nEnv];
+
+
+  for(int x=0;x<nEnv;x++)//col X
+    coef[x]=0;
+
+  for(int iter=0;iter<100;iter++){
+
+    //set to zero
+    for(int x=0;x<nEnv;x++){
+      Xt_y[x]=0;
+      invXtX_Xt_y[x]=0;
+      XtX[x]=0;
+    }
+    for(int i=0;i<nInd;i++){
+      eta[i]=0;
+    }
+
+
+    //eta <- 1/(1+exp(-(X%*%b)))
+    for(int i=0;i<nInd;i++){
+      for(int x=0;x<nEnv;x++)//col X
+      	eta[i]+=coef[x]*covMatrix[x*nInd+i];
+      eta[i] = 1.0/(1+exp(-eta[i])); 
+    }
+
+    
+
+ 
+    //get t(X) %*% ( y - eta )
+    for(int x=0;x<nEnv;x++)//col X
+      for(int i=0;i<nInd;i++)
+	Xt_y[x]+=covMatrix[x*nInd+i]*(Y[i]-eta[i]);
+
+    //get solve(t(X*eta*(1-eta)) %*% X )
+    for(int x=0;x<nEnv;x++)//col X
+      for(int y=0;y<nEnv;y++)//row Xt
+	for(int i=0;i<nInd;i++)
+	  XtX[x*nEnv+y]+=covMatrix[y*nInd+i] * eta[i] * covMatrix[x*nInd+i];
+
+    double workspace[2*nEnv];
+    //    angsd::matinv(XtX, nEnv, nEnv, workspace);
+    angsd::svd_inverse(XtX,nEnv,nEnv);
+    //S = svd_inverse(S,flag);     
+    //get (inv(t(X)%*%X))%*%(t(X)%*%y)
+    for(int x=0;x<nEnv;x++)//col X
+      for(int y=0;y<nEnv;y++)//row Xt
+	invXtX_Xt_y[x]+=XtX[y*nEnv+x]*Xt_y[y];
+
+    double diff = 0;
+    for(int x=0;x<nEnv;x++)
+      diff += fabs(invXtX_Xt_y[x]);
+  
+     for(int x=0;x<nEnv;x++)
+       coef[x]+=invXtX_Xt_y[x];
+
+     /*
+     fprintf(stdout,"iter=%d\n",iter);
+     for(int x=0;x<nEnv;x++)
+       fprintf(stdout,"%f\t",invXtX_Xt_y[x]);
+     fprintf(stdout,"diff=%f\n",diff);
+  for(int x=0;x<nEnv;x++)
+    fprintf(stdout,"%f\t",coef[x]);
+  fprintf(stdout,"\n");
+     */
+
+     if(diff<tol)
+       break;
+  }
+
+  
+  //yTilde <- X%in%coef
+  for(int j=0;j<nInd;j++)//row Xt
+    res[j]=0;
+  
+  for(int j=0;j<nInd;j++)//row Xt
+    for(int x=0;x<nEnv;x++)
+      res[j]+=covMatrix[x*nInd+j]*coef[x];
+  for(int j=0;j<nInd;j++)
+    res[j]= angsd::sigm(res[j]);
+
+  //   for(int x=0;x<nEnv;x++)
+  //   fprintf(stdout,"%f\t",coef[x]);
+  //fprintf(stdout,"\n");
+
+  
 }
 
 
@@ -659,8 +794,13 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
     for(int i=0;i<keepInd;i++)
       yfit[i]=mean;
   }
-  else
-    getFit(yfit,y,covMatrix,keepInd,nEnv);
+  else{
+    if(isBinary)
+      getFitBin(yfit,y,covMatrix,keepInd,nEnv);
+    else
+      getFit(yfit,y,covMatrix,keepInd,nEnv);
+
+  }
   
   //for(int i=0;i<keepInd;i++)
   //   fprintf(stdout,"%f\t",y[i]);
