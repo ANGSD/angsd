@@ -107,7 +107,7 @@ void abcFreq::getOptions(argStruct *arguments){
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
   doPost=angsd::getArg("-doPost",doPost,arguments);
   GL=angsd::getArg("-GL",GL,arguments);
-  if(inputtype!=INPUT_VCF&&inputtype!=INPUT_GLF&&(doPost &&GL==0)){
+  if(inputtype!=INPUT_VCF_GL&&inputtype!=INPUT_GLF&&(doPost &&GL==0)){
     fprintf(stderr,"\t-> Potential problem: You are required to choose a genotype likelihood model (-GL) for estimating genotypes posteriors.\n");
     exit(0);
   } 
@@ -188,7 +188,7 @@ void abcFreq::getOptions(argStruct *arguments){
 
   if(abs(doMaf)==0 &&doPost==0)
     return;
-  if(inputtype!=INPUT_BEAGLE&&inputtype!=0&&doMajorMinor==0){
+  if(inputtype!=INPUT_VCF_GP&&inputtype!=INPUT_BEAGLE&&inputtype!=0&&doMajorMinor==0){
     fprintf(stderr,"You must specify \'-doMajorMinor\' to infer major/minor \n");
     exit(0);
   }
@@ -197,7 +197,7 @@ void abcFreq::getOptions(argStruct *arguments){
     fprintf(stderr,"Only \'-doMaf 4\' can not be performed on posterior input\n");
     exit(0);
   }
-  if(inputtype!=INPUT_BEAGLE&&abs(doMaf)==4){
+  if(inputtype!=INPUT_BEAGLE&&inputtype!=INPUT_VCF_GP&&abs(doMaf)==4){
     fprintf(stderr,"\t \'-doMaf 4\' can only be performed on genotype probabilities provided by the user (-beagle).\n");
     exit(0);
   }
@@ -220,7 +220,7 @@ void abcFreq::getOptions(argStruct *arguments){
     exit(0);
   }
 
-  if(beagleProb && doPost==0){
+  if(beagleProb && doPost==0 &&inputtype!=INPUT_VCF_GP){
     fprintf(stderr,"Must supply -doPost 1 to write beaglestyle postprobs\n");
     exit(0);
   }
@@ -500,7 +500,6 @@ void make_post(double *like,double *post,double freqEst,int nInd){
 
 
 void abcFreq::run(funkyPars *pars) {
-
   if(doMaf==0&&doPost==0)
     return;
   freqStruct *freq = allocFreqStruct();

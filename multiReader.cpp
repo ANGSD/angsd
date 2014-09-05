@@ -81,14 +81,28 @@ void setInputType(argStruct *args){
     if(tmp_fai==NULL){
       fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -glf input\n");
       exit(0);
+    }
+    return;
+  }
+  tmp=NULL;
+  tmp = angsd::getArg("-vcf-GP",tmp,args);
+  if(tmp!=NULL){
+    args->inputtype=INPUT_VCF_GP;
+    args->infile = tmp;
+    args->nams.push_back(args->infile);
+    char *tmp_fai = NULL;
+    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
+    if(tmp_fai==NULL){
+      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -vcf input\n");
+      exit(0);
 
     }
     return;
   }
   tmp=NULL;
-  tmp = angsd::getArg("-vcf",tmp,args);
+  tmp = angsd::getArg("-vcf-GL",tmp,args);
   if(tmp!=NULL){
-    args->inputtype=INPUT_VCF;
+    args->inputtype=INPUT_VCF_GL;
     args->infile = tmp;
     args->nams.push_back(args->infile);
     char *tmp_fai = NULL;
@@ -185,7 +199,8 @@ void multiReader::printArg(FILE *argFile){
   fprintf(argFile,"-nLines=%d\n",nLines);
   fprintf(argFile,"-bytesPerLine=%d\n",bytesPerLine);
   fprintf(argFile,"\t-beagle\t%s\t(Beagle Filename (can be .gz))\n",fname);
-  fprintf(argFile,"\t-vcf\t%s\t(vcf Filename (can be .gz))\n",fname);
+  fprintf(argFile,"\t-vcf-GL\t%s\t(vcf Filename (can be .gz))\n",fname);
+  fprintf(argFile,"\t-vcf-GP\t%s\t(vcf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-glf\t%s\t(glf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-pileup\t%s\t(pileup Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-intName=%d\t(Assume First column is chr_position)\n",intName);
@@ -203,7 +218,8 @@ void multiReader::getOptions(argStruct *arguments){
   fname=angsd::getArg("-pileup",fname,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
   fname=angsd::getArg("-glf",fname,arguments);
-  fname=angsd::getArg("-vcf",fname,arguments);
+  fname=angsd::getArg("-vcf-GL",fname,arguments);
+  fname=angsd::getArg("-vcf-GP",fname,arguments);
   intName=angsd::getArg("-intName",intName,arguments);
   isSim=angsd::getArg("-isSim",intName,arguments);
   nInd=angsd::getArg("-nInd",nInd,arguments);
@@ -244,7 +260,7 @@ multiReader::multiReader(int argc,char**argv){
   type = args->inputtype;
 
   if(args->argc==2){
-    if((!strcasecmp(args->argv[1],"-beagle"))||!strcasecmp(args->argv[1],"-glf")||(!strcasecmp(args->argv[1],"-pileup"))||(!strcasecmp(args->argv[1],"-vcf"))){
+    if((!strcasecmp(args->argv[1],"-beagle"))||!strcasecmp(args->argv[1],"-glf")||(!strcasecmp(args->argv[1],"-pileup"))||(!strcasecmp(args->argv[1],"-vcf-GL"))||(!strcasecmp(args->argv[1],"-vcf-GP"))){
       printArg(stdout);
       exit(0);
     }else if ((!strcasecmp(args->argv[1],"-bam"))|| (!strcasecmp(args->argv[1],"-b"))){
@@ -273,9 +289,9 @@ multiReader::multiReader(int argc,char**argv){
 
 
 
-  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_VCF)){
+  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_VCF_GP||type==INPUT_VCF_GL)){
     if(nInd==0){
-      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-pileup/-vcf files\n");
+      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-pileup/-vcf-GL/-vcf-GP files\n");
       exit(0);
     }
   }else
@@ -287,8 +303,12 @@ multiReader::multiReader(int argc,char**argv){
   setArgsBam(args);
   if(fname==NULL)
     return;
+  gz=Z_NULL;
   gz=gzopen(fname,"r");   
-
+  if(gz==Z_NULL){
+    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);
+    exit(0);
+  }
   switch(type){
   case INPUT_PILEUP:{
     mpil = new mpileup(args->nInd,gz,bytesPerLine,args->revMap,minQ);
@@ -298,7 +318,11 @@ multiReader::multiReader(int argc,char**argv){
     myglf = new glfReader(args->nInd,gz,isSim);
     break;
   }
-  case INPUT_VCF:{
+  case INPUT_VCF_GP:{
+    myvcf = new vcfReader(args->nInd,gz,bytesPerLine,args->revMap);
+    break;
+  }
+  case INPUT_VCF_GL:{
     myvcf = new vcfReader(args->nInd,gz,bytesPerLine,args->revMap);
     break;
   }
@@ -370,7 +394,11 @@ funkyPars *multiReader::fetch(){
     fp = myglf->fetch(nLines); 
     break;
   }
-  case INPUT_VCF:{
+  case INPUT_VCF_GL:{
+    fp = myvcf->fetch(nLines); 
+    break;
+  }
+  case INPUT_VCF_GP:{
     fp = myvcf->fetch(nLines); 
     break;
   }
@@ -391,7 +419,8 @@ funkyPars *multiReader::fetch(){
   fprintf(stderr,"glf:%d\n",INPUT_GLF);
   fprintf(stderr,"blg:%d\n",INPUT_BEAGLE);
   fprintf(stderr,"plp:%d\n",INPUT_PILEUP);
-  fprintf(stderr,"vcf:%d\n",INPUT_VCF);
+  fprintf(stderr,"vcf_GP:%d\n",INPUT_VCF_GP);
+  fprintf(stderr,"vcf_GL:%d\n",INPUT_VCF_GL);
 #endif
 
     exit(0);
