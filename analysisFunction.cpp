@@ -496,6 +496,9 @@ void print_array(FILE *fp,int *ary,int len){
 }
 
 
+double angsd::sigm(double x){
+  return(1/(1+exp(-x)));
+}
 
 double *angsd::readDouble(const char*fname,int hint){
   FILE *fp = NULL;
@@ -543,6 +546,260 @@ int angsd::whichMax(double *d,int len){
   }else
     return r;
 }
+
+
+void ludcmp(double **a, int *indx, double &d,int n)
+{
+  int imax = 0;
+  double big, dum, sum, temp;
+  double vv[n];
+  d=1;
+
+  for (int i=0; i<n; i++){
+    big=0;
+    for (int j=0; j<n; j++){
+      //fprintf(stderr,"%f\t",a[i][j]);
+      if ((temp=fabs(a[i][j])) > big) 
+	big=temp;
+    }
+    
+    assert(big!=0) ;
+      //      fprintf(stderr,"singular matrix in ludcmp");
+    vv[i]=1/big;
+  }
+  
+  for (int j=0; j<n; j++){
+    for (int i=0; i<j; i++){
+      sum = a[i][j];
+      for (int k=0; k<i; k++) 
+	sum -= a[i][k] * a[k][j];
+      a[i][j]=sum;
+    }
+    big=0;
+    for (int i=j; i<n; i++)	{
+      sum=a[i][j];
+      for (int k=0; k<j; k++)
+	sum -= a[i][k] * a[k][j];
+      a[i][j]=sum;
+      if ((dum=vv[i]*fabs(sum)) >= big) {
+	big = dum;
+	imax = i;
+      }
+    }
+    if (j != imax){
+      for (int k=0; k<n; k++){
+	dum=a[imax][k];
+	a[imax][k]=a[j][k];
+	a[j][k]=dum;
+      }
+      d = -d;
+      vv[imax]=vv[j];
+    }
+    indx[j]=imax;
+    if (a[j][j] == 0) 
+      a[j][j] = 1.0e-20;
+    if (j != n-1){
+      dum = 1/(a[j][j]);
+      for (int i=j+1; i<n; i++) 
+	a[i][j] *= dum;
+    }
+  }
+}
+
+
+void lubksb(double **a, int *indx, double *b,int n)
+{
+
+  int ii=0;
+  double sum;
+
+  for (int i=0; i<n; i++){
+    int ip=indx[i];
+    sum=b[ip];
+    b[ip]=b[i];
+    if (ii != 0)
+      for (int j=ii-1; j<i; j++) 
+	sum -= a[i][j]*b[j];
+    else if (sum != 0.0) 
+      ii=i+1;
+    b[i]=sum;
+  }
+  for (int i=n-1; i>=0; i--){
+    sum=b[i];
+    for (int j=i+1; j<n; j++) 
+      sum -= a[i][j]*b[j];
+    b[i]=sum/a[i][i];
+  }
+}
+
+/*
+vector< vector<double> > svd_inverse(vector< vector<double> > & , bool & );
+vector< vector<double> > inverse(vector< vector<double> > & m )
+void svd_inverse(double *mat,int xLen, int xLen)
+{
+  double d;
+  int i, j;
+  
+  if (m.size() == 0) error("Internal error: matrix with no rows (inverse function)");
+  if (m.size() != m[0].size() ) error("Internal error: cannot invert non-square matrix");
+  int n = m.size();
+
+  // indx is an integer array
+  vector<int> indx(n);
+
+  vector<double> col(n);
+  vector<vector<double> > y(n);
+  for (int i=0; i<n; i++) y[i].resize(n); 
+  vector<vector<double> > tm;
+  tm = m;
+  
+  ludcmp(tm,indx,d);
+  
+  for (j=0; j<n; j++)
+    {
+      for (i=0; i<n; i++) col[i]=0;
+      col[j]=1;
+      lubksb(tm,indx,col);
+      for (i=0; i<n; i++) y[i][j]=col[i];
+    }
+  
+  return y;
+  
+}
+void ludcmp(vector<vector<double> > &a, vector<int> &indx, double &d)
+{
+  int i, imax = 0, j, k;
+  double big, dum, sum, temp;
+  int n = a.size();
+  vector<double> vv(n);
+  d=1;
+
+  for (i=0; i<n; i++)
+    {
+      big=0;
+      for (j=0; j<n; j++)
+	if ((temp=fabs(a[i][j])) > big) big=temp;
+      if (big==0) error("singular matrix in ludcmp");
+      vv[i]=1/big;
+    }
+  
+  for (j=0; j<n; j++)
+    {
+      for (i=0; i<j; i++)
+	{
+	  sum = a[i][j];
+	  for (k=0; k<i; k++) sum -= a[i][k] * a[k][j];
+	  a[i][j]=sum;
+	}
+      big=0;
+      for (i=j; i<n; i++)
+	{
+	  sum=a[i][j];
+	  for (k=0; k<j; k++)
+	    sum -= a[i][k] * a[k][j];
+	  a[i][j]=sum;
+	  if ((dum=vv[i]*fabs(sum)) >= big)
+	    {
+	      big = dum;
+	      imax = i;
+	    }
+	}
+      if (j != imax)
+	{
+	  for (k=0; k<n; k++)
+	    {
+	      dum=a[imax][k];
+	      a[imax][k]=a[j][k];
+	      a[j][k]=dum;
+	    }
+	  d = -d;
+	  vv[imax]=vv[j];
+	}
+      indx[j]=imax;
+      if (a[j][j] == 0) a[j][j] = 1.0e-20;
+
+      if (j != n-1)
+	{
+	  dum = 1/(a[j][j]);
+	  for (i=j+1; i<n; i++) a[i][j] *= dum;
+	}
+    }
+}
+
+void lubksb(vector<vector<double> > &a, vector<int> &indx, vector<double> &b)
+{
+
+  int i, ii=0, ip, j;
+  double sum;
+
+  int n = a.size();
+
+  for (i=0; i<n; i++)
+    {
+      ip=indx[i];
+      sum=b[ip];
+      b[ip]=b[i];
+      if (ii != 0)
+	for (j=ii-1; j<i; j++) sum -= a[i][j]*b[j];
+      else if (sum != 0.0) ii=i+1;
+      b[i]=sum;
+    }
+  for (i=n-1; i>=0; i--)
+    {
+      sum=b[i];
+      for (j=i+1; j<n; j++) sum -= a[i][j]*b[j];
+      b[i]=sum/a[i][i];
+    }
+}
+
+
+ */
+void angsd::svd_inverse(double mat[],int xLen, int yLen){
+  if(xLen !=xLen){
+
+    fprintf(stderr,"non square matrix [%s]\t[%s]\n",__FILE__,__FUNCTION__);
+    exit(0);
+
+  }
+  double *col;
+  double y[xLen * yLen];
+  col = new double[xLen];
+  double **tm;
+  int *indx=new int[xLen];
+  double d;
+  tm = new double*[xLen];
+  for (int i=0; i < xLen; i++)
+    tm[i] = new double[xLen];
+
+  for(int i=0;i<xLen;i++)
+    for(int j=0;j<yLen;j++)
+      tm[i][j]=mat[j*xLen+i];
+
+
+  ludcmp(tm,indx,d,xLen);
+
+  for (int j=0; j<xLen; j++)
+    {
+      for (int i=0; i<xLen; i++)
+	col[i]=0;
+      col[j]=1;
+      lubksb(tm,indx,col,xLen);
+      for (int i=0; i<xLen; i++) 
+	y[j*xLen+i]=col[i];
+    }
+  
+  
+  for (int j=0; j<yLen; j++)
+    for (int i=0; i<xLen; i++)
+      mat[j*xLen+i]=y[j*xLen+i];
+
+  delete[] col;
+  delete[] indx;
+  for (int i=0; i < xLen; i++)
+    delete[] tm[i];
+  delete[] tm;
+}
+
 
 
 // a,c,g,t,n
@@ -651,3 +908,5 @@ gzFile aio::getGz(const char*fname,const char* mode){
   }
   return fp;
 }
+
+
