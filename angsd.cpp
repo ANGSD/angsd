@@ -31,9 +31,8 @@ int VERBOSE =1;
 extern pthread_mutex_t mUpPile_mutex;//mutex for not deleting mUppile data untill end of data
 
 void printTime(FILE *fp){
- time_t rawtime;
-  struct tm * timeinfo;
-
+  time_t rawtime;
+  struct tm * timeinfo; 
   time ( &rawtime );
   timeinfo = localtime ( &rawtime );
   fprintf (fp, "\t-> %s", asctime (timeinfo) );
