@@ -57,7 +57,7 @@ namespace angsd {
   void logrescale(double *ary,int len);
   void svd_inverse(double mat[],int xLen, int yLen);
   std::vector<char*> getFilenames(const char * name,int nInd);
-
+  char *strpop(char **str,char split);
 
   template <typename T>
   T * allocArray(size_t len,T defval){
