@@ -393,7 +393,7 @@ void abcFreq::print(funkyPars *pars) {
       
       if(pars->keepSites[s]==0)
 	continue;
-      //	fprintf(stderr,"keepsites=%d\n",pars->keepSites[s]);
+      // fprintf(stderr,"keepsites=%d\n",pars->keepSites[s]);
       kputs(header->name[pars->refId],&bufstr);
       kputc('_',&bufstr);
       kputw(pars->posi[s]+1,&bufstr);
@@ -411,9 +411,12 @@ void abcFreq::print(funkyPars *pars) {
       }
       
       kputc('\n',&bufstr);
-      gzwrite(outfileZ2,bufstr.s,bufstr.l);
-    }
     
+    }
+    //valgrind on osx complains here check if prob on unix
+    int ret=gzwrite(outfileZ2,bufstr.s,bufstr.l);
+    //fprintf(stderr,"ret.l:%d bufstr.l:%zu\n",ret,bufstr.l);
+    bufstr.l=0;
   }
   free(bufstr.s);
 }
