@@ -12,6 +12,7 @@ void checkIfDir(char *fname){
     fprintf(stderr,"\t Folder: \'%s\' doesn't exist, please create\n",dirNam);
     exit(0);
   }
+  free(dirNam);
   free(dirNam2);
   
 }
@@ -23,10 +24,13 @@ aHead *getHeadFromFai(const char *fname){
   FILE *fp = aio::getFILE(fname,"r");
   char buf[1024];
   while(fgets(buf,1024,fp)){ 
-    chrs.push_back(strdup(strtok(buf,"\t \n")));//<-strdup so don't clean here
-    lengths.push_back(atoi(strtok(NULL,"\t \n")));
+    char *tok = strtok(buf,"\t \n");
+    //fprintf(stderr,"tok: %s\n",tok);
+    chrs.push_back(strdup(tok));//<-strdup so don't clean here
+    tok = strtok(NULL,"\t \n");
+    // fprintf(stderr,"tok: %s\n",tok);
+    lengths.push_back(atoi(tok));
   }
-  
   aHead *ret = new aHead;
   ret->l_text = strlen(fname);
   ret->text = new char[strlen(fname)+1];
@@ -46,6 +50,7 @@ aHead *getHeadFromFai(const char *fname){
   for(uint i=0;i<chrs.size();i++)
     free(chrs[i]);
   fclose(fp);
+  //printHd(ret,stderr);
   return ret;
 }
 
@@ -97,6 +102,7 @@ void setInputType(argStruct *args){
       exit(0);
 
     }
+    free(tmp_fai);
     return;
   }
   tmp=NULL;
@@ -112,6 +118,7 @@ void setInputType(argStruct *args){
       exit(0);
 
     }
+    free(tmp_fai);
     return;
   }
   tmp = angsd::getArg("-pileup",tmp,args);
@@ -133,6 +140,7 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_BEAGLE;
     args->infile = tmp;
     args->nams.push_back(args->infile);
+    free(tmp_fai);
     return;
   }
   tmp = angsd::getArg("-i",tmp,args);
@@ -254,7 +262,7 @@ multiReader::multiReader(int argc,char**argv){
   extern double VERS;
   fprintf(args->argumentFile,"\n\t-> angsd version: %.3f\t build(%s %s)\n",VERS,__DATE__,__TIME__); 
   void printTime(FILE *fp);
-  printTime(args->argumentFile);  
+  printTime(args->argumentFile); 
 
 
   type = args->inputtype;
@@ -355,6 +363,14 @@ multiReader::~multiReader(){
   switch(type){
   case INPUT_PILEUP:{
     delete mpil;
+    break;
+  }
+  case INPUT_VCF_GP:{
+    delete myvcf;
+    break;
+  }
+  case INPUT_VCF_GL:{
+    delete myvcf;
     break;
   }
   case INPUT_GLF:{

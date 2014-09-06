@@ -8,9 +8,9 @@ private:
   int nInd;
   gzFile gz;
   int len;
-  char *buf,*saveptr,*tmp;
+  char *buf,*saveptr;
   const aMap *revMap;
-  int parseline(double *lk,double *gp,char &major,char &minor);
+  int parseline(double **lk,double **gp,char &major,char &minor);
   int curChr;
 public:
   funkyPars *fetch(int chunkSize);
