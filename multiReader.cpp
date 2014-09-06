@@ -12,7 +12,7 @@ void checkIfDir(char *fname){
     fprintf(stderr,"\t Folder: \'%s\' doesn't exist, please create\n",dirNam);
     exit(0);
   }
-  free(dirNam);
+  //free(dirNam); VALGRIND on osx wants this line
   free(dirNam2);
   
 }

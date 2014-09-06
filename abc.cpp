@@ -33,7 +33,6 @@ const aHead *abc::header = NULL;
 const aMap *abc::revMap = NULL;
 char *abc::shouldRun = new char[MAX_CLASS]; 
 
-
 //here we instiantiate all the analysis classes, and return them as an array of pointers to the <abc> class. First parameter will contain the number of analysis classes.
 abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   memset(abc::shouldRun,'1',MAX_CLASS);

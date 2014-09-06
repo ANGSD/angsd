@@ -105,7 +105,7 @@ void destroy(){
   fprintf(stderr,"\t-> Done waiting for threads\n");
   for(int i=0;i<andersSux;i++)
     delete allMethods[i];
-
+  delete [] abc::shouldRun;
   delete [] allMethods;
 
 }
