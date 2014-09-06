@@ -437,7 +437,7 @@ void *cleanFunky(void *pars){
 pthread_t cleanThread;
 //only one instance at a time is running this function
 void printFunky(funkyPars *p){
-  //  fprintf(stderr,"printFunky killsig=%d nsites=%d\n",p->killSig,p->numSites);
+  //  fprintf(stderr,"printFunky killsig=%d nsites=%d refid:%d\n",p->killSig,p->numSites,p->refId);
   if(p->killSig==0) {//don't print the empty killSig chunk
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
