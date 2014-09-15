@@ -43,8 +43,7 @@ void abcMajorMinor::printArg(FILE *argFile){
 
 void abcMajorMinor::getOptions(argStruct *arguments){
   int inputtype = arguments->inputtype;
-  //default
-  doMajorMinor=0;
+
 
   //below is used only validating if doMajorMinor has the data it needs
   int GL=0;
@@ -89,9 +88,15 @@ void abcMajorMinor::getOptions(argStruct *arguments){
    
  }
  
+ 
 }
 
 abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int inputtype){
+  //default
+  doMajorMinor = 0;
+  doSaf = 0;
+  pest = NULL;
+  
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doMajorMinor")){
       printArg(stdout);
@@ -319,6 +324,20 @@ void abcMajorMinor::run(funkyPars *pars){
     majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
   else
     fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
+
+  if(doSaf!=0&&pest!=NULL){
+    //fix case of triallelic site in pest output when doing pest
+    for(int s=0;s<pars->numSites;s++){
+      if(pars->keepSites[s]==0)
+	continue;
+      int a=refToInt[pars->anc[s]];
+      int b=refToInt[pars->major[s]];
+      int c=refToInt[pars->major[s]];
+      if(a!=b&&a!=c)
+	pars->keepSites[s]=0;
+    }
+
+  }
 
   //if user has requested reference/ancestral then it is done in majorMinorGL and majorMinorCounts 0.585
   /*

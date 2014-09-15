@@ -2,6 +2,8 @@
 
 class abcMajorMinor:public abc{
   int doMajorMinor;
+  int doSaf;
+  char *pest;
 public:
   void printArg(FILE *argFile);
   void run(funkyPars *pars);
