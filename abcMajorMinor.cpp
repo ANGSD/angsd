@@ -87,7 +87,8 @@ void abcMajorMinor::getOptions(argStruct *arguments){
    exit(0);
    
  }
- 
+ doSaf = angsd::getArg("-doSaf",doSaf,arguments);
+ pest = angsd::getArg("-pest",pest,arguments);
  
 }
 
