@@ -312,6 +312,7 @@ void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
   for(int it=0; it<nsites; it++)  {//loop over sites
     int major_offset = anc[it];
     if(major_offset==4 || keepSites[it]==0){//skip if no ancestral information
+      keepSites[it] =0; //
       //      r->oklist is zero no need to update
       continue;
     }
@@ -599,6 +600,7 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
   for(int it=0; it<nsites; it++) {//loop over sites
     int major_offset = anc[it];
     if(major_offset==4||(keepSites[it]==0)){//skip of no ancestral information
+      keepSites[it] =0; //
       //      r->oklist is zero no need to update
       continue;
     }
