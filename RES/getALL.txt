@@ -1,0 +1,15 @@
+F="ASW CEU CHB CHD GIH JPT LWK MEX MKK TSI YRI"
+for f in $F
+do 
+    echo $f
+    wget http://hapmap.ncbi.nlm.nih.gov/downloads/frequencies/2010-08_phaseII+III/allele_freqs_chrX_${f}_r28_nr.b36_fwd.txt.gz
+done
+
+cat allele*.gz >allele_freqs_chrX_ALL_r28_nr.b36_fwd.txt.gz
+
+gunzip -c allele_freqs_chrX_ALL_r28_nr.b36_fwd.txt.gz| awk '{print $2" "$3-1" "$3" "$11" "$12" "$4" "$14}'|grep -v pos >allele.txt
+
+
+/opt/liftover/liftOver allele.txt /opt/liftover/hg18ToHg19.over.chain.gz hit nohit
+cut -f1,3 --complement hit |grep -v -P "\t1.0"|grep -v -P "\t0\t"|gzip -c  >HapMapALL.gz
+
