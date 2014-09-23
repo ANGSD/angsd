@@ -98,6 +98,7 @@ void setArgsBam(argStruct *arguments){
   baq = angsd::getArg("-baq",baq,arguments);
   regfile =angsd::getArg("-r",regfile,arguments);
   regfiles = angsd::getArg("-rf",regfiles,arguments);
+  checkBamHeaders = angsd::getArg("-checkBamHeaders",checkBamHeaders,arguments);
   arguments->show = angsd::getArg("-show",arguments->show,arguments);
 
   char *tmp = NULL;
