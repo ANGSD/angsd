@@ -219,8 +219,9 @@ int getNumBest(uint8_t *s, uint8_t *sStop) {
     else if (type == 'd') {s += 8;continue; }
     else if (type == 'Z' || type == 'H') return retVal;
   }
-  assert(1==0);
-  return retVal;
+  fprintf(stderr,"\t-> Need XO tag to calculate the number of best hits\n");
+  exit(0);
+  return retVal; //<- will never happen
 }
 
 //simple function to perform additional analysis, only used when we have to redo a single read when we change chr
