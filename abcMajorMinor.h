@@ -4,6 +4,7 @@ class abcMajorMinor:public abc{
   int doMajorMinor;
   int doSaf;
   char *pest;
+  int skipTriallelic;
 public:
   void printArg(FILE *argFile);
   void run(funkyPars *pars);

@@ -39,6 +39,7 @@ void abcMajorMinor::printArg(FILE *argFile){
   fprintf(argFile,"\t3: use major and minor from a file (requires -sites file.txt)\n");
   fprintf(argFile,"\t4: Use reference allele as major (requires -ref)\n");
   fprintf(argFile,"\t5: Use ancestral allele as major (requires -anc)\n");
+  fprintf(argFile,"\t-skipTriallelic\t%d\n",skipTriallelic);
 }
 
 void abcMajorMinor::getOptions(argStruct *arguments){
@@ -89,12 +90,12 @@ void abcMajorMinor::getOptions(argStruct *arguments){
  }
  doSaf = angsd::getArg("-doSaf",doSaf,arguments);
  pest = angsd::getArg("-pest",pest,arguments);
- 
+ skipTriallelic = angsd::getArg("-skipTriallelic",skipTriallelic,arguments);
 }
 
 abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int inputtype){
-  //default
-  doMajorMinor = 0;
+  skipTriallelic=0;
+    doMajorMinor = 0;
   doSaf = 0;
   pest = NULL;
   
@@ -326,14 +327,14 @@ void abcMajorMinor::run(funkyPars *pars){
   else
     fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
 
-  if(doSaf!=0&&pest!=NULL){
+  if(doSaf!=0&&pest!=NULL&&skipTriallelic==1){
     //fix case of triallelic site in pest output when doing pest
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s]==0)
 	continue;
       int a=refToInt[pars->anc[s]];
       int b=refToInt[pars->major[s]];
-      int c=refToInt[pars->major[s]];
+      int c=refToInt[pars->minor[s]];
       if(a!=b&&a!=c)
 	pars->keepSites[s]=0;
     }
