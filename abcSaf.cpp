@@ -36,7 +36,9 @@ void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"\t-anc\t\t\t%s (ancestral fasta)\n",anc);
   fprintf(argFile,"\t-noTrans\t\t%d (remove transitions)\n",noTrans);
   fprintf(argFile,"\t-pest\t\t\t%s (prior SFS)\n",pest);
+  fprintf(argFile,"\t-isHap\t\t\t%d (is haploid beta!)\n",isHap);
   fprintf(argFile,"NB:\n\t  If -pest is supplied in addition to -doSaf then the output will then be posterior probability of the sample allelefrequency for each site\n");
+
 }
 
 double lbico(double n, double k){
@@ -69,6 +71,7 @@ double myComb2(int k,int r, int j){
 
 void abcSaf::getOptions(argStruct *arguments){
   doSaf=angsd::getArg("-doSaf",doSaf,arguments);
+  isHap=angsd::getArg("-isHap",isHap,arguments);
 
   int tmp=0;
   tmp=angsd::getArg("-doRealSFS",tmp,arguments);
@@ -160,6 +163,7 @@ void abcSaf::getOptions(argStruct *arguments){
 }
 
 abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
+  isHap =0;
   lbicoTab = NULL;
   myComb2Tab=NULL;
   const char *SAF = ".saf";
@@ -208,17 +212,16 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
       if(j<=i)
 	myComb2Tab[i][j] = myComb2(arguments->nInd,i,j);
   }
-  
-
-
+  if(isHap){
+    for(int i=0;i<arguments->nInd+1;i++)
+      lbicoTab[i] = lbico(arguments->nInd,i);
+  }
 
   newDim = 2*arguments->nInd+1;
   if(fold)
     newDim = arguments->nInd+1;
-
   if(doSaf==3){
     outfileGprobs = aio::openFileGz(outfiles,GENO,"w6h");
-    
   }else if(doSaf!=0&&doThetas==0){
     outfileSFS =  aio::openFile(outfiles,SAF);
     outfileSFSPOS =  aio::openFileGz(outfiles,SFSPOS,GZOPT);
@@ -266,7 +269,9 @@ abcSaf::~abcSaf(){
   if(outfileSFSPOS) gzclose(outfileSFSPOS);
   if(theta_fp) gzclose(theta_fp);
   if(outfileGprobs)  gzclose(outfileGprobs);
-}
+  if(lbicoTab) delete [] lbicoTab;
+  if(myComb2Tab) delete [] myComb2Tab;//not cleaned properly
+ }
 
 
 void normalize_array(double *d, int len){
@@ -587,6 +592,154 @@ void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,real
   }
 }
 
+//AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
+int homo[4] = {0,4,7,9};
+
+
+void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans) {
+  int myCounter =0;
+  if(anc==NULL||liks==NULL){
+    fprintf(stderr,"problems receiving data in [%s] will exit (likes=%p||ancestral=%p)\n",__FUNCTION__,liks,anc);
+    exit(0);
+  }
+  double sumMinors[numInds+1];  //the sum of the 3 different minors
+
+  for(int it=0; it<nsites; it++) {//loop over sites
+    int major_offset = anc[it];
+    if(major_offset==4||(keepSites[it]==0)){//skip of no ancestral information
+      keepSites[it] =0; //
+      //      r->oklist is zero no need to update
+      continue;
+    }
+    //set the resultarray to zeros
+    for(int sm=0 ; sm<numInds+1 ; sm++ )
+      sumMinors[sm] = 0;
+    
+    //loop through the 3 different minors
+    for(int minor_offset=0;minor_offset<4;minor_offset++) {
+      if(minor_offset == major_offset)
+	continue;
+      if(noTrans){
+	if((major_offset==2&&minor_offset==0)||(major_offset==0&&minor_offset==2))
+	  continue;
+	if((major_offset==1&&minor_offset==3)||(major_offset==3&&minor_offset==1))
+	  continue;
+      }
+      double totmax = 0.0;
+      //hook for only calculating one minor
+      //  int Aa_offset = angsd::majorminor[minor_offset][major_offset];//0-9
+      int AA_offset = homo[major_offset];//angsd::majorminor[minor_offset][minor_offset];//0-9
+      int aa_offset = homo[minor_offset];//angsd::majorminor[major_offset][major_offset];//0-9
+      //     fprintf(stderr,"%d:%d\t%d\t%d\n",major_offset,Aa_offset,AA_offset,aa_offset);
+      //part two
+      double hj[numInds+1];
+      for(int index=0;index<(2*numInds+1);index++)
+	if(underFlowProtect==0)
+	  hj[index]=0;
+	else
+	  hj[index]=log(0);
+      double PAA,Paa;
+
+      for(int i=0 ; i<numInds ;i++) {
+	double GAA,Gaa;
+
+	GAA = liks[it][i*10+AA_offset];
+	Gaa = liks[it][i*10+aa_offset];
+
+	//do underlfow protection (we are in logspace here) (rasmus style)
+	if(1){
+	  double mymax=std::max(Gaa,GAA);
+	  // fprintf(stdout,"mymax[%d]=%f\t",i,mymax);
+	  
+	  if(mymax<MINLIKE){
+	    //	    fprintf(stderr,"\n%f %f %f\n",GAA, GAa,Gaa);
+	    Gaa = 0;
+	    GAA = 0;
+	    totmax = totmax + mymax;
+	  }else{
+	    Gaa=Gaa-mymax;
+	    GAA=GAA-mymax;
+	    totmax = totmax + mymax;
+	  }
+	
+	//	fprintf(stderr,"totmax=%f\n",totmax);
+	//END underlfow protection (we are in logspace here) (rasmus style)
+	}
+	if(underFlowProtect==0){
+	  PAA=exp(GAA);
+	  Paa=exp(Gaa);
+	}else{
+	  PAA =(GAA);///(MAA+MAa+Maa);
+	  Paa =(Gaa);///(MAA+MAa+Maa);
+	}
+
+	//check for underflow error, this should only occur once in a blue moon
+	if(std::isnan(Paa)||std::isnan(PAA)){
+	  fprintf(stderr,"PAA=%f\tPaa=%f\n",PAA,Paa);
+	}
+	//	fprintf(stdout,"it=%d PAA=%f\tPAa=%f\tPaa=%f\n",it,PAA,PAa,Paa);
+	if(i==0){
+	  hj[0] =Paa;
+	  hj[1] =PAA;
+	}else{
+	  //fprintf(stderr,"asdf\n");
+	  for(int j=i+1; j>0;j--) {
+	    double tmp;
+	    if(underFlowProtect==1)
+	      tmp =angsd::addProtect2(PAA+hj[j-1],Paa+hj[j]);
+	    else
+	      tmp = PAA*hj[j-1]+Paa*hj[j];
+	    
+	    if(std::isnan(tmp)){
+	      fprintf(stderr,"is nan:%d\n",j );
+	      
+	      hj[j] = 0;
+	      break;
+	    }else
+	      hj[j]  =tmp;
+	  }
+	  if(underFlowProtect==1)
+	    hj[0] = Paa+hj[0];
+	  else
+	    hj[0] = Paa*hj[0];
+
+	}
+	//ifunderflowprotect then hj is in logspace
+	
+      }
+      
+      for(int i=0;i<numInds+1;i++)
+	if(underFlowProtect==0)
+	  sumMinors[i] +=  exp(log(hj[i])-lbicoTab[i]+totmax);
+	else
+	  sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-lbicoTab[i]+totmax));
+    }
+    //sumMinors is in normal space, not log
+    /*
+      we do 3 things.
+      1. log scaling everyting
+      2. rescaling to the most likely in order to avoid underflows in the optimization
+      3. we might do a fold also.
+      
+     */    
+    {
+      for(int i=0;i<numInds+1;i++)
+	sumMinors[i] = log(sumMinors[i]);
+      angsd::logrescale(sumMinors,numInds+1);
+      if(std::isnan(sumMinors[0]))
+	r->oklist[it] = 2;
+      else{
+	r->oklist[it] = 1;
+	r->pLikes[myCounter] =new double[numInds+1];
+	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(numInds+1));
+	myCounter++;
+      }
+    }
+  }
+  
+}
+
+
 
 void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans) {
   // fprintf(stderr,"[%s]\n",__FUNCTION__);
@@ -809,8 +962,10 @@ void abcSaf::run(funkyPars  *p){
     memset(r->oklist,0,p->numSites);
     r->pLikes=new double*[p->numSites];
     
-    if(doSaf==1)
+    if(doSaf==1&&isHap==0)
       algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans);
+    else   if(doSaf==1&&isHap==1)
+      algoJointHap(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans);
     else if(doSaf==2){
       freqStruct *freq = (freqStruct *) p->extras[6];
       filipe::algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans,doSaf,p->major,p->minor,freq->freq,filipeIndF,newDim);
@@ -845,6 +1000,7 @@ void abcSaf::clean(funkyPars *p){
   delete r;
 
 }
+
 
 
 
@@ -955,9 +1111,12 @@ void abcSaf::print(funkyPars *p){
       }
     }
  
-
-    if(doThetas==0)
-      printFull(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId],newDim);
+    if(doThetas==0){
+      if(isHap==0)
+	printFull(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId],newDim);
+      else
+	printFull(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId],(newDim-1)/2+1);
+      }
     else 
       calcThetas(p,index,prior,theta_fp);
   }   
@@ -995,6 +1154,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
     //    fprintf(stderr,"%c %c asInt %d %d\n",major[it],minor[it],minor_offset,major_offset);
     if(keepSites[it]==0)
       continue;
+
 
     //    fprintf(sfsfile,"%s %d\t",chrnames[it->first.chromo],it->first.position);
     //1. first loop through all possible major/minor
