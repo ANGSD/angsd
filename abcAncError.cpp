@@ -114,6 +114,15 @@ abcAncError::~abcAncError(){
       fprintf(outfile,"\n");
     }
   }
+  if(currentChr!=-1){
+    fprintf(outfile2,"Chr: \t %s\n",header->name[currentChr]);
+    for(int i=0;i<nInd;i++){
+      for(int j=0;j<125;j++)
+	fprintf(outfile2,"%lu\t",alleleCountsChr[i][j]);
+      fprintf(outfile2,"\n");
+    }
+  }
+  
 
   for(int i=0;i<nInd;i++)
     delete[]  alleleCounts[i];
