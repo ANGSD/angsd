@@ -231,7 +231,11 @@ void filt_gen(const char *fname,const aMap * revMap,const aHead *hd,int isBed){
       exit(0);
     }
     if(isBed>0){
-      assert(posS<posE);
+      // assert(posS<posE);
+      if(posS>posE){
+	fprintf(stderr,"Problem parsing bedfile, end position looks before start position: %d vs %d\n",posS,posE);
+	exit(0);
+      }
       for(int ii=posS;ii<posE;ii++)
 	ary[ii]=1;
     }else{
