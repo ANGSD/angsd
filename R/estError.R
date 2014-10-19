@@ -50,7 +50,9 @@ args<-list(file=NULL,
            width=7,
            srt=90,
            cex=1,
-           doPng=FALSE
+           doPng=FALSE,
+           ylim1=NA,
+           ylim2=NA
            )
 #if no argument aree given prints the need arguments and the optional ones with default
 des<-list(file="the ancError File",
@@ -63,7 +65,9 @@ des<-list(file="the ancError File",
           height="height of the pdf",
           srt="angle of ind names",
           cex="scale of names",
-          doPng="Make png instead of pdf"
+          doPng="Make png instead of pdf",
+          ylim1="Set max ylim for barplot1",
+          ylim2="Set max ylim for barplot2"
           )
 
 #######get arguments and add to workspace
@@ -84,6 +88,10 @@ tol21rainbow= c("#771155", "#AA4488", "#CC99BB", "#114477", "#4477AA", "#77AADD"
 width=as.numeric(width)
 height=as.numeric(height)
 
+if(!is.na(ylim1))
+    ylim1=as.numeric(ylim1)
+if(!is.na(ylim2))
+    ylim2=as.numeric(ylim2)
 
 
 palette(tol21rainbow[c(1:8,10:21)])
@@ -209,7 +217,12 @@ nam<-paste(rep(bases,4),"->",rep(bases,each=4))[-c(1,6,11,16)]
     bitmap(paste(out,".png",sep=""),w=width,h=height,res=300)
 }
 
-barplot(res,beside=T,col=1:nInd,names=nam,main=main,ylab="error rate")
+{
+if(is.na(ylim1))
+    barplot(res,beside=T,col=1:nInd,names=nam,main=main,ylab="error rate")
+else
+    barplot(res,beside=T,col=1:nInd,names=nam,main=main,ylab="error rate",ylim=c(0,ylim1))
+}
 legend("top",paste(indNames,round(over*100,2),"%"),fill=1:nInd,bty="n")
 dev.off()
 
@@ -225,7 +238,13 @@ else
 }
 
 par(mar=par()$mar+c(3,0,0,0))
-h<-barplot(over,col=1:nInd,names=NULL,main=main,ylab="error rate")
+{
+if(is.na(ylim2)){
+    h<-barplot(over,col=1:nInd,names=NULL,main=main,ylab="error rate")
+}else{
+    h<-barplot(over,col=1:nInd,names=NULL,main=main,ylab="error rate",ylim=c(0,ylim2))
+}
+}
 text(h,rep(-max(over)/50,length(h)),indNames,xpd=T,srt=srt,adj=1,cex=cex)
 dev.off()
 {
