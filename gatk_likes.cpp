@@ -1,3 +1,10 @@
+/*
+  The GLs directly from the qscore, assuming diploid.
+
+  This is the one used in the original GATK paper. And is most likely very different from the newest gatk
+
+ */
+
 
 #include <cmath>
 #include <cstdio>
