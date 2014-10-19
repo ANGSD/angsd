@@ -1,25 +1,4 @@
-
-typedef struct{
-  int64_t offs;
-  int len;
-}asdf_dats;
-
-
-
-typedef struct{
-  BGZF *bg;
-  FILE *fp;
-  std::map<int,asdf_dats> offs;
-  char *keeps;
-  char *major;
-  char *minor;
-  int hasMajMin;
-  int curLen;//<-length of the char arrays;
-}filt;
-
-
-
-
+#include "prep_sites.h"
 class abcFilter : public abc{
   filt *fl;
   int doMajorMinor;
