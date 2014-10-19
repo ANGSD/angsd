@@ -242,6 +242,7 @@ void multiReader::getOptions(argStruct *arguments){
 
 
 multiReader::multiReader(int argc,char**argv){
+  gz=Z_NULL;
   myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;
   fai = NULL;
   bytesPerLine = 33554432 ;//2^15 about 33 megs perline/persites should be enough
