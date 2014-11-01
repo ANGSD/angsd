@@ -1,14 +1,14 @@
 /*
-  small class to filter positions and assign major minor.
-  This class can be improved very much.
+  Thorfinn 31oct 2014
 
-  Thorfinn 7march 2013
+  refactored version of old code.
+  indexing and reading of binary representation is now in prep_sites.cpp
 
-  On the most basic level then this class will remove those sites with an effective sample size<minInd
+  Code can be optimized by skipping rest of filereading for remainer of chr
+osome if we have reached the last position from the keep list.
 
-  It can also be used for filtering away those sites not included in the -sites file.keep
-
- */
+Maybe there are some memleaks. This will have to be fixed later.
+*/
 
 #include <cassert>
 #include <sys/stat.h>
@@ -19,23 +19,14 @@
 
 abcFilter::~abcFilter(){
   if(fl!=NULL){
-    if(fl->keeps)
-      free(fl->keeps);
-    if(fl->major)
-      free(fl->major);
-    if(fl->minor)
-      free(fl->minor);
-    if(fl->fp) fclose(fl->fp);
-    bgzf_close(fl->bg);
-    delete fl;
+    dalloc(fl);
   }
   free(fname);
 }
 
 
 abcFilter::abcFilter(argStruct *arguments){
-  isBed = 0; //<- indicates that we don't assume bed
-  //below if shared for all analysis classes
+    //below if shared for all analysis classes
   shouldRun[index] = 1;
   header = arguments->hd;
   revMap = arguments->revMap;
@@ -66,19 +57,17 @@ abcFilter::abcFilter(argStruct *arguments){
 void abcFilter::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos))\n",fname);
+  fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr regStart regStop))\n",fname);
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos major minor))\n",fname);
-  fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr posStart posStop mapScore))\n",fname);
   fprintf(argFile,"\t-minInd\t\t%d\tOnly use site if atleast minInd of samples has data\n",minInd);
-  fprintf(argFile,"\t-isBed\t\t%d\t-sites file is a bed file\n",isBed);
   fprintf(argFile,"\t1) You can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");
   fprintf(argFile,"\t2) You can also supply a bed file containing regions to use last column is a mappability score.\n\tSet this to a value differet from zero will then assume the input file is a bedfile. \n");
 }
 
 void abcFilter::getOptions(argStruct *arguments){
   fname=angsd::getArg("-sites",fname,arguments);
-  isBed=angsd::getArg("-isBed",isBed,arguments);
   if(fname!=NULL)  
-    fl = filt_init(fname,revMap,header,isBed);
+    fl = filt_read(fname);
   if(fl!=NULL)
     fprintf(stderr,"\t-> [%s] -sites is still beta, use at own risk...\n",__FILE__);
 
@@ -97,7 +86,7 @@ void abcFilter::getOptions(argStruct *arguments){
 
 
 void abcFilter::run(funkyPars *p){
-  //  fprintf(stderr,"nsites=%d\n",p->numSites);
+  //fprintf(stderr,"nsites=%d\n",p->numSites);
   p->keepSites=new int[p->numSites];
   
   for(int s=0;s<p->numSites;s++){
@@ -106,7 +95,7 @@ void abcFilter::run(funkyPars *p){
   }
 
 
-  if(fl!=NULL && fl->hasMajMin==1){
+  if(fl!=NULL && fl->hasMajMin==1 && doMajorMinor==3){
     //    fprintf(stderr,"aloocating for major and minor\n");
     p->major = new char [p->numSites];
     p->minor = new char [p->numSites];
@@ -123,7 +112,7 @@ void abcFilter::run(funkyPars *p){
 	//	fprintf(stderr,"Plugging inf vals std\n");
 	p->keepSites[s] =0;
       }
-      if(p->keepSites[s] && fl->hasMajMin==1){
+      if(p->keepSites[s] && fl->hasMajMin==1 &&doMajorMinor==3){
 	//fprintf(stderr,"Plugging inf vals std majorminor\n");
 	p->major[s] = fl->major[p->posi[s]];
 	p->minor[s] = fl->minor[p->posi[s]];
@@ -165,35 +154,5 @@ void abcFilter::readSites(int refId) {
   //  fprintf(stderr,"[%s].%s():%d -> refId:%d\n",__FILE__,__FUNCTION__,__LINE__,refId);
   if(fl==NULL)
     return;
-  std::map<int,asdf_dats> ::iterator it = fl->offs.find(refId);
-  if(it==fl->offs.end()){
-    fprintf(stderr,"\n\t-> Potential problem: The filereading has reached a chromsome: \'%s\', which is not included in your \'-sites\' file.\n\t-> Please consider limiting your analysis to the chromsomes of interest \n",header->name[refId]);
-    fprintf(stderr,"\t-> see \'http://www.popgen.dk/angsd/index.php/Sites\' for more information\n");
-    fprintf(stderr,"\t-> Program will continue reading this chromosome... \n");
-    //exit(0);
-    if(header->l_ref[refId]> fl->curLen){
-      fl->keeps=(char*) realloc(fl->keeps,header->l_ref[refId]);
-      fl->curLen = header->l_ref[refId];
-      if(fl->hasMajMin==1){
-	fl->major=(char*) realloc(fl->major,header->l_ref[refId]);
-	fl->minor=(char*) realloc(fl->minor,header->l_ref[refId]);
-      }
-    }
-    memset(fl->keeps,0,fl->curLen);
-    return;
-  }
-  bgzf_seek(fl->bg,it->second.offs,SEEK_SET);
-  if(it->second.len>fl->curLen) 
-    fl->keeps=(char*) realloc(fl->keeps,it->second.len);
-  bgzf_read(fl->bg,fl->keeps,it->second.len);
-
-  if(fl->hasMajMin==1){
-    if(it->second.len>fl->curLen) {
-      fl->major = (char*) realloc(fl->major,it->second.len);
-      fl->minor = (char*) realloc(fl->minor,it->second.len);
-    }
-    bgzf_read(fl->bg,fl->major,it->second.len);
-    bgzf_read(fl->bg,fl->minor,it->second.len);
-  }
- 
+  filt_readSites(fl,header->name[refId],header->l_ref[refId]);
 }

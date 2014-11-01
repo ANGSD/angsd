@@ -5,21 +5,24 @@
 
 typedef struct{
   int64_t offs;
-  int len;
+  size_t len;
 }asdf_dats;
 
-
+typedef std::map<char*,asdf_dats,ltstr> pMap;
 
 typedef struct{
   BGZF *bg;
   FILE *fp;
-  std::map<int,asdf_dats> offs;
+  pMap offs;
   char *keeps;
   char *major;
   char *minor;
   int hasMajMin;
-  int curLen;//<-length of the char arrays;
+  size_t curLen;//<-length of the char arrays;
+  char *curNam;
 }filt;
 
 
-filt *filt_init(const char *fname,const aMap* revMap,const aHead *hd,int isBed);
+filt *filt_read(const char *fname);
+void dalloc(filt *f);
+void filt_readSites(filt*fl,char *chr,size_t hint) ;

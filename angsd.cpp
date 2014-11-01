@@ -175,8 +175,7 @@ void parseArgStruct(argStruct *arguments){
 }
 
 int main(int argc, char** argv){
-  if(strcmp(ZLIB_VERSION,zlib_version))
-{
+  if(strcmp(ZLIB_VERSION,zlib_version)){
     fprintf(stderr,"\t-> Problem with difference in zlib version used for compiling and linking\n");
     fprintf(stderr,"\t-> ZLIB_VERSION: %s zlibversion: %s \n",ZLIB_VERSION,zlib_version);
     return 0;
@@ -185,6 +184,13 @@ int main(int argc, char** argv){
   //no arguments supplied -> print info
    if(argc==1||(argc==2&&(strcasecmp(argv[1],"--version")==0||strcasecmp(argv[1],"--help")==0))){//if haven't been supplied with arguments, load default,print, and exit
      printProgInfo(stderr);
+     return 0;
+   }
+   
+   if(!strcasecmp("sites",argv[1])){
+     //from prep_sites.* used for indexing -sites files
+     int main_sites(int argc,char **argv);
+     main_sites(--argc,++argv);
      return 0;
    }
 

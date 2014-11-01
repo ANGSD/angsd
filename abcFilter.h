@@ -9,7 +9,6 @@ class abcFilter : public abc{
   int minInd;
   //  int nInd;
   int curChr;
-  int isBed;
 public:
   void readSites(int refId);
   //none optional stuff
