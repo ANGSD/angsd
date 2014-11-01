@@ -102,6 +102,7 @@ namespace aio{
   BGZF *openFileBG(const char* a,const char* b,const char *mode);
 }
 
-
+int isNewer(const char *newer,const char *older);
 #endif
+
 

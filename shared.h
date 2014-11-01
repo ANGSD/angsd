@@ -1,3 +1,8 @@
+#ifdef __WITH_MAIN__
+int SIG_COND =1;
+#endif
+
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -63,5 +68,5 @@ void destroy();//destroy all initialized objects
 void selector(funkyPars *p);
 
 #define LOGMAX 20000   // pre-computed logfactorial 
-int isNewer(const char *newer,const char *older);
+
 #endif

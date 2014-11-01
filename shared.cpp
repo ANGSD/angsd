@@ -472,18 +472,3 @@ void printFunky(funkyPars *p){
 
 
 
-
-//checks that newer is newer than older
-int isNewer(const char *newer,const char *older){
-   if (strstr(older, "ftp://") == older || strstr(older, "http://") == older)
-     return 0;
-  //  fprintf(stderr,"newer:%s older:%s\n",newer,older);
-  // return 0;
-  struct stat one;
-  struct stat two;
-  stat(newer, &one );
-  stat(older, &two );
-  
-  return one.st_mtime>=two.st_mtime;
-}
-
