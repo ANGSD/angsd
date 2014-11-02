@@ -1,13 +1,14 @@
  /*
-  thorfinn thorfinn@binf.ku.dk dec17 2012
-  
+  thorfinn thorfinn@binf.ku.dk dec17 2012 
   has modified so no sites[].chromo etc are used
-    
+  
   anders albrecht@binf.ku.dk made this.
+
+
+  logistic regression changed 612new/613
 
   part of angsd
 
-  DRAGON positions are not offset correctly
 */
 #include <cmath>
 #include <zlib.h>
