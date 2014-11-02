@@ -109,6 +109,8 @@ void abcWriteFasta::print(funkyPars *pars){
 }
 
 void abcWriteFasta::changeChr(int refId){
+  if(doFasta==0)
+    return;
   if(myFasta!=NULL){
     for(size_t i=0;i<header->l_ref[currentChr];i++){
       if(i % NbasesPerLine == 0)
