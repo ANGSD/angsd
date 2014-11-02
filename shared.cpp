@@ -26,7 +26,7 @@
 //small hack for the keepsites, this should be included allready in the bam parsing
 #include "abcFilter.h"
 #include "abcSmartCounts.h"
-
+#include "abcWriteFasta.h"
 //class to keep track of chunk order when dumping results
 #include "printRes.h"
 
@@ -265,9 +265,9 @@ void master(funkyPars *p){
 
 
 void changeChr(int refId){
-  ((abcFilter *)allMethods[0])->readSites(refId);//<-used for filter if -doFilter==2 and -sites with .keep
+  ((abcFilter *)allMethods[0])->readSites(refId);
+  ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
-
 }
 
 

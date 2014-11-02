@@ -2,10 +2,10 @@
 class abcWriteFasta:public abc{
 private:
   kstring_t bufstr;
-  size_t currentPos;
   int currentChr;
   int NbasesPerLine;
-  double *lphred;//these are log phread scores log(10^(1:255)/(-10))
+  double lphred[256];//these are log phread scores log(10^(1:255)/(-10))
+  char *myFasta;//contains the new fastasequence for the currrent chr
 public:
   int doFasta;
   gzFile outfileZ;
@@ -13,6 +13,7 @@ public:
 
   abcWriteFasta(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcWriteFasta();
+  void changeChr(int refId);
   void getOptions(argStruct *arguments);
   void run(funkyPars  *pars);
   void print(funkyPars *pars);
