@@ -7,7 +7,7 @@ refactored. Should be simpler now
 
 #include <cmath>
 #include <cstdlib>
-#include <zlib.h>
+#include "bgzf.h"
 #include <assert.h>
 
 #include "analysisFunction.h"
@@ -16,6 +16,7 @@ refactored. Should be simpler now
 #include "abc.h"
 #include "abcWriteFasta.h"
 
+
 void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doFasta\t%d\n",doFasta);
@@ -23,6 +24,7 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t2: use the most common base (needs -doCounts 1)\n");
   fprintf(argFile,"\t3: use the base with highest ebd (under development) \n");
   fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases perline in output file)\n",NbasesPerLine);
+  fprintf(argFile,"\t-explode\t%d\t(Should we include chrs with no data?)",explode);
   fprintf(argFile,"\n");
 }
 
@@ -31,6 +33,7 @@ void abcWriteFasta::getOptions(argStruct *arguments){
   //from command line
   doFasta=angsd::getArg("-doFasta",doFasta,arguments);
   doCount=angsd::getArg("-doCounts",doCount,arguments);
+  explode=angsd::getArg("-explode",explode,arguments);
   NbasesPerLine = angsd::getArg("-basesPerLine",NbasesPerLine,arguments);
   
   if(doFasta){
@@ -50,14 +53,27 @@ void abcWriteFasta::getOptions(argStruct *arguments){
 
 
 }
+void writeChr(kstring_t *bufstr,size_t len,char *nam,char*d,int nbpl){
+  fprintf(stderr,"\t[%s] writing chr:%s\n",__FUNCTION__,nam);
+  ksprintf(bufstr,">%s",nam);
+  for(size_t i=0;i<len;i++){
+    if(i % nbpl == 0)
+      kputc('\n',bufstr);
+    kputc(d!=NULL?d[i]:'N',bufstr);
+  }
+  kputc('\n',bufstr);
+
+}
+
 
 abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int inputtype){
+  explode = 0;
   myFasta = NULL;
   doFasta=0;
   doCount=0;
   currentChr=-1;
   NbasesPerLine=50;
-  
+  hasData =0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doFasta")){
       printArg(stdout);
@@ -80,7 +96,7 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   const char* postfix;
   postfix=".fa.gz";
   outfileZ = Z_NULL;
-  outfileZ = aio::openFileGz(outfiles,postfix,GZOPT);
+  outfileZ = aio::openFileBG(outfiles,postfix,GZOPT);
   bufstr.s=NULL;
   bufstr.m=0;
   bufstr.l=0;
@@ -92,48 +108,41 @@ abcWriteFasta::~abcWriteFasta(){
   if(doFasta==0)
     return;
   changeChr(-1);
-  if(outfileZ!=Z_NULL) gzclose(outfileZ); 
+  if(outfileZ!=Z_NULL) bgzf_close(outfileZ); 
   if(bufstr.s!=NULL)
     free(bufstr.s);
 }
 
-
-void abcWriteFasta::clean(funkyPars *pars){
-
-}
-
-
-
-void abcWriteFasta::print(funkyPars *pars){
-    
-}
-
-void abcWriteFasta::changeChr(int refId){
+void abcWriteFasta::changeChr(int refId) {
   if(doFasta==0)
     return;
-  if(myFasta!=NULL){
-    for(size_t i=0;i<header->l_ref[currentChr];i++){
-      if(i % NbasesPerLine == 0)
-	kputc('\n',&bufstr);//fprintf(outfile,"\n");
-      kputc(myFasta[i],&bufstr);//fprintf(outfile,"%c",fastaStruct->seq[c]);
+  if(myFasta!=NULL){//proper case we have data
+    if(explode||hasData){
+      writeChr(&bufstr,header->l_ref[currentChr],header->name[currentChr],myFasta,NbasesPerLine);
+    bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     }
-    kputc('\n',&bufstr);//fprintf(outfile,"\n");
   }
-
+  
   //ANDERS FILL IN MISSING CHRS IF YOU WANT HERE
+  //ANDERS IS APPRANTLY LAZY SO NOW I'VE DONE IT FOR HIM
 
-
-  if(refId!=-1){//-1 means that we are at destructor
+  if(refId!=-1){//-1 = destructor
+    for(int i=currentChr+1;explode&&i<refId;i++){
+      writeChr(&bufstr,header->l_ref[i],header->name[i],NULL,NbasesPerLine);
+      bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+    }
     currentChr=refId;
-    ksprintf(&bufstr,">%s",header->name[currentChr]);
     free(myFasta);
     myFasta=(char*)malloc(header->l_ref[currentChr]);
     memset(myFasta,'N',header->l_ref[currentChr]);
-  }else
+  }else{
     free(myFasta);
-  
-  gzwrite(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
-
+    for(int i=currentChr+1;explode&&i<header->n_ref;i++){
+      writeChr(&bufstr,header->l_ref[i],header->name[i],NULL,NbasesPerLine);
+      bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+    }
+  }
+  bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
 }
 
 
@@ -143,7 +152,7 @@ void abcWriteFasta::run(funkyPars *pars){
 
   if(doFasta==0)
     return;
- 
+  hasData=1;
   if(doFasta==1){//random number read
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->l_ref[pars->refId];s++){
       if(pars->keepSites[s]==0)
