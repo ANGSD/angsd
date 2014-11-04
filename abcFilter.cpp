@@ -61,7 +61,6 @@ void abcFilter::printArg(FILE *argFile){
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos major minor))\n",fname);
   fprintf(argFile,"\t-minInd\t\t%d\tOnly use site if atleast minInd of samples has data\n",minInd);
   fprintf(argFile,"\t1) You can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");
-  fprintf(argFile,"\t2) You can also supply a bed file containing regions to use last column is a mappability score.\n\tSet this to a value differet from zero will then assume the input file is a bedfile. \n");
 }
 
 void abcFilter::getOptions(argStruct *arguments){

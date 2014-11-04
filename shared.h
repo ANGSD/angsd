@@ -23,7 +23,7 @@ typedef unsigned int suint;
 // struct for covar class - classy
 
 enum{INPUT_BAM,INPUT_GLF,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP};
-#define VERSION 0.613
+#define VERSION 0.614
 
 typedef struct {
 
