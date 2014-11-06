@@ -557,6 +557,7 @@ int val_bed(int argc, char**argv){
   BGZF *fp = bgzf_open(outnames_bin,"r");
   gzFile gz =gzopen(outnames_gz,"r");
   char buf[4096];
+  gzgets(gz,buf,4096);
   while(1){
     perChr pc = getPerChr(fp);
     if(pc.nSites==0)
@@ -566,7 +567,7 @@ int val_bed(int argc, char**argv){
       gzgets(gz,buf,4096);
       char *chr = strtok(buf,"\n\t ");
       if(strcmp(chr,pc.chr)!=0){
-	fprintf(stderr,"Problem with nonmatching chromosome\n");
+	fprintf(stderr,"Problem with nonmatching chromosome: \'%s\' vs \'%s\'\n",chr,pc.chr);
 	exit(0);
       }
       int posi =atoi(strtok(NULL,"\t\n "));
@@ -589,7 +590,7 @@ int val_bed(int argc, char**argv){
     dalloc(pc);
   }
 
-  fprintf(stderr,"ALL OK: %s",base);
+  fprintf(stderr,"ALL OK: %s\n",base);
   return 0;
 }
 
