@@ -13,6 +13,7 @@ private:
   float postCutoff;
   gzFile outfileZ;
   int geno_minDepth;
+  int geno_maxDepth;
 public:
   abcCallGenotypes(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcCallGenotypes();
