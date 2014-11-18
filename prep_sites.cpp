@@ -60,11 +60,13 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
   }
 
   bgzf_seek(fl->bg,it->second.offs,SEEK_SET);
-  //  fprintf(stderr,"it->second.len:%lu fl->curLen:%lu fl->keeps:%p\n",it->second.len,fl->curLen,fl->keeps);
+
   size_t nsize = std::max(fl->curLen,hint);
+  nsize = std::max(nsize,it->second.len);
   if(nsize>fl->curLen) 
     fl->keeps=(char*) realloc(fl->keeps,nsize);
   memset(fl->keeps,0,nsize);
+  fprintf(stderr,"it->second.len:%lu fl->curLen:%lu fl->keeps:%p\n",it->second.len,fl->curLen,fl->keeps);
   bgzf_read(fl->bg,fl->keeps,it->second.len);
 
   if(fl->hasMajMin==1){
@@ -205,10 +207,17 @@ filt *filt_read(const char *fname){
       fprintf(stderr,"Problem reading chunk from binary file:\n");
       exit(0);
     }
+#if 0
+    fprintf(stderr,"tmp.len:%lu\n",tmp.len); 
+#endif
     if(1!=fread(&ret->hasMajMin,sizeof(int),1,ret->fp)){
       fprintf(stderr,"Problem reading chunk from binary file:\n");
       exit(0);
     }
+#if 0
+    fprintf(stderr,"tmp.hasMajMin:%d\n",ret->hasMajMin); 
+#endif
+
     ret->offs[strdup(chrId)]=tmp;
   }
   
