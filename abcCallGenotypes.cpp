@@ -33,8 +33,10 @@ void abcCallGenotypes::printArg(FILE *argFile){
   fprintf(argFile,"\t-> A combination of the above can be choosen by summing the values, EG write 0,1,2 types with majorminor as -doGeno 3\n");
   fprintf(argFile,"\t-postCutoff=%f (Only genotype to missing if below this threshold)\n",postCutoff);
  fprintf(argFile,"\t-geno_minDepth=%d\t(-1 indicates no cutof)\n",geno_minDepth);
+ fprintf(argFile,"\t-geno_maxDepth=%d\t(-1 indicates no cutof)\n",geno_maxDepth);
  fprintf(argFile,"\n\tNB When writing the posterior the -postCutoff is not used\n\n");
  fprintf(argFile,"\n\tNB geno_minDepth requires -doCounts\n\n");
+ fprintf(argFile,"\n\tNB geno_maxDepth requires -doCounts\n\n");
  
 }
 
@@ -54,11 +56,16 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
 
 
   geno_minDepth=angsd::getArg("-geno_minDepth",geno_minDepth,arguments);
+  geno_minDepth=angsd::getArg("-geno_maxDepth",geno_maxDepth,arguments);
   
   int doCounts=0;
   doCounts = angsd::getArg("-doCounts",doCounts,arguments);
   if(geno_minDepth!=-1&&doCounts==0){
     fprintf(stderr,"Must supply -doCounts to use a minimum depth for GC calling\n");
+    exit(0);
+  }
+  if(geno_maxDepth!=-1&&doCounts==0){
+    fprintf(stderr,"Must supply -doCounts to use a maximum depth for GC calling\n");
     exit(0);
   }
   
@@ -82,6 +89,7 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
   postCutoff= 1.0/3.0;
   outfileZ = Z_NULL;
   geno_minDepth = -1;
+  geno_maxDepth = -1;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doGeno")){
       printArg(stdout);
@@ -134,6 +142,11 @@ void abcCallGenotypes::getGeno(funkyPars *pars){
       if(geno_minDepth!=-1) {
 	int geno_Depth = pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3];
 	if(geno_Depth<geno_minDepth)
+	  maxGeno=-1;
+      }
+      if(geno_maxDepth!=-1) {
+	int geno_Depth = pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3];
+	if(geno_Depth>geno_maxDepth)
 	  maxGeno=-1;
       }
 
