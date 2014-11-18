@@ -22,7 +22,7 @@ jackKnife3<-function(x,fun,mc.cores,...){
     f<-floor(seq(1,n,n/mc.cores))
     f[mc.cores]<-n+1
     ffun<-function(z) unlist(lapply(f[z]:(f[z+1]-1),function(i) fun(x[-i,],...) ))
-    u<-unlist(parallel::mclapply(1:(mc.cores-1),ffun))
+    u<-unlist(parallel::mclapply(1:(mc.cores-1),ffun,mc.cores=mc.cores))
     thetahat <- fun(x, ...)
     jack.bias <- (n - 1) * (mean(u) - thetahat)
     jack.se <- sqrt(((n - 1)/n) * sum((u - mean(u))^2))
@@ -224,12 +224,9 @@ doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores){
     keep<-r_save[,1]%in%map100
     r_save<-r_save[keep,]
 
-    
     hapMap_save<-readHap(hapFile=hapFile)
     res<-mismatch(r_save,hapMap_save,controlSNP)
     res$mat3
-
-    
 
     est <-estCont(res,jack=T,mc.cores=mc.cores) 
     print(est$est)
