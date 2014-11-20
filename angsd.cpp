@@ -234,12 +234,18 @@ int main(int argc, char** argv){
    //Below is main loop which will run until nomore data
    assert(args->hd);
    assert(args->revMap);
+   int lastRefId=-1;
    while(SIG_COND) {
      funkyPars *tmp = mr->fetch(); //YES MISTER FETCH
-     
-       if(tmp==NULL)
-	 break;
-      selector(tmp);
+      if(tmp==NULL)
+	break;
+     if(lastRefId==-1||lastRefId!=tmp->refId){
+       lastRefId=tmp->refId;
+       void changeChr(int refId);//<-ugly is located in shared.cpp, to force a change of chr, when notusing bamfiles
+       changeChr(lastRefId);
+     }
+    
+     selector(tmp);
       
    }
 

@@ -265,6 +265,7 @@ void master(funkyPars *p){
 
 
 void changeChr(int refId){
+  //fprintf(stderr,"[%s.%s():%d] refid:%d\n",__FILE__,__FUNCTION__,__LINE__,refId);
   ((abcFilter *)allMethods[0])->readSites(refId);
   ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;

@@ -95,7 +95,6 @@ void abcFilter::run(funkyPars *p){
 
 
   if(fl!=NULL && fl->hasMajMin==1 && doMajorMinor==3){
-    //    fprintf(stderr,"aloocating for major and minor\n");
     p->major = new char [p->numSites];
     p->minor = new char [p->numSites];
     for(int i=0;i<p->numSites;i++){
@@ -103,16 +102,14 @@ void abcFilter::run(funkyPars *p){
       p->minor[i] = 4;
     }
   }
-
+  
   if(fl!=NULL) {
+    assert(fl->keeps!=NULL);
     for(int s=0;s<p->numSites;s++){
-
       if(fl->keeps[p->posi[s]]==0){
-	//	fprintf(stderr,"Plugging inf vals std\n");
 	p->keepSites[s] =0;
       }
       if(p->keepSites[s] && fl->hasMajMin==1 &&doMajorMinor==3){
-	//fprintf(stderr,"Plugging inf vals std majorminor\n");
 	p->major[s] = fl->major[p->posi[s]];
 	p->minor[s] = fl->minor[p->posi[s]];
       }
@@ -150,7 +147,7 @@ void abcFilter::clean(funkyPars *p){
 
 
 void abcFilter::readSites(int refId) {
-  //  fprintf(stderr,"[%s].%s():%d -> refId:%d\n",__FILE__,__FUNCTION__,__LINE__,refId);
+  //fprintf(stderr,"[%s].%s():%d -> refId:%d\n",__FILE__,__FUNCTION__,__LINE__,refId);
   if(fl==NULL)
     return;
   filt_readSites(fl,header->name[refId],header->l_ref[refId]);
