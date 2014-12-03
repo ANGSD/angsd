@@ -172,12 +172,12 @@ void modMajorMinor(funkyPars *pars,int doMajorMinor){
  
 }
 
-void majorMinorGL(funkyPars *pars,int doMajorMinor){
+void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
   
   float lmax;
   float totalLike;
-  int choiceMajor;
-  int choiceMinor;
+  int choiceMajor=-1;
+  int choiceMinor=-1;
   for(int s=0;s<pars->numSites;s++)  {
     if(pars->keepSites[s]==0){
       pars->major[s] = 4;
@@ -208,6 +208,7 @@ void majorMinorGL(funkyPars *pars,int doMajorMinor){
 	    choiceMajor=Imajor;
 	    choiceMinor=Iminor;
 	  }
+
 	}
 //if we fix the major then skip after internal loop.
       }
@@ -215,6 +216,11 @@ void majorMinorGL(funkyPars *pars,int doMajorMinor){
       float W1;
       float W2;
       float sum=0;
+      if(choiceMajor==-1 || choiceMinor==-1){
+	fprintf(stdout,"\t-> Something has gone wrong trying to infer major/minor from GLS at \'%s\' %d will discard site from analysis\n",header->name[pars->refId],pars->posi[s]+1);
+	pars->keepSites[s]=0;
+      }
+      // assert(choiceMajor!=-1&&choiceMinor!=-1);
       for(int i=0;i<pars->nInd;i++){
 	W0=exp(pars->likes[s][i*10+angsd::majorminor[choiceMajor][choiceMajor]])*0.25;
 	W1=exp(pars->likes[s][i*10+angsd::majorminor[choiceMajor][choiceMinor]])*0.5;

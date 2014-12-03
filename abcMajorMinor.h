@@ -5,6 +5,7 @@ class abcMajorMinor:public abc{
   int doSaf;
   char *pest;
   int skipTriallelic;
+  void majorMinorGL(funkyPars *pars,int doMajorMinor);
 public:
   void printArg(FILE *argFile);
   void run(funkyPars *pars);
