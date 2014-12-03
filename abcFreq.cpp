@@ -838,7 +838,7 @@ double abcFreq::emFrequencyNoFixed(double *loglike,int numInds, int iter,double 
     sum=0;
     correctInd=keepInd;
     for(int i=0;i<numInds;i++){
-      if(keep[i]==0)
+      if(keep!=NULL && keep[i]==0)
         continue;
       for(int j=0;j<3;j++){
 	W0[j]=exp(loglike[i*10+angsd::majorminor[major][major]])*pow(1-p,2);
@@ -908,7 +908,7 @@ double abcFreq::likeNoFixedMinor(double p,double *logLikes,int numInds,int major
 			   logLikes[i*10+angsd::majorminor[major][iMinor[j]]]+log(2)+log(p)+log(1-p),
 			   logLikes[i*10+angsd::majorminor[iMinor[j]][iMinor[j]]]+2*log(p));
   }
-  totalLike=angsd::addProtect3(partialLike[0],partialLike[1],partialLike[2]);
+  totalLike=angsd::addProtect3(partialLike[0],partialLike[1],partialLike[2])-log(3);
   return -totalLike;
 
 }
