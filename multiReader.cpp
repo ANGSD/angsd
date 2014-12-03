@@ -80,7 +80,7 @@ void setInputType(argStruct *args){
   if(tmp!=NULL){
     args->inputtype=INPUT_GLF;
     args->infile = tmp;
-    args->nams.push_back(args->infile);
+    args->nams.push_back(strdup(args->infile));
     char *tmp_fai = NULL;
     tmp_fai = angsd::getArg("-fai",tmp_fai,args);
     if(tmp_fai==NULL){
@@ -94,7 +94,7 @@ void setInputType(argStruct *args){
   if(tmp!=NULL){
     args->inputtype=INPUT_VCF_GP;
     args->infile = tmp;
-    args->nams.push_back(args->infile);
+    args->nams.push_back(strdup(args->infile));
     char *tmp_fai = NULL;
     tmp_fai = angsd::getArg("-fai",tmp_fai,args);
     if(tmp_fai==NULL){
@@ -110,7 +110,7 @@ void setInputType(argStruct *args){
   if(tmp!=NULL){
     args->inputtype=INPUT_VCF_GL;
     args->infile = tmp;
-    args->nams.push_back(args->infile);
+    args->nams.push_back(strdup(args->infile));
     char *tmp_fai = NULL;
     tmp_fai = angsd::getArg("-fai",tmp_fai,args);
     if(tmp_fai==NULL){
@@ -125,7 +125,7 @@ void setInputType(argStruct *args){
   if(tmp!=NULL){
     args->inputtype=INPUT_PILEUP;
     args->infile = tmp;
-    args->nams.push_back(args->infile);
+    args->nams.push_back(strdup(args->infile));
     return;
   }
   tmp = angsd::getArg("-beagle",tmp,args);
@@ -139,7 +139,7 @@ void setInputType(argStruct *args){
     }
     args->inputtype=INPUT_BEAGLE;
     args->infile = tmp;
-    args->nams.push_back(args->infile);
+    args->nams.push_back(strdup(args->infile));
     free(tmp_fai);
     return;
   }
@@ -147,7 +147,7 @@ void setInputType(argStruct *args){
   if(tmp!=NULL){
     args->inputtype=INPUT_BAM;
     args->infile = tmp;
-    args->nams.push_back(args->infile);
+    args->nams.push_back(strdup(args->infile));
     return;
   }
   int nInd = 0;
@@ -395,6 +395,7 @@ multiReader::~multiReader(){
   
   delete []   args->usedArgs;
   free(args->outfiles);
+  free(args->infile);
   if(args->argumentFile!=stderr) fclose(args->argumentFile);
   delete args;
   
