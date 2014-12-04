@@ -4,13 +4,16 @@ CXX=g++
 FLAGS=-O3 -D_USE_KNETFILE
 
 
-all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl
+all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix
 
 bfgs.o: bfgs.c bfgs.h
 	$(CC) $(FLAGS) -c bfgs.c -Wno-vexing-parse
 
 printIcounts: printIcounts.c
 	$(CC) $(FLAGS) printIcounts.c -o printIcounts -lz
+
+NGSadmix: ngsadmix32.cpp
+	$(CXX) $(FLAGS) ngsadmix32.cpp -o NGSadmix -lz -lpthread
 
 supersim: supersim.cpp rbeta.cpp
 	$(CXX) $(FLAGS) supersim.cpp -lz -o supersim
