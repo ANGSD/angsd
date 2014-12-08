@@ -299,7 +299,7 @@ void abcError::getOptions(argStruct *arguments){
     exit(0);
   }
 
-  if(doError &&((it==INPUT_BAM) || (it==INPUT_PILEUP) )){
+  if((doError &&(it!=INPUT_BAM) )&& (doError && it!=INPUT_PILEUP) ){
     fprintf(stderr,"Error rates can be estimated based on either \n 1) SOAP input or bam files with -doCounts\n");
     exit(0);
   }
