@@ -423,22 +423,15 @@ int angsd::matinv( double x[], int n, int m, double space[])
 
 void angsd::logrescale(double *ary,int len){
   int maxId = 0;
-  //    fprintf(stderr,"maxid:%d maxval:%f\n",maxId,ary[maxId]);
-  for(int i=1;i<len;i++){
-    //if(posCounter==debug_print)
-    //fprintf(stderr,"maxid:%d maxval:%f ary=%f\n",maxId,ary[maxId],ary[i]);
+  for(int i=1;i<len;i++)
     if(ary[i]>ary[maxId])
       maxId=i;
-  }
+  
   double maxVal = ary[maxId];
-  //if(posCounter==debug_print)
-  //  fprintf(stderr,"maxval: %f\n",maxVal);
-  for(int i=0;i<len;i++){
-    //if(posCounter==debug_print)
-    //fprintf(stderr,"%f\t%f\n",ary[i],ary[i]-maxVal);
-    ary[i] = ary[i]-maxVal;
-  }
-  //  exit(0);
+  for(int i=0;i<len;i++)
+    ary[i] -= maxVal;
+  
+  
 }
 
 
