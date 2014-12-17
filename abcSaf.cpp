@@ -2,7 +2,7 @@
 #include <cmath>
 #include <assert.h>
 #include <zlib.h>
-
+#include <cfloat>
 #include "kstring.h"
 #include "abcFreq.h"
 #include "shared.h"
@@ -13,9 +13,6 @@
 #include "abcSaf.h"
 
 #define MINLIKE -1000.0 //this is for setting genotypelikelhoods to missing (EXPLAINED BELOW)
-
-
-
 
 /*
   From 0.501 the realSFS method can take into account individual inbreeding coefficients
@@ -42,13 +39,8 @@ void abcSaf::printArg(FILE *argFile){
 }
 
 double lbico(double n, double k){
-  //  fprintf(stderr,"%f %f\n",n,k);
   return lgamma(n+1)-lgamma(k+1)-lgamma(n-k+1);
 }
-
-
-
-
 
 double myComb2(int k,int r, int j){
   //fprintf(stderr,"myComb\t%d\t%d\t%d\n",k,r,j);
@@ -63,11 +55,6 @@ double myComb2(int k,int r, int j){
   return exp(fac1-fac2);
   //return fac1;
 }
-
-
-
-
-
 
 void abcSaf::getOptions(argStruct *arguments){
   doSaf=angsd::getArg("-doSaf",doSaf,arguments);
@@ -127,7 +114,7 @@ void abcSaf::getOptions(argStruct *arguments){
     exit(0);
   }
   if(doSaf==2){
-    fprintf(stderr,"\t->(Using Filipe modification of: %s)\n",__FILE__);
+    fprintf(stderr,"\t->(Using Filipe G Vieira modification of: %s)\n",__FILE__);
     int doMajorMinor =0;
     doMajorMinor = angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
     int doMaf =0;
@@ -140,9 +127,10 @@ void abcSaf::getOptions(argStruct *arguments){
     indF_name =  angsd::getArg("-indF",indF_name,arguments);
     if(indF_name==NULL){
       filipeIndF = new double[arguments->nInd];
-      memset(filipeIndF, 0, arguments->nInd*sizeof(double));
-      //fprintf(stderr,"Need to set -indF\n");
-      //exit(0);
+      for(int i=0;i<arguments->nInd;i++)
+	filipeIndF[i] =0;
+      fprintf(stderr,"\t-> No -indF file provided will assume an inbreeding zero for all samples.\n");
+      fprintf(stderr,"\t-> If no inbreeding is expected consider using -doSaf 1\n");
     }else
       filipeIndF = angsd::readDouble(indF_name,arguments->nInd);
   }
@@ -193,8 +181,6 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     }else
       return;
   }
-
-
 
   getOptions(arguments);
 
@@ -301,10 +287,10 @@ int isSame(double a,double b,double tolerance){
   return (fabs(a-b)<tolerance);
 }
 
-
+//18dec 2014 we now condition on the sites where the ancestral is either major or minor. 
 void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim) {
   //  fprintf(stderr,"liks=%p anc=%p nsites=%d nInd=%d underflowprotect=%d fold=%d keepSites=%p r=%p\n",liks,anc,nsites,numInds,underFlowProtect,fold,keepSites,r);
-
+  assert(doSaf==2);
   int myCounter =0;
 
   if(anc==NULL||liks==NULL){
@@ -315,200 +301,145 @@ void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
   double m[numInds][3];  //HWE priors
 
   for(int it=0; it<nsites; it++)  {//loop over sites
-    int major_offset = anc[it];
-    if(major_offset==4 || keepSites[it]==0){//skip if no ancestral information
+    int ancB,derB;
+    ancB= anc[it];
+    derB=-1;
+    
+
+
+    if(ancB==4 || keepSites[it]==0){//skip if no ancestral information
       keepSites[it] =0; //
-      //      r->oklist is zero no need to update
       continue;
     }
+    //if the ancestral is neither major or the minor skip site
+    if(ancB!=major[it]&&ancB!=minor[it]){
+      keepSites[it] =0; //
+      continue;
+    }
+
     //set the resultarray to zeros
-    for(int sm=0 ; sm<(2*numInds+1) ; sm++ )
-      sumMinors[sm] = 0;
+    for(int sm=0 ; sm<(2*numInds+1) ; sm++ ) sumMinors[sm] = 0;
     
-    //loop through the 3 different minors
-    for(int minor_offset=0;minor_offset<4;minor_offset++) {
-      if(minor_offset == major_offset)
+    // Assign freqs to ancestral and non-ancestral alleles
+    double anc_freq, non_anc_freq;
+    
+    anc_freq = non_anc_freq = freq[it];
+    if(ancB == major[it]){
+      anc_freq = 1-freq[it];
+      derB = minor[it];
+    }else {
+      non_anc_freq = 1-freq[it];
+      derB = major[it];
+    }
+
+    if(noTrans){
+      if((ancB==2&&derB==0)||(ancB==0&&derB==2))
 	continue;
+      if((ancB==1&&derB==3)||(ancB==3&&derB==1))
+	continue;
+    }
 
-      if(noTrans){
-	if((major_offset==2&&minor_offset==0)||(major_offset==0&&minor_offset==2))
-	  continue;
-	if((major_offset==1&&minor_offset==3)||(major_offset==3&&minor_offset==1))
-	  continue;
-      }
+    assert(ancB!=-1&&derB!=-1);
+    
+    double totmax = 0.0;
+    
+    int Aa_offset = angsd::majorminor[derB][ancB];//0-9
+    int AA_offset = angsd::majorminor[derB][derB];//0-9
+    int aa_offset = angsd::majorminor[ancB][ancB];//0-9
+    
+    double hj[2*numInds+1];
+    for(int index=0;index<(2*numInds+1);index++)
+      if(underFlowProtect==0)
+	hj[index]=0;
+      else
+	hj[index]=log(0);
+    
+    double PAA,PAa,Paa;
+    
+    for(int i=0 ; i<numInds ;i++) {
+      m[i][0] = pow(anc_freq,2.0) + anc_freq*non_anc_freq*indF[i];
+      m[i][1] = 2.0*anc_freq*non_anc_freq - 2.0*anc_freq*non_anc_freq*indF[i];
+      m[i][2] = pow(non_anc_freq,2.0) + anc_freq*non_anc_freq*indF[i];
+    
+      double GAA,GAa,Gaa;
 
-      if(doSaf == 2 && minor_offset != major[it] && minor_offset != minor[it]) continue;
+      //fix issues where frequency is estimated to zero. Returns very small value
+      GAA = ((m[i][2] != 0) ? (log(m[i][2])+liks[it][i*10+AA_offset]) : log(DBL_MIN));
+      GAa = ((m[i][1] != 0) ? (log(m[i][1])+liks[it][i*10+Aa_offset]) : log(DBL_MIN));
+      Gaa = ((m[i][0] != 0) ? (log(m[i][0])+liks[it][i*10+aa_offset]) : log(DBL_MIN));
       
-      double totmax = 0.0;
-      //hook for only calculating one minor
-      int Aa_offset = angsd::majorminor[minor_offset][major_offset];//0-9
-      int AA_offset = angsd::majorminor[minor_offset][minor_offset];//0-9
-      int aa_offset = angsd::majorminor[major_offset][major_offset];//0-9
-      // fprintf(stderr,"%d:%d\t%d\t%d\n",major_offset,Aa_offset,AA_offset,aa_offset);
-      //exit(0);
-      //part two
-      double hj[2*numInds+1];
-      for(int index=0;index<(2*numInds+1);index++)
-	if(underFlowProtect==0)
-	  hj[index]=0;
-	else
-	  hj[index]=log(0);
-      double PAA,PAa,Paa;
-
-      // Assign freqs to ancestral and non-ancestral alleles
-      double anc_freq, non_anc_freq;
-      if(doSaf == 2){
-	anc_freq = non_anc_freq = freq[it];
-	if(major_offset == major[it])
-	  anc_freq = 1-freq[it];
-	if(minor_offset == major[it])
-	  non_anc_freq = 1-freq[it];
+      double mymax;
+      if (Gaa > GAa && Gaa > GAA) mymax = Gaa;
+      else if (GAa > GAA) mymax = GAa;
+      else mymax = GAA;
+      
+      if(mymax<MINLIKE){
+	Gaa = 0;
+	GAa = 0;
+	GAA = 0;
+	totmax = totmax + mymax;
+      }else{
+	Gaa=Gaa-mymax;
+	GAa=GAa-mymax;
+	GAA=GAA-mymax;
+	totmax = totmax + mymax;
       }
+      
+      if(underFlowProtect==0){
+	PAA=exp(GAA);
+	PAa=exp(GAa);
+	Paa=exp(Gaa);
+      }else{
+	PAA =(GAA);
+	PAa =(GAa);
+	Paa =(Gaa);
+      }
+      
+      
+      if(std::isnan(Paa)||std::isnan(PAa)||std::isnan(Paa))
+	fprintf(stderr,"Possible underflow  PAA=%f\tPAa=%f\tPaa=%f\n",PAA,PAa,Paa);
 
-      for(int i=0 ; i<numInds ;i++) {
-	if(doSaf == 2) { //calculate priors based on HWE + indF
-	  m[i][0] = pow(anc_freq,2) + anc_freq*non_anc_freq*indF[i];
-	  m[i][1] = 2*anc_freq*non_anc_freq - 2*anc_freq*non_anc_freq*indF[i];
-	  m[i][2] = pow(non_anc_freq,2) + anc_freq*non_anc_freq*indF[i];
-	} else { // If not realSFS2, assume uniform prior
-	  m[i][0] = m[i][1] = m[i][2] = 1;
-	}
-
-	//	printf("pre scale AA=%f\tAa=%f\taa=%f\n",liks[it][i*3+AA_offset],liks[it][i*3+Aa_offset],liks[it][i*3+aa_offset]);
-	double GAA,GAa,Gaa;
-#ifdef RESCALE
-	if(0){//The rescaling is now done in 'getMajorMinor()'
-	  double max = liks[it][i*10+0];
-	  for(int index=1;index<10;index++)
-	    if(liks[it][i*10+index]>max)
-	      max = liks[it][i*10+index];
-	  for(int index=0;index<10;index++)
-	    liks[it][i*10+index] = liks[it][i*10+index]-max;
-	}
-#endif
-
-	GAA = ((m[i][2] != 0) ? (log(m[i][2])+liks[it][i*10+AA_offset]) : (-999999999));
-	GAa = ((m[i][1] != 0) ? (log(m[i][1])+liks[it][i*10+Aa_offset]) : (-999999999));
-	Gaa = ((m[i][0] != 0) ? (log(m[i][0])+liks[it][i*10+aa_offset]) : (-999999999));
-	if(doSaf==1) GAa += log(2);
-	//printf("post scale AA=%f\tAa=%f\taa=%f\n",liks[it][i*3+AA_offset],liks[it][i*3+Aa_offset],liks[it][i*3+aa_offset]);
-	//printf("[GAA] GAA=%f\tGAa=%f\tGaa=%f\n",GAA,GAa,Gaa);
-
-	//do underlfow protection (we are in logspace here) (rasmus style)
-	if(1){
-	  double mymax;
-	  if (Gaa > GAa && Gaa > GAA) mymax = Gaa;
-	  else if (GAa > GAA) mymax = GAa;
-	  else mymax = GAA;
-	  // fprintf(stdout,"mymax[%d]=%f\t",i,mymax);
+      if(i==0){
+	hj[0] =Paa;
+	hj[1] =PAa;
+	hj[2] =PAA;
+      }else{
+	for(int j=2*(i+1); j>1;j--){
+	  double tmp;
+	  if(underFlowProtect==1)
+	    tmp = angsd::addProtect3(log(m[i][2])+PAA+hj[j-2],log(m[i][1])+PAa+hj[j-1],log(m[i][0])+Paa+hj[j]);
+	  else
+	    tmp = m[i][2]*PAA*hj[j-2] + m[i][1]*PAa*hj[j-1] + m[i][0]*Paa*hj[j];
 	  
-	  if(mymax<MINLIKE){
-	    //	    fprintf(stderr,"\n%f %f %f\n",GAA, GAa,Gaa);
-	    Gaa = 0;
-	    GAa = 0;
-	    GAA = 0;
-	    totmax = totmax + mymax;
-	  }else{
-	    Gaa=Gaa-mymax;
-	    GAa=GAa-mymax;
-	    GAA=GAA-mymax;
-	    totmax = totmax + mymax;
-	  }
-	//	fprintf(stderr,"totmax=%f\n",totmax);
-	//END underlfow protection (we are in logspace here) (rasmus style)
-	}
-
-	if(underFlowProtect==0){
-	  PAA=exp(GAA);
-	  PAa=exp(GAa);
-	  Paa=exp(Gaa);
-	}else{
-	  PAA =(GAA);///(MAA+MAa+Maa);
-	  PAa =(GAa);///(MAA+MAa+Maa);
-	  Paa =(Gaa);///(MAA+MAa+Maa);
-	}
-
-	//check for underflow error, this should only occur once in a blue moon
-	if(std::isnan(Paa)||std::isnan(PAa)||std::isnan(Paa)){
-	  //fprintf(stderr,"Possible underflow at: \t%d\t%d\n",it->first.chromo,it->first.position);
-	  fprintf(stderr,"PAA=%f\tPAa=%f\tPaa=%f\n",PAA,PAa,Paa);
-	}
-	//	fprintf(stdout,"it=%d PAA=%f\tPAa=%f\tPaa=%f\n",it,PAA,PAa,Paa);
-	if(i==0){
-	  hj[0] =Paa;
-	  hj[1] =PAa;
-	  hj[2] =PAA;
-	}else{
-	  //fprintf(stderr,"asdf\n");
-	  for(int j=2*(i+1); j>1;j--){
-	    //  print_array(stdout,hj,2*numInds+1,0);
-	    //print_array(hj,2*numInds+1);
-	    double tmp;
-	    if(underFlowProtect==1)
-	      tmp = angsd::addProtect3(log(m[i][2])+PAA+hj[j-2],log(m[i][1])+PAa+hj[j-1],log(m[i][0])+Paa+hj[j]);
-	    else
-	      tmp = m[i][2]*PAA*hj[j-2] + m[i][1]*PAa*hj[j-1] + m[i][0]*Paa*hj[j];
-	    
-	    if(std::isnan(tmp)){
+	  if(std::isnan(tmp)){
 	      fprintf(stderr,"is nan:%d\n",j );
-	      
 	      hj[j] = 0;
 	      break;
-	    }else
-	      hj[j] = tmp;
-	  }
-	  if(underFlowProtect==1){
-	    hj[1] = angsd::addProtect2(log(m[i][0])+Paa+hj[1],log(m[i][1])+PAa+hj[0]);
-	    hj[0] = log(m[i][0]) + Paa + hj[0];
-	  }
-	  else{
-	    hj[1] = m[i][0]*Paa*hj[1] + m[i][1]*PAa*hj[0];
-	    hj[0] = m[i][0]*Paa*hj[0];
-	  }
+	  }else
+	    hj[j] = tmp;
 	}
-	//ifunderflowprotect then hj is in logspace
-	
+	if(underFlowProtect==1){
+	  hj[1] = angsd::addProtect2(log(m[i][0])+Paa+hj[1],log(m[i][1])+PAa+hj[0]);
+	  hj[0] = log(m[i][0]) + Paa + hj[0];
+	}
+	else{
+	  hj[1] = m[i][0]*Paa*hj[1] + m[i][1]*PAa*hj[0];
+	  hj[0] = m[i][0]*Paa*hj[0];
+	}
       }
-
-      if(0){
-	//old version before the filipe paper
-	for(int i=0;i<(2*numInds+1);i++)
-	  if(underFlowProtect==0){
-	    if(doSaf == 2)
-	      sumMinors[i] += hj[i];
-	    //sumMinors[i] += hj[i]/(1-M0-M2); //As in the PLoS ONE paper
-	    else
-	      sumMinors[i] += exp(log(hj[i])-lbico(2*numInds,i)+totmax);
-	  }else{
-	    if(doSaf == 2)
-	      sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]));
-	    //sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-log(1-M0-M2))); //As in the PLoS ONE paper
-	    else
-	      sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-lbico(2*numInds,i)+totmax));
-	  }
-      }else{
-	for(int i=0;i<(2*numInds+1);i++)
-	  if(underFlowProtect==0){
-	    if(doSaf == 2)
-	      sumMinors[i] += hj[i];
-	      // sumMinors[i] += hj[i]/(1-hj[0]-hj[2*numInds]); //As in the PLoS ONE paper
-	    else
-	      sumMinors[i] += exp(log(hj[i])-lbico(2*numInds,i)+totmax);
-	  }else{
-	    if(doSaf == 2)
-	      sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]));
-	    
-
-	      //sumMinors[i] =
-	      //	exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-log(1-hj[0]-hj[2*numInds])));
-	    //As in the PLoS ONE paper
-	    else
-	      sumMinors[i] =
-		exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-lbico(2*numInds,i)+totmax));
-	  }
-      }
-
     }
+
+    for(int i=0;i<(2*numInds+1);i++)
+      if(underFlowProtect==0){
+	sumMinors[i] += hj[i];
+	// sumMinors[i] += hj[i]/(1-hj[0]-hj[2*numInds]); //As in the PLoS ONE paper
+      }else{
+	sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]));
+	//sumMinors[i] =
+	//	exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-log(1-hj[0]-hj[2*numInds])));
+	//As in the PLoS ONE paper
+      }
+     
 
     //sumMinors is in normal space, not log
     /*
@@ -521,9 +452,17 @@ void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
     if(fold) {
       //newDim is set in constructor
       for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
-	sumMinors[i] = log(sumMinors[i] + sumMinors[2*numInds-i]);//THORFINN NEW
+	sumMinors[i] = log(sumMinors[i] + sumMinors[2*numInds-i]);
       sumMinors[newDim-1] = log(sumMinors[newDim-1])+log(2.0);
-      angsd::logrescale(sumMinors,newDim);
+      //angsd::logrescale(sumMinors,newDim);
+      double ts=0;
+      for(int i=0;i<newDim;i++)
+	ts += exp(sumMinors[i]);
+      ts = log(ts);
+      for(int i=0;i<newDim;i++)
+	sumMinors[i] = sumMinors[i]-ts;
+
+
       if(std::isnan(sumMinors[0]))
 	r->oklist[it] = 2;
       else{
@@ -535,7 +474,14 @@ void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
     }else{
       for(int i=0;i<2*numInds+1;i++)
 	sumMinors[i] = log(sumMinors[i]);
-      angsd::logrescale(sumMinors,2*numInds+1);
+      //      angsd::logrescale(sumMinors,2*numInds+1);
+      double ts=0;
+      for(int i=0;i<newDim;i++)
+	ts += exp(sumMinors[i]);
+      ts = log(ts);
+      for(int i=0;i<newDim;i++)
+	sumMinors[i] = sumMinors[i]-ts;
+      
       if(std::isnan(sumMinors[0]))
 	r->oklist[it] = 2;
       else{
