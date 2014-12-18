@@ -112,7 +112,8 @@ void abcFreq::getOptions(argStruct *arguments){
     exit(0);
   } 
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
-  if((doPost||doMaf) &&doMajorMinor==0){
+  //  fprintf(stderr,"%d %d\n",inputtype,INPUT_VCF_GL);
+  if((doPost||doMaf) &&doMajorMinor==0 &&inputtype!=INPUT_VCF_GL){
     if(doMaf!=4){
       fprintf(stderr,"\t-> Potential problem: You are required to choose a major/minor estimator (-doMajorMinor)\n");
       exit(0);
@@ -188,7 +189,7 @@ void abcFreq::getOptions(argStruct *arguments){
 
   if(abs(doMaf)==0 &&doPost==0)
     return;
-  if(inputtype!=INPUT_VCF_GP&&inputtype!=INPUT_BEAGLE&&inputtype!=0&&doMajorMinor==0){
+  if(inputtype!=INPUT_VCF_GP&&inputtype!=INPUT_BEAGLE&&inputtype!=0&&doMajorMinor==0&&inputtype!=INPUT_VCF_GL){
     fprintf(stderr,"You must specify \'-doMajorMinor\' to infer major/minor \n");
     exit(0);
   }

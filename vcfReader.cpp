@@ -1,7 +1,7 @@
 #include <cassert>
 #include "analysisFunction.h"
 #include "vcfReader.h"
-
+#include <cfloat>
 
 vcfReader::~vcfReader(){
   if(buf!=NULL)
@@ -66,6 +66,7 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
   }
   ref[0]=refToInt[ref[0]];
   alt[0]=refToInt[alt[0]];
+  assert(alt[0]!=4);
   if(ref[0]==4||alt[0]==4){
     fprintf(stderr,"skipping site:%d (ref and alt must be A,C,G,T not N/n)\n",pos);
     return 0;
@@ -96,11 +97,11 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
     return 0;
   }
   //  fprintf(stderr,"pick[0]:%d pick[1]:%d\n",pick[0],pick[1]);
-  //*lk = new double[nInd*10];
+  *lk = new double[nInd*10];
   *gp = new double[nInd*3];
 
-  for(int i=0;0&&i<nInd*10;i++)
-    lk[0][i]=-0.0;
+  for(int i=0;1&&i<nInd*10;i++)
+    lk[0][i]=-DBL_MIN;
   for(int i=0;i<3*nInd;i++)
     gp[0][i]=0;
  
@@ -114,15 +115,18 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
     int p=0;
     while(((tok = angsd::strpop(&pi,':')))[0]!='\0') {
       if(p==pick[0]){
-	fprintf(stderr,"GL tag not implemented yet\n");
-	exit(0);
-#if 0
-	snprintf(tok,strlen(tok),"%f,%f,%f",				\
-		 lk[i*10+angsd::majorminor[ref[0]][ref[0]]]/M_LOG10E,	\
-		 lk[i*10+angsd::majorminor[ref[0]][alt[0]]]/M_LOG10E,	\
-		 lk[i*10+angsd::majorminor[alt[0]][alt[0]]]/M_LOG10E);
-#endif
-      
+	//	fprintf(stderr,"GL tag not implemented properly yet:%s %lu\n",tok,strlen(tok));
+	
+	double tre[3];
+	for(int j=0;j<3;j++){
+	  tre[j] = atof(angsd::strpop(&tok,','));
+	  //	  fprintf(stdout,"j[%d]:%f\n",j,tre[j]);
+	}
+	lk[0][i*10+angsd::majorminor[ref[0]][ref[0]]]=tre[0]/M_LOG10E;
+	lk[0][i*10+angsd::majorminor[ref[0]][alt[0]]]=tre[1]/M_LOG10E;
+	lk[0][i*10+angsd::majorminor[alt[0]][alt[0]]]=tre[2]/M_LOG10E;
+		 //exit(0);
+
       }
       if(p==pick[1]){
 	int pp=0;
@@ -148,7 +152,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
     return NULL;
   funkyPars *r = allocFunkyPars();  
   r->likes=NULL;
-  //r->likes=new double*[chunkSize];
+  r->likes=new double*[chunkSize];
   r->post=new double*[chunkSize];
   r->posi=new int[chunkSize];
   r->major = new char[chunkSize];
@@ -161,7 +165,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
   static int changed =0;
   if(changed){
     fprintf(stderr,"inchange\n");
-    //double *lk = new double [10*nInd];
+    double *lk = new double [10*nInd];
     int p = parseline(r->likes,r->post,r->major[0],r->minor[0]);
     if(p>0)
       r->posi[0]=p-1;

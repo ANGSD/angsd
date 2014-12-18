@@ -121,6 +121,7 @@ void setInputType(argStruct *args){
     free(tmp_fai);
     return;
   }
+  tmp=NULL;
   tmp = angsd::getArg("-pileup",tmp,args);
   if(tmp!=NULL){
     args->inputtype=INPUT_PILEUP;
@@ -128,6 +129,7 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
+  tmp=NULL;
   tmp = angsd::getArg("-beagle",tmp,args);
   if(tmp!=NULL){
     char *tmp_fai = NULL;
@@ -143,6 +145,7 @@ void setInputType(argStruct *args){
     free(tmp_fai);
     return;
   }
+  tmp=NULL;
   tmp = angsd::getArg("-i",tmp,args);
   if(tmp!=NULL){
     args->inputtype=INPUT_BAM;
@@ -152,6 +155,7 @@ void setInputType(argStruct *args){
   }
   int nInd = 0;
   nInd = angsd::getArg("-nInd",nInd,args);
+  tmp=NULL;
   tmp = angsd::getArg("-bam",tmp,args);
   tmp = angsd::getArg("-b",tmp,args);
   if(tmp!=NULL&&args->argc>2){
