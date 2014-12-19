@@ -51,22 +51,25 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
   // fprintf(stderr,"\npos:%d ref:%s alt:%s qual:%s flt:%s info:%s format:%s strlen(ref):%zu strlen(alt):%zu\n",pos,ref,alt,qual,filter,info,format,strlen(ref),strlen(alt)); exit(0);
  
  if(strlen(ref)!=1||strlen(alt)!=1){
-    fprintf(stderr,"skipping site:%d multiref/multialt (indel)\n",pos);
+    fprintf(stderr,"skipping site:%d multiref/multialt (indel)\n",pos+1);
     return 0;
   }
   if(strcmp(filter,"PASS")){
-    fprintf(stderr,"skipping site:%d (non PASS)\n",pos);
+    fprintf(stderr,"skipping site:%d (non PASS)\n",pos+1);
     return 0;
     
   }
     
   if(strlen(ref)!=1||strlen(alt)!=1){
-    fprintf(stderr,"skipping site:%d (indel)\n",pos);
+    fprintf(stderr,"skipping site:%d (indel)\n",pos+1);
     return 0;
   }
   ref[0]=refToInt[ref[0]];
   alt[0]=refToInt[alt[0]];
-  assert(alt[0]!=4);
+  if(ref[0]==4|| alt[0]==4){
+    fprintf(stderr,"REF/ALT is 'N' will discard site: %d \n",pos+1);
+    return 0;
+  }
   if(ref[0]==4||alt[0]==4){
     fprintf(stderr,"skipping site:%d (ref and alt must be A,C,G,T not N/n)\n",pos);
     return 0;
