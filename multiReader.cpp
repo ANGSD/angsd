@@ -98,7 +98,7 @@ void setInputType(argStruct *args){
     char *tmp_fai = NULL;
     tmp_fai = angsd::getArg("-fai",tmp_fai,args);
     if(tmp_fai==NULL){
-      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -vcf input\n");
+      fprintf(stderr,"\t-> You must supply a fai file (-faiw)hen using VCF input\n");
       exit(0);
 
     }
@@ -114,7 +114,7 @@ void setInputType(argStruct *args){
     char *tmp_fai = NULL;
     tmp_fai = angsd::getArg("-fai",tmp_fai,args);
     if(tmp_fai==NULL){
-      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -vcf input\n");
+      fprintf(stderr,"\t-> You must supply a fai file (-fai)  and number of individuals (-nInd) when using VCF input\n");
       exit(0);
 
     }
@@ -288,7 +288,7 @@ multiReader::multiReader(int argc,char**argv){
     hd=getHeadFromFai(fai);
   }else{
     if(args->nams.size()==0){
-      fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-pileup/-i filename\n");
+      fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-pileup/-i/-vcf-gl/-vcf-gp filename\n");
       exit(0);
     }
     hd= getHd_andClose(args->nams[0]);
@@ -350,7 +350,14 @@ multiReader::multiReader(int argc,char**argv){
     break;
   }
   }
+  if(args->inputtype==INPUT_VCF_GL||args->inputtype==INPUT_VCF_GL){
+    fprintf(stderr,"\t-> VCF still beta. Remember that\n");
+    fprintf(stderr,"\t   1. indels and sites that are non diallelic are discarded\n");
+    fprintf(stderr,"\t   2. will use chrom, pos, ref, alt columns\n");
+    fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln\n");
+    fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...)\n");
 
+  }
 }
 
 multiReader::~multiReader(){

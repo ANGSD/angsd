@@ -149,7 +149,6 @@ funkyPars *beagle_reader::fetch(int chunksize){
   myfunky->numSites = nSites;
   
   if(nSites==0){
-    delete [] post;
     deallocFunkyPars(myfunky);
     return(NULL);
 

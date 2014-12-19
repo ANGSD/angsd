@@ -398,7 +398,14 @@ void deallocFunkyPars(funkyPars *p) {
   if(p->post){
     for(int i=0;i<p->numSites;i++)
       delete [] p->post[i];
-
+    delete [] p->post;
+    p->post=NULL;
+  }
+  if(p->likes){
+    for(int i=0;i<p->numSites;i++)
+      delete [] p->likes[i];
+    delete [] p->likes;
+    p->post=NULL;
   }
   delete p;
 

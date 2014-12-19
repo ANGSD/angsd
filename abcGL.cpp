@@ -265,6 +265,7 @@ void abcGL::clean(funkyPars *pars){
     for(int i=0;i<pars->numSites;i++)
       delete [] pars->likes[i];
     delete [] pars->likes;
+    pars->likes=NULL;
   }
   
 }
