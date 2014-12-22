@@ -26,7 +26,6 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t-doAsso\t%d\n",doAsso);
   fprintf(argFile,"\t1: Frequency Test (Known Major and Minor)\n");
   fprintf(argFile,"\t2: Score Test\n");
-  fprintf(argFile,"\t3: Frequency Test (Unknown Minor)\t\n");
   fprintf(argFile,"  Frequency Test Options:\n");
   fprintf(argFile,"\t-yBin\t\t%s\t(File containing disease status)\t\n\n",yfile);
   fprintf(argFile,"  Score Test Options:\n");
@@ -49,7 +48,10 @@ void abcAsso::getOptions(argStruct *arguments){
 
 
   doAsso=angsd::getArg("-doAsso",doAsso,arguments);
-
+  if(doAsso==3){
+    fprintf(stderr,"\t-> -doAsso 3 is deprecated from version 0.615 \n");
+    exit(0);
+  }
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
 
   adjust=angsd::getArg("-adjust",adjust,arguments);
@@ -319,7 +321,7 @@ void abcAsso::run(funkyPars *pars){
   assoStruct *assoc = allocAssoStruct();
   pars->extras[index] = assoc;
 
-  if(doAsso==1||doAsso==3){
+  if(doAsso==1){
     frequencyAsso(pars,assoc);
   }
   else if(doAsso==2){
@@ -345,7 +347,7 @@ void abcAsso::frequencyAsso(funkyPars  *pars,assoStruct *assoc){
   }
 
   if(ymat.y!=1){
-    fprintf(stderr,"Only one phenotype allowed for doAsso 1 or 3 \n");
+    fprintf(stderr,"Only one phenotype allowed for -doAsso 1\n");
     fflush(stderr);
     exit(0);
   }
@@ -398,11 +400,7 @@ void abcAsso::frequencyAsso(funkyPars  *pars,assoStruct *assoc){
     like1=angsd::get3likes(pars,cases);
     likeAll=angsd::get3likes(pars,all);
   }
-  if(doAsso==3){//use all 10 genotype likes
-    like0=angsd::getlikes(pars,controls);
-    like1=angsd::getlikes(pars,cases);
-    likeAll=angsd::getlikes(pars,all);
-  }
+
  if(doPrint)
     fprintf(stderr,"like complete [%s]\t[%s]\n",__FILE__,__FUNCTION__);
 
@@ -425,18 +423,6 @@ void abcAsso::frequencyAsso(funkyPars  *pars,assoStruct *assoc){
       double LRT=-2*(score0+score1-scoreNull);
       stat[0][s]=LRT;
     }
-    if(doAsso==3){
-      double score0=abcFreq::likeNoFixedMinor(abcFreq::emFrequencyNoFixed_ext(like0[s],Ncontrols,NULL,Ncontrols,pars->major[s],0),like0[s],Ncontrols,pars->major[s]);//last is posiiton in inner function, only used when printing when there are bugs
-      //likelihood for the cases
-      double score1=abcFreq::likeNoFixedMinor(abcFreq::emFrequencyNoFixed_ext(like1[s],Ncases,NULL,Ncases,pars->major[s],0),like1[s],Ncases,pars->major[s]);
-      //likelihood for all individuals
-      double scoreNull=abcFreq::likeNoFixedMinor(abcFreq::emFrequencyNoFixed_ext(likeAll[s],Nall,NULL,Nall,pars->major[s],0),likeAll[s],Nall,pars->major[s]);
-      //likelhood ratio statistics \sim chi^2
-      double LRT=-2*(score0+score1-scoreNull);
-      stat[0][s]=LRT;
-    }
-   
-
   }
   assoc->stat=stat;
   for(int s=0;s<pars->numSites;s++){
