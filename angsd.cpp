@@ -85,7 +85,7 @@ void catchkill(){
 
 //print nice info
 void printProgInfo(FILE *fp){
-
+  fprintf(fp,"\n\t-> angsd version: %.3f\t build(%s %s)\n",VERS,__DATE__,__TIME__); 
   fprintf(fp,"\t-> Please use the website \"http://www.popgen.dk/angsd\" as reference\n");
   fprintf(fp,"\t-> Use -nThreads or -P for number of threads allocated to the program\n\n"); 
  fprintf(fp,"Overview of methods:\n");
