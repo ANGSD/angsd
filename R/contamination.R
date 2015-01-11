@@ -212,22 +212,21 @@ if(FALSE){
     fileName <- "../angsdput.icnts.gz"
 }
 doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores){
- 
-    temp<-read.table(mapFile)
-    map100<-unlist(apply(temp[,1:2],1,function(x) seq(x[1],x[2],by=1)))
+    hapMap_save<-readHap(hapFile=hapFile)
     r_save<-readDat(countFile,maxDepth,minDepth)
 
+    if(!missing(mapFile)){
+        temp<-read.table(mapFile)
+        map100<-unlist(apply(temp[,1:2],1,function(x) seq(x[1],x[2],by=1)))
+        keep<-r_save[,1]%in%map100
+        r_save<-r_save[keep,]
+    }
     maxPos<-154900000
     minPos<-5e6
-
     r_save<-r_save[r_save[,1]>minPos&r_save[,1]<maxPos,]
-    keep<-r_save[,1]%in%map100
-    r_save<-r_save[keep,]
-
-    hapMap_save<-readHap(hapFile=hapFile)
+    
     res<-mismatch(r_save,hapMap_save,controlSNP)
     res$mat3
-
     est <-estCont(res,jack=T,mc.cores=mc.cores) 
     print(est$est)
    # est
@@ -276,12 +275,13 @@ print.args<-function(args,des){
 ## NULL is an non-optional argument, NA is an optional argument with no default, others are the default arguments
 
 args<-list(
-    mapFile = NULL,
+    mapFile = NA,
     hapFile = NULL,
     countFile = NULL,
     minDepth=2,
     maxDepth=20,
-    mc.cores=10
+    mc.cores=10,
+    fixed=FALSE
     )
 ##if no argument are given prints the need arguments and the optional ones with default
 
@@ -291,7 +291,8 @@ des<-list(
     countFile = "Count file",
     minDepth= "Minimum depth",
     maxDepth= "Maximium depth",
-    mc.cores= "Number of cores"
+    mc.cores= "Number of cores",
+    fixed = "Use fixed version of likelihood"
     )
 
 ######################################
@@ -304,13 +305,15 @@ if(length(args)==0){
     cat(" Arguments: output prefix\n")
     q("no")
 }
-if(FALSE){
-    mapFile="RES/chrX.unique.gz"
-    hapFile="RES/HapMapChrX.gz"
-    countFile="angsdput.icnts.gz"
-    minDepth=2
-    maxDepth=20
-    mc.cores=10
-}
+
+
+cat("mapFile = ", mapFile,"\n")
+cat("hapFile = ", hapFile,"\n")
+cat("countFile =",countFile,"\n")
+cat("minDepth = ",minDepth,"\n")
+cat("maxDepth = ",maxDepth,"\n")
+cat("mc.cores = ",mc.cores,"\n")
+cat("fixed = ",fixed,"\n")
+
 
 doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores))
