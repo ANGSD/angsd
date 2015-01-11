@@ -9,9 +9,20 @@ like<-function(x,error,d,freq,eps){
     return(-sum(log(l)))
 }
 
-like1Wrap2<-function(x,max=0.1){
+likeFixed<-function(x,error,d,freq,eps){ 
+    if(x<0|x>1)
+        return(Inf)
+    l<-  dbinom(error,d,x*freq*(1-4*eps/3)+eps)
+    return(-sum(log(l)))
+}
+
+like1Wrap2<-function(x,max=0.1,fixed){
     c<-sum(x[,2])/sum(x[,4])
-    optimize(like,c(0,max),eps=c,error=x[,1],d=x[,3],freq=x[,5])$minimum
+    
+    if(fixed==FALSE)
+        optimize(like,c(0,max),eps=c,error=x[,1],d=x[,3],freq=x[,5])$minimum
+    else
+        optimize(likeFixed,c(0,max),eps=c,error=x[,1],d=x[,3],freq=x[,5])$minimum
 }
 
 jackKnife3<-function(x,fun,mc.cores,...){
@@ -34,12 +45,15 @@ jackKnife3<-function(x,fun,mc.cores,...){
 
 
 
-like1Wrap<-function(x){
+like1Wrap<-function(x,fixed){
     c<-sum(x[,2])/sum(x[,4])
-    optimize(like,c(0,1),eps=c,error=x[,1],d=x[,3],freq=x[,5])
+    if(fixed==FALSE)
+        optimize(like,c(0,1),eps=c,error=x[,1],d=x[,3],freq=x[,5])
+    else
+        optimize(likeFixed,c(0,1),eps=c,error=x[,1],d=x[,3],freq=x[,5])
 }
 
-estCont<-function(x,jack=FALSE,max=0.1,mc.cores){
+estCont<-function(x,jack=FALSE,max=0.1,mc.cores,fixed){
     c<-x$mat[1,2]/sum(x$mat[,2])
     keep<-x$d>0
     err<-sum(x$mat[1,1])/sum(x$mat[,1])
@@ -70,16 +84,16 @@ estCont<-function(x,jack=FALSE,max=0.1,mc.cores){
         freq=x$freq
         )
     
-    Method1 <- like1Wrap(dat)
-    Method2 <- like1Wrap(dat2)
+    Method1 <- like1Wrap(dat,fixed=fixed)
+    Method2 <- like1Wrap(dat2,fixed=fixed)
     
     j12<-NA
     j32<-NA
     if(jack){
         cat ("----------------------\nRunning jackknife for Method1 (could be slow)\n")
-        j12<-jackKnife3(dat,like1Wrap2,max=max,mc.cores)
+        j12<-jackKnife3(dat,like1Wrap2,max=max,mc.cores,fixed=fixed)
         cat ("Running jackknife for Method2 (could be slow)\n")
-        j32<-jackKnife3(dat2,like1Wrap2,max=max,mc.cores)
+        j32<-jackKnife3(dat2,like1Wrap2,max=max,mc.cores,fixed=fixed)
     }
     rr <- rbind(cbind(Method1,Method2),se=c(j12[1],j32[1]))
     rownames(rr) <- c("Contamination","llh","SE")
@@ -211,7 +225,7 @@ if(FALSE){
     hapFile="../RES/hapMapCeuXlift.map"
     fileName <- "../angsdput.icnts.gz"
 }
-doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores){
+doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores,fixed){
     hapMap_save<-readHap(hapFile=hapFile)
     r_save<-readDat(countFile,maxDepth,minDepth)
 
@@ -227,7 +241,7 @@ doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores){
     
     res<-mismatch(r_save,hapMap_save,controlSNP)
     res$mat3
-    est <-estCont(res,jack=T,mc.cores=mc.cores) 
+    est <-estCont(res,jack=T,mc.cores=mc.cores,fixed=fixed) 
     print(est$est)
    # est
 }
@@ -316,4 +330,9 @@ cat("mc.cores = ",mc.cores,"\n")
 cat("fixed = ",fixed,"\n")
 
 
-doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores))
+{
+if(!is.na(mapFile))
+    doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed)
+else
+    doAnal(hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed)
+}
