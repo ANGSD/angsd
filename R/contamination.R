@@ -2,8 +2,8 @@
 bases=c("A","C","G","T")
 require(parallel)
 
-like<-function(x,error,d,freq,eps){ 
-    if(x<0|x>1)
+like<-function(x,error,d,freq,eps){
+     if(x<0|x>1)
         return(Inf)
     l<-  dbinom(error,d,(1-x)*eps+x*freq)
     return(-sum(log(l)))
@@ -225,7 +225,7 @@ if(FALSE){
     hapFile="../RES/hapMapCeuXlift.map"
     fileName <- "../angsdput.icnts.gz"
 }
-doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores,fixed){
+doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores,fixed,jack){
     hapMap_save<-readHap(hapFile=hapFile)
     r_save<-readDat(countFile,maxDepth,minDepth)
 
@@ -241,7 +241,7 @@ doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores,fixed){
     
     res<-mismatch(r_save,hapMap_save,controlSNP)
     res$mat3
-    est <-estCont(res,jack=T,mc.cores=mc.cores,fixed=fixed) 
+    est <-estCont(res,jack=jack,mc.cores=mc.cores,fixed=fixed) 
     print(est$est)
    # est
 }
@@ -295,7 +295,8 @@ args<-list(
     minDepth=2,
     maxDepth=20,
     mc.cores=10,
-    fixed=FALSE
+    fixed=FALSE,
+    jack=TRUE
     )
 ##if no argument are given prints the need arguments and the optional ones with default
 
@@ -306,7 +307,9 @@ des<-list(
     minDepth= "Minimum depth",
     maxDepth= "Maximium depth",
     mc.cores= "Number of cores",
-    fixed = "Use fixed version of likelihood"
+    fixed = "Use fixed version of likelihood",
+    jack = "Jacknive to get confidence intervals"
+    
     )
 
 ######################################
@@ -328,11 +331,11 @@ cat("minDepth = ",minDepth,"\n")
 cat("maxDepth = ",maxDepth,"\n")
 cat("mc.cores = ",mc.cores,"\n")
 cat("fixed = ",fixed,"\n")
-
+cat("jack = ",jack,"\n")
 
 {
 if(!is.na(mapFile))
-    doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed)
+    doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack)
 else
-    doAnal(hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed)
+    doAnal(hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack)
 }
