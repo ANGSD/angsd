@@ -103,7 +103,7 @@ estCont<-function(x,jack=FALSE,max=0.1,mc.cores,fixed){
 
 mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
     hapPos<-hapMap_save$V1
-    
+
     pos<-r_save[,1]
    
     keepSites<-pos%in%hapPos
@@ -116,6 +116,7 @@ mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
    
     ##all
     snps<-(r[,1])%in%hapPos
+    cat("SNPsites: ",sum(snps),"\n")
     snps1<-!snps
  
     d<-rowSums(r[,-1])
@@ -196,20 +197,26 @@ mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
 readDat<-function(fileName,maxDepth,minDepth,nSites=1e8){
   to.read<-gzfile(fileName,"rb")
   r_save<-matrix(readBin(to.read,integer(),5*nSites),ncol=5,by=T)
+  cat("nSites from ANGSD: ",nrow(r_save),"\n")
   close(to.read)
   dep<-rowSums(r_save[,-1])
   r_save<-r_save[dep>=minDepth&dep<=maxDepth,]
   r_save[,1]<-r_save[,1]-1
+  cat("nSites from ANGSD after depfilter: ",nrow(r_save),"\n")
   r_save
 }
 
 readHap<-function(MinDist=10,hapFile) {
     hapMap_save<-read.table(hapFile,as.is=T)
+    hapMap_save <- hapMap_save[!duplicated(hapMap_save[,1]),]
     hapMap_save<-hapMap_save[order(hapMap_save[,1]),]
+    cat("unique HapMap sites:",nrow(hapMap_save), "from file: ",hapFile,"\n")
     hapMap_save<-hapMap_save[-which(diff(hapMap_save[,1])<MinDist),]
-    
+    ##    write.table(hapMap_save,file="delme.txt",row.names=F,col.names=F,quote=F)
+    cat("HapMap after removing close snpts ",nrow(hapMap_save),"\n")
     return(hapMap_save)
 }
+
 
 controlSNP<-c(-4:-1,1:4)
 
