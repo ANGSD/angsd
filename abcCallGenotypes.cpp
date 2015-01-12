@@ -56,11 +56,11 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
 
 
   geno_minDepth=angsd::getArg("-geno_minDepth",geno_minDepth,arguments);
-  geno_minDepth=angsd::getArg("-geno_maxDepth",geno_maxDepth,arguments);
+  geno_maxDepth=angsd::getArg("-geno_maxDepth",geno_maxDepth,arguments);
   
   int doCounts=0;
   doCounts = angsd::getArg("-doCounts",doCounts,arguments);
-  if(geno_minDepth!=-1&&doCounts==0){
+  if((geno_minDepth!=-1 || geno_maxDepth!=-1 ) &&doCounts==0){
     fprintf(stderr,"Must supply -doCounts to use a minimum depth for GC calling\n");
     exit(0);
   }
