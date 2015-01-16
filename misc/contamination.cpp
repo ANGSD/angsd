@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -7,7 +8,17 @@
 #include <map>
 #include <cassert>
 #include <ctype.h>
+#include "../fet.c"
 #define LENS 4096
+
+typedef struct{
+  double p;
+  int n;
+  double *dens;
+  double *cum;
+}rbinom;
+
+
 int minDist = 10;
 typedef struct{
   char allele1;
@@ -15,11 +26,7 @@ typedef struct{
   double freq;
 }hapSite;
 
-std::vector<int> ipos;
-std::vector<int*> cnt;
-
 typedef std::map<int,hapSite> aMap;
-aMap myMap;
 
 const char *hapfile=NULL,*mapfile=NULL,*icounts=NULL;
 typedef unsigned char uchar;
@@ -33,40 +40,220 @@ typedef struct{
   aMap myMap;
 }dat;
 
+
+
+rbinom *init_rbinom(double p,int n){
+  //fprintf(stderr,"initializatin rbinom p:%f n:%d\n",p,n);
+  rbinom *rb=new rbinom;
+  rb->p=p;
+  rb->n=n;
+  rb->cum = new double[n+1];
+  rb->dens= new double[n+1];
+
+  double ts=0;
+  for(int k=0;k<=n;k++){
+    rb->dens[k] = lbinom(n,k)+k*log(p)+(n-k)*log(1-p);
+    //    fprintf(stderr,"%e\n",exp(rb->dens[k]));
+    ts += exp(rb->dens[k]);
+  }
+  rb->cum[0] = exp(rb->dens[0])/ts;
+  for(int k=1;k<=n;k++){
+    rb->cum[k] = exp(rb->dens[k])/ts+rb->cum[k-1];
+    //    fprintf(stdout,"%e\n",rb->cum[k]);
+  }
+  return rb;
+}
+
+int simrbinom(double p){
+  if(drand48()<(1-p))
+    return 0;
+  else
+    return 1;
+}
+
+int sample(rbinom *rb){
+  //  fprintf(stderr,"rb n:%d p:%f\n",rb->n,rb->p);
+  double r = drand48();
+  int k=0;
+  if(r<rb->cum[0])
+    return k;
+
+  while(k++<=rb->n)
+    if(rb->cum[k-1]<r &&r<=rb->cum[k])
+      break;
+  return k;
+ 
+}
+
+
+void analysis(dat &d){
+  int *rowSum = new int[d.cn.size()];
+  int *rowMax = new int[d.cn.size()];
+  int *rowMaxW = new int[d.cn.size()];
+  int *error1 = new int[d.cn.size()];
+  int *error2 = new int[d.cn.size()];
+  size_t mat1[4]={0,0,0,0};
+  size_t mat2[4]={0,0,0,0};
+  size_t tab[2] = {0,0};
+  for(int i=0;i<d.cn.size();i++){
+    int s =d.cn[i][0];
+    int max=s;
+    int which=0;
+    for(int j=1;j<4;j++){
+      s += d.cn[i][j];
+      if(d.cn[i][j]>max){
+	max=d.cn[i][j];
+	which=j;
+      }
+    }
+    rowSum[i] = s;
+    rowMax[i]=max;
+    rowMaxW[i]=which;
+
+    error1[i] = rowSum[i]-rowMax[i];
+    error2[i] = simrbinom((1.0*error1[i])/(1.0*rowSum[i]));
+    //    fprintf(stdout,"rs\t%d %d %d %d %d %d\n",rowSum[i],rowMax[i],rowMaxW[i],error1[i],error2[i],d.dist[i]);
+    if(error1[i]>0)
+      tab[1]++;
+    else
+      tab[0]++;
+    if(d.dist[i]==0){
+      mat1[0] +=error1[i];
+      mat1[1] +=rowSum[i]-error1[i];
+      mat2[0] +=error2[i];
+      mat2[1] +=1-error2[i];
+    }else{
+      mat1[2] +=error1[i];
+      mat1[3] +=rowSum[i]-error1[i];
+      mat2[2] += error2[i];
+      mat2[3] += 1-error2[i];
+    }
+  }
+  fprintf(stderr,"tab:%lu %lu\n",tab[0],tab[1]);
+  fprintf(stderr,"mat: %lu %lu %lu %lu\n",mat1[0],mat1[1],mat1[2],mat1[3]);
+  fprintf(stderr,"mat2: %lu %lu %lu %lu\n",mat2[0],mat2[1],mat2[2],mat2[3]);
+  
+  int n11, n12, n21, n22;
+  double left, right, twotail, prob;
+  
+  n11=mat1[0];n12=mat1[2];n21=mat1[1];n22=mat1[3];
+  prob = kt_fisher_exact(n11, n12, n21, n22, &left, &right, &twotail);
+  fprintf(stdout,"Method\t n11 n12 n21 n22 prob left right twotail\n");
+  fprintf(stdout,"%s\t%d\t%d\t%d\t%d\t%.6g\t%.6g\t%.6g\t%.6g\n", "method1", n11, n12, n21, n22,
+				prob, left, right, twotail);
+
+  n11=mat2[0];n12=mat2[2];n21=mat2[1];n22=mat2[3];
+  prob = kt_fisher_exact(n11, n12, n21, n22, &left, &right, &twotail);
+  fprintf(stdout,"%s\t%d\t%d\t%d\t%d\t%.6g\t%.6g\t%.6g\t%.6g\n", "method2", n11, n12, n21, n22,
+				prob, left, right, twotail);
+
+  //estimate how much contaminatino
+  double c= mat1[2]/(1.0*(mat1[2]+mat1[3]));
+  double err= mat1[0]/(1.0*(mat1[0]+mat1[1]));
+  fprintf(stderr,"c:%f err:%f len:%lu lenpos:%lu\n",c,err,d.cn.size()/9,d.pos.size());
+
+  int *err0 =new int[d.cn.size()/9];
+  int *err1 =new int[d.cn.size()/9];
+  int *d0 =new int[d.cn.size()/9];
+  int *d1 =new int[d.cn.size()/9];
+  double *freq =new double[d.cn.size()/9];
+
+  for(int i=0;i<d.cn.size()/9;i++){
+    int adj=0;
+    int dep=0;
+    for(int j=0;j<9;j++){
+      
+      if(d.dist[i*9+j]!=0){
+	adj += error1[i*9+j];
+	dep += rowSum[i*9+j];
+      }else{
+	err0[i] = error1[i*9+j];
+	d0[i] = rowSum[i*9+j];
+	freq[i] =d.myMap.find(d.pos[i*9+j])->second.freq;
+      }
+    }
+    err1[i] =adj;
+    d1[i] = dep;
+#if 0
+    if(it==d.myMap.end()){
+      fprintf(stderr,"Problem finding:%d\n",d.pos[i]);
+      exit(0);
+    }
+#endif
+    fprintf(stdout,"cont\t%d\t%d\t%d\t%d\t%f\n",err0[i],err1[i],d0[i],d1[i],freq[i]);
+    
+  }
+  int ii=0;
+  for(aMap::iterator it=d.myMap.begin();it!=d.myMap.end();++it){
+    
+
+  }
+  
+
+
+}
+
+void print(int *ary,FILE *fp,size_t l,char *pre){
+  fprintf(fp,"%s\t",pre);
+  for(size_t i=0;i<l;i++)
+    fprintf(fp,"%d\t",ary[i]);
+  fprintf(fp,"\n");
+}
+
 #define NVAL -66
-dat count(){
+dat count(aMap &myMap,std::vector<int> &ipos,std::vector<int*> &cnt){
   int lastP = std::max((--myMap.end())->first,ipos[ipos.size()-1])+5;//<-add five so we dont step out
+
   char *hit = new char[lastP];
   memset(hit,NVAL,lastP);//-10 just indicate no value..
-  int pp=-1;
+  
   for(aMap::iterator it=myMap.begin();it!=myMap.end();++it){
-    if(pp!=-1&&(it->first-pp)<=minDist)
-      continue;
-    pp=it->first;
-    for(int p=0;p<5;p++){
-    
-      hit[it->first+p] =hit[it->first-p] = p;
-      hit[it->first-p] = -  hit[it->first-p] ;
-      //      fprintf(stderr,"p:%d\n",p);
-      //fprintf(stderr,"+p %d\n",hit[it->first+p]);
-      //fprintf(stderr,"-p %d\n",hit[it->first-p]);
-    }
-    //    exit(0);
+      for(int p=0;p<5;p++){
+        hit[it->first+p] =hit[it->first-p] = p;
+	hit[it->first-p] = -  hit[it->first-p] ;
+      }
   }
-#if 0
+
+  //now hit contains long stretches of NVAL and -4,...4.
+  //now set NVAL to all the places where we don't have data
+  char *aa= new char[lastP];
+  memset(aa,NVAL,lastP);
+  for(int i=0;i<ipos.size();i++)
+    aa[ipos[i]] = 1; 
+  //now loop over hit array and set to NVAL if no data
   for(int i=0;i<lastP;i++)
-    if(hit[i]!=NVAL)
-      fprintf(stdout,"%d\t%d\n",i,(int)hit[i]);
-  exit(0);
-#endif
+    if(aa[i]==NVAL)
+      hit[i] = NVAL;
+
+  //now loop over hitarray and make remove non -4,..4: segments
+  int i=0;
+  while(i<lastP){
+    if(hit[i]!=-4)
+      hit[i] = NVAL;
+    else{
+      int isOk=1;
+      for(int j=0;j<9;j++)
+	if(hit[i+j]!=j-4){
+	  isOk=0;
+	  break;
+	}
+      if(isOk==1)
+	i+=9;
+      else{
+	hit[i]=NVAL;
+      }
+    }
+    i++;
+  }
 
   dat d;
   for(int i=0;i<ipos.size();i++)
     if(hit[ipos[i]]!=NVAL) { 
       d.pos.push_back(ipos[i]);
-      d.dist.push_back(hit[i]);
+      d.dist.push_back(hit[ipos[i]]);
+      
       d.cn.push_back(cnt[i]);//plugs in pointer to 4ints.
-     
+      
       if(hit[ipos[i]]==0){//this is a snpsite
 	aMap::iterator it=myMap.find(ipos[i]);
 	if(it==myMap.end()){
@@ -76,7 +263,7 @@ dat count(){
 	aMap::iterator it2=d.myMap.find(ipos[i]);
 	assert(it2==d.myMap.end());
 	d.myMap[it->first] = it->second;
-	//	fprintf(stdout,"%d\n",it->first);
+
       }
     }
   fprintf(stderr,"nSNP sites: %lu, with flanking: %lu\n",d.myMap.size(),d.cn.size());
@@ -112,11 +299,12 @@ void printhapsite(hapSite &hs,FILE *fp,int &p){
   fprintf(fp,"p:%d al1:%c al2:%c freq:%f\n",p,hs.allele1,hs.allele2,hs.freq);
 }
 
-void readhap(const char *fname,int minDist=10){
+aMap readhap(const char *fname,int minDist=10){
   fprintf(stderr,"[%s] fname:%s minDist:%d\n",__FUNCTION__,fname,minDist);
   gzFile gz=getgz(fname,"rb");
   char buf[LENS];
   int viggo=3;
+  aMap myMap;
   while(gzgets(gz,buf,LENS)){
     hapSite hs;
     int p = atoi(strtok(buf,"\t\n "));
@@ -125,12 +313,11 @@ void readhap(const char *fname,int minDist=10){
     char strand= strtok(NULL,"\t\n ")[0];
     hs.allele2 = strtok(NULL,"\t\n ")[0];
 
-    //    printhapsite(hs,stdout,p);
     if(strand=='-'){
       hs.allele1 = flip(hs.allele1);
       hs.allele2 = flip(hs.allele2);
     }
-  
+    
     if(myMap.count(p)>0){
       if(viggo>0){
 	fprintf(stderr,"Duplicate positions found in file: %s, pos:%d\n",fname,p);
@@ -140,28 +327,38 @@ void readhap(const char *fname,int minDist=10){
       }
     }else{
       myMap[p]=hs;
-
     }
   }
   fprintf(stderr,"[%s] We have read: %zu sites from hapfile:%s\n",__FUNCTION__,myMap.size(),fname);
-  if(1){
-    fprintf(stderr,"[%s] will remove snp sites to close:\n",__FUNCTION__);
-    for(aMap::iterator it = myMap.begin();it!=myMap.end();++it){
-      aMap::iterator it2=it++;
-      if(it2==myMap.end())
-	break;
-      if(it->first-it2->first<minDist){
-	myMap.erase(it);
-	it=it2;
-      }
-    }
-    fprintf(stderr,"[%s] We know have: %lu snpSites\n",__FUNCTION__,myMap.size());
+  fprintf(stderr,"[%s] will remove snp sites to close:\n",__FUNCTION__);
+
+
+  int *vec = new int[myMap.size() -1];
+  aMap::iterator it = myMap.begin();
+  for(int i=0;i<myMap.size()-1;i++){
+    aMap::iterator it2 = it;
+    it2++;
+    vec[i]=it2->first - it->first;
+    it=it2;
   }
-  
+  it = myMap.begin();
+  aMap newMap;
+  for(int i=0;i<myMap.size()-1;i++){
+    if(fabs(vec[i])>=minDist){
+      newMap[it->first] = it->second;
+    }
+    it++;
+  }
+  newMap[it->first] = it->second;
+  delete [] vec;
+
+    fprintf(stderr,"[%s] We know have: %lu snpSites\n",__FUNCTION__,myMap.size());
+    return newMap;
 }
+ 
 
 
-void readicnts(const char *fname,int minDepth=2,int maxDepth=20){
+void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,int minDepth,int maxDepth){
   fprintf(stderr,"[%s] fname:%s minDepth:%d maxDepth:%d\n",__FUNCTION__,fname,minDepth,maxDepth);
   gzFile gz=getgz(fname,"rb");
 
@@ -169,16 +366,21 @@ void readicnts(const char *fname,int minDepth=2,int maxDepth=20){
   int totSite=0;
   while(gzread(gz,tmp,sizeof(int)*5)){
     totSite++;
-    int tmp1[4];
-    memcpy(tmp1,tmp+1,sizeof(int)*4);
-    
-    int d=tmp1[0]+tmp1[1]+tmp1[2]+tmp1[3];
+    int *tmp1=new int[4];
+    int d=0;
+    for(int i=0;i<4;i++) {
+      tmp1[i]=tmp[i+1];
+      d += tmp1[i];
+    }
+   
     if(d>=minDepth&&d<=maxDepth){
       cnt.push_back(tmp1);
-      ipos.push_back(tmp[0]);
+      // print(cnt[cnt.size()-1],stdout,4,"pre");
+      //exit(0);
+      ipos.push_back(tmp[0]-1);
     }
   }
-  
+  //  print(cnt[0],stderr,4,"dung");
   fprintf(stderr,"Has read:%d sites,  %zu sites (after depfilter) from ANGSD icnts file\n",totSite,ipos.size());
 }
 
@@ -186,12 +388,22 @@ void readicnts(const char *fname,int minDepth=2,int maxDepth=20){
 
 
 int main(int argc,char**argv){
+#if 0
+  rbinom *rb=init_rbinom(0.23,1);
+  for(int i=0;i<1e7;i++)
+    fprintf(stdout,"%d\n",sample(rb));
+  return 0;
+#endif
+  int minDepth=2;
+  int maxDepth=20;
   hapfile="../RES/hapMapCeuXlift.map.gz";
   icounts="../angsdput.icnts.gz";
   mapfile="../RES/chrX.unique.gz";
-  readhap(hapfile);
-  return 0;
-  readicnts(icounts);
-  count();
+  aMap myMap = readhap(hapfile);
+  std::vector<int> ipos;
+  std::vector<int*> cnt;
+  readicnts(icounts,ipos,cnt,minDepth,maxDepth);
+  dat d=count(myMap,ipos,cnt);
+  analysis(d);
   return 0;
 }
