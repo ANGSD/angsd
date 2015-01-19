@@ -66,7 +66,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
   if(nsize>fl->curLen) 
     fl->keeps=(char*) realloc(fl->keeps,nsize);
   memset(fl->keeps,0,nsize);
-  fprintf(stderr,"it->second.len:%lu fl->curLen:%lu fl->keeps:%p\n",it->second.len,fl->curLen,fl->keeps);
+  //fprintf(stderr,"it->second.len:%lu fl->curLen:%lu fl->keeps:%p\n",it->second.len,fl->curLen,fl->keeps);
   bgzf_read(fl->bg,fl->keeps,it->second.len);
 
   if(fl->hasMajMin==1){
