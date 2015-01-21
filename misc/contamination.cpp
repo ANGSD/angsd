@@ -26,12 +26,17 @@ typedef struct{
   double freq;
 }hapSite;
 
+void print(FILE *fp,int p,hapSite &h){
+  fprintf(fp,"hapmap\t%d\t%d\t%d\t%f\n",p,h.allele1,h.allele2,h.freq);
+}
+
 typedef std::map<int,hapSite> aMap;
 
 const char *hapfile=NULL,*mapfile=NULL,*icounts=NULL;
 typedef unsigned char uchar;
 
 typedef std::vector<int> iv;
+typedef std::vector<int*> iv2;
 
 typedef struct{
   iv pos;
@@ -59,7 +64,7 @@ rbinom *init_rbinom(double p,int n){
   rb->cum[0] = exp(rb->dens[0])/ts;
   for(int k=1;k<=n;k++){
     rb->cum[k] = exp(rb->dens[k])/ts+rb->cum[k-1];
-    //    fprintf(stdout,"%e\n",rb->cum[k]);
+
   }
   return rb;
 }
@@ -109,10 +114,21 @@ void analysis(dat &d){
     rowSum[i] = s;
     rowMax[i]=max;
     rowMaxW[i]=which;
+    aMap::iterator it= d.myMap.find(d.pos[i]);
+    if(it!=d.myMap.end()){
+      // fprintf(stderr,"posi:%d wmax:%d all1:%d freq:%f\n",it->first,rowMaxW[i],it->second.allele1,it->second.freq);
+      
+      if(rowMaxW[i]==it->second.allele1)
+	it->second.freq=1-it->second.freq;
+      else
+	it->second.freq=it->second.freq;
+      // fprintf(stderr,"posi:%d wmax:%d all1:%d freq:%f\n",it->first,rowMaxW[i],it->second.allele1,it->second.freq);
+      // exit(0);
+    }
 
     error1[i] = rowSum[i]-rowMax[i];
     error2[i] = simrbinom((1.0*error1[i])/(1.0*rowSum[i]));
-    //    fprintf(stdout,"rs\t%d %d %d %d %d %d\n",rowSum[i],rowMax[i],rowMaxW[i],error1[i],error2[i],d.dist[i]);
+    //   fprintf(stdout,"rs\t%d %d %d %d %d %d\n",rowSum[i],rowMax[i],rowMaxW[i],error1[i],error2[i],d.dist[i]);
     if(error1[i]>0)
       tab[1]++;
     else
@@ -122,6 +138,7 @@ void analysis(dat &d){
       mat1[1] +=rowSum[i]-error1[i];
       mat2[0] +=error2[i];
       mat2[1] +=1-error2[i];
+      // fprintf(stdout,"rs %d %d %d %d %d %d %d %f %d %d\n",d.pos[i],rowSum[i],rowMax[i],rowMaxW[i],error1[i],error2[i],d.dist[i],it->second.freq,it->second.allele1,it->second.allele2);
     }else{
       mat1[2] +=error1[i];
       mat1[3] +=rowSum[i]-error1[i];
@@ -147,7 +164,7 @@ void analysis(dat &d){
   fprintf(stdout,"%s\t%d\t%d\t%d\t%d\t%.6g\t%.6g\t%.6g\t%.6g\n", "method2", n11, n12, n21, n22,
 				prob, left, right, twotail);
 
-  //estimate how much contaminatino
+  //estimate how much contamination
   double c= mat1[2]/(1.0*(mat1[2]+mat1[3]));
   double err= mat1[0]/(1.0*(mat1[0]+mat1[1]));
   fprintf(stderr,"c:%f err:%f len:%lu lenpos:%lu\n",c,err,d.cn.size()/9,d.pos.size());
@@ -183,14 +200,7 @@ void analysis(dat &d){
     fprintf(stdout,"cont\t%d\t%d\t%d\t%d\t%f\n",err0[i],err1[i],d0[i],d1[i],freq[i]);
     
   }
-  int ii=0;
-  for(aMap::iterator it=d.myMap.begin();it!=d.myMap.end();++it){
-    
-
-  }
-  
-
-
+ 
 }
 
 void print(int *ary,FILE *fp,size_t l,char *pre){
@@ -281,6 +291,14 @@ char flip(char c){
     return 'C';
   if(c=='C')
     return 'G';
+  if(c==0)
+    return 3;
+  if(c==1)
+    return 2;
+  if(c==2)
+    return 1;
+  if(c==3)
+    return 0;
   fprintf(stderr,"Problem interpreting char:%c\n",c);
   return 0;
 }
@@ -299,6 +317,20 @@ void printhapsite(hapSite &hs,FILE *fp,int &p){
   fprintf(fp,"p:%d al1:%c al2:%c freq:%f\n",p,hs.allele1,hs.allele2,hs.freq);
 }
 
+int charToNum(char c){
+  if(c=='A'||c=='a')
+    return 0;
+  if(c=='C'||c=='c')
+    return 1;
+  if(c=='G'||c=='g')
+    return 2;
+  if(c=='T'||c=='t')
+    return 3;
+  // fprintf(stderr,"Problem with observed char: '%c'\n",c);
+  return -1;
+}
+
+
 aMap readhap(const char *fname,int minDist=10){
   fprintf(stderr,"[%s] fname:%s minDist:%d\n",__FUNCTION__,fname,minDist);
   gzFile gz=getgz(fname,"rb");
@@ -308,11 +340,12 @@ aMap readhap(const char *fname,int minDist=10){
   while(gzgets(gz,buf,LENS)){
     hapSite hs;
     int p = atoi(strtok(buf,"\t\n "));
-    hs.allele1 = strtok(NULL,"\t\n ")[0];
+    hs.allele1 = charToNum(strtok(NULL,"\t\n ")[0]);
     hs.freq = atof(strtok(NULL,"\t\n "));
     char strand= strtok(NULL,"\t\n ")[0];
-    hs.allele2 = strtok(NULL,"\t\n ")[0];
-
+    hs.allele2 = charToNum(strtok(NULL,"\t\n ")[0]);
+    if(hs.allele1==-1||hs.allele2==-1)
+      continue;
     if(strand=='-'){
       hs.allele1 = flip(hs.allele1);
       hs.allele2 = flip(hs.allele2);
@@ -320,9 +353,9 @@ aMap readhap(const char *fname,int minDist=10){
     
     if(myMap.count(p)>0){
       if(viggo>0){
-	fprintf(stderr,"Duplicate positions found in file: %s, pos:%d\n",fname,p);
-	fprintf(stderr,"Will only use first entry\n");
-	fprintf(stderr,"This message is only printed 3 times\n");
+	fprintf(stderr,"[%s] Duplicate positions found in file: %s, pos:%d\n",__FUNCTION__,fname,p);
+	fprintf(stderr,"[%s] Will only use first entry\n",__FUNCTION__);
+	fprintf(stderr,"[%s] This message is only printed 3 times\n",__FUNCTION__);
 	viggo--;
       }
     }else{
@@ -346,14 +379,22 @@ aMap readhap(const char *fname,int minDist=10){
   for(int i=0;i<myMap.size()-1;i++){
     if(fabs(vec[i])>=minDist){
       newMap[it->first] = it->second;
+      //     fprintf(stdout,"test\t%d\n",it->first);
     }
     it++;
   }
   newMap[it->first] = it->second;
+  //..  exit(0);
   delete [] vec;
+  fprintf(stderr,"[%s] We now have: %lu snpSites\n",__FUNCTION__,newMap.size());
 
-    fprintf(stderr,"[%s] We know have: %lu snpSites\n",__FUNCTION__,myMap.size());
-    return newMap;
+#if 0
+  for(aMap::iterator it=newMap.begin();it!=newMap.end();++it)
+    print(stdout,it->first,it->second);
+#endif
+  
+
+  return newMap;
 }
  
 
@@ -383,9 +424,6 @@ void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,i
   //  print(cnt[0],stderr,4,"dung");
   fprintf(stderr,"Has read:%d sites,  %zu sites (after depfilter) from ANGSD icnts file\n",totSite,ipos.size());
 }
-
-
-
 
 int main(int argc,char**argv){
 #if 0

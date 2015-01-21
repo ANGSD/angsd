@@ -1,3 +1,21 @@
+
+
+if(TRUE){
+    hapFile="../RES/hapMapCeuXlift.map.gz"
+    countFile="../angsdput.icnts.gz"
+    mapFile = NA
+    minDepth=2
+    maxDepth=20
+    mc.cores=10
+    fixed=FALSE
+    jack=TRUE
+    controlSNP<-c(-4:-1,1:4)    
+    MinDist=10
+    bases=c("A","C","G","T")
+}
+
+
+controlSNP<-c(-4:-1,1:4)
 ##this code is horrible. But it works. 
 bases=c("A","C","G","T")
 require(parallel)
@@ -55,7 +73,6 @@ like1Wrap<-function(x,fixed){
 
 estCont<-function(x,jack=FALSE,max=0.1,mc.cores,fixed){
     c<-x$mat[1,2]/sum(x$mat[,2])
-    keep<-x$d>0
     err<-sum(x$mat[1,1])/sum(x$mat[,1])
 
     ##jack
@@ -103,10 +120,11 @@ estCont<-function(x,jack=FALSE,max=0.1,mc.cores,fixed){
 
 mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
     hapPos<-hapMap_save$V1
-
+    cat("mismaatch: nrow(hapPos): ",length(hapPos),"\n")
     pos<-r_save[,1]
    
     keepSites<-pos%in%hapPos
+    cat("mismatch nkeeps: ",sum(keepSites),"\n")
     for(c in controlSNP)
         keepSites[keepSites]<-((pos[keepSites]+c)%in%pos)&keepSites[keepSites]
     w<-which(keepSites)
@@ -125,7 +143,7 @@ mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
     error<-d-max
     set.seed(1)
     error2<-rbinom(length(d),1,prob=error/d)
-    table(error>0)
+##    Table(error>0)
     keep<-rep(T,nrow(r))
     
     ## test 1
@@ -180,14 +198,14 @@ mismatch<-function(r_save,hapMap_save,controlSNP,noNA=TRUE){
      cat("\n-----------------------\n major and minor bases - Method2:\n")
      print(mat4)
     ## get frequencies
-    hapMap<-hapMap_save[(hapMap_save[,1]+0 )%in%r[snps,1],] ##<- + zero because of hg18/hg19
+    hapMap<-hapMap_save[(hapMap_save[,1]+0 )%in%r[snps,1],] ##<- + Zero because of hg18/hg19
     if(TRUE){
         table(bases[wmax[snps]]==hapMap$V5|bases[wmax[snps]]==hapMap$V2)
         flip<-bases[wmax[snps]]==hapMap$V2
         hapMap$matchAF<-hapMap$V3
         hapMap$matchAF[flip]<-1-hapMap$matchAF[flip]
         freq<-hapMap$matchAF #frequency of the none benny allele
-        freq[hapMap$V4=="-"]<-1-freq[hapMap$V4=="-"]
+      #  freq[hapMap$V4=="-"]<-1-freq[hapMap$V4=="-"]
     }
 ##    freq <-1- hapMap[,5]
     obj<-list(error=error,error2=error2,d=d,freq=freq,wmax=wmax,snps=snps,snps1=snps1,mat=mat,mat2=mat2,mat3=mat3,mat4=mat4,controlSNP=controlSNP,r=r)
@@ -208,17 +226,41 @@ readDat<-function(fileName,maxDepth,minDepth,nSites=1e8){
 
 readHap<-function(MinDist=10,hapFile) {
     hapMap_save<-read.table(hapFile,as.is=T)
+    cat("HapMap sites:",nrow(hapMap_save), "from file: ",hapFile,"\n")
+    hapMap_save <- hapMap_save[(hapMap_save[,2] %in% bases) &(hapMap_save[,5] %in% bases),]
+    cat("HapMap after removing undefined(N/-/n) snps ",nrow(hapMap_save),"\n")
+    
     hapMap_save <- hapMap_save[!duplicated(hapMap_save[,1]),]
     hapMap_save<-hapMap_save[order(hapMap_save[,1]),]
     cat("unique HapMap sites:",nrow(hapMap_save), "from file: ",hapFile,"\n")
     hapMap_save<-hapMap_save[-which(diff(hapMap_save[,1])<MinDist),]
     ##    write.table(hapMap_save,file="delme.txt",row.names=F,col.names=F,quote=F)
     cat("HapMap after removing close snpts ",nrow(hapMap_save),"\n")
+    if(any(is.na(hapMap_save))){
+        stop("NA in hapmap")
+    }
+    #now flip
+    fl <- hapMap_save[,4]=="-"
+    hapMap_save[hapMap_save[,2]=="A"&fl,2] <- "N"
+    hapMap_save[hapMap_save[,2]=="T"&fl,2] <- "A"
+    hapMap_save[hapMap_save[,2]=="N",2] <- "T"
+    
+    hapMap_save[hapMap_save[,2]=="C"&fl,2] <- "N"
+    hapMap_save[hapMap_save[,2]=="G"&fl,2] <- "C"
+    hapMap_save[hapMap_save[,2]=="N",2] <- "G"
+    
+    hapMap_save[hapMap_save[,5]=="A"&fl,5] <- "N"
+    hapMap_save[hapMap_save[,5]=="T"&fl,5] <- "A"
+    hapMap_save[hapMap_save[,5]=="N",5] <- "T"
+    
+    hapMap_save[hapMap_save[,5]=="C"&fl,5] <- "N"
+    hapMap_save[hapMap_save[,5]=="G"&fl,5] <- "C"
+    hapMap_save[hapMap_save[,5]=="N",5] <- "G"
+    
     return(hapMap_save)
 }
 
 
-controlSNP<-c(-4:-1,1:4)
 
 if(FALSE){
     mapFile = NULL
@@ -232,6 +274,7 @@ if(FALSE){
     hapFile="../RES/hapMapCeuXlift.map"
     fileName <- "../angsdput.icnts.gz"
 }
+
 doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores,fixed,jack){
     hapMap_save<-readHap(hapFile=hapFile)
     r_save<-readDat(countFile,maxDepth,minDepth)
@@ -341,8 +384,8 @@ cat("fixed = ",fixed,"\n")
 cat("jack = ",jack,"\n")
 
 {
-if(!is.na(mapFile))
-    doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack)
-else
-    doAnal(hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack)
+    if(!is.na(mapFile))
+        doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack)
+    else
+        doAnal(hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack)
 }
