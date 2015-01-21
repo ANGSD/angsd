@@ -25,7 +25,7 @@
 #include "abcWritePlink.h" //<- dump plink files.
 #include "abcSmartCounts.h"
 #include "abcTemplate.h"
-
+#include "abcAncestry.h"
 //below we set some variables that are shared between all the analysis classes
 #define MAX_CLASS 25
 int abc::tot_index =0;
