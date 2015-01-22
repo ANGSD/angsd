@@ -30,6 +30,58 @@ void print(FILE *fp,int p,hapSite &h){
   fprintf(fp,"hapmap\t%d\t%d\t%d\t%f\n",p,h.allele1,h.allele2,h.freq);
 }
 
+
+double ldbinom(int k, int n,double p){
+  return lbinom(n,k)+k*log(p)+(n-k)*log(1-p);
+}
+
+//    l<-  dbinom(error,d,(1-x)*eps+x*freq)
+double likeOld(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+  double t = 0;
+  for(int i=0;i<len;i++)
+    t += ldbinom(nonMajor[i],seqDepth[i],(1-x)*eps+x*freq[i]);
+  return t;
+}
+
+//    l<-  dbinom(error,d,x*freq*(1-4*eps/3)+eps)
+double likeNew(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+  double t = 0;
+  for(int i=0;i<len;i++)
+    t += ldbinom(nonMajor[i],seqDepth[i],x*freq[i]*(1-4*eps/3.0)+eps);
+  return t;
+}
+
+
+double likeOldMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+  //  return(mean(error/d-eps)/(mean(freq)-eps))
+  double top = 0;
+  double bot = 0;
+  
+  for(int i=0;i<len;i++){
+    top += (1.0*nonMajor[i])/(1.0*seqDepth[i]);
+    bot += freq[i];
+  }
+  top = top/(1.0*len)-eps;
+  bot = bot/(1.0*len)-eps;
+  return top/bot; 
+}
+
+
+double likeNewMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+  //  return(mean(error/d-eps)/(mean(freq)-eps))
+  double top = 0;
+  double bot = 0;
+  
+  for(int i=0;i<len;i++){
+    top += (1.0*nonMajor[i])/(1.0*seqDepth[i]);
+    bot += freq[i];
+  }
+  top = top/(1.0*len)-eps;
+  bot = bot/(1.0*len)*(1-4.0*eps/3.0);
+  return top/bot; 
+}
+
+
 typedef std::map<int,hapSite> aMap;
 
 const char *hapfile=NULL,*mapfile=NULL,*icounts=NULL;
@@ -197,9 +249,18 @@ void analysis(dat &d){
       exit(0);
     }
 #endif
-    fprintf(stdout,"cont\t%d\t%d\t%d\t%d\t%f\n",err0[i],err1[i],d0[i],d1[i],freq[i]);
+    //    fprintf(stdout,"cont\t%d\t%d\t%d\t%d\t%f\n",err0[i],err1[i],d0[i],d1[i],freq[i]);
     
   }
+
+  double llh=likeOld(0.027,d.cn.size()/9,d0,err0,freq,c);
+  double mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c);
+  fprintf(stderr,"llh:%f mom:%f\n",llh,mom);
+
+
+  llh=likeNew(0.027,d.cn.size()/9,d0,err0,freq,c);
+  mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c);
+  fprintf(stderr,"llh:%f mom:%f\n",llh,mom);
  
 }
 

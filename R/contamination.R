@@ -27,11 +27,32 @@ like<-function(x,error,d,freq,eps){
     return(-sum(log(l)))
 }
 
+mom.old <- function(error,d,freq,eps){
+    return(mean(error/d-eps)/(mean(freq)-eps))
+}
+
+mom.new <- function(error,d,freq,eps){
+    return(mean(error/d-eps)/(mean(freq)*(1-4*eps/3)))
+}
+
 likeFixed<-function(x,error,d,freq,eps){ 
     if(x<0|x>1)
         return(Inf)
     l<-  dbinom(error,d,x*freq*(1-4*eps/3)+eps)
     return(-sum(log(l)))
+}
+
+like1Wrap<-function(x,fixed){
+    c<-sum(x[,2])/sum(x[,4])
+    r <- c()
+    if(fixed==FALSE)
+        r <- mom.old(eps=c,error=x[,1],d=x[,3],freq=x[,5])
+    else
+        r <- mom.new(eps=c,error=x[,1],d=x[,3],freq=x[,5])
+    if(fixed==FALSE)
+        optimize(like,c(0,1),eps=c,error=x[,1],d=x[,3],freq=x[,5])
+    else
+        optimize(likeFixed,c(0,1),eps=c,error=x[,1],d=x[,3],freq=x[,5])
 }
 
 like1Wrap2<-function(x,max=0.1,fixed){
@@ -63,18 +84,12 @@ jackKnife3<-function(x,fun,mc.cores,...){
 
 
 
-like1Wrap<-function(x,fixed){
-    c<-sum(x[,2])/sum(x[,4])
-    if(fixed==FALSE)
-        optimize(like,c(0,1),eps=c,error=x[,1],d=x[,3],freq=x[,5])
-    else
-        optimize(likeFixed,c(0,1),eps=c,error=x[,1],d=x[,3],freq=x[,5])
-}
 
 estCont<-function(x,jack=FALSE,max=0.1,mc.cores,fixed){
     c<-x$mat[1,2]/sum(x$mat[,2])
+  
     err<-sum(x$mat[1,1])/sum(x$mat[,1])
-
+    cat("c est is: ",c," err is",err,"\n")
     ##jack
     j1<-NA
     j3<-NA
