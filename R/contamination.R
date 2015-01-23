@@ -1,20 +1,3 @@
-
-
-if(TRUE){
-    hapFile="../RES/hapMapCeuXlift.map.gz"
-    countFile="../angsdput.icnts.gz"
-    mapFile = NA
-    minDepth=2
-    maxDepth=20
-    mc.cores=10
-    fixed=FALSE
-    jack=TRUE
-    controlSNP<-c(-4:-1,1:4)    
-    MinDist=10
-    bases=c("A","C","G","T")
-}
-
-
 controlSNP<-c(-4:-1,1:4)
 ##this code is horrible. But it works. 
 bases=c("A","C","G","T")
@@ -49,6 +32,7 @@ like1Wrap<-function(x,fixed){
         r <- mom.old(eps=c,error=x[,1],d=x[,3],freq=x[,5])
     else
         r <- mom.new(eps=c,error=x[,1],d=x[,3],freq=x[,5])
+
     if(fixed==FALSE)
         optimize(like,c(0,1),eps=c,error=x[,1],d=x[,3],freq=x[,5])
     else
@@ -360,7 +344,7 @@ args<-list(
     minDepth=2,
     maxDepth=20,
     mc.cores=10,
-    fixed=FALSE,
+    fixed=TRUE,
     jack=TRUE
     )
 ##if no argument are given prints the need arguments and the optional ones with default

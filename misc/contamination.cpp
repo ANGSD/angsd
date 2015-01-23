@@ -1,3 +1,9 @@
+/*
+  jackknifing could be speeded current implemention is O(nsites^2)
+  
+
+ */
+
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -30,6 +36,18 @@ void print(FILE *fp,int p,hapSite &h){
   fprintf(fp,"hapmap\t%d\t%d\t%d\t%f\n",p,h.allele1,h.allele2,h.freq);
 }
 
+double sd(double *a,int l){
+  double ts =0;
+  for(int i=0;i<l;i++)
+    ts += a[i];
+
+  double u = ts/(1.0*l);
+  assert(u!=0);
+  ts =0;
+  for(int i=0;i<l;i++)
+    ts += (a[i]-u)*(a[i]-u);
+  return ts/(1.0*(l-1.0));
+}
 
 double ldbinom(int k, int n,double p){
   return lbinom(n,k)+k*log(p)+(n-k)*log(1-p);
@@ -52,14 +70,16 @@ double likeNew(double x,int len,int *seqDepth,int *nonMajor,double *freq,double 
 }
 
 
-double likeOldMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+double likeOldMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int jump){
   //  return(mean(error/d-eps)/(mean(freq)-eps))
   double top = 0;
   double bot = 0;
   
   for(int i=0;i<len;i++){
-    top += (1.0*nonMajor[i])/(1.0*seqDepth[i]);
-    bot += freq[i];
+    if(i!=jump){
+      top += (1.0*nonMajor[i])/(1.0*seqDepth[i]);
+      bot += freq[i];
+    }
   }
   top = top/(1.0*len)-eps;
   bot = bot/(1.0*len)-eps;
@@ -67,18 +87,35 @@ double likeOldMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps){
 }
 
 
-double likeNewMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+double likeNewMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int jump){
   //  return(mean(error/d-eps)/(mean(freq)-eps))
   double top = 0;
   double bot = 0;
   
   for(int i=0;i<len;i++){
-    top += (1.0*nonMajor[i])/(1.0*seqDepth[i]);
-    bot += freq[i];
+    if(i!=jump){
+      top += (1.0*nonMajor[i])/(1.0*seqDepth[i]);
+      bot += freq[i];
+    }
   }
   top = top/(1.0*len)-eps;
   bot = bot/(1.0*len)*(1-4.0*eps/3.0);
   return top/bot; 
+}
+
+//mehtod==0 => OLD;
+// method==1 => NEW
+double jack(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int method){
+  double *thetas =new double[len];
+  for(int i=0;i<len;i++)
+    if(method==0){
+      thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,eps,i) ;
+    }else
+      thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,eps,i) ;
+  double esd = sd(thetas,len);
+  //  fprintf(stderr,"jackknife sd: %f\n\n",esd);
+  delete [] thetas;
+  return esd;
 }
 
 
@@ -198,13 +235,14 @@ void analysis(dat &d){
       mat2[3] += 1-error2[i];
     }
   }
+#if 0
   fprintf(stderr,"tab:%lu %lu\n",tab[0],tab[1]);
   fprintf(stderr,"mat: %lu %lu %lu %lu\n",mat1[0],mat1[1],mat1[2],mat1[3]);
   fprintf(stderr,"mat2: %lu %lu %lu %lu\n",mat2[0],mat2[1],mat2[2],mat2[3]);
-  
+#endif
   int n11, n12, n21, n22;
   double left, right, twotail, prob;
-  
+  fprintf(stderr,"--------\nMAIN RESULTS: Fisher exact test:\n");
   n11=mat1[0];n12=mat1[2];n21=mat1[1];n22=mat1[3];
   prob = kt_fisher_exact(n11, n12, n21, n22, &left, &right, &twotail);
   fprintf(stdout,"Method\t n11 n12 n21 n22 prob left right twotail\n");
@@ -219,7 +257,7 @@ void analysis(dat &d){
   //estimate how much contamination
   double c= mat1[2]/(1.0*(mat1[2]+mat1[3]));
   double err= mat1[0]/(1.0*(mat1[0]+mat1[1]));
-  fprintf(stderr,"c:%f err:%f len:%lu lenpos:%lu\n",c,err,d.cn.size()/9,d.pos.size());
+  //  fprintf(stderr,"c:%f err:%f len:%lu lenpos:%lu\n",c,err,d.cn.size()/9,d.pos.size());
 
   int *err0 =new int[d.cn.size()/9];
   int *err1 =new int[d.cn.size()/9];
@@ -254,14 +292,51 @@ void analysis(dat &d){
   }
 
   double llh=likeOld(0.027,d.cn.size()/9,d0,err0,freq,c);
-  double mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c);
-  fprintf(stderr,"llh:%f mom:%f\n",llh,mom);
+  double mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
+  fprintf(stderr,"Method1: old Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,c,0));
 
 
-  llh=likeNew(0.027,d.cn.size()/9,d0,err0,freq,c);
-  mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c);
-  fprintf(stderr,"llh:%f mom:%f\n",llh,mom);
+  //llh=likeNew(0.027,d.cn.size()/9,d0,err0,freq,c);
+  mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
+  fprintf(stderr,"Method1: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,c,1));
  
+
+  for(int i=0;i<d.cn.size()/9;i++){
+    int adj=0;
+    //    int dep=0;
+    for(int j=0;j<9;j++){
+      
+      if(d.dist[i*9+j]!=0){
+	adj += error2[i*9+j];
+	//	dep += rowSum[i*9+j];
+      }else{
+	err0[i] = error2[i*9+j];
+	//d0[i] = rowSum[i*9+j];
+	freq[i] =d.myMap.find(d.pos[i*9+j])->second.freq;
+      }
+    }
+    err1[i] =adj;
+    d0[i] = 1; 
+    d1[i] = 8;
+#if 0
+    if(it==d.myMap.end()){
+      fprintf(stderr,"Problem finding:%d\n",d.pos[i]);
+      exit(0);
+    }
+#endif
+    //    fprintf(stdout,"cont\t%d\t%d\t%d\t%d\t%f\n",err0[i],err1[i],d0[i],d1[i],freq[i]);
+    
+  }
+
+  llh=likeOld(0.027,d.cn.size()/9,d0,err0,freq,c);
+  mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
+  fprintf(stderr,"Method2: old Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,c,0));
+
+
+  //llh=likeNew(0.027,d.cn.size()/9,d0,err0,freq,c);
+  mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
+  fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,c,1));
+
 }
 
 void print(int *ary,FILE *fp,size_t l,char *pre){
@@ -337,7 +412,7 @@ dat count(aMap &myMap,std::vector<int> &ipos,std::vector<int*> &cnt){
 
       }
     }
-  fprintf(stderr,"nSNP sites: %lu, with flanking: %lu\n",d.myMap.size(),d.cn.size());
+  fprintf(stderr,"  After removing SNP sites with no data in 5bp surrounding region`\n  We have nSNP sites: %lu, with flanking: %lu\n",d.myMap.size(),d.cn.size());
   return d;
 }
 
@@ -414,17 +489,17 @@ aMap readhap(const char *fname,int minDist=10){
     
     if(myMap.count(p)>0){
       if(viggo>0){
-	fprintf(stderr,"[%s] Duplicate positions found in file: %s, pos:%d\n",__FUNCTION__,fname,p);
-	fprintf(stderr,"[%s] Will only use first entry\n",__FUNCTION__);
-	fprintf(stderr,"[%s] This message is only printed 3 times\n",__FUNCTION__);
+	//	fprintf(stderr,"[%s] Duplicate positions found in file: %s, pos:%d\n",__FUNCTION__,fname,p);
+	//fprintf(stderr,"[%s] Will only use first entry\n",__FUNCTION__);
+	//fprintf(stderr,"[%s] This message is only printed 3 times\n",__FUNCTION__);
 	viggo--;
       }
     }else{
       myMap[p]=hs;
     }
   }
-  fprintf(stderr,"[%s] We have read: %zu sites from hapfile:%s\n",__FUNCTION__,myMap.size(),fname);
-  fprintf(stderr,"[%s] will remove snp sites to close:\n",__FUNCTION__);
+  //fprintf(stderr,"[%s] We have read: %zu sites from hapfile:%s\n",__FUNCTION__,myMap.size(),fname);
+  //fprintf(stderr,"[%s] will remove snp sites to close:\n",__FUNCTION__);
 
 
   int *vec = new int[myMap.size() -1];
@@ -447,7 +522,7 @@ aMap readhap(const char *fname,int minDist=10){
   newMap[it->first] = it->second;
   //..  exit(0);
   delete [] vec;
-  fprintf(stderr,"[%s] We now have: %lu snpSites\n",__FUNCTION__,newMap.size());
+  fprintf(stderr,"[%s] We now have: %lu snpSites after filtering based on hapMapfile\n",__FUNCTION__,newMap.size());
 
 #if 0
   for(aMap::iterator it=newMap.begin();it!=newMap.end();++it)
@@ -483,7 +558,7 @@ void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,i
     }
   }
   //  print(cnt[0],stderr,4,"dung");
-  fprintf(stderr,"Has read:%d sites,  %zu sites (after depfilter) from ANGSD icnts file\n",totSite,ipos.size());
+  fprintf(stderr,"[%s] Has read:%d sites,  %zu sites (after depfilter) from ANGSD icnts file\n",__FUNCTION__,totSite,ipos.size());
 }
 
 int main(int argc,char**argv){
@@ -497,7 +572,7 @@ int main(int argc,char**argv){
   int maxDepth=20;
   hapfile="../RES/hapMapCeuXlift.map.gz";
   icounts="../angsdput.icnts.gz";
-  mapfile="../RES/chrX.unique.gz";
+  // mapfile="../RES/chrX.unique.gz";
   aMap myMap = readhap(hapfile);
   std::vector<int> ipos;
   std::vector<int*> cnt;
