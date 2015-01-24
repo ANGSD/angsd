@@ -388,7 +388,7 @@ void filt_gen(const char *fname) {
       int al2 = refToInt[parsed[3][0]];
       //      fprintf(stderr,"al1:%d al2:%d\n",al1,al2);
       if(al1==al2||al1==4||al2==4){
-	fprintf(stderr,"\t-> major and minor allele should be different, and should be non \'n'/'N' chr:\'%s\' pos:%lu\n",last,posS);
+	fprintf(stderr,"\t-> major and minor allele should be different, and should be non \'n'/'N' chr:\'%s\' pos:%lu\n",last,posS+1);
 	SIG_COND=0;
 	goto cleanup;
       }

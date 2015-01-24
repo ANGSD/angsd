@@ -104,14 +104,18 @@ void abcFilter::run(funkyPars *p){
   }
   
   if(fl!=NULL) {
-    assert(fl->keeps!=NULL);
-    for(int s=0;s<p->numSites;s++){
-      if(fl->keeps[p->posi[s]]==0){
+    if(fl->keeps==NULL){
+      for(int s=0;s<p->numSites;s++)
 	p->keepSites[s] =0;
-      }
-      if(p->keepSites[s] && fl->hasMajMin==1 &&doMajorMinor==3){
-	p->major[s] = fl->major[p->posi[s]];
-	p->minor[s] = fl->minor[p->posi[s]];
+    }else{
+      for(int s=0;s<p->numSites;s++){
+	if(fl->keeps[p->posi[s]]==0){
+	  p->keepSites[s] =0;
+	}
+	if(p->keepSites[s] && fl->hasMajMin==1 &&doMajorMinor==3){
+	  p->major[s] = fl->major[p->posi[s]];
+	  p->minor[s] = fl->minor[p->posi[s]];
+	}
       }
     }
   }
