@@ -205,14 +205,16 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
     errorProbs = abcError::generateErrorPointers(errors,3,4);
   }
   
-  gzoutfile = Z_NULL;
+  gzoutfile = gzoutfile2 = Z_NULL;
   bufstr.s=NULL; bufstr.l=bufstr.m=0;// <- used for buffered output 
   bufstr.l=0;
   if(doGlf){
  
-    if(doGlf!=2)
+    if(doGlf!=2){
       gzoutfile = aio::openFileGz(outfiles,postfix,GZOPT);
-    else{
+      if(doGlf==3)
+	gzoutfile2 = aio::openFileGz(outfiles,".glf.pos.gz",GZOPT);
+    }else{
       gzoutfile = aio::openFileGz(outfiles,beaglepostfix,GZOPT);
       
       kputs("marker\tallele1\tallele2",&bufstr);
@@ -247,7 +249,9 @@ abcGL::~abcGL(){
     abcError::killGlobalErrorProbs(errorProbs);
   if(doGlf)    gzclose(gzoutfile);
     
-  
+  if(gzoutfile!=Z_NULL)
+    gzclose(gzoutfile2);
+
   if(bufstr.s!=NULL)
     free(bufstr.s);
 
@@ -435,8 +439,8 @@ void abcGL::printLike(funkyPars *pars) {
     for(int s=0;s<pars->numSites;s++) {
       if(pars->keepSites[s]==0) //TSK 0.441 sep 25
 	continue;
-      int major = pars->major[s];
-      int minor = pars->minor[s] ;
+      char major = pars->major[s];
+      char minor = pars->minor[s] ;
       assert(major!=4&&minor!=4);
 
       for(int i=0;i<pars->nInd;i++) {
@@ -446,6 +450,14 @@ void abcGL::printLike(funkyPars *pars) {
 	dump[2] = pars->likes[s][i*10+angsd::majorminor[minor][minor]] ;
 	gzwrite(gzoutfile,dump,3*sizeof(double));
       }
+      
+      gzwrite(gzoutfile2,header->name[pars->refId],sizeof(char)*strlen(header->name[pars->refId]));
+      gzputc(gzoutfile2,'\0');
+      //      fprintf(stderr,"%s\n",header->name[pars->refId]);
+      //exit(0);
+      gzwrite(gzoutfile2,&pars->posi[s],sizeof(int));
+      gzwrite(gzoutfile2,&major,sizeof(char));
+      gzwrite(gzoutfile2,&minor,sizeof(char));
     }
   } else if(doGlf==4){
     bufstr.l=0;
