@@ -103,15 +103,31 @@ double likeNewMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps,in
   return top/bot; 
 }
 
+double calcEps(int *e1,int *d1,int len,int skip){
+  double top=0;double bot=0;
+  for(int i=0;i<len;i++){
+    if(i!=skip){
+      top += e1[i];
+      bot += d1[i];
+    }
+  }
+  double eps=top/bot;
+  //  fprintf(stderr,"eps:%f\n",eps);
+  return eps;
+  
+}
+
+
 //mehtod==0 => OLD;
 // method==1 => NEW
-double jack(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int method){
+double jack(int len,int *seqDepth,int *nonMajor,double *freq,int method,int *e1,int *d1){
+
   double *thetas =new double[len];
   for(int i=0;i<len;i++)
     if(method==0){
-      thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,eps,i) ;
+      thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
     }else
-      thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,eps,i) ;
+      thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
   double esd = sd(thetas,len);
   //  fprintf(stderr,"jackknife sd: %f\n\n",esd);
   delete [] thetas;
@@ -179,7 +195,6 @@ int sample(rbinom *rb){
  
 }
 
-
 void analysis(dat &d){
   int *rowSum = new int[d.cn.size()];
   int *rowMax = new int[d.cn.size()];
@@ -189,6 +204,7 @@ void analysis(dat &d){
   size_t mat1[4]={0,0,0,0};
   size_t mat2[4]={0,0,0,0};
   size_t tab[2] = {0,0};
+  int increr=0;
   for(int i=0;i<d.cn.size();i++){
     int s =d.cn[i][0];
     int max=s;
@@ -229,6 +245,7 @@ void analysis(dat &d){
       mat2[1] +=1-error2[i];
       // fprintf(stdout,"rs %d %d %d %d %d %d %d %f %d %d\n",d.pos[i],rowSum[i],rowMax[i],rowMaxW[i],error1[i],error2[i],d.dist[i],it->second.freq,it->second.allele1,it->second.allele2);
     }else{
+      
       mat1[2] +=error1[i];
       mat1[3] +=rowSum[i]-error1[i];
       mat2[2] += error2[i];
@@ -257,7 +274,7 @@ void analysis(dat &d){
   //estimate how much contamination
   double c= mat1[2]/(1.0*(mat1[2]+mat1[3]));
   double err= mat1[0]/(1.0*(mat1[0]+mat1[1]));
-  //  fprintf(stderr,"c:%f err:%f len:%lu lenpos:%lu\n",c,err,d.cn.size()/9,d.pos.size());
+  fprintf(stderr,"c:%f err:%f len:%lu lenpos:%lu \n",c,err,d.cn.size()/9,d.pos.size());
 
   int *err0 =new int[d.cn.size()/9];
   int *err1 =new int[d.cn.size()/9];
@@ -293,12 +310,12 @@ void analysis(dat &d){
 
   double llh=likeOld(0.027,d.cn.size()/9,d0,err0,freq,c);
   double mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  fprintf(stderr,"Method1: old Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,c,0));
+  fprintf(stderr,"Method1: old Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,0,err1,d1));
 
 
   //llh=likeNew(0.027,d.cn.size()/9,d0,err0,freq,c);
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  fprintf(stderr,"Method1: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,c,1));
+  fprintf(stderr,"Method1: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,1,err1,d1));
  
 
   for(int i=0;i<d.cn.size()/9;i++){
@@ -330,12 +347,12 @@ void analysis(dat &d){
 
   llh=likeOld(0.027,d.cn.size()/9,d0,err0,freq,c);
   mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  fprintf(stderr,"Method2: old Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,c,0));
+  fprintf(stderr,"Method2: old Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,0,err1,d1));
 
 
   //llh=likeNew(0.027,d.cn.size()/9,d0,err0,freq,c);
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,c,1));
+  fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,1,err1,d1));
 
 }
 
