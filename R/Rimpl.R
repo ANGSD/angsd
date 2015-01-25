@@ -127,3 +127,20 @@ likes <- readGeno(file="pops1.glf.gz",nind=5,nsites=10000)
 aa<-estsfs1(likes[1,],anc=1)
 dd[1,]
 aa
+
+
+
+emSFS <- function(x,start,maxItr=10,tole=1e-3){
+  if(nrow(x)>ncol(x))
+    x <- t(x)
+  if(missing(start))
+    start <- norm(runif(nrow(x)))
+  llhOld <- sum(log(colSums(start*x)))
+  for(i in 1:maxItr){ 
+    start <- rowMeans(apply(x*start,2,norm))
+    llh <- sum(log(colSums(start*x)))
+    cat("i: ",i," diff: ",llhOld-llh,"\n")
+    llhOld <- llh
+  }
+  start
+}
