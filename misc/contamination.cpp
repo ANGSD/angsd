@@ -195,7 +195,7 @@ int sample(rbinom *rb){
  
 }
 
-void analysis(dat &d){
+void analysis(dat &d) {
   int *rowSum = new int[d.cn.size()];
   int *rowMax = new int[d.cn.size()];
   int *rowMaxW = new int[d.cn.size()];
@@ -354,6 +354,21 @@ void analysis(dat &d){
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
   fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,1,err1,d1));
 
+  delete [] rowSum;
+  delete [] rowMax;
+  delete [] rowMaxW;
+  delete [] error1;
+  delete [] error2;
+  
+
+  delete [] err0;
+  delete [] err1;
+  delete [] d0;
+  delete [] d1;
+  delete [] freq;
+
+
+
 }
 
 void print(int *ary,FILE *fp,size_t l,char *pre){
@@ -387,7 +402,7 @@ dat count(aMap &myMap,std::vector<int> &ipos,std::vector<int*> &cnt){
   for(int i=0;i<lastP;i++)
     if(aa[i]==NVAL)
       hit[i] = NVAL;
-
+  delete [] aa;
   //now loop over hitarray and make remove non -4,..4: segments
   int i=0;
   while(i<lastP){
@@ -429,6 +444,7 @@ dat count(aMap &myMap,std::vector<int> &ipos,std::vector<int*> &cnt){
 
       }
     }
+  delete [] hit;
   fprintf(stderr,"  After removing SNP sites with no data in 5bp surrounding region`\n  We have nSNP sites: %lu, with flanking: %lu\n",d.myMap.size(),d.cn.size());
   return d;
 }
@@ -457,6 +473,7 @@ char flip(char c){
 }
 
 gzFile getgz(const char *fname,const char *mode){
+  //  fprintf(stderr,"Trying to open file:%s\n",fname);
   gzFile gz=Z_NULL;
   gz = gzopen(fname,"rb");
   if(gz==Z_NULL){
@@ -484,12 +501,15 @@ int charToNum(char c){
 }
 
 
-aMap readhap(const char *fname,int minDist=10){
-  fprintf(stderr,"[%s] fname:%s minDist:%d\n",__FUNCTION__,fname,minDist);
+aMap readhap( char *fname,int minDist=10){
+  //  fprintf(stderr,"[%s] fname:%s\tminDist:%d LENS:%d\n",__FUNCTION__,fname,minDist,LENS);
   gzFile gz=getgz(fname,"rb");
-  char buf[LENS];
+  
+  char *buf = new char[LENS];
   int viggo=3;
   aMap myMap;
+
+  gzgets(gz,buf,LENS);
   while(gzgets(gz,buf,LENS)){
     hapSite hs;
     int p = atoi(strtok(buf,"\t\n "));
@@ -518,7 +538,7 @@ aMap readhap(const char *fname,int minDist=10){
   //fprintf(stderr,"[%s] We have read: %zu sites from hapfile:%s\n",__FUNCTION__,myMap.size(),fname);
   //fprintf(stderr,"[%s] will remove snp sites to close:\n",__FUNCTION__);
 
-
+  assert(myMap.size()>0);
   int *vec = new int[myMap.size() -1];
   aMap::iterator it = myMap.begin();
   for(int i=0;i<myMap.size()-1;i++){
@@ -545,8 +565,8 @@ aMap readhap(const char *fname,int minDist=10){
   for(aMap::iterator it=newMap.begin();it!=newMap.end();++it)
     print(stdout,it->first,it->second);
 #endif
-  
-
+  delete [] buf;
+  gzclose(gz);
   return newMap;
 }
  
@@ -572,23 +592,35 @@ void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,i
       // print(cnt[cnt.size()-1],stdout,4,"pre");
       //exit(0);
       ipos.push_back(tmp[0]-1);
-    }
+    }else
+      delete [] tmp1;
   }
   //  print(cnt[0],stderr,4,"dung");
   fprintf(stderr,"[%s] Has read:%d sites,  %zu sites (after depfilter) from ANGSD icnts file\n",__FUNCTION__,totSite,ipos.size());
+  gzclose(gz);
 }
 
 int main(int argc,char**argv){
-#if 0
-  rbinom *rb=init_rbinom(0.23,1);
-  for(int i=0;i<1e7;i++)
-    fprintf(stdout,"%d\n",sample(rb));
-  return 0;
-#endif
+  char *hapfile=NULL;
+  char *icounts=NULL;
+  int n;
+  while ((n = getopt(argc, argv, "h:a:")) >= 0) {
+    switch (n) {
+    case 'h': hapfile = strdup(optarg); break;
+    case 'a': icounts = strdup(optarg); break;
+    default: {fprintf(stderr,"unknown arg:\n");return 0;}
+    }
+  }
+  if(!hapfile||!icounts){
+    fprintf(stderr,"\t-> Must supply -h hapmapfile -a angsd.icnts.gz file\n");
+    return 0;
+  }
+
+
   int minDepth=2;
   int maxDepth=20;
-  hapfile="../RES/hapMapCeuXlift.map.gz";
-  icounts="../angsdput.icnts.gz";
+  //  hapfile="../RES/hapMapCeuXlift.map.gz";
+  //icounts="../angsdput.icnts.gz";
   // mapfile="../RES/chrX.unique.gz";
   aMap myMap = readhap(hapfile);
   std::vector<int> ipos;
@@ -596,5 +628,14 @@ int main(int argc,char**argv){
   readicnts(icounts,ipos,cnt,minDepth,maxDepth);
   dat d=count(myMap,ipos,cnt);
   analysis(d);
+
+  //cleanup
+  for(int i=0;i<cnt.size();i++)
+    delete [] cnt[i];
+  for(int i=0;0&&i<d.cn.size();i++)//<-should cleanup here. We have copied pointers not values
+    delete [] d.cn[i];
+  free(hapfile);
+  free(icounts);
   return 0;
+
 }
