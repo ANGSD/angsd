@@ -25,7 +25,7 @@ typedef struct{
 }rbinom;
 
 
-int minDist = 10;
+
 typedef struct{
   char allele1;
   char allele2;
@@ -501,7 +501,7 @@ int charToNum(char c){
 }
 
 
-aMap readhap( char *fname,int minDist=10){
+aMap readhap( char *fname,int minDist,double minMaf){
   //  fprintf(stderr,"[%s] fname:%s\tminDist:%d LENS:%d\n",__FUNCTION__,fname,minDist,LENS);
   gzFile gz=getgz(fname,"rb");
   
@@ -515,6 +515,8 @@ aMap readhap( char *fname,int minDist=10){
     int p = atoi(strtok(buf,"\t\n "));
     hs.allele1 = charToNum(strtok(NULL,"\t\n ")[0]);
     hs.freq = atof(strtok(NULL,"\t\n "));
+    if(hs.freq<minMaf||(1-hs.freq)<minMaf)
+      continue;
     char strand= strtok(NULL,"\t\n ")[0];
     hs.allele2 = charToNum(strtok(NULL,"\t\n ")[0]);
     if(hs.allele1==-1||hs.allele2==-1)
@@ -603,11 +605,13 @@ void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,i
 int main(int argc,char**argv){
   char *hapfile=NULL;
   char *icounts=NULL;
+  double minMaf = 0.05;
   int n;
-  while ((n = getopt(argc, argv, "h:a:")) >= 0) {
+  while ((n = getopt(argc, argv, "h:a:m:")) >= 0) {
     switch (n) {
     case 'h': hapfile = strdup(optarg); break;
     case 'a': icounts = strdup(optarg); break;
+    case 'm': minMaf = atof(optarg); break;
     default: {fprintf(stderr,"unknown arg:\n");return 0;}
     }
   }
@@ -615,14 +619,17 @@ int main(int argc,char**argv){
     fprintf(stderr,"\t-> Must supply -h hapmapfile -a angsd.icnts.gz file\n");
     return 0;
   }
-
-
+  
+  int minDist = 10;
   int minDepth=2;
   int maxDepth=20;
   //  hapfile="../RES/hapMapCeuXlift.map.gz";
   //icounts="../angsdput.icnts.gz";
   // mapfile="../RES/chrX.unique.gz";
-  aMap myMap = readhap(hapfile);
+  fprintf(stderr,"hapmap:%s counts:%s minMaf:%f\n",hapfile,icounts,minMaf);
+
+  
+  aMap myMap = readhap(hapfile,minDist,minMaf);
   std::vector<int> ipos;
   std::vector<int*> cnt;
   readicnts(icounts,ipos,cnt,minDepth,maxDepth);
