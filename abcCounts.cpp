@@ -14,12 +14,11 @@
 void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"---------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doCounts\t%d\t(Count the number A,C,G,T. All sites, All samples)\n",doCounts);
-  
-  
   fprintf(argFile,"\t-minQfile\t%s\t file with individual quality score thresholds)\n",minQfile);
   fprintf(argFile,"\t-setMaxDepth\t%d\t(If total depth is larger then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMaxDepth);
   fprintf(argFile,"\t-setMinDepth\t%d\t(If total depth is smaller then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMinDepth);
   fprintf(argFile,"\t-minInd\t\t%d\t(Discard site if effective sample size below value.\n\t\t\t\t 0 indicates no filtering)\n",minInd);
+  fprintf(argFile,"\t-setMaxDiffObs\t%d\t(Discard sites where we observe to many different alleles.\n\t\t\t\t 0 indicates no filtering)\n",setMaxObs);
   fprintf(argFile,"Filedumping:\n");
   fprintf(argFile,"\t-doDepth\t%d\t(dump distribution of seqdepth)\t%s,%s\n",doDepth,postfix4,postfix5);
   fprintf(argFile,"\t  -maxDepth\t%d\t(bin together high depths)\n",maxDepth);
@@ -31,8 +30,8 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"\t  3: A,C,G,T sum over samples\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  4: A,C,G,T sum every sample\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t-iCounts\t%d (Internal format for dumping binary single chrs,1=simple,2=advanced)\n",iCounts);
-  fprintf(argFile,"\t-qfile\t%s\t(Onlyfor -iCounts 2)\n",qfileFname);
-  fprintf(argFile,"\t-ffile\t%s\t(Onlyfor -iCounts 2)\n",ffileFname);
+  fprintf(argFile,"\t-qfile\t%s\t(Only for -iCounts 2)\n",qfileFname);
+  fprintf(argFile,"\t-ffile\t%s\t(Only for -iCounts 2)\n",ffileFname);
 }
 
 int calcSum(suint *counts,int len){
@@ -80,6 +79,7 @@ void abcCounts::getOptions(argStruct *arguments){
   doQsDist=angsd::getArg("-doQsDist",doQsDist,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
   setMaxDepth = angsd::getArg("-setMaxDepth",setMaxDepth,arguments);
+  setMaxObs = angsd::getArg("-setMaxDiffObs",setMaxObs,arguments);
   setMinDepth=angsd::getArg("-setMinDepth",setMinDepth,arguments);
   doDepth=angsd::getArg("-doDepth",doDepth,arguments);
   maxDepth=angsd::getArg("-maxDepth",maxDepth,arguments);
@@ -152,7 +152,7 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   dumpCounts =0;
   doCounts = 0;
   doQsDist = 0;
-  
+  setMaxObs = 0;
   doDepth = 0;
   maxDepth = 100;
   setMaxDepth = -1;
@@ -622,5 +622,18 @@ void abcCounts::run(funkyPars *pars){
       }
     }
   }
-  
+  if(setMaxObs!=0){
+    //only for first sample...
+    for(int s=0;s<pars->numSites;s++){
+      if(pars->keepSites[s]==0)
+	continue;
+      int ndiff=0;
+      for(int i=0;i<4;i++)
+	if(pars->counts[s][i])
+	  ndiff++;
+      if(ndiff>setMaxObs)
+	pars->keepSites[s]=0;
+
+    }
+  }
 }

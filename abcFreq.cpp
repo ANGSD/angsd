@@ -226,7 +226,7 @@ void abcFreq::getOptions(argStruct *arguments){
     exit(0);
   }
 
-  if(doPost!=0 && doMajorMinor==0){
+  if(doPost!=0 && doMajorMinor==0 &&INPUT_VCF_GL!=inputtype){
     fprintf(stderr,"Do post requires major and minor: supply -doMajorMinor \n");
     exit(0);
   }

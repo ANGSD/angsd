@@ -14,7 +14,7 @@ private:
   int iCounts;
   int doCounts;
   int doQsDist;//0=nothing 1=overall 
-
+  int setMaxObs;
   char *minQfile;
   angsd::Matrix<double> minQmat;
 

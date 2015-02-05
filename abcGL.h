@@ -24,6 +24,7 @@ private:
 
   
   gzFile gzoutfile;
+  gzFile gzoutfile2;
   int GL;
   int doGlf;
   int minInd;
