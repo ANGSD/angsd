@@ -108,7 +108,9 @@ void printProgInfo(FILE *fp){
   fprintf(fp,"\tmany others\n\n");
  
   fprintf(fp,"For information of specific options type: \n\t./angsd METHODNAME eg \n\t\t./angsd -GL\n\t\t./angsd -doMaf\n\t\t./angsd -doAsso etc\n");
+  fprintf(fp,"\t\t./angsd sites for information about indexing -sites files\n");
   fprintf(fp,"Examples:\n\tEstimate MAF for bam files in 'list'\n\t\t\'./angsd -bam list -GL 2 -doMaf 2 -out RES -doMajorMinor 1\'\n");
+  
 }
 
 
