@@ -120,7 +120,7 @@ estsfs1 <- function(likes1,anc){
   return(ressfs)
 }
 #estsfs1(likes[1,],anc=1)
- 
+ if(F){
 ## validate like ./angsd.g++ -sim1 pops1.glf.gz -nInd 5  -outfiles testout -doMaf 2 -realSFS 1
 dd <- readBjoint(file="testout.sfs",nind=5,nsites=10000)
 likes <- readGeno(file="pops1.glf.gz",nind=5,nsites=10000)
@@ -128,9 +128,9 @@ aa<-estsfs1(likes[1,],anc=1)
 dd[1,]
 aa
 
+}
 
-
-emSFS <- function(x,start,maxItr=10,tole=1e-3){
+emSFS <- function(x,start,maxItr=100,tole=1e-6){
   if(nrow(x)>ncol(x))
     x <- t(x)
   if(missing(start))
@@ -140,6 +140,8 @@ emSFS <- function(x,start,maxItr=10,tole=1e-3){
     start <- rowMeans(apply(x*start,2,norm))
     llh <- sum(log(colSums(start*x)))
     cat("i: ",i," diff: ",llhOld-llh,"\n")
+    if(abs(llhOld-llh)<tole)
+      break;
     llhOld <- llh
   }
   start
