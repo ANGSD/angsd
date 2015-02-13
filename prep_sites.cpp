@@ -284,7 +284,7 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
   return 0;
 }
 
-void filt_gen(const char *fname) {
+void filt_gen(const char *fname,int posi_off) {
   fprintf(stderr,"\t-> Filterfile: %s supplied will generate binary representations... \n",fname);
 
   gzFile gz = Z_NULL;
@@ -371,10 +371,12 @@ void filt_gen(const char *fname) {
     size_t posS=atol(parsed[1]);
     assert(posS>0);
     posS--;
+    posS += posi_off;
     set<char>(keep,posS,1);
     //fprintf(stderr,"keep->l:%lu val:%d\n",keep->l,keep->d[posS]);
     if(nCols==3){
       size_t posE=atol(parsed[2]);
+      posE += posE;
       if(posS>posE){
 	fprintf(stderr,"Problem parsing bedfile, end position looks before start position: %lu vs %lu\n",posS,posE);
 	exit(0);
@@ -442,11 +444,23 @@ void filt_init(int argc,char**argv){
     exit(0);
   }
 
-  char *fname =*argv;
+  char *fname = *argv;
+  int posi_offs = 0;
+  
+  if(argc==2 && strcmp(argv[1],"+1")==0)
+    posi_offs=-1;
+  else if(argc==2 && strcmp(argv[1],"-1")==0)
+    posi_offs=+1;
+  else if(argc==2){
+    fprintf(stderr,"problem interpreting arg: \'%s\'\n",argv[1]);
+    exit(0);
+  }
+  fprintf(stderr,"indexing %s and will add \'%d\' to pos column\n",fname,posi_offs);
+
   char *bin_name=append(fname,BIN);
   char *idx_name=append(fname,IDX);
   //  if(!aio::fexists(bin_name)||!aio::fexists(idx_name))
-  filt_gen(fname);		//
+  filt_gen(fname,posi_offs);		//
   fprintf(stderr,"\t-> Generated files:\t\n\t\t'%s\'\n\t\t'%s\'\n",bin_name,idx_name);
   delete [] bin_name;
   delete [] idx_name;
@@ -458,7 +472,7 @@ int main_sites(int argc,char **argv){
     fprintf(stderr,"argv[%d]:%s\n",i,argv[i]);
 #endif
   if(argc==1){
-    fprintf(stderr,"sites index/print filename\n");
+    fprintf(stderr,"\tsites print filename\t\tPrint index file\n\tsites index filename [+1][-1]\tgenerate binary index file\n");
     return 0;
   }
   --argc;++argv;
@@ -468,11 +482,10 @@ int main_sites(int argc,char **argv){
     filt *f = filt_read(*++argv);
     filt_print(stdout,f,NULL);
     dalloc(f);
-  }
+  }else
+    fprintf(stderr,"Unknown option: \'%s\'\n",*argv);
 
-  return 0;			// 
-
-
+  return 0;
 }
 
 
