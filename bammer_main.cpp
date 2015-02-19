@@ -42,9 +42,10 @@ void dalloc_bufReader(bufReader &ret){
 
 bufReader initBufReader2(const char*fname){
   bufReader ret;
-    ret.bamfname = strdup(fname);
-  ret.baifname =(char *) malloc(strlen(ret.bamfname)+5);
-  snprintf(ret.baifname,strlen(ret.bamfname)+5,"%s.bai",ret.bamfname);
+  ret.bamfname = strdup(fname);
+  int newlen=strlen(fname);//<-just to avoid valgrind -O3 uninitialized warning
+  ret.baifname =(char *) malloc(newlen+5);
+  snprintf(ret.baifname,newlen+5,"%s.bai",ret.bamfname);
   if(angsd::fexists(ret.baifname)){
     //fprintf(stderr,"bai exists\n");
     if(isNewer(ret.bamfname,ret.baifname)){
