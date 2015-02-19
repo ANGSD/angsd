@@ -132,7 +132,7 @@ void abcFreq::getOptions(argStruct *arguments){
 
 
 
-  if(doMaf==0)
+  if(doMaf==0 )//&& doPost==0?
     return;
   chisq1 = new Chisqdist(1);
   chisq3 = new Chisqdist(3);
@@ -269,7 +269,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   
   getOptions(arguments);
   printArg(arguments->argumentFile);
-  if(doMaf==0){
+  if(doMaf==0 && doPost==0){
     shouldRun[index]=0;
     return;
   }
