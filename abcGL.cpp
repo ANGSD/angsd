@@ -139,7 +139,7 @@ void abcGL::getOptions(argStruct *arguments){
   }
  
   if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
-    fprintf(stderr,"Error: Likelihoods can only be estimated based on SOAP input and uppile input\n");
+    fprintf(stderr,"Error: Likelihoods can only be estimated based on BAM input and uppile input\n");
     exit(0);
   }
 
