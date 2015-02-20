@@ -204,7 +204,7 @@ void abcFreq::getOptions(argStruct *arguments){
   }
 
   if((inputtype==INPUT_BAM || inputtype==INPUT_PILEUP )&& GL==0 &&doMaf!=8){
-    fprintf(stderr,"Error: For sequence data (bam,SOAP) likehoods (-GL) must be specified for frequency estimation\n");
+    fprintf(stderr,"Error: For sequence data (BAM,pileups) likehoods (-GL) must be specified for frequency estimation\n");
     exit(0);
   }
 
