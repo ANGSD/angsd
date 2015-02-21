@@ -16,4 +16,4 @@ before_script:
   - cd htslib;make;cd -
   - export HTSDIR=./htslib
 
-script: make -e && make -e test
+script: make -e
