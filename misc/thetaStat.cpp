@@ -4,7 +4,7 @@
 #include <map>
 #include <zlib.h>
 #include <sys/stat.h>
-#include "../bgzf.h"
+#include "../htslib/bgzf.h"
 #include "kstring.h"
 #include "stats.cpp"
 #include <cassert>

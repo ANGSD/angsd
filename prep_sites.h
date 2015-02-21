@@ -1,6 +1,5 @@
 #include <cstdio>
 #include <cstdlib>
-#include "razf.h"
 #include "analysisFunction.h"
 
 typedef struct{

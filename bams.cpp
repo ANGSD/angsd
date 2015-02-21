@@ -8,7 +8,6 @@
 
 #include "bams.h"
 #include "baq_adjustMapQ.h"
-#include "bgzf.h"
 #include "abcGetFasta.h"
 //three externs below are from
 extern int uniqueOnly;
