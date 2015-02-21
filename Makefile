@@ -5,7 +5,7 @@ CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
--include $(OBJ:.o=.d)
+
 
 PLATFORM=$(shell uname )
 FLAGS=-O3 -D_USE_KNETFILE
@@ -31,7 +31,7 @@ HTSDIR = ../htslib
 HTSLIB = $(HTSDIR)/libhts.a
 BGZIP  = $(HTSDIR)/bgzip
 include $(HTSDIR)/htslib.mk
-
+-include $(OBJ:.o=.d)
 
 %.o: %.c
 	$(CC) -c  $(CFLAGS) -I$(HTSDIR)/htslib $*.c

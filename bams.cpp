@@ -5,7 +5,8 @@
 #include <cassert>
 #include <ctype.h>
 #include <cmath>
-
+#include <sam.h>
+#include <bgzf.h>
 #include "bams.h"
 #include "baq_adjustMapQ.h"
 #include "abcGetFasta.h"
@@ -90,12 +91,12 @@ int bam_validate1(const aHead *header, const aRead b)
 
 
 
-aHead *getHd(BGZF *gz){
+aHead *getHd_bgzf(htsFile *gz){
   aHead *h = new aHead;
   
   const char * magic ="BAM\1"; 
   char head[4];
-  if(4!=bgzf_read(gz,head,4)){
+  if(4!=bgzf_read(gz->fp.bgzf,head,4)){
     fprintf(stderr,"[%s] Error reading\n",__FUNCTION__);
   }
   //  print(stderr,head,4);
@@ -103,26 +104,40 @@ aHead *getHd(BGZF *gz){
     fprintf(stderr,"[%s]\t-> Problem with magic number in header from BAM file\n",__FUNCTION__);
     exit(0);
   }
-  bgzf_read(gz,&h->l_text,sizeof(int));
+  bgzf_read(gz->fp.bgzf,&h->l_text,sizeof(int));
   h->text = new char[h->l_text];
-  bgzf_read(gz,h->text,h->l_text);
+  bgzf_read(gz->fp.bgzf,h->text,h->l_text);
   #if 0
   fprintf(stdout,"[%s] hd:%s\n",__FILE__,h->text);
   exit(0);
   #endif
-  bgzf_read(gz,&h->n_ref,sizeof(int));
+  bgzf_read(gz->fp.bgzf,&h->n_ref,sizeof(int));
   h->l_name=new int[h->n_ref];
   h->name = new char*[h->n_ref];
   h->l_ref = new int[h->n_ref];
   
   for(int i=0;i<h->n_ref;i++){
-    bgzf_read(gz,&h->l_name[i],sizeof(int));
+    bgzf_read(gz->fp.bgzf,&h->l_name[i],sizeof(int));
     h->name[i] =(char*) malloc(h->l_name[i]);
-    bgzf_read(gz,h->name[i],h->l_name[i]);
-    bgzf_read(gz,&h->l_ref[i],sizeof(int));
+    bgzf_read(gz->fp.bgzf,h->name[i],h->l_name[i]);
+    bgzf_read(gz->fp.bgzf,&h->l_ref[i],sizeof(int));
   } 
  
   return h;
+}
+aHead *getHd(htsFile *fp){
+  switch (fp->format.format) {
+  case bam: {
+    return getHd_bgzf(fp);
+  }
+  case cram:{
+    fprintf(stderr,"Not implemented\n");
+    return NULL;
+  }
+  default:
+    fprintf(stderr,"not implemented\n");
+  }
+  return NULL;
 }
 
 void printHd(const aHead *hd,FILE *fp){
@@ -136,9 +151,9 @@ void printHd(const aHead *hd,FILE *fp){
 
 
 aHead *getHd_andClose(const char *fname){
-  BGZF *fp = openBAM(fname);
+  htsFile *fp = openBAM(fname);
   aHead *hd = getHd(fp);
-  bgzf_close(fp);
+  hts_close(fp);
   return hd;
 }
 
@@ -147,10 +162,10 @@ aHead *getHd_andClose(const char *fname){
 /*
   given the current offset read an alignment and put the data in st
  */
-int getAlign(BGZF *gz,int block_size,aRead &st) {
+int getAlign(htsFile *gz,int block_size,aRead &st) {
 
   uint32_t tmp[8];
-  bgzf_read(gz,tmp,32);
+  bgzf_read(gz->fp.bgzf,tmp,32);
   //copy vals to st
   st.refID = tmp[0];
   st.pos = tmp[1];
@@ -170,7 +185,7 @@ int getAlign(BGZF *gz,int block_size,aRead &st) {
     st.vDat = new uint8_t[tmpSize];
   }
     
-  bgzf_read(gz,st.vDat,block_size-32);
+  bgzf_read(gz->fp.bgzf,st.vDat,block_size-32);
   st.block_size=block_size-32;
    
   //plugin bitparsed attributes maybe we don't want to do this...
@@ -183,10 +198,10 @@ int getAlign(BGZF *gz,int block_size,aRead &st) {
 }
 
 
-int bam_read1(BGZF *fp,aRead & b){
+int bam_read1_angsd(htsFile *fp,aRead & b){
 
   int block_size;
-  if(4!=bgzf_read(fp,&block_size,sizeof(int))){
+  if(4!=bgzf_read(fp->fp.bgzf,&block_size,sizeof(int))){
     fprintf(stderr,"[%s] error reading some file stuff in assuming EOF\n",__FUNCTION__);
     //    return 0;
     return -1;
@@ -254,13 +269,13 @@ int restuff(aRead &b){
 #if 1
 //this is the old
 //read a single 'read'
-int bam_read2(BGZF *fp,aRead & b){
+int bam_read2(htsFile *fp,aRead & b){
   extern abcGetFasta *gf;
  
  reread: //oh yes baby a goto statement
 
   int block_size;
-  if(4!=bgzf_read(fp,&block_size,sizeof(int))){
+  if(4!=bgzf_read(fp->fp.bgzf,&block_size,sizeof(int))){
     return -2;
   }
   getAlign(fp,block_size,b);
@@ -310,7 +325,7 @@ int bam_read2(BGZF *fp,aRead & b){
 }
 #else
 //this is the new, that I haven't fixed yet
-int bam_read2(BGZF *fp,aRead & b){
+int bam_read2(htsFile *fp,aRead & b){
   extern getFasta *gf;
   extern unsigned int includeflags,discardflags;
  reread: //oh yes baby a goto statement
@@ -379,15 +394,15 @@ void dalloc(const aHead *hd){
 }
 
 
-BGZF *openBAM(const char *fname){
-  BGZF* fp =NULL;
-  if((fp=bgzf_open(fname,"r"))==NULL ){
+htsFile *openBAM(const char *fname){
+  htsFile *fp =NULL;
+  if((fp=sam_open(fname,"r"))==NULL ){
     fprintf(stderr,"[%s] nonexistant file: %s\n",__FUNCTION__,fname);
     exit(0);
   }
   const char *str = strrchr(fname,'.');
-  if(str&&strcasecmp(str,".bam")!=0){
-    fprintf(stderr,"file:\"%s\" should be suffixed with \".bam\"\n",fname);
+  if(str&&strcasecmp(str,".bam")!=0&&str&&strcasecmp(str,".cram")!=0){
+    fprintf(stderr,"\t-> file:\"%s\" should be suffixed with \".bam\" or \".cram\"\n",fname);
     exit(0);
   }
   return fp;
@@ -395,11 +410,11 @@ BGZF *openBAM(const char *fname){
 
 
 
-int bam_iter_read(BGZF *fp, iter_t *iter, aRead &b) {
+int bam_iter_read(htsFile *fp, iter_t *iter, aRead &b) {
   int ret;
   if (iter && iter->finished) return -1;
   if (iter == 0 || iter->from_first) {
-    ret = bam_read1(fp, b);
+    ret = bam_read1_angsd(fp, b);
     if (ret < 0 && iter) iter->finished = 1;
     return ret;
   }
@@ -411,13 +426,13 @@ int bam_iter_read(BGZF *fp, iter_t *iter, aRead &b) {
       } // no more chunks
       if (iter->i >= 0) assert(iter->curr_off == iter->off[iter->i].chunk_end); // otherwise bug
       if (iter->i < 0 || iter->off[iter->i].chunk_end != iter->off[iter->i+1].chunk_beg) { // not adjacent chunks; then seek
-	bgzf_seek(fp, iter->off[iter->i+1].chunk_beg, SEEK_SET);
-	iter->curr_off = bgzf_tell(fp);
+	bgzf_seek(fp->fp.bgzf, iter->off[iter->i+1].chunk_beg, SEEK_SET);
+	iter->curr_off = bgzf_tell(fp->fp.bgzf);
       }
       ++iter->i;
     }
-    if ((ret = bam_read1(fp, b)) >= 0) {
-      iter->curr_off = bgzf_tell(fp);
+    if ((ret = bam_read1_angsd(fp, b)) >= 0) {
+      iter->curr_off = bgzf_tell(fp->fp.bgzf);
       if (b.refID != iter->tid || b.pos >= iter->end) { // no need to proceed
 	ret = bam_validate1(NULL, b)? -1 : -5; // determine whether end of region or error
 	break;
@@ -430,7 +445,7 @@ int bam_iter_read(BGZF *fp, iter_t *iter, aRead &b) {
 }
 
 
-int bam_iter_read1(BGZF *fp, iter_t *iter, aRead &b) {
+int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b) {
   int ret;
   if (iter && iter->finished) return -2;
   if (iter == 0 || iter->from_first) {
@@ -447,14 +462,14 @@ int bam_iter_read1(BGZF *fp, iter_t *iter, aRead &b) {
       } // no more chunks
       //      if (iter->i >= 0) assert(iter->curr_off == iter->off[iter->i].chunk_end); // otherwise bug
       if (iter->i < 0 || iter->off[iter->i].chunk_end != iter->off[iter->i+1].chunk_beg) { // not adjacent chunks; then seek
-	bgzf_seek(fp, iter->off[iter->i+1].chunk_beg, SEEK_SET);
-	iter->curr_off = bgzf_tell(fp);
+	bgzf_seek(fp->fp.bgzf, iter->off[iter->i+1].chunk_beg, SEEK_SET);
+	iter->curr_off = bgzf_tell(fp->fp.bgzf);
       }
       ++(iter->i);
     }
     //    fprintf(stderr,"in the for looop2 curr_off=%lu\n",iter->curr_off);
     if ((ret = bam_read2(fp, b)) >= 0) {
-      iter->curr_off = bgzf_tell(fp);
+      iter->curr_off = bgzf_tell(fp->fp.bgzf);
       //      fprintf(stderr,"in the for looop3 curr_off=%lu\n",iter->curr_off);
       if (b.refID != iter->tid || b.pos >= iter->end) { // no need to proceed
 	//	fprintf(stderr,"in the for looop4 no ned to procedd:%lu\n",iter->curr_off);

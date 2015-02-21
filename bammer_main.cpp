@@ -19,7 +19,7 @@
 #include "abc.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
-#include "knetfile.h"
+
 
 extern abc **allMethods;
 abcGetFasta *gf=NULL;
@@ -34,7 +34,7 @@ void dalloc_bufReader(bufReader &ret){
   free(ret.bamfname);
   free(ret.baifname);
   free(ret.it.off);//cleanup offsets if used
-  bgzf_close(ret.fp);
+  hts_close(ret.fp);
   dalloc(ret.hd);
 }
 

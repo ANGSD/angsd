@@ -6,8 +6,7 @@
 #include <stdint.h>
 #include <map>
 #include <vector>
-#include "bgzf.h"
-#include "kstring.h"
+#include <sam.h>
 
 
 #define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
@@ -19,53 +18,6 @@
 
 
 #define RLEN 512
-/*
-  CIGAR operations.
- */
-/*! @abstract CIGAR: M = match or mismatch*/
-#define BAM_CMATCH      0
-/*! @abstract CIGAR: I = insertion to the reference */
-#define BAM_CINS        1
-/*! @abstract CIGAR: D = deletion from the reference */
-#define BAM_CDEL        2
-/*! @abstract CIGAR: N = skip on the reference (e.g. spliced alignment) */
-#define BAM_CREF_SKIP   3
-/*! @abstract CIGAR: S = clip on the read with clipped sequence
-  present in qseq */
-#define BAM_CSOFT_CLIP  4
-/*! @abstract CIGAR: H = clip on the read with clipped sequence trimmed off */
-#define BAM_CHARD_CLIP  5
-/*! @abstract CIGAR: P = padding */
-#define BAM_CPAD        6
-/*! @abstract CIGAR: equals = match */
-#define BAM_CEQUAL        7
-/*! @abstract CIGAR: X = mismatch */
-#define BAM_CDIFF        8
-
-
-/*! @abstract the read is paired in sequencing, no matter whether it is mapped in a pair */
-#define BAM_FPAIRED        1
-/*! @abstract the read is mapped in a proper pair */
-#define BAM_FPROPER_PAIR   2
-/*! @abstract the read itself is unmapped; conflictive with BAM_FPROPER_PAIR */
-#define BAM_FUNMAP         4
-/*! @abstract the mate is unmapped */
-#define BAM_FMUNMAP        8
-/*! @abstract the read is mapped to the reverse strand */
-#define BAM_FREVERSE      16
-/*! @abstract the mate is mapped to the reverse strand */
-#define BAM_FMREVERSE     32
-/*! @abstract this is read1 */
-#define BAM_FREAD1        64
-/*! @abstract this is read2 */
-#define BAM_FREAD2       128
-/*! @abstract not primary alignment */
-#define BAM_FSECONDARY   256
-/*! @abstract QC failure */
-#define BAM_FQCFAIL      512
-/*! @abstract optical or PCR duplicate */
-#define BAM_FDUP        1024
-
 
 
 #define bam1_strand(b) (((b)->flag&BAM_FREVERSE) != 0)
@@ -104,20 +56,6 @@ typedef struct {
 }aRead;
 
 
-
-
-
-
-/**
- * Describing how CIGAR operation/length is packed in a 32-bit integer.
- */
-#define BAM_CIGAR_SHIFT 4
-#define BAM_CIGAR_MASK  ((1 << BAM_CIGAR_SHIFT) - 1)
-
-
-
-
-
 #define getSeq(b) ((b)->vDat + (b)->nCig*sizeof(uint32_t) + (b)->l_qname)
 #define getCig(b) ((uint32_t*)((b)->vDat + (b)->l_qname))
 #define getQuals(b) ((b)->vDat + (b)->nCig*sizeof(uint32_t) + (b)->l_qname + (((b)->l_seq + 1)>>1))
@@ -133,11 +71,11 @@ int is_overlap(uint32_t beg, uint32_t end, const aRead &b);
 int bam_validate1(const aHead *header, const aRead b);
 
 
-int bam_read1(BGZF *fp,aRead & b);
-aHead *getHd(BGZF *gz);
-int getAlign(BGZF *gz,int block_size,aRead &st);
+int bam_read1_angsd(htsFile *fp,aRead & b);
+aHead *getHd(htsFile *gz);
+int getAlign(htsFile *gz,int block_size,aRead &st);
 void dalloc(const aHead *hd);
-BGZF *openBAM(const char *fname);
+htsFile *openBAM(const char *fname);
 
 
 
@@ -185,7 +123,8 @@ typedef struct{
 
 void printIter(const iter_t& it,FILE *fp);
 
-int bam_iter_read(BGZF *fp, iter_t *iter, aRead &b);
+int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b);
+int bam_iter_read(htsFile *fp, iter_t *iter, aRead &b);
 
 aHead *getHd_andClose(const char *fname);
 void printHd(const aHead *hd,FILE *fp);

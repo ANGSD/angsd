@@ -10,7 +10,7 @@
 #include "mUpPile.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
-
+#include "bams.h"
 extern int SIG_COND;
 extern int minQ;
 extern int trim;
@@ -208,7 +208,7 @@ void realloc(sglPool &ret,int l){
 
 
 
-void read_reads_usingStop(BGZF *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone) {
+void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone) {
 #if 0
   fprintf(stderr,"[%s]\n",__FUNCTION__);
 #endif 
@@ -216,8 +216,6 @@ void read_reads_usingStop(BGZF *fp,int nReads,int &isEof,sglPool &ret,int refToR
   //if should never be in this function if we shouldnt read from the file.
   assert(rdObjRegionDone!=1 &&rdObjEof!=1 );
   
-  extern int bam_iter_read1(BGZF *fp, iter_t *iter, aRead &b);
-
   if((nReads+ret.l)>ret.m)
     realloc(ret,nReads+ret.l);
 
@@ -307,14 +305,12 @@ void read_reads_usingStop(BGZF *fp,int nReads,int &isEof,sglPool &ret,int refToR
 
 
 //nothing with buffered here
-void read_reads_noStop(BGZF *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int &rdObjEof,int &rdObjRegionDone) {
+void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int &rdObjEof,int &rdObjRegionDone) {
 #if 0
   fprintf(stderr,"\t->[%s] buffRefid=%d\trefToRead=%d\n",__FUNCTION__,ret.bufferedRead.refID,refToRead);
 #endif
   assert(rdObjEof==0 && ret.bufferedRead.refID==-2);
   
-  extern int bam_iter_read1(BGZF *fp, iter_t *iter, aRead &b);
-
   if((nReads+ret.l)>ret.m)
     realloc(ret,nReads+ret.l);
  

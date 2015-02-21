@@ -45,7 +45,7 @@ typedef struct{
 typedef struct{
   char *bamfname;
   char *baifname;
-  BGZF *fp;
+  htsFile *fp;
   aHead *hd;
   int isEOF;
    int regionDone;
