@@ -11,34 +11,36 @@ PLATFORM=$(shell uname )
 FLAGS=-O3 -D_USE_KNETFILE
 
 ifeq ($(PLATFORM),Darwin)
-	PRG=angsd misc
+	PRG=htshook angsd misc
 else
-	PRG=angsd angsd.static misc
+	PRG=htshook angsd angsd.static misc
 endif
 
 all: $(PRG)
 
-.PHONY: misc clean
+.PHONY: misc clean htshook
 
 misc:
 	make -C misc/
 
-
+htshook:
+	make -C ../htslib
 
 # Adjust $(HTSDIR) to point to your top-level htslib directory
 HTSDIR = ../htslib
 HTSLIB = $(HTSDIR)/libhts.a
 BGZIP  = $(HTSDIR)/bgzip
-
+include $(HTSDIR)/htslib.mk
 
 
 %.o: %.c
-	$(CC) -MM $(CFLAGS)  -I$(HTSDIR)/htslib $*.c >$*.d
 	$(CC) -c  $(CFLAGS) -I$(HTSDIR)/htslib $*.c
+	$(CC) -MM $(CFLAGS)  -I$(HTSDIR)/htslib $*.c >$*.d
 
 %.o: %.cpp
-	$(CXX) -MM $(CXXFLAGS)  -I$(HTSDIR)/htslib $*.cpp >$*.d
 	$(CXX) -c  $(CXXFLAGS)  -I$(HTSDIR)/htslib $*.cpp
+	$(CXX) -MM $(CXXFLAGS)  -I$(HTSDIR)/htslib $*.cpp >$*.d
+
 
 angsd: $(OBJ)
 	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread $(HTSLIB)
@@ -49,6 +51,6 @@ angsd.static: $(OBJ)
 clean:
 	rm  -f *.o *.d angsd angsd.static *~
 	make -C misc/ clean
-
+	make -C ../htslib clean
 test:
 	echo "Not implemented yet"
