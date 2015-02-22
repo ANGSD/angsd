@@ -15,7 +15,7 @@
 #include <cassert>
 #include <cmath>
 
-#include "kstring.h"//<-used for buffered output
+#include <htslib/kstring.h>
 #include "abcFreq.h"
 
 int abcFreq::emIter = EM_NITER;

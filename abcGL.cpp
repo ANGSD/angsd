@@ -24,7 +24,7 @@
 #include <cmath>
 #include <zlib.h>
 #include <assert.h>
-#include "kstring.h"//<-used for buffered output when dumping beagle 0.204
+#include <htslib/kstring.h>
 #include "bfgs.h"
 #include "analysisFunction.h"
 #include "abc.h"

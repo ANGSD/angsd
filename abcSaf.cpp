@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <zlib.h>
 #include <cfloat>
-#include "kstring.h"
+#include <htslib/kstring.h>
 #include "abcFreq.h"
 #include "shared.h"
 #include "analysisFunction.h"

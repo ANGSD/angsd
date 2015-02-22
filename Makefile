@@ -34,12 +34,12 @@ include $(HTSDIR)/htslib.mk
 -include $(OBJ:.o=.d)
 
 %.o: %.c
-	$(CC) -c  $(CFLAGS) -I$(HTSDIR)/htslib $*.c
-	$(CC) -MM $(CFLAGS)  -I$(HTSDIR)/htslib $*.c >$*.d
+	$(CC) -c  $(CFLAGS) -I$(HTSDIR) $*.c
+	$(CC) -MM $(CFLAGS)  -I$(HTSDIR) $*.c >$*.d
 
 %.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS)  -I$(HTSDIR)/htslib $*.cpp
-	$(CXX) -MM $(CXXFLAGS)  -I$(HTSDIR)/htslib $*.cpp >$*.d
+	$(CXX) -c  $(CXXFLAGS)  -I$(HTSDIR) $*.cpp
+	$(CXX) -MM $(CXXFLAGS)  -I$(HTSDIR) $*.cpp >$*.d
 
 
 angsd: $(OBJ)

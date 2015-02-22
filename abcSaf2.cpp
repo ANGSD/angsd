@@ -10,7 +10,7 @@ xs
 #include <assert.h>
 #include <zlib.h>
 #include <algorithm>
-#include "kstring.h"
+#include <htslib/kstring.h>
 #include "abcFreq.h"
 #include "shared.h"
 #include "analysisFunction.h"

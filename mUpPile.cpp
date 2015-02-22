@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <cassert>
 #include "bams.h"
-#include "kstring.h"
+#include <htslib/kstring.h>
 #include "indexer.h"
 #include "mUpPile.h"
 #include "abcGetFasta.h"

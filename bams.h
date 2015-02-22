@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <map>
 #include <vector>
-#include <sam.h>
+#include <htslib/sam.h>
 
 
 #define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample

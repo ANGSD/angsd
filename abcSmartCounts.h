@@ -1,6 +1,6 @@
 
 #include "abc.h"
-#include "bgzf.h"
+#include <htslib/bgzf.h>
 
 class abcSmartCounts:public abc{
 private:

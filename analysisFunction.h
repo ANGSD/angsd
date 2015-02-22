@@ -7,7 +7,7 @@
 #include <vector>
 #include "shared.h"
 #include "chisquare.h" 
-#include "bgzf.h"
+#include <htslib/bgzf.h>
 
 extern int refToInt[256];
 extern char intToRef[5];

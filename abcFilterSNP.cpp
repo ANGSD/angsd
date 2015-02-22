@@ -20,7 +20,7 @@
 #include "abc.h"
 #include "abcFilterSNP.h"
 #include "abcHWE.h"
-#include "kstring.h"//<-used for buffered output
+#include <htslib/kstring.h>
 
 //public domain from here http://www.johndcook.com/cpp_phi.html
 double phi(double x){

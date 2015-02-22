@@ -5,11 +5,15 @@
 #include <cassert>
 #include <ctype.h>
 #include <cmath>
-#include <sam.h>
-#include <bgzf.h>
+#include <htslib/sam.h>
+#include <htslib/bgzf.h>
+#include <cram/cram.h>
+
+#include <htslib/hts.h>
 #include "bams.h"
 #include "baq_adjustMapQ.h"
 #include "abcGetFasta.h"
+
 //three externs below are from
 extern int uniqueOnly;
 extern int only_proper_pairs;
@@ -89,6 +93,14 @@ int bam_validate1(const aHead *header, const aRead b)
  }
 
 
+void printHd(const aHead *hd,FILE *fp){
+  fprintf(fp,"htext=%s\n",hd->text);
+  fprintf(fp,"n_ref=%d\n",hd->n_ref);
+  for(int i=0;i<hd->n_ref;i++)
+    fprintf(fp,"i=%d name=%s length=%d\n",i,hd->name[i],hd->l_ref[i]);
+
+}
+
 
 
 aHead *getHd_bgzf(htsFile *gz){
@@ -125,27 +137,42 @@ aHead *getHd_bgzf(htsFile *gz){
  
   return h;
 }
+
+aHead *cram_header_to_bam_angsd(SAM_hdr *h) {
+    int i;
+    aHead *header = new aHead;
+
+    header->l_text = ks_len(&h->text);
+    //    header->text = malloc(header->l_text+1);
+    header->text = new char[header->l_text+1];
+    memcpy(header->text, ks_str(&h->text), header->l_text);
+    header->text[header->l_text] = 0;
+
+    header->n_ref = h->nref;
+    header->name = new char*[header->n_ref];
+    //header->target_len = (uint32_t *)calloc(header->n_targets, 4);
+
+    for (i = 0; i < h->nref; i++) {
+	header->name[i] = strdup(h->ref[i].name);
+	header->l_ref[i] = h->ref[i].len;
+    }
+    printHd(header,stderr);
+    return header;
+}
+
 aHead *getHd(htsFile *fp){
+  fprintf(stderr,"\t-> getHd\n");
   switch (fp->format.format) {
   case bam: {
     return getHd_bgzf(fp);
   }
   case cram:{
-    fprintf(stderr,"Not implemented\n");
-    return NULL;
+    return cram_header_to_bam_angsd(fp->fp.cram->header);
   }
   default:
     fprintf(stderr,"not implemented\n");
   }
   return NULL;
-}
-
-void printHd(const aHead *hd,FILE *fp){
-  fprintf(fp,"htext=%s\n",hd->text);
-  fprintf(fp,"n_ref=%d\n",hd->n_ref);
-  for(int i=0;i<hd->n_ref;i++)
-    fprintf(fp,"i=%d name=%s length=%d\n",i,hd->name[i],hd->l_ref[i]);
-
 }
 
 

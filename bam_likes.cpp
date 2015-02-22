@@ -11,7 +11,7 @@
 #include <cmath>
 #include <cassert>
 #include "ctype.h"
-#include "ksort.h"
+#include <htslib/ksort.h>
 #include "mUpPile.h"
 
 

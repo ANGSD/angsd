@@ -4,7 +4,7 @@
 #include "argStruct.h"
 #include "bambi_interface.h"
 
-#include "kstring.h"
+#include <htslib/kstring.h>
 #include "bams.h"
 
 

@@ -9,7 +9,7 @@
 #include "analysisFunction.h"
 #include "abc.h"
 #include "abcCounts.h"
-#include "kstring.h"
+#include <htslib/kstring.h>
 
 void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"---------------\n%s:\n",__FILE__);

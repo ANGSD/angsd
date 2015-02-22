@@ -12,7 +12,7 @@
 #include "shared.h"
 #include "analysisFunction.h"
 
-#include "kstring.h"//<-used for buffered output
+#include <htslib/kstring.h>
 #include "abc.h"
 
 #include "abcDstat.h"

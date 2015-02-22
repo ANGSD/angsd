@@ -6,7 +6,7 @@
 
 #include "analysisFunction.h"
 #include "shared.h"
-#include "kstring.h"//<-used for buffered output
+#include <htslib/kstring.h>
 #include "abcCallGenotypes.h"
 #include "abcWritePlink.h"
 void abcWritePlink::printArg(FILE *argFile){

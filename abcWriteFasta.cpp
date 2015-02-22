@@ -7,12 +7,12 @@ refactored. Should be simpler now
 
 #include <cmath>
 #include <cstdlib>
-#include "bgzf.h"
+#include <htslib/bgzf.h>
 #include <assert.h>
 
 #include "analysisFunction.h"
 #include "shared.h"
-#include "kstring.h"//<-used for buffered output
+#include <htslib/kstring.h>
 #include "abc.h"
 #include "abcWriteFasta.h"
 
