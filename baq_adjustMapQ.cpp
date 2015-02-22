@@ -8,7 +8,7 @@
 #include <ctype.h>
 #include "bams.h"
 #include "kprobaln.h"
-
+#include "baq_adjustMapQ.h"
 
 static inline int bam_aux_type2size(int x)
 {

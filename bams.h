@@ -7,7 +7,7 @@
 #include <map>
 #include <vector>
 #include <htslib/sam.h>
-
+#include <cstdio>
 
 #define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
 //#define NTHREADS 10
@@ -41,8 +41,7 @@ typedef struct {
 typedef struct {
   int refID;//4
   int pos;// 4
-  unsigned int bin_mq_nl;//4
-  unsigned int flag_nc;//4
+  //  unsigned int flag_nc;//4
   int l_seq;//4 <-  length of sequence
   int next_refID;//4
   int next_pos;//4
@@ -69,9 +68,6 @@ typedef struct {
 uint32_t bam_calend(const aRead& rd, const uint32_t *cigar);
 int is_overlap(uint32_t beg, uint32_t end, const aRead &b);
 int bam_validate1(const aHead *header, const aRead b);
-
-
-int bam_read1_angsd(htsFile *fp,aRead & b);
 aHead *getHd(htsFile *gz);
 int getAlign(htsFile *gz,int block_size,aRead &st);
 void dalloc(const aHead *hd);

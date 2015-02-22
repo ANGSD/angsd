@@ -5,16 +5,9 @@ CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
+FLAGS=-O3
 
-
-PLATFORM=$(shell uname )
-FLAGS=-O3 -D_USE_KNETFILE
-
-ifeq ($(PLATFORM),Darwin)
-	PRG=htshook angsd misc
-else
-	PRG=htshook angsd angsd.static misc
-endif
+PRG=htshook angsd misc
 
 all: $(PRG)
 
@@ -51,6 +44,6 @@ angsd.static: $(OBJ)
 clean:
 	rm  -f *.o *.d angsd angsd.static *~
 	make -C misc/ clean
-	make -C ../htslib clean
+#	make -C ../htslib clean
 test:
 	echo "Not implemented yet"

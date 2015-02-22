@@ -1,5 +1,5 @@
 #pragma once
-
+#include <cstring>
 
 
 //little struct for keeping information of regions to extract

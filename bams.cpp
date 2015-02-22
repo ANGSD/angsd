@@ -64,7 +64,6 @@ int bam_validate1(const aHead *header, const aRead b)
     fprintf(stderr,"error second\n");
     return 0;
   }
-  //  int l_qname = b.bin_mq_nl &0xff;
 
   if (b.block_size < b.l_qname){
       fprintf(stderr,"error third\n");
@@ -150,18 +149,19 @@ aHead *cram_header_to_bam_angsd(SAM_hdr *h) {
 
     header->n_ref = h->nref;
     header->name = new char*[header->n_ref];
+    header->l_ref = new int[header->n_ref];
     //header->target_len = (uint32_t *)calloc(header->n_targets, 4);
 
     for (i = 0; i < h->nref; i++) {
 	header->name[i] = strdup(h->ref[i].name);
 	header->l_ref[i] = h->ref[i].len;
     }
-    printHd(header,stderr);
+    //printHd(header,stderr);
     return header;
 }
 
 aHead *getHd(htsFile *fp){
-  fprintf(stderr,"\t-> getHd\n");
+  //  fprintf(stderr,"\t-> getHd\n");
   switch (fp->format.format) {
   case bam: {
     return getHd_bgzf(fp);
@@ -189,15 +189,15 @@ aHead *getHd_andClose(const char *fname){
 /*
   given the current offset read an alignment and put the data in st
  */
-int getAlign(htsFile *gz,int block_size,aRead &st) {
+int getAlign(BGZF *gz,int block_size,aRead &st) {
 
   uint32_t tmp[8];
-  bgzf_read(gz->fp.bgzf,tmp,32);
+  bgzf_read(gz,tmp,32);
   //copy vals to st
   st.refID = tmp[0];
   st.pos = tmp[1];
-  st.bin_mq_nl = tmp[2];
-  st.flag_nc = tmp[3];
+  unsigned int bin_mq_nl = tmp[2];
+  unsigned int flag_nc = tmp[3];
   st.l_seq = tmp[4];
   st.next_refID = tmp[5];
   st.next_pos = tmp[6];
@@ -212,32 +212,17 @@ int getAlign(htsFile *gz,int block_size,aRead &st) {
     st.vDat = new uint8_t[tmpSize];
   }
     
-  bgzf_read(gz->fp.bgzf,st.vDat,block_size-32);
+  bgzf_read(gz,st.vDat,block_size-32);
   st.block_size=block_size-32;
    
   //plugin bitparsed attributes maybe we don't want to do this...
-  st.nBin = st.bin_mq_nl >>16;
-  st.mapQ = st.bin_mq_nl >>8&0xff;
-  st.l_qname = st.bin_mq_nl &0xff;
-  st.flag = st.flag_nc >>16;
-  st.nCig = st.flag_nc &0xffff;
+  st.nBin = bin_mq_nl >>16;
+  st.mapQ = bin_mq_nl >>8&0xff;
+  st.l_qname = bin_mq_nl &0xff;
+  st.flag = flag_nc >>16;
+  st.nCig = flag_nc &0xffff;
   return 0;
 }
-
-
-int bam_read1_angsd(htsFile *fp,aRead & b){
-
-  int block_size;
-  if(4!=bgzf_read(fp->fp.bgzf,&block_size,sizeof(int))){
-    fprintf(stderr,"[%s] error reading some file stuff in assuming EOF\n",__FUNCTION__);
-    //    return 0;
-    return -1;
-  }
-  getAlign(fp,block_size,b);
-  return 1;
-}
-
-
 
 int getNumBest(uint8_t *s, uint8_t *sStop) {
  
@@ -293,16 +278,15 @@ int restuff(aRead &b){
 }
 
 
-#if 1
 //this is the old
 //read a single 'read'
-int bam_read2(htsFile *fp,aRead & b){
+int bam_read2(BGZF *fp,aRead & b){
   extern abcGetFasta *gf;
  
  reread: //oh yes baby a goto statement
 
   int block_size;
-  if(4!=bgzf_read(fp->fp.bgzf,&block_size,sizeof(int))){
+  if(4!=bgzf_read(fp,&block_size,sizeof(int))){
     return -2;
   }
   getAlign(fp,block_size,b);
@@ -350,63 +334,101 @@ int bam_read2(htsFile *fp,aRead & b){
   
   return 1;
 }
-#else
-//this is the new, that I haven't fixed yet
-int bam_read2(htsFile *fp,aRead & b){
-  extern getFasta *gf;
-  extern unsigned int includeflags,discardflags;
- reread: //oh yes baby a goto statement
 
-  int block_size;
-  if(4!=bgzf_read(fp,&block_size,sizeof(int))){
-    return -2;
-  }
-  getAlign(fp,block_size,b);
-  if(b.flag&discardflags||((b.flag&includeflags)!=includeflags))
-    goto reread;
-
-
-  if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
-    return 1;
-  }
-
-  //check if read was bad
-  if(remove_bads ){
-    if(b.flag>=256)
-      goto reread;
-  }
-
-
-  //check if orphan read, 
-  if(only_proper_pairs&&(b.flag%2) ){//only check if pairend
-    if(!(b.flag&BAM_FPROPER_PAIR))
-      goto reread;
-  }if(uniqueOnly&& getNumBest(getAuxStart(&b),b.vDat+b.block_size)!=1)
-    goto reread;
-  
-
-  if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
-    if(baq){
-      bam_prob_realn_core(b,gf->ref->seqs,baq);
-    }
-  }
-
-  if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
-    if(adjustMapQ!=0){
-      assert(gf->ref!=NULL);
-      int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
-      if(q<0)
-	goto reread;
-      if(q<b.mapQ)
-	b.mapQ = q;
-    }
-  }
-  if(b.mapQ<minMapQ)
-    goto reread;
-  
-  return 1;
+int bam_t_to_aRead (bam1_t *from,aRead &to){
+ to.refID = from->core.tid;
+ to.pos = from->core.pos;
+ to.nBin = from->core.bin;
+ to.mapQ = from->core.qual;
+ to.l_qname = from->core.l_qname;
+ to.flag = from->core.flag;
+ to.nCig = from->core.n_cigar;
+ to.l_seq = from->core.l_qseq;
+ to.next_refID = from->core.mtid;
+ to.next_pos= from->core.mpos;
+ to.tlen = from->core.isize;
+ //fprintf(stderr,"vDat:Rlen:%d l_data:%d m_data:%d\n",RLEN,from->l_data,from->m_data);
+ if(from->l_data-32>RLEN){
+   delete [] to.vDat;
+   to.vDat = new uint8_t[from->m_data];
+ }
+ memcpy(to.vDat,from->data,sizeof(uint8_t)*from->l_data);
+ //fprintf(stderr,"refId:%d pos:%d flag:%d\n",to.refID,to.pos,to.flag);
+ to.block_size= from->l_data;
+ return 1;
 }
-#endif
+
+int bam_read2(htsFile *fp,aRead & b){
+  switch (fp->format.format) {
+  case bam: {
+    return bam_read2(fp->fp.bgzf,b);
+  }
+  case cram:{
+    bam1_t *bb = bam_init1();
+    bam_read2_reread :
+
+    int r = cram_get_bam_seq(fp->fp.cram, &bb);
+    //fprintf(stderr,"r: %d\n",r);
+    if(r==-1)
+      return r;
+
+    bam_t_to_aRead(bb,b);
+    {
+      extern abcGetFasta *gf;
+      if(b.flag&4)
+	goto bam_read2_reread;
+      
+      
+      if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
+	return 1;
+      }
+      
+      //check if read was bad
+      if(remove_bads ){
+	if(b.flag>=256)
+	  goto bam_read2_reread;
+      }
+      
+      
+      //check if orphan read, 
+      if(only_proper_pairs&&(b.flag%2) ){//only check if pairend
+	if(!(b.flag&BAM_FPROPER_PAIR))
+	  goto bam_read2_reread;
+      }if(uniqueOnly&& getNumBest(getAuxStart(&b),b.vDat+b.block_size)!=1)
+	 goto bam_read2_reread;
+      
+      
+      if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
+	if(baq){
+	  bam_prob_realn_core(b,gf->ref->seqs,baq);
+	}
+      }
+      
+      if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
+	if(adjustMapQ!=0){
+	  assert(gf->ref!=NULL);
+	  int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
+	  if(q<0)
+	    goto bam_read2_reread;
+	  if(q<b.mapQ)
+	    b.mapQ = q;
+	}
+      }
+      if(b.mapQ<minMapQ)
+	goto bam_read2_reread;
+    }
+
+
+    bam_destroy1(bb);
+    return r;
+  }
+  default:
+    fprintf(stderr,"not implemented\n");
+  }
+  return -1;
+
+}
+
 
 //DRAGON, make sure that all hd->names are allocated with malloc or new. Dont' remember what is used.
 void dalloc(const aHead *hd){
@@ -433,42 +455,6 @@ htsFile *openBAM(const char *fname){
     exit(0);
   }
   return fp;
-}
-
-
-
-int bam_iter_read(htsFile *fp, iter_t *iter, aRead &b) {
-  int ret;
-  if (iter && iter->finished) return -1;
-  if (iter == 0 || iter->from_first) {
-    ret = bam_read1_angsd(fp, b);
-    if (ret < 0 && iter) iter->finished = 1;
-    return ret;
-  }
-  if (iter->off == 0) return -1;
-  for (;;) {
-    if (iter->curr_off == 0 || iter->curr_off >= iter->off[iter->i].chunk_end) { // then jump to the next chunk
-      if (iter->i == iter->n_off - 1) {
-	ret = -1; break; 
-      } // no more chunks
-      if (iter->i >= 0) assert(iter->curr_off == iter->off[iter->i].chunk_end); // otherwise bug
-      if (iter->i < 0 || iter->off[iter->i].chunk_end != iter->off[iter->i+1].chunk_beg) { // not adjacent chunks; then seek
-	bgzf_seek(fp->fp.bgzf, iter->off[iter->i+1].chunk_beg, SEEK_SET);
-	iter->curr_off = bgzf_tell(fp->fp.bgzf);
-      }
-      ++iter->i;
-    }
-    if ((ret = bam_read1_angsd(fp, b)) >= 0) {
-      iter->curr_off = bgzf_tell(fp->fp.bgzf);
-      if (b.refID != iter->tid || b.pos >= iter->end) { // no need to proceed
-	ret = bam_validate1(NULL, b)? -1 : -5; // determine whether end of region or error
-	break;
-      }
-      else if (is_overlap(iter->beg, iter->end, b)) return ret;
-    } else break; // end of file or error
-  }
-  iter->finished = 1;
-  return ret;
 }
 
 
