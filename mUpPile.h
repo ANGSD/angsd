@@ -5,6 +5,7 @@
 #include "bambi_interface.h"
 
 #include <htslib/kstring.h>
+#include <htslib/hts.h>
 #include "bams.h"
 
 
@@ -39,18 +40,15 @@ typedef struct{
   int refId;
 }chunky;
 
-
-
-
 typedef struct{
-  char *bamfname;
-  char *baifname;
   htsFile *fp;
+  char *fn;
   aHead *hd;
   int isEOF;
-   int regionDone;
+  int regionDone;
   iter_t it;
   regs regions;
+  bam_hdr_t *hts_hdr;
 }bufReader;
 
 

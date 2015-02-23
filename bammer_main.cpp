@@ -31,35 +31,45 @@ static const char *bam_nt16_rev_table2 = "=ACMGRSVTWYHKDBN";
 
 
 void dalloc_bufReader(bufReader &ret){
-  free(ret.bamfname);
-  free(ret.baifname);
+  if(ret.hts_hdr)
+    bam_hdr_destroy(ret.hts_hdr);
+  if(ret.it.hts_itr)
+    hts_itr_destroy(ret.it.hts_itr);
+  if(ret.it.hts_idx)
+    hts_idx_destroy(ret.it.hts_idx);
+  free(ret.fn);
   free(ret.it.off);//cleanup offsets if used
   hts_close(ret.fp);
   dalloc(ret.hd);
+  
 }
 
 
 
 bufReader initBufReader2(const char*fname){
   bufReader ret;
-  ret.bamfname = strdup(fname);
+  ret.fn = strdup(fname);
   int newlen=strlen(fname);//<-just to avoid valgrind -O3 uninitialized warning
-  ret.baifname =(char *) malloc(newlen+5);
-  snprintf(ret.baifname,newlen+5,"%s.bai",ret.bamfname);
-  if(angsd::fexists(ret.baifname)){
-    //fprintf(stderr,"bai exists\n");
-    if(isNewer(ret.bamfname,ret.baifname)){
-      fprintf(stderr,"\t-> bai index file: \'%s\' looks older than corresponding BAM file: \'%s\'.\n\t-> Please reindex BAM file\n",ret.baifname,ret.bamfname);
-      exit(0);
-    }
-  }
-  ret.fp = openBAM(ret.bamfname);
+  ret.fp = openBAM(ret.fn);
+  //  fprintf(stderr,"[%s] Not implemented fromat.format:%d cram:%d\n",__FUNCTION__,ret.fp->format.format,cram);  
+
   ret.hd = getHd(ret.fp);
   ret.isEOF =0;
   ret.it.from_first=1;//iterator, used when supplying regions
   ret.it.finished=0;//iterator, used when supplying regions
   ret.it.off = NULL;
   ret.it.dasIndex = NULL;
+
+  ret.it.hts_itr=NULL;
+  ret.it.hts_idx=NULL;
+  ret.hts_hdr= NULL;
+  if(ret.fp->format.format==cram){
+    if((ret.hts_hdr = sam_hdr_read(ret.fp)) == 0) {
+      fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
+      exit(0);
+    }
+  }
+
   return ret;
 }
 
@@ -236,12 +246,9 @@ int bammer_main(argStruct *args){
   uppile(args->show,maxThreads,rd,args->nLines,args->nams.size(),args->regions);
 
   //cleanup stuff
-  for(unsigned i=0;i<args->nams.size();i++){
-    
+  for(unsigned i=0;i<args->nams.size();i++)
     dalloc_bufReader(rd[i]);
-  }
-
-  delete [] rd;
   
+  delete [] rd;
   return 0;
 }

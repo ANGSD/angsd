@@ -8,6 +8,7 @@
 
 #include "bams.h"
 #include <algorithm>
+#include <htslib/hts.h>
 #include "argStruct.h"
 //linear index per chromosome/reference
 
@@ -345,13 +346,51 @@ void buildOffsets(tindex id,int ref,int beg, int end,iter_t &iter) {
  }
 
 
-void getOffsets(char *bainame,const aHead *hd,iter_t &ITER,int ref,int start,int stop){
+void getOffsets(htsFile *fp,char *fn,const aHead *hd,iter_t &iter,int ref,int start,int stop,bam_hdr_t *hdr){
+  switch (fp->format.format) {
+  case bam:
+    //DRAONG
+    if(iter.dasIndex==NULL||iter.dasIndex->loadedRef !=ref){
+      //    fprintf(stderr,"reding bai");
+      dalloc(iter.dasIndex);
+      char tmp[strlen(fn)+20];
+      snprintf(tmp,strlen(fn)+20,"%s.bai",fn);
+      iter.dasIndex = getIdx(tmp,ref);//index file
+    }
+    buildOffsets(iter.dasIndex,ref,start,stop,iter);
+    break;
+  case cram:{
+    //    fprintf(stderr,"reding crai");
+    if(iter.hts_idx==NULL)
+      iter.hts_idx = sam_index_load(fp,fn);
+    if (iter.hts_idx == 0) { // index is unavailable
+      fprintf(stderr, "[main_samview] random alignment retrieval only works for indexed BAM or CRAM files.\n");
+      exit(0);
+    }
+    char tmp[1024];
+    snprintf(tmp,1024,"%s:%d-%d",hd->name[ref],start+1,stop);
+    if(iter.hts_itr)
+      hts_itr_destroy(iter.hts_itr);
+    iter.hts_itr = sam_itr_querys(iter.hts_idx, hdr, tmp);
+    if (iter.hts_itr == NULL) { // reference name is not found
+      fprintf(stderr, "[main_samview] region \"%s\" specifies an unknown reference name. Continue anyway.\n",tmp);
+      exit(0);
+    }
+    //  fprintf(stderr,"HEJSA MED IDG%p\n",iter.hts_itr);
+    hts_itr_t *idx=iter.hts_itr;
+    iter.tid=idx->tid;
+    iter.beg=idx->beg;
+    iter.end=idx->end;
+    iter.n_off=idx->n_off;
+    iter.i=idx->i;
+    iter.finished=idx->finished;
+    iter.curr_off=idx->curr_off;
+    iter.off=(pair64_t*)idx->off;
 
-  if(ITER.dasIndex==NULL||ITER.dasIndex->loadedRef !=ref){
-    //    fprintf(stderr,"reding bai");
-    dalloc(ITER.dasIndex);
-    ITER.dasIndex = getIdx(bainame,ref);//index file
+    break;
   }
-    
-  buildOffsets(ITER.dasIndex,ref,start,stop,ITER);
+  default:{
+    fprintf(stderr,"[%s] Not implemented\n",__FUNCTION__);
+  }
+  }
 }

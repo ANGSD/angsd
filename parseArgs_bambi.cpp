@@ -119,7 +119,7 @@ void setArgsBam(argStruct *arguments){
     regionsRaw =  angsd::getFilenames(regfiles,0);
   
   if(regfile)
-    regionsRaw.push_back(regfile);
+    regionsRaw.push_back(strdup(regfile));
    
   for(size_t i=0;i<regionsRaw.size();i++){
     regs tmpRegs;
@@ -128,11 +128,16 @@ void setArgsBam(argStruct *arguments){
       exit(0);
     }else
       arguments->regions.push_back(tmpRegs);
+    free(regionsRaw[i]);
   }
 
 
 
   printArg(arguments->argumentFile,arguments);
-  free(regfile);
-  free(regfiles);
+
+  if(regfile)
+    free(regfile);
+  if(regfiles)
+    free(regfiles);
+
 }

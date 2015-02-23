@@ -150,6 +150,7 @@ aHead *cram_header_to_bam_angsd(SAM_hdr *h) {
     header->n_ref = h->nref;
     header->name = new char*[header->n_ref];
     header->l_ref = new int[header->n_ref];
+    header->l_name = new int[header->n_ref];
     //header->target_len = (uint32_t *)calloc(header->n_targets, 4);
 
     for (i = 0; i < h->nref; i++) {
@@ -458,7 +459,7 @@ htsFile *openBAM(const char *fname){
 }
 
 
-int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b) {
+int bam_iter_read1_angsd(htsFile *fp, iter_t *iter, aRead &b) {
   int ret;
   if (iter && iter->finished) return -2;
   if (iter == 0 || iter->from_first) {
@@ -498,6 +499,26 @@ int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b) {
   iter->finished = 1;
   return ret;
 }
+
+int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &bb) {
+  switch (fp->format.format) {
+  case bam: {
+    return bam_iter_read1_angsd(fp,iter,bb);
+  }
+  case cram:{
+    bam1_t *b=bam_init1();
+    int r = sam_itr_next(fp, iter->hts_itr, b);
+    if(r!=-1)
+      bam_t_to_aRead(b,bb);
+    bam_destroy1(b);
+    return r; 
+  }
+  default:
+    fprintf(stderr,"not implemented\n");
+  }
+
+}
+
 
 void dalloc (sglPool &ret){
   for(int i=0;i<ret.l;i++)

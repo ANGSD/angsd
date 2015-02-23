@@ -12,6 +12,7 @@
 #include <cassert>
 #include "ctype.h"
 #include <htslib/ksort.h>
+#include <htslib/hts.h>
 #include "mUpPile.h"
 
 

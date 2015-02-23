@@ -8,7 +8,7 @@
 #include <vector>
 #include <htslib/sam.h>
 #include <cstdio>
-
+#include <htslib/hts.h>
 #define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
 //#define NTHREADS 10
 #define UPPILE_LEN 8
@@ -115,6 +115,8 @@ typedef struct{
   uint64_t curr_off;
   pair64_t *off;//offsets for alignements to loop through
   tindex dasIndex;
+  hts_idx_t *hts_idx;
+  hts_itr_t *hts_itr;
 }iter_t;
 
 void printIter(const iter_t& it,FILE *fp);

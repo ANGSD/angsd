@@ -11,6 +11,7 @@
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
 #include "bams.h"
+#include <htslib/hts.h>
 extern int SIG_COND;
 extern int minQ;
 extern int trim;
@@ -1395,7 +1396,7 @@ void *setIterator1(void *args){
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->baifname,rd->hd,rd->it,ref,start,stop);//leak
+  getOffsets(rd->fp,rd->fn,rd->hd,rd->it,ref,start,stop,rd->hts_hdr);//leak
   return EXIT_SUCCESS;
 }
 
@@ -1409,14 +1410,8 @@ void *setIterator1(void *args){
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->baifname,rd->hd,rd->it,ref,start,stop);
+  getOffsets(rd->fp,rd->fn,rd->hd,rd->it,ref,start,stop,rd->hts_hdr);
 }
-
-typedef struct{
-  bufReader *rds;
-  int index;
-}it_struct;
-
 
 void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
   for(int i=0;1&&i<nFiles;i++){
@@ -1490,6 +1485,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
   int theRef=-1;//<- this is current referenceId,
   while( SIG_COND) {
+
     int notDone = nFiles;
     sumEof =0;
     //reset the done region flag, while checking that any file still has data
@@ -1515,23 +1511,17 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	//fflush(stderr);
 	setIterators(rd,regions[itrPos],nFiles,nThreads);
 	//fprintf(stderr,"done region lookup %d/%lu\n",itrPos+1,regions.size());
-	//fflush(stderr);
-
-	theRef = rd[0].it.tid;
-	
+	//fflush(stderr);///BAME
+	//theRef =rd[0].fp->format.format==bam ? rd[0].it.tid : rd[0].it.hts_itr->tid;
+	theRef = rd[0].it.tid; 
+	//	fprintf(stderr,"theRef:%d %p %p\n",theRef,rd[0].it.off,rd[0].it.hts_itr->off);
 	//validate we have offsets;
 	int gotData = 0;
 	for(int i=0;i<nFiles;i++)
-	  if(rd[i].it.off!=NULL){
+	  if(rd[i].it.off!=NULL||(rd[i].it.hts_itr &&(rd[i].it.hts_itr->off!=NULL))){
 	    gotData =1;
 	    break;
 	  }
-	if(gotData==0){
-	  regs rrr = regions[itrPos];
-	  fprintf(stderr,"\t[%s] skipping region=%d,%d,%d (noData)\n",__FUNCTION__,rrr.refID,rrr.start,rrr.stop);
-	  continue;
-	}
-
 	//reset eof and region donepointers.
 	for(int i=0;i<nFiles;i++){
 	  rd[i].isEOF = 0;
@@ -1556,6 +1546,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	  theRef = minRef;
       }
     }
+
     if(theRef==rd[0].hd->n_ref)
       break;
     assert(theRef>=0 && theRef<rd[0].hd->n_ref);//ref should be inrange [0,#nref in header]
@@ -1570,6 +1561,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
     //now we have changed chromosome we should plug in buffered, if buffered is same as the new chr
     //this is not needed if we use the indexing
+
     if(regions.size()==0){
       for(int i=0;i<nFiles;i++){
 	extern abcGetFasta *gf;
@@ -1593,9 +1585,10 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	  rd[i].regionDone=1;
       }
     }
-    
+
     //below loop will continue untill eoc/oef/eor <- funky abbrev =end of chr, file and region
     while(notDone&& SIG_COND) {
+
       //before collecting reads from the files, lets first check if we should pop reads from the buffered queue in each sgl
       for(int i=0;i<nFiles;i++){
 	if(sglp[i].bufferedRead.refID==theRef){
@@ -1609,6 +1602,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       }
       
       int pickStop=-1;
+      
       int doFlush = (collect_reads(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
 #if 0
       for(int i=0;i<nFiles;i++)
