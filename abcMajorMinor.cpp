@@ -96,8 +96,6 @@ void abcMajorMinor::getOptions(argStruct *arguments){
  skipTriallelic = angsd::getArg("-skipTriallelic",skipTriallelic,arguments);
 }
 
-int val a=b<c?d>e:2:1:0;
-
 abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int inputtype){
   skipTriallelic=0;
     doMajorMinor = 0;
