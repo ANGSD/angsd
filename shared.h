@@ -22,7 +22,7 @@ typedef unsigned int suint;
 #define GZOPT "w6h"
 // struct for covar class - classy
 
-enum{INPUT_BAM,INPUT_GLF,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP};
+enum{INPUT_BAM,INPUT_GLF,INPUT_GLF3,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP};
 #define VERSION 0.615
 
 typedef struct {

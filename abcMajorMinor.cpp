@@ -75,14 +75,11 @@ void abcMajorMinor::getOptions(argStruct *arguments){
    fprintf(stderr,"\t-> Potential problem: Cannot estimate the major and minor based on posterior probabilities\n");
    exit(0);
  }
- if((inputtype!=INPUT_GLF && doMajorMinor==1 && GL==0)){
+ if(inputtype!=INPUT_GLF && inputtype!=INPUT_GLF3 && inputtype!=INPUT_VCF_GL && doMajorMinor==1 && GL==0){
    fprintf(stderr,"\t-> Potential problem: -doMajorMinor 1 is based on genotype likelihoods, you must specify a genotype likelihood model -GL \n");
    exit(0);
  }
- if(( (doMajorMinor==4 || doMajorMinor==5) && GL==0)){
-   fprintf(stderr,"\t-> Potential problem: -doMajorMinor 4/5 use the genotype likelihoods to infer the minor alllee, you must specify a genotype likelihood model -GL \n");
-   exit(0);
- }
+
  if(doMajorMinor==2&&doCounts==0){
    fprintf(stderr,"\t-> Potential problem: -doMajorMinor 2 is based on allele counts, you must specify -doCounts 1\n");
    exit(0);
@@ -181,7 +178,7 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
   for(int s=0;s<pars->numSites;s++)  {
     if(pars->keepSites[s]==0){
       pars->major[s] = 4;
-      pars->major[s] = 4;
+      pars->minor[s] = 4;
       continue;
     }
     if(doMajorMinor==4&&refToInt[pars->ref[s]]==4){

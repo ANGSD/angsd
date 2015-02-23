@@ -104,7 +104,7 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
   *gp = new double[nInd*3];
 
   for(int i=0;1&&i<nInd*10;i++)
-    lk[0][i]=-DBL_MIN;
+    lk[0][i]=-DBL_MAX;
   for(int i=0;i<3*nInd;i++)
     gp[0][i]=0;
  

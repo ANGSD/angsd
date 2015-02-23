@@ -108,7 +108,7 @@ void abcSaf::getOptions(argStruct *arguments){
     else
       prior=angsd::readDouble(pest,arguments->nInd+1);
   }
-  if(GL==0 &&(arguments->inputtype!=INPUT_GLF&&arguments->inputtype!=INPUT_BEAGLE&&arguments->inputtype!=INPUT_VCF_GL)){
+  if(GL==0 &&(arguments->inputtype!=INPUT_GLF && arguments->inputtype!=INPUT_GLF3 && arguments->inputtype!=INPUT_VCF_GL)){
     fprintf(stderr,"Must supply genotype likelihoods (-GL [INT])\n");
     printArg(arguments->argumentFile);
     exit(0);

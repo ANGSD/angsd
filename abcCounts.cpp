@@ -86,6 +86,10 @@ void abcCounts::getOptions(argStruct *arguments){
   iCounts=angsd::getArg("-iCounts",iCounts,arguments);
   
 
+  if(doCounts && arguments->inputtype!=INPUT_BAM && arguments->inputtype!=INPUT_PILEUP){
+    fprintf(stderr,"Cannot calculate -doCounts 1 from GL/GP data\n");
+    exit(0);
+  }
   if(dumpCounts&&doCounts==0){
     fprintf(stderr,"You must supply -doCounts if you want to dumpcounts\n");
     exit(0);
