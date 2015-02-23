@@ -80,6 +80,12 @@ void abcMajorMinor::getOptions(argStruct *arguments){
    exit(0);
  }
 
+ if((doMajorMinor==4 || doMajorMinor==5) && GL==0){
+   if(inputtype!=INPUT_GLF3 && inputtype!=INPUT_VCF_GL && inputtype!=INPUT_GLF){
+     fprintf(stderr,"\t-> Potential problem: -doMajorMinor 4/5 use the genotype likelihoods to infer the minor allele, you must specify a genotype likelihood model -GL \n");
+     exit(0);
+   }
+ }
  if(doMajorMinor==2&&doCounts==0){
    fprintf(stderr,"\t-> Potential problem: -doMajorMinor 2 is based on allele counts, you must specify -doCounts 1\n");
    exit(0);
@@ -89,6 +95,8 @@ void abcMajorMinor::getOptions(argStruct *arguments){
  pest = angsd::getArg("-pest",pest,arguments);
  skipTriallelic = angsd::getArg("-skipTriallelic",skipTriallelic,arguments);
 }
+
+int val a=b<c?d>e:2:1:0;
 
 abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int inputtype){
   skipTriallelic=0;
