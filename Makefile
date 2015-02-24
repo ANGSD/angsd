@@ -18,7 +18,7 @@ BGZIP  = $(HTSDIR)/bgzip
 
 all: $(PRG)
 
-.PHONY: misc clean htshook
+.PHONY: misc clean htshook test
 
 misc:
 	make -C misc/
@@ -38,16 +38,13 @@ htshook: string_alloc.h
 	$(CXX) -c  $(CXXFLAGS)  -I$(HTSDIR) $*.cpp
 	$(CXX) -MM $(CXXFLAGS)  -I$(HTSDIR) $*.cpp >$*.d
 
-
 angsd: $(OBJ)
 	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread $(HTSLIB)
-
-angsd.static: $(OBJ)
-	$(CXX) $(FLAGS)  -o angsd.static *.o -lz -lpthread --static $(HTSLIB)
 
 clean:
 	rm  -f *.o *.d angsd angsd.static *~
 	make -C misc/ clean
-#	make -C ../htslib clean
+
 test:
-	echo "Not implemented yet"
+	echo "Only subset of analyses is being tested"
+	cd test;./testAll.sh ../angsd

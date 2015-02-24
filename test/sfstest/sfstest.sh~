@@ -1,0 +1,47 @@
+#!/bin/bash
+
+
+WDIR=$1
+
+GLFINPUT=input/sfstest.glf.gz
+
+LOG=${0}.log
+
+##rm old
+rm -rf input/ output/ ${LOG}
+
+##make workdirs
+mkdir -p input
+mkdir -p output
+
+##cp checksums
+cp md5/sfsinput.md5sum input/
+cp md5/*.md5sum output
+
+##make and check inputfiles
+$WDIR/misc/supersim -outfiles input/sfstest -npop 1 -nind 10 -nsites 50000 -depth 8 -pvar 1.0 &>>${LOG} ||exit 1 
+cd input
+md5sum --status -c sfsinput.md5sum || exit 2
+ 
+
+cd ..
+PROGGY=$WDIR/angsd
+$PROGGY -glf  $GLFINPUT -isSim 1 -nInd 10  -out output/sfstest -doSaf 1 -underFlowProtect 0 -fai ../hg19.fa.fai &>>${LOG}||exit 3
+
+
+cd output/
+md5sum --status -c results.md5sum||exit 4
+
+cd ..
+$WDIR/misc/realSFS output/sfstest.saf 20 -P 4 -nSites 10000000 >output/em.log &>>${LOG} ||exit 5
+$WDIR/misc/realSFS output/sfstest.saf 20 -P 4 -nSites 10000000 -use-BFGS 1 >output/bfgs.log &>>${LOG} ||exit 6
+cd output
+md5sum --status -c mlRes.md5sum ||exit 7
+
+
+
+#echo do GC test
+cd ..
+$PROGGY -glf  $GLFINPUT -isSim 1 -nInd 10  -out output/sfstestGC -doSaf 3 -underFlowProtect 0 -fai ../hg19.fa.fai -doMajorMinor 1 -pest output/em.log  &>>${LOG} ||exit 8
+cd output
+md5sum --status -c sfsgc.md5sum ||exit 9
