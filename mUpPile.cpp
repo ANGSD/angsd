@@ -412,6 +412,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPool *ret,int &readNl
 #if 0
   fprintf(stderr,"\t[%s] Reading from referenceID=%d\n",__FUNCTION__,ref);
 #endif
+
   int usedPicker=-1;
   for(int ii=0;ii<nFiles;ii++) {
     extern int *bamSortedIds;
@@ -434,8 +435,13 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPool *ret,int &readNl
       pickStop = ret[i].first[ret[i].l-1];
       break;
     }
-    
+    fprintf(stderr,"end of loop:%d\n",ii);
   }
+#if 0
+  fprintf(stderr,"usedPicker:%d\n",usedPicker);
+  exit(0);
+#endif
+ 
   if(usedPicker==-1)  //<-this means we are done with the current chr/region
     return nFiles;
 
@@ -446,7 +452,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPool *ret,int &readNl
 
 #if 0
     fprintf(stderr,"i=%d regdone=%d\tiseof=%d\n",i,rd[i].regionDone,rd[i].isEOF);
-1    fprintf(stderr," getpool on i=%d\n",i);
+    fprintf(stderr," getpool on i=%d\n",i);
 #endif
     if(ret[i].l>0&&ret[i].first[ret[i].l-1]>pickStop)
       continue;
@@ -456,7 +462,8 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPool *ret,int &readNl
   for(int i=0;i<nFiles;i++)
     if(rd[i].regionDone)
       nDone++;
-    return nDone;
+  
+  return nDone;
 
 }
 
@@ -1534,6 +1541,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     }else{
       if(theRef==-1){//init
 	theRef =0;
+
       }else if(theRef==rd[0].hd->n_targets-1){
 	break;//then we are done
       }else{

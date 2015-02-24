@@ -91,85 +91,6 @@ int bam_validate1(const bam_hdr_t *header, const aRead b)
    fprintf(stderr,"--------------\n");
  }
 
-/*
-aHead *getHd_bgzf(htsFile *gz){
-  aHead *h = new aHead;
-  
-  const char * magic ="BAM\1"; 
-  char head[4];
-  if(4!=bgzf_read(gz->fp.bgzf,head,4)){
-    fprintf(stderr,"[%s] Error reading\n",__FUNCTION__);
-  }
-  //  print(stderr,head,4);
-  if(strncmp(head,magic,4)!=0) {
-    fprintf(stderr,"[%s]\t-> Problem with magic number in header from BAM file\n",__FUNCTION__);
-    exit(0);
-  }
-  bgzf_read(gz->fp.bgzf,&h->l_text,sizeof(int));
-  h->text = new char[h->l_text];
-  bgzf_read(gz->fp.bgzf,h->text,h->l_text);
-  #if 0
-  fprintf(stdout,"[%s] hd:%s\n",__FILE__,h->text);
-  exit(0);
-  #endif
-  bgzf_read(gz->fp.bgzf,&h->n_ref,sizeof(int));
-  h->l_name=new int[h->n_ref];
-  h->name = new char*[h->n_ref];
-  h->l_ref = new int[h->n_ref];
-  
-  for(int i=0;i<h->n_ref;i++){
-    bgzf_read(gz->fp.bgzf,&h->l_name[i],sizeof(int));
-    h->name[i] =(char*) malloc(h->l_name[i]);
-    bgzf_read(gz->fp.bgzf,h->name[i],h->l_name[i]);
-    bgzf_read(gz->fp.bgzf,&h->l_ref[i],sizeof(int));
-  } 
- 
-  return h;
-}
-
-aHead *cram_header_to_bam_angsd(SAM_hdr *h) {
-    int i;
-    aHead *header = new aHead;
-
-    header->l_text = ks_len(&h->text);
-    //    header->text = malloc(header->l_text+1);
-    header->text = new char[header->l_text+1];
-    memcpy(header->text, ks_str(&h->text), header->l_text);
-    header->text[header->l_text] = 0;
-
-    header->n_ref = h->nref;
-    header->name = new char*[header->n_ref];
-    header->l_ref = new int[header->n_ref];
-    header->l_name = new int[header->n_ref];
-    //header->target_len = (uint32_t *)calloc(header->n_targets, 4);
-
-    for (i = 0; i < h->nref; i++) {
-	header->name[i] = strdup(h->ref[i].name);
-	header->l_ref[i] = h->ref[i].len;
-    }
-    //printHd(header,stderr);
-    return header;
-}
-
-aHead *getHd(htsFile *fp){
-  //  fprintf(stderr,"\t-> getHd\n");
-  switch (fp->format.format) {
-  case bam: {
-    return getHd_bgzf(fp);
-  }
-  case cram:{
-    return cram_header_to_bam_angsd(fp->fp.cram->header);
-  }
-  default:
-    fprintf(stderr,"not implemented\n");
-  }
-  return NULL;
-}
-
-
-
-*/
-
 
 /*
   given the current offset read an alignment and put the data in st
@@ -332,18 +253,19 @@ int bam_t_to_aRead (bam1_t *from,aRead &to){
  to.next_refID = from->core.mtid;
  to.next_pos= from->core.mpos;
  to.tlen = from->core.isize;
- //fprintf(stderr,"vDat:Rlen:%d l_data:%d m_data:%d\n",RLEN,from->l_data,from->m_data);
- if(from->l_data-32>RLEN){
+ // fprintf(stderr,"vDat:Rlen:%d l_data:%d m_data:%d\n",RLEN,from->l_data,from->m_data);
+ if(from->l_data+32>RLEN){
    delete [] to.vDat;
    to.vDat = new uint8_t[from->m_data];
  }
  memcpy(to.vDat,from->data,sizeof(uint8_t)*from->l_data);
- //fprintf(stderr,"refId:%d pos:%d flag:%d\n",to.refID,to.pos,to.flag);
+ // fprintf(stderr,"refId:%d pos:%d flag:%d\n",to.refID,to.pos,to.flag);
  to.block_size= from->l_data;
  return 1;
 }
 
 int bam_read2(htsFile *fp,aRead & b){
+  //  fprintf(stderr,"[%s]\n",__FUNCTION__);
   switch (fp->format.format) {
   case bam: {
     return bam_read2(fp->fp.bgzf,b);
@@ -354,9 +276,10 @@ int bam_read2(htsFile *fp,aRead & b){
 
     int r = cram_get_bam_seq(fp->fp.cram, &bb);
     //fprintf(stderr,"r: %d\n",r);
-    if(r==-1)
+    if(r==-1){
+      bam_destroy1(bb);
       return r;
-
+    }
     bam_t_to_aRead(bb,b);
     {
       extern abcGetFasta *gf;
@@ -472,16 +395,23 @@ int bam_iter_read1_angsd(htsFile *fp, iter_t *iter, aRead &b) {
 }
 
 int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &bb) {
+  //  fprintf(stderr,"[%s] iter:%p iter.hts_hti:%p\n",__FUNCTION__,iter,iter->hts_itr);
   switch (fp->format.format) {
   case bam: {
     return bam_iter_read1_angsd(fp,iter,bb);
   }
   case cram:{
-    bam1_t *b=bam_init1();
-    int r = sam_itr_next(fp, iter->hts_itr, b);
-    if(r!=-1)
-      bam_t_to_aRead(b,bb);
-    bam_destroy1(b);
+
+    int r;
+    if(iter->hts_itr!=NULL){
+      bam1_t *b=bam_init1();
+      r = sam_itr_next(fp, iter->hts_itr, b);
+      if(r!=-1)
+	bam_t_to_aRead(b,bb);
+      bam_destroy1(b); 
+    }else
+      r= bam_read2(fp, bb);
+   
     return r; 
   }
   default:
