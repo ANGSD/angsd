@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 
-FLAGS=-O3 -D_USE_KNETFILE
+FLAGS=-O3
 
 HTSDIR = ../../htslib
 HTSLIB = $(HTSDIR)/libhts.a

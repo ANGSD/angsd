@@ -14,11 +14,20 @@ fi
 
 WDIR=`dirname $PRG`
 
+RVAL=0
 echo "Testing neutrality test statistics"
-./testTaj.sh $WDIR || echo "Problem with neutrality test statistics exit code: $?"
-
+if ./testTaj.sh $WDIR ;then
+    echo "Problem with neutrality test statistics exit code: $?"
+    cat ./testTaj.sh.log
+    RVAL=1
+fi
 echo "Testing SFS"
-./testSFS.sh $WDIR || echo "Problem with SFS exit code: $?"
+if ./testSFS.sh $WDIR ;then
+    echo "Problem with SFS exit code: $?"
+    cat ./testSFS.sh.log
+    RVAL=1
+fi
+exit ${RVAL}
 
 if false; then
     echo ./testBam.sh $PRG
