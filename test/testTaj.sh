@@ -43,6 +43,5 @@ cat ${ODIR}/fold.thetas.gz.pestPG &>>${LOG}
 echo "You should eyeball the above and see if they are comparable column (1-5,9) (not all defined for unfold)" &>>${LOG}
 
 ##when generated the results:
-##md5sum tajima/output/*pestPG  >tajima/md5/pestPG.md5sum
-##md5sum tajima/output/*pestPG tajima/output/*.ml  >tajima/md5/pestPG.md5sum
+##md5sum tajima/output/*pestPG tajima/output/*.ml tajima/output/*.saf tajima/output/*.gz  >tajima/md5/pestPG.md5sum
 md5sum  -c tajima/md5/pestPG.md5sum &>>${LOG} || exit 1
