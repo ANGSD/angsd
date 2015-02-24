@@ -41,7 +41,11 @@ htshook: string_alloc.h
 angsd: $(OBJ)
 	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread $(HTSLIB)
 
-clean:
+
+testclean:
+	rm -rf test/sfstest/output test/tajima/output test/*.log 
+
+clean:	testclean
 	rm  -f *.o *.d angsd angsd.static *~
 	make -C misc/ clean
 

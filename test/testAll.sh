@@ -14,6 +14,10 @@ fi
 
 WDIR=`dirname $PRG`
 
+echo "Testing neutrality test statistics"
+./testTaj.sh $WDIR || echo "Problem with neutrality test statistics exit code: $?"
+
+echo "Testing SFS"
 ./testSFS.sh $WDIR || echo "Problem with SFS exit code: $?"
 
 if false; then
@@ -34,10 +38,7 @@ if false; then
     
     echo ./testAbba.sh $PRG
     ./testAbba.sh $PRG
-    
-    echo ./tajTest6.sh
-    ./tajTest6.sh $WDIR
-    
+        
     echo ./testFasta.sh
     ./testFasta.sh $PRG
     
