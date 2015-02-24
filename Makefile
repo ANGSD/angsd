@@ -5,9 +5,16 @@ CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
+
 FLAGS=-O3
 
 PRG=htshook angsd misc
+
+
+# Adjust $(HTSDIR) to point to your top-level htslib directory
+HTSDIR = ../htslib
+HTSLIB = $(HTSDIR)/libhts.a
+BGZIP  = $(HTSDIR)/bgzip
 
 all: $(PRG)
 
@@ -16,16 +23,12 @@ all: $(PRG)
 misc:
 	make -C misc/
 
-htshook:
-	cp string_alloc.h ../htslib/cram/
+htshook: string_alloc.h
+	cmp string_alloc.h ../htslib/cram/string_alloc.h 2>/dev/null || cp -f string_alloc.h ../htslib/cram/string_alloc.h 2>/dev/null
 	make -C ../htslib
 
-# Adjust $(HTSDIR) to point to your top-level htslib directory
-HTSDIR = ../htslib
-HTSLIB = $(HTSDIR)/libhts.a
-BGZIP  = $(HTSDIR)/bgzip
-include $(HTSDIR)/htslib.mk
 -include $(OBJ:.o=.d)
+
 
 %.o: %.c
 	$(CC) -c  $(CFLAGS) -I$(HTSDIR) $*.c
