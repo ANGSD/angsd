@@ -17,6 +17,7 @@ misc:
 	make -C misc/
 
 htshook:
+	cp string_alloc.h ../htslib/cram/
 	make -C ../htslib
 
 # Adjust $(HTSDIR) to point to your top-level htslib directory
