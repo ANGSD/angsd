@@ -10,7 +10,7 @@
 class abc{
 public:
   static char *shouldRun;
-  const static aHead *header;//contains the header of a single bam;
+  const static bam_hdr_t *header;//contains the header of a single bam;
   const static aMap *revMap;
   int index;
   static int tot_index;

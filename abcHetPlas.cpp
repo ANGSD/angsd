@@ -250,7 +250,7 @@ void abcHetPlas::print(funkyPars *pars){
       if(maxLRT<minLRT)
 	 continue;
 
-	fprintf(outputFile,"%s\t%d",header->name[pars->refId],pars->posi[s]+1);
+	fprintf(outputFile,"%s\t%d",header->target_name[pars->refId],pars->posi[s]+1);
 	if(pars->ref!=NULL)
 	  fprintf(outputFile,"\t%c",intToRef[pars->ref[s]]);
 	else

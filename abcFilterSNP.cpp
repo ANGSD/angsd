@@ -168,7 +168,7 @@ void abcFilterSNP::run(funkyPars *pars){
 	}
       }
       
-      ksprintf(bufstr,"%s\t%d\t%d %d %d %d\t",header->name[pars->refId],pars->posi[s]+1, cnts[0],cnts[1],cnts[2],cnts[3]);
+      ksprintf(bufstr,"%s\t%d\t%d %d %d %d\t",header->target_name[pars->refId],pars->posi[s]+1, cnts[0],cnts[1],cnts[2],cnts[3]);
       ksprintf(bufstr,"%f:%f:%f\t",sb1(cnts),sb2(cnts),sb3(cnts));
       funkyHWE *hweStruct = (funkyHWE *) pars->extras[8];//THIS IS VERY NASTY! the ordering within general.cpp is now important
       double llh = 2*hweStruct->like0[s]-2*hweStruct->likeF[s];

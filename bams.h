@@ -24,18 +24,6 @@
 
 
 /*
-  structure to represent the header of a read, names taken from bam spec
- */
-typedef struct {
-  int l_text;
-  char *text;//len is l_text
-  int n_ref;//number of chromosomes
-  int *l_name;//length of chromoname name
-  char **name;//name[n_ref][l_name]
-  int *l_ref;//length of the chromosome
-}aHead;
-
-/*
   strute to represent a single read, names taken from bam spec
  */
 typedef struct {
@@ -67,10 +55,10 @@ typedef struct {
 
 uint32_t bam_calend(const aRead& rd, const uint32_t *cigar);
 int is_overlap(uint32_t beg, uint32_t end, const aRead &b);
-int bam_validate1(const aHead *header, const aRead b);
-aHead *getHd(htsFile *gz);
+//int bam_validate1(const aHead *header, const aRead b);
+//aHead *getHd(htsFile *gz);
 int getAlign(htsFile *gz,int block_size,aRead &st);
-void dalloc(const aHead *hd);
+//void dalloc(const aHead *hd);
 htsFile *openBAM(const char *fname);
 
 
@@ -97,7 +85,7 @@ typedef struct{
 
 
 sglPool getPool(BGZF *fp,int nReads,aRead &bufRead,int &keepGoing);
-void printSglPool(const sglPool& sgl,FILE *fp,aHead *hd);
+//void printSglPool(const sglPool& sgl,FILE *fp,aHead *hd);
 void dalloc (sglPool &ret);
 
 typedef struct{
@@ -124,8 +112,6 @@ void printIter(const iter_t& it,FILE *fp);
 int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b);
 int bam_iter_read(htsFile *fp, iter_t *iter, aRead &b);
 
-aHead *getHd_andClose(const char *fname);
-void printHd(const aHead *hd,FILE *fp);
+//xaHead *getHd_andClose(const char *fname);
 int restuff(aRead &b);
-int compHeader(aHead *hd1,aHead *hd2);
 #endif

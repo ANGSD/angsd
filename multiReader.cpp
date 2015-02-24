@@ -18,7 +18,7 @@ void checkIfDir(char *fname){
 }
 
 
-aHead *getHeadFromFai(const char *fname){
+bam_hdr_t *getHeadFromFai(const char *fname){
   std::vector<char *> chrs;
   std::vector<int> lengths;
   FILE *fp = aio::getFILE(fname,"r");
@@ -31,33 +31,28 @@ aHead *getHeadFromFai(const char *fname){
     // fprintf(stderr,"tok: %s\n",tok);
     lengths.push_back(atoi(tok));
   }
-  aHead *ret = new aHead;
+  bam_hdr_t *ret = bam_hdr_init();
   ret->l_text = strlen(fname);
   ret->text = new char[strlen(fname)+1];
   ret->text = strcpy(ret->text,fname);
-  ret->n_ref = chrs.size();
-  ret->l_name = new int[chrs.size()];
-  ret->l_ref = new int [chrs.size()];
-  ret->name = new char*[chrs.size()];
+  ret->n_targets = chrs.size();
+  ret->target_len = new uint32_t [chrs.size()];
+  ret->target_name = new char*[chrs.size()];
   for(size_t i=0;i<chrs.size();i++){
-    ret->l_name[i] = strlen(chrs[i]);
-    ret->l_ref[i] = lengths[i];
-    //    ret->name[i] = chrs[i];
-    ret->name[i] =(char*) malloc(strlen(chrs[i])+1);
-    strcpy(ret->name[i],chrs[i]);
+    ret->target_len[i] = lengths[i];
+    ret->target_name[i] =strdup(chrs[i]);
   }
 
   for(uint i=0;i<chrs.size();i++)
     free(chrs[i]);
   fclose(fp);
-  //printHd(ret,stderr);
   return ret;
 }
 
-aMap *buildRevTable(const aHead *hd){
+aMap *buildRevTable(const bam_hdr_t *hd){
   aMap *ret = new aMap;
-  for(int i=0;i<hd->n_ref;i++){
-    ret->insert(std::pair<char *,int>(strdup(hd->name[i]),i));
+  for(int i=0;i<hd->n_targets;i++){
+    ret->insert(std::pair<char *,int>(strdup(hd->target_name[i]),i));
   }
   for(aMap::iterator it= ret->begin();0&&it!=ret->end();++it)
     fprintf(stderr,"%s %d\n",it->first,it->second);
@@ -291,7 +286,9 @@ multiReader::multiReader(int argc,char**argv){
       fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-pileup/-i/-vcf-gl/-vcf-gp filename\n");
       exit(0);
     }
-    hd= getHd_andClose(args->nams[0]);
+    htsFile *in=sam_open(args->nams[0],"r");
+    hd= sam_hdr_read(in);
+    hts_close(in);
   }
   args->hd = hd;
   
@@ -365,7 +362,7 @@ multiReader::~multiReader(){
     for(aMap::iterator it=revMap->begin();it!=revMap->end();++it)
       free((char*)it->first);
   }
-  dalloc(hd);
+ 
   delete revMap;
 
   
@@ -407,6 +404,7 @@ multiReader::~multiReader(){
   delete []   args->usedArgs;
   free(args->outfiles);
   free(args->infile);
+  bam_hdr_destroy(args->hd);
   if(args->argumentFile!=stderr) fclose(args->argumentFile);
   delete args;
   

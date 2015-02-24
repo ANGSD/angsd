@@ -17,6 +17,7 @@ extern int minQ;
 extern int trim;
 static const char *bam_nt16_rev_table = "=ACMGRSVTWYHKDBN";
 
+
 /*
   When merging different nodes, we are using a greedy but fast approach,
   however if we have a large genomic region with no data we are are allocating huge chunks.
@@ -1396,7 +1397,7 @@ void *setIterator1(void *args){
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->fp,rd->fn,rd->hd,rd->it,ref,start,stop,rd->hts_hdr);//leak
+  getOffsets(rd->fp,rd->fn,rd->hd,rd->it,ref,start,stop,rd->hd);//leak
   return EXIT_SUCCESS;
 }
 
@@ -1410,7 +1411,7 @@ void *setIterator1(void *args){
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->fp,rd->fn,rd->hd,rd->it,ref,start,stop,rd->hts_hdr);
+  getOffsets(rd->fp,rd->fn,rd->hd,rd->it,ref,start,stop,rd->hd);
 }
 
 void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
@@ -1533,29 +1534,29 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     }else{
       if(theRef==-1){//init
 	theRef =0;
-      }else if(theRef==rd[0].hd->n_ref-1){
+      }else if(theRef==rd[0].hd->n_targets-1){
 	break;//then we are done
       }else{
-	int minRef = rd[0].hd->n_ref;
+	int minRef = rd[0].hd->n_targets;
 	for(int i=0;i<nFiles;i++)
 	  if(sglp[i].bufferedRead.refID!=-2 && sglp[i].bufferedRead.refID<minRef)
 	    minRef = sglp[i].bufferedRead.refID;
-	if(minRef==-2||minRef == rd[0].hd->n_ref){
+	if(minRef==-2||minRef == rd[0].hd->n_targets){
 	  theRef++;
 	}else
 	  theRef = minRef;
       }
     }
 
-    if(theRef==rd[0].hd->n_ref)
+    if(theRef==rd[0].hd->n_targets)
       break;
-    assert(theRef>=0 && theRef<rd[0].hd->n_ref);//ref should be inrange [0,#nref in header]
+    assert(theRef>=0 && theRef<rd[0].hd->n_targets);//ref should be inrange [0,#nref in header]
 
     //load fasta for this ref if needed
     void waiter(int);
     waiter(theRef);//will wait for exisiting threads and then load stuff relating to the chromosome=theRef;
     if(gf->ref!=NULL && theRef!=gf->ref->curChr)
-      gf->loadChr(gf->ref,rd[0].hd->name[theRef],theRef);
+      gf->loadChr(gf->ref,rd[0].hd->target_name[theRef],theRef);
     
      
 
@@ -1632,7 +1633,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       int tmpSum = 0;
 
       if(show!=1){
-	dnT = new nodePoolT[nFiles];
+	dnT = new nodePoolT[nFiles];//<- this can leak now
 	for(int i=0;i<nFiles;i++){
 	  dnT[i] = mkNodes_one_sampleT(&sglp[i],&npsT[i]);
 	  tmpSum += dnT[i].l;
@@ -1652,14 +1653,16 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 #endif
             
       //simple sanity check for validating that we have indeed something to print.
+
       if(tmpSum==0){
 	if(regions.size()!=0)
 	  notDone=1;
 	else{
-	  fprintf(stderr,"No data for chromoId=%d chromoname=%s\n",theRef,rd[0].hd->name[theRef]);
+	  fprintf(stderr,"No data for chromoId=%d chromoname=%s\n",theRef,rd[0].hd->target_name[theRef]);
 	  fprintf(stderr,"This could either indicate that there really is no data for this chromosome\n");
 	  fprintf(stderr,"Or it could be problem with this program regSize=%lu notDone=%d\n",regions.size(),notDone);
 	}
+	delete [] dnT;
 	break;
       }
 
@@ -1669,7 +1672,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	regStop = regions[itrPos].stop;
       }else{
 	regStart = -1;
-	regStop = rd[0].hd->l_ref[theRef];
+	regStop = rd[0].hd->target_len[theRef];
       }
       if(show){
 	//merge the perFile upnodes.FIXME for large regions (with gaps) this will allocate to much...
@@ -1678,7 +1681,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	
 	chk->regStart = regStart;
 	chk->regStop = regStop;
-	chk->refName = rd[0].hd->name[theRef];
+	chk->refName = rd[0].hd->target_name[theRef];
 	chk->refId = theRef;
 	printChunky2(chk,stdout,chk->refName);
 	
@@ -1687,6 +1690,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	    delete [] dn[i].nds;
 	}
       }else{
+
 	fcb *f = new fcb; //<-for call back
 	f->dn=dnT; f->nFiles = nFiles; f->regStart = regStart; f->regStop = regStop; f->refId = theRef;
 	callBack_bambi(f);

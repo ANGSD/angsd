@@ -407,7 +407,7 @@ void abcGL::printLike(funkyPars *pars) {
       if(pars->keepSites[s]==0)
 	continue;
       
-      kputs(header->name[pars->refId],&bufstr);
+      kputs(header->target_name[pars->refId],&bufstr);
       kputc('_',&bufstr);
       kputw(pars->posi[s]+1,&bufstr);
       kputc('\t',&bufstr);
@@ -451,7 +451,7 @@ void abcGL::printLike(funkyPars *pars) {
 	gzwrite(gzoutfile,dump,3*sizeof(double));
       }
       
-      gzwrite(gzoutfile2,header->name[pars->refId],sizeof(char)*strlen(header->name[pars->refId]));
+      gzwrite(gzoutfile2,header->target_name[pars->refId],sizeof(char)*strlen(header->target_name[pars->refId]));
       gzputc(gzoutfile2,'\0');
       //      fprintf(stderr,"%s\n",header->name[pars->refId]);
       //exit(0);
@@ -465,7 +465,7 @@ void abcGL::printLike(funkyPars *pars) {
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s]==0)
 	continue;
-      kputs(header->name[pars->refId],&bufstr);
+      kputs(header->target_name[pars->refId],&bufstr);
       kputc('\t',&bufstr);
       kputw(pars->posi[s]+1,&bufstr);
       for(int i=0;i<10*pars->nInd;i++)      

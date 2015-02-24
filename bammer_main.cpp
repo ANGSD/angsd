@@ -12,6 +12,7 @@
 #include <vector>
 #include <stdint.h>
 #include <algorithm>
+#include <htslib/hts.h>
 #include "bams.h"
 #include "mUpPile.h"
 #include "parseArgs_bambi.h"
@@ -30,9 +31,51 @@ extern int SIG_COND;
 static const char *bam_nt16_rev_table2 = "=ACMGRSVTWYHKDBN";
 
 
+
+void printHd(const bam_hdr_t *hd,FILE *fp){
+  fprintf(fp,"htext=%s\n",hd->text);
+  fprintf(fp,"n_ref=%d\n",hd->n_targets);
+  for(int i=0;i<hd->n_targets;i++)
+    fprintf(fp,"i=%d name=%s length=%d\n",i,hd->target_name[i],hd->target_len[i]);
+
+}
+
+
+
+
+/*
+  compare all entries in the 2 headers, if difference return 1;
+*/
+
+int compHeader(bam_hdr_t *hd1,bam_hdr_t *hd2){
+  if(0){
+    if(hd1->l_text!=hd2->l_text)
+      fprintf(stderr,"problem with l_text in header\n");
+    if(memcmp(hd1->text,hd2->text,hd1->l_text)!=0)
+      fprintf(stderr,"problem with text in header\n");
+  }
+  if(hd1->n_targets!=hd2->n_targets){
+    fprintf(stderr,"Difference in BAM headers: Problem with number of chromosomes in header\n");
+    return 1;
+  }
+  for(int i=0;i<hd1->n_targets;i++){
+    if(strcasecmp(hd1->target_name[i],hd2->target_name[i])!=0){
+      fprintf(stderr,"Difference in BAM headers: Problem with chromosome ordering");
+      return 1;
+    }
+    if(hd1->target_len[i]!=hd2->target_len[i]){
+      fprintf(stderr,"Difference in BAM headers: Problem with length of chromosomes");
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
+
 void dalloc_bufReader(bufReader &ret){
-  if(ret.hts_hdr)
-    bam_hdr_destroy(ret.hts_hdr);
+  if(ret.hd)
+    bam_hdr_destroy(ret.hd);
   if(ret.it.hts_itr)
     hts_itr_destroy(ret.it.hts_itr);
   if(ret.it.hts_idx)
@@ -40,8 +83,6 @@ void dalloc_bufReader(bufReader &ret){
   free(ret.fn);
   free(ret.it.off);//cleanup offsets if used
   hts_close(ret.fp);
-  dalloc(ret.hd);
-  
 }
 
 
@@ -53,7 +94,6 @@ bufReader initBufReader2(const char*fname){
   ret.fp = openBAM(ret.fn);
   //  fprintf(stderr,"[%s] Not implemented fromat.format:%d cram:%d\n",__FUNCTION__,ret.fp->format.format,cram);  
 
-  ret.hd = getHd(ret.fp);
   ret.isEOF =0;
   ret.it.from_first=1;//iterator, used when supplying regions
   ret.it.finished=0;//iterator, used when supplying regions
@@ -62,14 +102,13 @@ bufReader initBufReader2(const char*fname){
 
   ret.it.hts_itr=NULL;
   ret.it.hts_idx=NULL;
-  ret.hts_hdr= NULL;
-  if(ret.fp->format.format==cram){
-    if((ret.hts_hdr = sam_hdr_read(ret.fp)) == 0) {
-      fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
-      exit(0);
-    }
+ 
+  ret.hd = sam_hdr_read(ret.fp);
+  if(ret.hd==NULL) {
+    fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
+    exit(0);
   }
-
+  
   return ret;
 }
 

@@ -118,7 +118,7 @@ void abcWriteFasta::changeChr(int refId) {
     return;
   if(myFasta!=NULL){//proper case we have data
     if(explode||hasData){
-      writeChr(&bufstr,header->l_ref[currentChr],header->name[currentChr],myFasta,NbasesPerLine);
+      writeChr(&bufstr,header->target_len[currentChr],header->target_name[currentChr],myFasta,NbasesPerLine);
     bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     }
   }
@@ -128,17 +128,17 @@ void abcWriteFasta::changeChr(int refId) {
 
   if(refId!=-1){//-1 = destructor
     for(int i=currentChr+1;explode&&i<refId;i++){
-      writeChr(&bufstr,header->l_ref[i],header->name[i],NULL,NbasesPerLine);
+      writeChr(&bufstr,header->target_len[i],header->target_name[i],NULL,NbasesPerLine);
       bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     }
     currentChr=refId;
     free(myFasta);
-    myFasta=(char*)malloc(header->l_ref[currentChr]);
-    memset(myFasta,'N',header->l_ref[currentChr]);
+    myFasta=(char*)malloc(header->target_len[currentChr]);
+    memset(myFasta,'N',header->target_len[currentChr]);
   }else{
     free(myFasta);
-    for(int i=currentChr+1;explode&&i<header->n_ref;i++){
-      writeChr(&bufstr,header->l_ref[i],header->name[i],NULL,NbasesPerLine);
+    for(int i=currentChr+1;explode&&i<header->n_targets;i++){
+      writeChr(&bufstr,header->target_len[i],header->target_name[i],NULL,NbasesPerLine);
       bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     }
   }
@@ -154,7 +154,7 @@ void abcWriteFasta::run(funkyPars *pars){
     return;
   hasData=1;
   if(doFasta==1){//random number read
-    for(int s=0;s<pars->numSites&&pars->posi[s]<header->l_ref[pars->refId];s++){
+    for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
       if(pars->keepSites[s]==0)
 	continue;
       if(pars->chk->nd[s][0].l==0)
@@ -164,7 +164,7 @@ void abcWriteFasta::run(funkyPars *pars){
       
     }
   }else if(doFasta==2) {//most common
-    for(int s=0;s<pars->numSites&&pars->posi[s]<header->l_ref[pars->refId];s++){
+    for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
       if(pars->keepSites[s]==0)
 	continue;
 
@@ -211,7 +211,7 @@ void abcWriteFasta::run(funkyPars *pars){
   }else if(doFasta==3){
     for(int i=0;i<pars->nInd;i++){
       //      fprintf(stderr,"numSites: %d\n",pars->numSites);
-      for(int s=0;s<pars->numSites&&pars->posi[s]<header->l_ref[pars->refId];s++){
+      for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
 	tNode &tn = pars->chk->nd[s][i];
 	double ebds[]= {0.0,0.0,0.0,0.0};
 	for(int b=0;b<tn.l;b++){

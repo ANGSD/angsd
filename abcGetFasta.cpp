@@ -117,9 +117,9 @@ char *abcGetFasta::loadChr(perFasta *f, char*chrName,int chrId){
     f->chrLen=0;
   }
   //  fprintf(stderr,"[%s] done\n",__FUNCTION__);
-  if(f->chrLen!=header->l_ref[chrId]){
+  if(f->chrLen!=header->target_len[chrId]){
     fprintf(stderr,"\t-> Problem with length of fastafile vs length of chr in BAM header\n");
-    fprintf(stderr,"\t-> Chromosome name: \'%s\' length from BAM header:%d length from fai file:%d\n",chrName,header->l_ref[chrId],f->chrLen);
+    fprintf(stderr,"\t-> Chromosome name: \'%s\' length from BAM header:%d length from fai file:%d\n",chrName,header->target_len[chrId],f->chrLen);
     extern int SIG_COND;
     SIG_COND = 0;
   }
@@ -135,11 +135,11 @@ char *abcGetFasta::magic(int refId,int *posi,int numSites,perFasta *f){
   if(f->curChr==-1||refId!=f->curChr){
     //    fprintf(stderr,"[%s] chaning to chr: %d\n",__FUNCTION__,refId);
     //fflush(stderr);
-    loadChr(f,header->name[refId],refId);
+    loadChr(f,header->target_name[refId],refId);
   }
   //first check that last position is not to long after.
   if(posi[numSites-1] > f->chrLen+200){
-    fprintf(stderr,"Trying to access fasta efter end of chromsome+200:%s/%s pos=%d ref_len=%d\n",header->name[f->curChr],header->name[refId],posi[numSites-1],f->chrLen);
+    fprintf(stderr,"Trying to access fasta efter end of chromsome+200:%s/%s pos=%d ref_len=%d\n",header->target_name[f->curChr],header->target_name[refId],posi[numSites-1],f->chrLen);
   }
   //now loop over all positions. We allow +200 since a read might match to the end of a chr
   char *ret=new char[numSites];

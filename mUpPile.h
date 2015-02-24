@@ -43,12 +43,11 @@ typedef struct{
 typedef struct{
   htsFile *fp;
   char *fn;
-  aHead *hd;
+  bam_hdr_t *hd;
   int isEOF;
   int regionDone;
   iter_t it;
   regs regions;
-  bam_hdr_t *hts_hdr;
 }bufReader;
 
 

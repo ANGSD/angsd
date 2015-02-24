@@ -203,7 +203,7 @@ void abcDstat::clean(funkyPars *pars){
 void abcDstat::printAndEmpty(){
 
 
-fprintf(outfile,"%s\t%d\t%d",header->name[currentChr],block*blockSize+1,block*blockSize+blockSize);
+fprintf(outfile,"%s\t%d\t%d",header->target_name[currentChr],block*blockSize+1,block*blockSize+blockSize);
   for(int j=0;j<nComb;j++){
     fprintf(outfile,"\t%d\t%d",ABBA[j],BABA[j]);
     ABBA[j]=0;

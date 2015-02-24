@@ -54,7 +54,7 @@ void dalloc(tindex idx){
 
 
 
-int parse_region(char *extra,const aHead *hd,int &ref,int &start,int &stop,const aMap *revMap) {
+int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,const aMap *revMap) {
   aMap::const_iterator it;
    if(strrchr(extra,':')==NULL){//only chromosomename
      if((it = revMap->find(extra))==revMap->end()){
@@ -65,7 +65,7 @@ int parse_region(char *extra,const aHead *hd,int &ref,int &start,int &stop,const
      }
      ref = it->second;
      start =0;
-     stop = hd->l_ref[ref];
+     stop = hd->target_len[ref];
      return 1;
    }
 
@@ -79,7 +79,7 @@ int parse_region(char *extra,const aHead *hd,int &ref,int &start,int &stop,const
    ref = it->second;
 
    start =0;
-   stop = hd->l_ref[ref];
+   stop = hd->target_len[ref];
    tok = extra+strlen(tok)+1;//tok now contains the rest of the string
 
    if(strlen(tok)==0)//not start and/or stop ex: chr21:
@@ -346,7 +346,7 @@ void buildOffsets(tindex id,int ref,int beg, int end,iter_t &iter) {
  }
 
 
-void getOffsets(htsFile *fp,char *fn,const aHead *hd,iter_t &iter,int ref,int start,int stop,bam_hdr_t *hdr){
+void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,iter_t &iter,int ref,int start,int stop,bam_hdr_t *hdr){
   switch (fp->format.format) {
   case bam:
     //DRAONG
@@ -368,7 +368,7 @@ void getOffsets(htsFile *fp,char *fn,const aHead *hd,iter_t &iter,int ref,int st
       exit(0);
     }
     char tmp[1024];
-    snprintf(tmp,1024,"%s:%d-%d",hd->name[ref],start+1,stop);
+    snprintf(tmp,1024,"%s:%d-%d",hd->target_name[ref],start+1,stop);
     if(iter.hts_itr)
       hts_itr_destroy(iter.hts_itr);
     iter.hts_itr = sam_itr_querys(iter.hts_idx, hdr, tmp);

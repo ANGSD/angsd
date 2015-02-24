@@ -53,14 +53,14 @@ int is_overlap(uint32_t beg, uint32_t end, const aRead &b) {
 
 
 
-int bam_validate1(const aHead *header, const aRead b)
+int bam_validate1(const bam_hdr_t *header, const aRead b)
 {
   
   if (b.refID < -1 || b.next_refID < -1){
     fprintf(stderr,"error first\n");
     return 0;
   }
-  if (header && (b.refID >= header->n_ref || b.next_refID >= header->n_ref)){
+  if (header && (b.refID >= header->n_targets || b.next_refID >= header->n_targets)){
     fprintf(stderr,"error second\n");
     return 0;
   }
@@ -91,17 +91,7 @@ int bam_validate1(const aHead *header, const aRead b)
    fprintf(stderr,"--------------\n");
  }
 
-
-void printHd(const aHead *hd,FILE *fp){
-  fprintf(fp,"htext=%s\n",hd->text);
-  fprintf(fp,"n_ref=%d\n",hd->n_ref);
-  for(int i=0;i<hd->n_ref;i++)
-    fprintf(fp,"i=%d name=%s length=%d\n",i,hd->name[i],hd->l_ref[i]);
-
-}
-
-
-
+/*
 aHead *getHd_bgzf(htsFile *gz){
   aHead *h = new aHead;
   
@@ -178,13 +168,7 @@ aHead *getHd(htsFile *fp){
 
 
 
-aHead *getHd_andClose(const char *fname){
-  htsFile *fp = openBAM(fname);
-  aHead *hd = getHd(fp);
-  hts_close(fp);
-  return hd;
-}
-
+*/
 
 
 /*
@@ -431,19 +415,6 @@ int bam_read2(htsFile *fp,aRead & b){
 }
 
 
-//DRAGON, make sure that all hd->names are allocated with malloc or new. Dont' remember what is used.
-void dalloc(const aHead *hd){
-  delete [] hd->text;
-  delete [] hd->l_name;
-  delete [] hd->l_ref;
-  for(int i=0;i<hd->n_ref;i++)
-    free(hd->name[i]);
-  delete [] hd->name;
-  delete hd;
-  hd=NULL;
-}
-
-
 htsFile *openBAM(const char *fname){
   htsFile *fp =NULL;
   if((fp=sam_open(fname,"r"))==NULL ){
@@ -534,32 +505,4 @@ void dalloc (sglPool &ret){
 
 
   }
-}
-
-
-/*
-  compare all entries in the 2 headers, if difference return 1;
-*/
-int compHeader(aHead *hd1,aHead *hd2){
-  if(0){
-    if(hd1->l_text!=hd2->l_text)
-      fprintf(stderr,"problem with l_text in header\n");
-    if(memcmp(hd1->text,hd2->text,hd1->l_text)!=0)
-      fprintf(stderr,"problem with text in header\n");
-  }
-  if(hd1->n_ref!=hd2->n_ref){
-    fprintf(stderr,"Difference in BAM headers: Problem with number of chromosomes in header\n");
-    return 1;
-  }
-  for(int i=0;i<hd1->n_ref;i++){
-    if(strcasecmp(hd1->name[i],hd2->name[i])!=0){
-      fprintf(stderr,"Difference in BAM headers: Problem with chromosome ordering");
-      return 1;
-    }
-    if(hd1->l_ref[i]!=hd2->l_ref[i]){
-      fprintf(stderr,"Difference in BAM headers: Problem with length of chromosomes");
-      return 1;
-    }
-  }
-  return 0;
 }

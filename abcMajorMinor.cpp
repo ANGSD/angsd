@@ -217,7 +217,7 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
       float W2;
       float sum=0;
       if(choiceMajor==-1 || choiceMinor==-1){
-	fprintf(stdout,"\t-> Something has gone wrong trying to infer major/minor from GLS at \'%s\' %d will discard site from analysis\n",header->name[pars->refId],pars->posi[s]+1);
+	fprintf(stdout,"\t-> Something has gone wrong trying to infer major/minor from GLS at \'%s\' %d will discard site from analysis\n",header->target_name[pars->refId],pars->posi[s]+1);
 	pars->keepSites[s]=0;
       }
       // assert(choiceMajor!=-1&&choiceMinor!=-1);

@@ -29,7 +29,7 @@
 //below we set some variables that are shared between all the analysis classes
 #define MAX_CLASS 25
 int abc::tot_index =0;
-const aHead *abc::header = NULL;
+const bam_hdr_t *abc::header = NULL;
 const aMap *abc::revMap = NULL;
 char *abc::shouldRun = new char[MAX_CLASS]; 
 

@@ -994,7 +994,7 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,gzFile fpgz){
        seq=log(0.0);
      else
        seq = log(pv)-aConst;//watterson
-     gzprintf(fpgz,"%s\t%d\t%f\t",header->name[pars->refId],pars->posi[i]+1,seq);
+     gzprintf(fpgz,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
 
      if(fold==0) {
        double pairwise=0;    //Find theta_pi the pairwise
@@ -1017,7 +1017,7 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,gzFile fpgz){
        gzprintf(fpgz,"%f\t-Inf\t-Inf\t-Inf\n",log(pairwise)-aConst2);
      }
    }else if(r->oklist[i]==2)
-     fprintf(stderr,"PROBS at: %s\t%d\n",header->name[pars->refId],pars->posi[i]+1);
+     fprintf(stderr,"PROBS at: %s\t%d\n",header->target_name[pars->refId],pars->posi[i]+1);
  }
 }
 
@@ -1059,9 +1059,9 @@ void abcSaf::print(funkyPars *p){
  
     if(doThetas==0){
       if(isHap==0)
-	printFull(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId],newDim);
+	printFull(p,index,outfileSFS,outfileSFSPOS,header->target_name[p->refId],newDim);
       else
-	printFull(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId],(newDim-1)/2+1);
+	printFull(p,index,outfileSFS,outfileSFSPOS,header->target_name[p->refId],(newDim-1)/2+1);
       }
     else 
       calcThetas(p,index,prior,theta_fp);
@@ -1392,7 +1392,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
 	shouldBeOne = exp(res[0]-log(denominator))+exp(res[1]-log(denominator))+exp(res[2]-log(denominator));
       //fprintf(stderr,"this should be one: %f\n",shouldBeOne);
       if((fabs(shouldBeOne-1)>0.000001)){
-	fprintf(stderr,"this should be one: %f at position:(%s,%d)\n",shouldBeOne,header->name[refId],posi[it+1]);
+	fprintf(stderr,"this should be one: %f at position:(%s,%d)\n",shouldBeOne,header->target_name[refId],posi[it+1]);
 	exit(0);
       }
       
@@ -1424,7 +1424,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
     //    print_array(sfsfile,whichGeno,numInds);
     // print_array(sfsfile,whichProb,numInds,0);
 
-    ksprintf(sfsfile,"%s\t%d\t%c\t%c\t",header->name[refId],posi[it]+1,intToRef[major[it]],intToRef[minor[it]]);
+    ksprintf(sfsfile,"%s\t%d\t%c\t%c\t",header->target_name[refId],posi[it]+1,intToRef[major[it]],intToRef[minor[it]]);
     for(int i=0;i<numInds;i++)
       ksprintf(sfsfile,"%d ",whichGeno[i]);
     //ksprintf(sfsfile,"%d\t",whichGeno[numInds]);

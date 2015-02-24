@@ -195,7 +195,7 @@ void abcSaf2::print(funkyPars *p){
     realRes2 *r=(realRes2 *) p->extras[index];
     int id=0;
     if(outputBanded)
-      printSparse(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId]);
+      printSparse(p,index,outfileSFS,outfileSFSPOS,header->target_name[p->refId]);
   }
 }
 

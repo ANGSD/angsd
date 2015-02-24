@@ -125,7 +125,7 @@ void abcTemplate::print(funkyPars *pars){
 	  bases[strand][refToInt[c]]++;
 	}
 	//print chr and position
-	fprintf(outfile,"%s\t%d",header->name[pars->refId],pars->posi[s]+1);//position is zero index internally
+	fprintf(outfile,"%s\t%d",header->target_name[pars->refId],pars->posi[s]+1);//position is zero index internally
 	
 	//print the basecount
 	for(int i=0;i<2;i++)

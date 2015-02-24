@@ -32,7 +32,8 @@ typedef struct{
   int *usedArgs; //array of ints telling if args been used
   FILE *argumentFile; //logfile
   char *outfiles; //prefix output
-  const aHead *hd;
+  bam_hdr_t *hd;
+  // const aHead *hd;
   const aMap *revMap;
   char *infile;//contains, the -bam fname,-glf fname, -pileup fname
   std::vector<char *> nams;//contains either the above or the contents of -bam;

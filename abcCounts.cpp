@@ -385,7 +385,7 @@ void abcCounts::print(funkyPars *pars){
   if(pars->numSites==0)
     return;
   if(dumpCounts)
-    printCounts(header->name[pars->refId],pars->posi,pars->counts,pars->numSites,pars->nInd,bpos,bbin,dumpCounts,pars->keepSites);
+    printCounts(header->target_name[pars->refId],pars->posi,pars->counts,pars->numSites,pars->nInd,bpos,bbin,dumpCounts,pars->keepSites);
   gzwrite(oFileCountsBin,bbin.s,bbin.l);
   gzwrite(oFileCountsPos,bpos.s,bpos.l);
 
