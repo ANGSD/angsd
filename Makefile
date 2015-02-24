@@ -24,7 +24,7 @@ misc:
 	make -C misc/
 
 htshook: string_alloc.h
-	cmp string_alloc.h ../htslib/cram/string_alloc.h 2>/dev/null || cp -f string_alloc.h ../htslib/cram/string_alloc.h 2>/dev/null
+	cmp string_alloc.h ../htslib/cram/string_alloc.h || cp -f string_alloc.h ../htslib/cram/string_alloc.h 
 	make -C ../htslib
 
 -include $(OBJ:.o=.d)
