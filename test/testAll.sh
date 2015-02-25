@@ -32,6 +32,15 @@ if [ ! $? -eq 0  ]   ;then
     cat ./testSFS.sh.log
     RVAL=1
 fi
+
+echo "Testing basic mpileup"
+./testBam.sh $WDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with basic pileup exit code: $?"
+    cat ./testBam.sh.log
+    RVAL=1
+fi
+
 exit ${RVAL}
 
 if false; then

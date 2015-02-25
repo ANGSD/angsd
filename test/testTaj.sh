@@ -5,27 +5,26 @@ then
 fi
 
 LOG=${0}.log
-echo "Cleaning old output dir 'taj/'" &>>${LOG}
+echo "Cleaning old output dir taj/" &>${LOG}
 rm -rf tajima/output ${LOG}
 mkdir -p tajima/output
 
-
-MSMS=tajima/input/msout
+MSMS=tajima/input/msout.gz
 ODIR=tajima/output/
 ##below is for simulating haplotypes
 #mkdir -p tajima/input
 #msms -ms 40 100 -t 900 -r 400 -SAA 1000 -SaA 500 -N 10000 -SF 0 -Sp .5 -oTPi -oAFS >${MSMS}
 #grep -i afs ${MSMS} |grep -i sum|cut -f2 -d":"|tr " " "\n" >${MSMS}.sfs
 
-echo "Generating genotype likelihood based on the haplotypes" &>>${LOG}
-${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleOut 1 2>>${LOG}
+echo "Generating genotype likelihood based on the haplotypes" >>${LOG} 2>&1
+${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleOut 1 >>${LOG} 2>&1
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/norm -doSaf 1 -nInd 20 -fai hg19.fa.fai  2>>${LOG}
 ${WDIR}/misc/emOptim2 ${ODIR}/norm.saf 40 -P 24 -nSites 1000000 >${ODIR}/norm.saf.em.ml 2>>${LOG}
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/norm -nInd 20 -doThetas 1 -doSaf 1 -pest ${ODIR}/norm.saf.em.ml -fai hg19.fa.fai  2>>${LOG}
 ${WDIR}/misc/thetaStat make_bed ${ODIR}/norm.thetas.gz  2>>${LOG}
 ${WDIR}/misc/thetaStat do_stat ${ODIR}/norm.thetas.gz -nChr 40  2>>${LOG}
 
-echo "2) Will do folded analysis" &>>${LOG}
+echo "2) Will do folded analysis" >>${LOG} 2>&1
 
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/fold -doSaf 1 -nInd 20 -fold 1 -fai hg19.fa.fai  2>>${LOG}
 ${WDIR}/misc/emOptim2 ${ODIR}/fold.saf 20 -P 24 -nSites 1000000 >${ODIR}/fold.saf.em.ml 2>>${LOG}
@@ -33,15 +32,15 @@ ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/fold -nInd 20 -doT
 ${WDIR}/misc/thetaStat make_bed ${ODIR}/fold.thetas.gz  2>>${LOG}
 ${WDIR}/misc/thetaStat do_stat ${ODIR}/fold.thetas.gz -nChr 40  2>>${LOG}
 
-echo -e "\tThe theta estimates from msms simulated haplotypes for 8x 0.5% errorrate"  &>>${LOG}
-echo -e "\tWatterson\tpairwise\ttajimasD" &>>${LOG}
-grep ThetaW ${MSMS}|grep Sum &>>${LOG}
-echo -e "-------\nThe estimated thetas (sum of 100 reps) and the tajima value (unfolded)" &>>${LOG}
-cat ${ODIR}/norm.thetas.gz.pestPG &>>${LOG}
-echo -e "-------\nThe estimated thetas (sum of 100 reps) and the tajima value (unfolded)" &>>${LOG}
-cat ${ODIR}/fold.thetas.gz.pestPG &>>${LOG}
-echo "You should eyeball the above and see if they are comparable column (1-5,9) (not all defined for unfold)" &>>${LOG}
+echo -e "\tThe theta estimates from msms simulated haplotypes for 8x 0.5% errorrate"  >>${LOG} 2>&1
+echo -e "\tWatterson\tpairwise\ttajimasD" >>${LOG} 2>&1
+grep ThetaW ${MSMS}|grep Sum >>${LOG} 2>&1
+echo -e "-------\nThe estimated thetas (sum of 100 reps) and the tajima value (unfolded)" >>${LOG} 2>&1
+cat ${ODIR}/norm.thetas.gz.pestPG >>${LOG} 2>&1
+echo -e "-------\nThe estimated thetas (sum of 100 reps) and the tajima value (unfolded)" >>${LOG} 2>&1
+cat ${ODIR}/fold.thetas.gz.pestPG >>${LOG} 2>&1
+echo "You should eyeball the above and see if they are comparable column (1-5,9) (not all defined for unfold)" >>${LOG} 2>&1
 
 ##when generated the results:
 ##md5sum tajima/output/*pestPG tajima/output/*.ml tajima/output/*.saf tajima/output/*.gz  >tajima/md5/pestPG.md5sum
-md5sum  -c tajima/md5/pestPG.md5sum &>>${LOG} || exit 1
+md5sum  -c tajima/md5/pestPG.md5sum >>${LOG} 2>&1 || exit 1

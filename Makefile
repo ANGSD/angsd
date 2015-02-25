@@ -25,7 +25,7 @@ misc:
 
 htshook: string_alloc.h
 	cmp string_alloc.h $(HTSDIR)/cram/string_alloc.h || cp -f string_alloc.h $(HTSDIR)/cram/string_alloc.h 
-	make -C $(HTSDIR) 2>/dev/null ##suppress htslib warnings we trust that
+	make -C $(HTSDIR)
 
 -include $(OBJ:.o=.d)
 
