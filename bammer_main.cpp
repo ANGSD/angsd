@@ -16,7 +16,6 @@
 #include "bams.h"
 #include "mUpPile.h"
 #include "parseArgs_bambi.h"
-#include "indexer.h"
 #include "abc.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
@@ -74,14 +73,13 @@ int compHeader(bam_hdr_t *hd1,bam_hdr_t *hd2){
 
 
 void dalloc_bufReader(bufReader &ret){
-  if(ret.hd)
-    bam_hdr_destroy(ret.hd);
+  if(ret.hdr)
+    bam_hdr_destroy(ret.hdr);
   if(ret.it.hts_itr)
     hts_itr_destroy(ret.it.hts_itr);
   if(ret.it.hts_idx)
     hts_idx_destroy(ret.it.hts_idx);
   free(ret.fn);
-  free(ret.it.off);//cleanup offsets if used
   hts_close(ret.fp);
 }
 
@@ -92,19 +90,12 @@ bufReader initBufReader2(const char*fname){
   ret.fn = strdup(fname);
   int newlen=strlen(fname);//<-just to avoid valgrind -O3 uninitialized warning
   ret.fp = openBAM(ret.fn);
-  //  fprintf(stderr,"[%s] Not implemented fromat.format:%d cram:%d\n",__FUNCTION__,ret.fp->format.format,cram);  
-
   ret.isEOF =0;
-  ret.it.from_first=1;//iterator, used when supplying regions
-  ret.it.finished=0;//iterator, used when supplying regions
-  ret.it.off = NULL;
-  ret.it.dasIndex = NULL;
-
   ret.it.hts_itr=NULL;
   ret.it.hts_idx=NULL;
  
-  ret.hd = sam_hdr_read(ret.fp);
-  if(ret.hd==NULL) {
+  ret.hdr = sam_hdr_read(ret.fp);
+  if(ret.hdr==NULL) {
     fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
     exit(0);
   }
@@ -130,11 +121,11 @@ bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError)
     ret[i] = initBufReader2(vec[i]);
   //now all readers are inialized, lets validate the header is the same
   for(size_t i=1;i<vec.size();i++)
-    if(compHeader(ret[0].hd,ret[i].hd)){
+    if(compHeader(ret[0].hdr,ret[i].hdr)){
       fprintf(stderr,"Difference in BAM headers for \'%s\' and \'%s\'\n",vec[0],vec[i]);
       fprintf(stderr,"HEADER BAM1\n");
-      printHd(ret[0].hd,stderr);
-      printHd(ret[i].hd,stderr);
+      printHd(ret[0].hdr,stderr);
+      printHd(ret[i].hdr,stderr);
       if(exitOnError)
 	exit(0);
     }

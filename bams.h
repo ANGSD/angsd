@@ -98,19 +98,14 @@ typedef struct __tindex *tindex;
 
 
 typedef struct{
-  int from_first;
-  int tid,beg,end,n_off,i,finished;
-  uint64_t curr_off;
-  pair64_t *off;//offsets for alignements to loop through
-  tindex dasIndex;
   hts_idx_t *hts_idx;
   hts_itr_t *hts_itr;
 }iter_t;
 
 void printIter(const iter_t& it,FILE *fp);
 
-int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b);
-int bam_iter_read(htsFile *fp, iter_t *iter, aRead &b);
+int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b,bam_hdr_t *hdr);
+int bam_iter_read(htsFile *fp, iter_t *iter, aRead &b,bam_hdr_t *hdr);
 
 //xaHead *getHd_andClose(const char *fname);
 int restuff(aRead &b);

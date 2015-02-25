@@ -6,7 +6,6 @@
 #include <cassert>
 #include "bams.h"
 #include <htslib/kstring.h>
-#include "indexer.h"
 #include "mUpPile.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
@@ -210,7 +209,7 @@ void realloc(sglPool &ret,int l){
 
 
 
-void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone) {
+void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 #if 0
   fprintf(stderr,"[%s]\n",__FUNCTION__);
 #endif 
@@ -229,8 +228,8 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
     aRead &b = ret.reads[0];
     int tmp;
     b.vDat = new uint8_t[RLEN];
-    if((tmp=bam_iter_read1(fp,it,b))<0){//FIXME
-      if(tmp==-2){
+    if((tmp=bam_iter_read1(fp,it,b,hdr))<0){//FIXME
+      if(tmp==-1){
 	rdObjEof =1;
 	//	ret.isEOF =1;
 	isEof--;
@@ -266,8 +265,8 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
     
     aRead &b = ret.reads[i+ret.l];
     b.vDat = new uint8_t[RLEN];
-    if((tmp=bam_iter_read1(fp,it,b))<0){
-      if(tmp==-2){
+    if((tmp=bam_iter_read1(fp,it,b,hdr))<0){
+      if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
       }else
@@ -307,7 +306,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
 
 
 //nothing with buffered here
-void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int &rdObjEof,int &rdObjRegionDone) {
+void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 #if 0
   fprintf(stderr,"\t->[%s] buffRefid=%d\trefToRead=%d\n",__FUNCTION__,ret.bufferedRead.refID,refToRead);
 #endif
@@ -329,8 +328,8 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToR
   while(ret.l==0){
     aRead &b = ret.reads[0];
     int tmp;
-    if((tmp=bam_iter_read1(fp,it,b))<0){//FIXME
-      if(tmp==-2){
+    if((tmp=bam_iter_read1(fp,it,b,hdr))<0){//FIXME
+      if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
       }else
@@ -367,8 +366,8 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToR
   for( i=0;i<nReads;i++){
     aRead &b = ret.reads[i+ret.l];
 
-    if((tmp=bam_iter_read1(fp,it,b))<0){
-      if(tmp==-2){
+    if((tmp=bam_iter_read1(fp,it,b,hdr))<0){
+      if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
       }else
@@ -424,7 +423,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPool *ret,int &readNl
     
     int pre=ret[i].l;//number of elements before
     //function reads readNlines reads, from rd[i].fp and modifies isEOF and regionDone
-    read_reads_noStop(rd[i].fp,readNlines,notDone,ret[i],ref,&rd[i].it,rd[i].isEOF,rd[i].regionDone);
+    read_reads_noStop(rd[i].fp,readNlines,notDone,ret[i],ref,&rd[i].it,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
     
     //first check if reading caused and end of region event to occur
     if(rd[i].regionDone||rd[i].isEOF) 
@@ -435,7 +434,6 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPool *ret,int &readNl
       pickStop = ret[i].first[ret[i].l-1];
       break;
     }
-    fprintf(stderr,"end of loop:%d\n",ii);
   }
 #if 0
   fprintf(stderr,"usedPicker:%d\n",usedPicker);
@@ -456,7 +454,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPool *ret,int &readNl
 #endif
     if(ret[i].l>0&&ret[i].first[ret[i].l-1]>pickStop)
       continue;
-    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,&rd[i].it,pickStop,rd[i].isEOF,rd[i].regionDone);
+    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,&rd[i].it,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
   } 
   int nDone =0;
   for(int i=0;i<nFiles;i++)
@@ -1395,16 +1393,37 @@ void getMaxMax2T(sglPool *sglp,int nFiles,nodePoolT *nps){
 }
 
 
+void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,iter_t &iter,int ref,int start,int stop,bam_hdr_t *hdr){
+  if(iter.hts_idx==NULL)
+    iter.hts_idx = sam_index_load(fp,fn);
+  if (iter.hts_idx == 0) { // index is unavailable
+    fprintf(stderr, "[main_samview] random alignment retrieval only works for indexed BAM or CRAM files.\n");
+    exit(0);
+  }
+  char tmp[1024];
+  snprintf(tmp,1024,"%s:%d-%d",hd->target_name[ref],start+1,stop);
+  if(iter.hts_itr)
+    hts_itr_destroy(iter.hts_itr);
+  iter.hts_itr = sam_itr_querys(iter.hts_idx, hdr, tmp);
+  if (iter.hts_itr == NULL) { // reference name is not found
+    fprintf(stderr, "[main_samview] region \"%s\" specifies an unknown reference name. Continue anyway.\n",tmp);
+    exit(0);
+  }
+  //  fprintf(stderr,"HEJSA MED IDG%p\n",iter.hts_itr);
+  hts_itr_t *idx=iter.hts_itr;
+}
+
+
 
 void *setIterator1(void *args){
   bufReader *rd = (bufReader *) args;
-  free(rd->it.off);
+  // free(rd->it.off);
   //  fprintf(stderr,"[%s]\n",__FUNCTION__,rd->regions[rd->itrPos]);
   int start,stop,ref;
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->fp,rd->fn,rd->hd,rd->it,ref,start,stop,rd->hd);//leak
+  getOffsets(rd->fp,rd->fn,rd->hdr,rd->it,ref,start,stop,rd->hdr);//leak
   return EXIT_SUCCESS;
 }
 
@@ -1413,12 +1432,12 @@ void *setIterator1(void *args){
    //   fprintf(stderr,"[%s]\n",__FUNCTION__);
   bufReader *rds = (bufReader *) args;
   bufReader *rd = &rds[index];
-  free(rd->it.off);
+  // free(rd->it.off);
   int start,stop,ref;
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->fp,rd->fn,rd->hd,rd->it,ref,start,stop,rd->hd);
+  getOffsets(rd->fp,rd->fn,rd->hdr,rd->it,ref,start,stop,rd->hdr);
 }
 
 void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
@@ -1520,13 +1539,13 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	setIterators(rd,regions[itrPos],nFiles,nThreads);
 	//fprintf(stderr,"done region lookup %d/%lu\n",itrPos+1,regions.size());
 	//fflush(stderr);///BAME
-	//theRef =rd[0].fp->format.format==bam ? rd[0].it.tid : rd[0].it.hts_itr->tid;
-	theRef = rd[0].it.tid; 
+
+	theRef = rd[0].it.hts_itr->tid; 
 	//	fprintf(stderr,"theRef:%d %p %p\n",theRef,rd[0].it.off,rd[0].it.hts_itr->off);
 	//validate we have offsets;
 	int gotData = 0;
 	for(int i=0;i<nFiles;i++)
-	  if(rd[i].it.off!=NULL||(rd[i].it.hts_itr &&(rd[i].it.hts_itr->off!=NULL))){
+	  if((rd[i].it.hts_itr &&(rd[i].it.hts_itr->off!=NULL))){
 	    gotData =1;
 	    break;
 	  }
@@ -1542,29 +1561,29 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       if(theRef==-1){//init
 	theRef =0;
 
-      }else if(theRef==rd[0].hd->n_targets-1){
+      }else if(theRef==rd[0].hdr->n_targets-1){
 	break;//then we are done
       }else{
-	int minRef = rd[0].hd->n_targets;
+	int minRef = rd[0].hdr->n_targets;
 	for(int i=0;i<nFiles;i++)
 	  if(sglp[i].bufferedRead.refID!=-2 && sglp[i].bufferedRead.refID<minRef)
 	    minRef = sglp[i].bufferedRead.refID;
-	if(minRef==-2||minRef == rd[0].hd->n_targets){
+	if(minRef==-2||minRef == rd[0].hdr->n_targets){
 	  theRef++;
 	}else
 	  theRef = minRef;
       }
     }
 
-    if(theRef==rd[0].hd->n_targets)
+    if(theRef==rd[0].hdr->n_targets)
       break;
-    assert(theRef>=0 && theRef<rd[0].hd->n_targets);//ref should be inrange [0,#nref in header]
+    assert(theRef>=0 && theRef<rd[0].hdr->n_targets);//ref should be inrange [0,#nref in header]
 
     //load fasta for this ref if needed
     void waiter(int);
     waiter(theRef);//will wait for exisiting threads and then load stuff relating to the chromosome=theRef;
     if(gf->ref!=NULL && theRef!=gf->ref->curChr)
-      gf->loadChr(gf->ref,rd[0].hd->target_name[theRef],theRef);
+      gf->loadChr(gf->ref,rd[0].hdr->target_name[theRef],theRef);
     
      
 
@@ -1666,7 +1685,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	if(regions.size()!=0)
 	  notDone=1;
 	else{
-	  fprintf(stderr,"No data for chromoId=%d chromoname=%s\n",theRef,rd[0].hd->target_name[theRef]);
+	  fprintf(stderr,"No data for chromoId=%d chromoname=%s\n",theRef,rd[0].hdr->target_name[theRef]);
 	  fprintf(stderr,"This could either indicate that there really is no data for this chromosome\n");
 	  fprintf(stderr,"Or it could be problem with this program regSize=%lu notDone=%d\n",regions.size(),notDone);
 	}
@@ -1680,7 +1699,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	regStop = regions[itrPos].stop;
       }else{
 	regStart = -1;
-	regStop = rd[0].hd->target_len[theRef];
+	regStop = rd[0].hdr->target_len[theRef];
       }
       if(show){
 	//merge the perFile upnodes.FIXME for large regions (with gaps) this will allocate to much...
@@ -1689,7 +1708,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	
 	chk->regStart = regStart;
 	chk->regStop = regStop;
-	chk->refName = rd[0].hd->target_name[theRef];
+	chk->refName = rd[0].hdr->target_name[theRef];
 	chk->refId = theRef;
 	printChunky2(chk,stdout,chk->refName);
 	
@@ -1715,7 +1734,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     callBack_bambi(NULL);//cleanup signal
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
     for(int i=0;1&&i<nFiles;i++){
-      dalloc(rd[i].it.dasIndex);
       dalloc_nodePoolT(npsT[i]);
       delete [] npsT[i].nds;
       dalloc(sglp[i]);
@@ -1726,7 +1744,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   }else{
     //clean up
     for(int i=0;1&&i<nFiles;i++){
-      dalloc(rd[i].it.dasIndex);
       dalloc_nodePool(nps[i]);
       delete [] nps[i].nds;
       dalloc(sglp[i]);

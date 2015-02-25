@@ -80,18 +80,6 @@ int bam_validate1(const bam_hdr_t *header, const aRead b)
     return 1;
 }
 
-
- void printIter(const iter_t& it,FILE *fp){
-   fprintf(stderr,"--------------\n");
-   fprintf(stderr,"from_first=%d\n",it.from_first);
-   fprintf(stderr,"tid=%d\tbeg=%d\tend=%d\tn_off=%d\ti=%d\tfinished=%d\n",it.tid,it.beg,it.end,it.n_off,it.i,it.finished);
-   fprintf(stderr,"i=%d\tcurr_off:%zu\n",it.i,(size_t)it.curr_off);
-   for(int i=0;i<it.n_off;i++)
-     fprintf(stderr,"%d: (%lu-%lu)\n",i,(size_t)it.off[i].chunk_beg,(size_t)it.off[i].chunk_end);
-   fprintf(stderr,"--------------\n");
- }
-
-
 /*
   given the current offset read an alignment and put the data in st
  */
@@ -184,63 +172,6 @@ int restuff(aRead &b){
 }
 
 
-//this is the old
-//read a single 'read'
-int bam_read2(BGZF *fp,aRead & b){
-  extern abcGetFasta *gf;
- 
- reread: //oh yes baby a goto statement
-
-  int block_size;
-  if(4!=bgzf_read(fp,&block_size,sizeof(int))){
-    return -2;
-  }
-  getAlign(fp,block_size,b);
-  if(b.flag&4)
-    goto reread;
-
-
-  if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
-    return 1;
-  }
-
-  //check if read was bad
-  if(remove_bads ){
-    if(b.flag>=256)
-      goto reread;
-  }
-
-
-  //check if orphan read, 
-  if(only_proper_pairs&&(b.flag%2) ){//only check if pairend
-    if(!(b.flag&BAM_FPROPER_PAIR))
-      goto reread;
-  }if(uniqueOnly&& getNumBest(getAuxStart(&b),b.vDat+b.block_size)!=1)
-    goto reread;
-  
-
-  if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
-    if(baq){
-      bam_prob_realn_core(b,gf->ref->seqs,baq);
-    }
-  }
-
-  if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
-    if(adjustMapQ!=0){
-      assert(gf->ref!=NULL);
-      int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
-      if(q<0)
-	goto reread;
-      if(q<b.mapQ)
-	b.mapQ = q;
-    }
-  }
-  if(b.mapQ<minMapQ)
-    goto reread;
-  
-  return 1;
-}
-
 int bam_t_to_aRead (bam1_t *from,aRead &to){
  to.refID = from->core.tid;
  to.pos = from->core.pos;
@@ -264,77 +195,66 @@ int bam_t_to_aRead (bam1_t *from,aRead &to){
  return 1;
 }
 
-int bam_read2(htsFile *fp,aRead & b){
-  //  fprintf(stderr,"[%s]\n",__FUNCTION__);
-  switch (fp->format.format) {
-  case bam: {
-    return bam_read2(fp->fp.bgzf,b);
-  }
-  case cram:{
-    bam1_t *bb = bam_init1();
-    bam_read2_reread :
-
-    int r = cram_get_bam_seq(fp->fp.cram, &bb);
-    //fprintf(stderr,"r: %d\n",r);
-    if(r==-1){
-      bam_destroy1(bb);
-      return r;
-    }
-    bam_t_to_aRead(bb,b);
-    {
-      extern abcGetFasta *gf;
-      if(b.flag&4)
-	goto bam_read2_reread;
-      
-      
-      if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
-	return 1;
-      }
-      
-      //check if read was bad
-      if(remove_bads ){
-	if(b.flag>=256)
-	  goto bam_read2_reread;
-      }
-      
-      
-      //check if orphan read, 
-      if(only_proper_pairs&&(b.flag%2) ){//only check if pairend
-	if(!(b.flag&BAM_FPROPER_PAIR))
-	  goto bam_read2_reread;
-      }if(uniqueOnly&& getNumBest(getAuxStart(&b),b.vDat+b.block_size)!=1)
-	 goto bam_read2_reread;
-      
-      
-      if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
-	if(baq){
-	  bam_prob_realn_core(b,gf->ref->seqs,baq);
-	}
-      }
-      
-      if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
-	if(adjustMapQ!=0){
-	  assert(gf->ref!=NULL);
-	  int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
-	  if(q<0)
-	    goto bam_read2_reread;
-	  if(q<b.mapQ)
-	    b.mapQ = q;
-	}
-      }
-      if(b.mapQ<minMapQ)
-	goto bam_read2_reread;
-    }
-
-
+int bam_read2(htsFile *fp,aRead & b,bam_hdr_t *hdr){
+  bam1_t *bb = bam_init1();
+ bam_read2_reread :
+  
+  int r = sam_read1(fp,hdr, bb);
+  //fprintf(stderr,"r: %d\n",r);
+  if(r==-1){
     bam_destroy1(bb);
     return r;
   }
-  default:
-    fprintf(stderr,"not implemented\n");
+  bam_t_to_aRead(bb,b);
+  {
+    extern abcGetFasta *gf;
+    if(b.flag&4)
+      goto bam_read2_reread;
+    
+    
+    if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
+      return 1;
+    }
+    
+    //check if read was bad
+    if(remove_bads ){
+      if(b.flag>=256)
+	goto bam_read2_reread;
+    }
+      
+      
+    //check if orphan read, 
+    if(only_proper_pairs&&(b.flag%2) ){//only check if pairend
+      if(!(b.flag&BAM_FPROPER_PAIR))
+	goto bam_read2_reread;
+    }if(uniqueOnly&& getNumBest(getAuxStart(&b),b.vDat+b.block_size)!=1)
+       goto bam_read2_reread;
+      
+    
+    if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
+      if(baq){
+	bam_prob_realn_core(b,gf->ref->seqs,baq);
+      }
+    }
+    
+    if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
+      if(adjustMapQ!=0){
+	assert(gf->ref!=NULL);
+	int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
+	if(q<0)
+	  goto bam_read2_reread;
+	if(q<b.mapQ)
+	  b.mapQ = q;
+      }
+    }
+    if(b.mapQ<minMapQ)
+      goto bam_read2_reread;
   }
-  return -1;
 
+  
+  bam_destroy1(bb);
+  return r;
+  
 }
 
 
@@ -352,72 +272,70 @@ htsFile *openBAM(const char *fname){
   return fp;
 }
 
-
-int bam_iter_read1_angsd(htsFile *fp, iter_t *iter, aRead &b) {
-  int ret;
-  if (iter && iter->finished) return -2;
-  if (iter == 0 || iter->from_first) {
-    //fprintf(stderr,"[%s] reading\n",__FUNCTION__);
-    ret = bam_read2(fp, b);
-    if (ret < 0 && iter) iter->finished = 1;
-    return ret;
-  }
-  if (iter->off == 0) return -1;
-  for (;;) {
-    if (iter->curr_off == 0 || iter->curr_off >= iter->off[iter->i].chunk_end) { // then jump to the next chunk
-      if (iter->i == iter->n_off - 1) {
-	ret = -1; break; 
-      } // no more chunks
-      //      if (iter->i >= 0) assert(iter->curr_off == iter->off[iter->i].chunk_end); // otherwise bug
-      if (iter->i < 0 || iter->off[iter->i].chunk_end != iter->off[iter->i+1].chunk_beg) { // not adjacent chunks; then seek
-	bgzf_seek(fp->fp.bgzf, iter->off[iter->i+1].chunk_beg, SEEK_SET);
-	iter->curr_off = bgzf_tell(fp->fp.bgzf);
+int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b,bam_hdr_t *hdr) {
+  int r;
+  bam1_t *bb=bam_init1();
+  
+  if(iter->hts_itr==NULL){
+    r= bam_read2(fp, b,hdr);
+  }else {
+  bam_iter_reread :
+    r = sam_itr_next(fp, iter->hts_itr, bb);
+    fprintf(stderr,"rit:%d\n");
+    if(r!=-1) {
+      bam_t_to_aRead(bb,b);
+      {
+	extern abcGetFasta *gf;
+	if(b.flag&4)
+	  goto bam_iter_reread;
+	
+	
+	if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
+	  return 1;
+	}
+	
+	//check if read was bad
+	if(remove_bads ){
+	  if(b.flag>=256)
+	    goto bam_iter_reread;
+	}
+	
+	
+	//check if orphan read, 
+	if(only_proper_pairs&&(b.flag%2) ){//only check if pairend
+	  if(!(b.flag&BAM_FPROPER_PAIR))
+	    goto bam_iter_reread;
+	}if(uniqueOnly&& getNumBest(getAuxStart(&b),b.vDat+b.block_size)!=1)
+	   goto bam_iter_reread;
+	
+	
+	if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
+	  if(baq){
+	    bam_prob_realn_core(b,gf->ref->seqs,baq);
+	  }
+	}
+	
+	if(gf->ref!=NULL&&gf->ref->curChr==b.refID){
+	  if(adjustMapQ!=0){
+	    assert(gf->ref!=NULL);
+	    int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
+	    if(q<0)
+	      goto bam_iter_reread;
+	    if(q<b.mapQ)
+	      b.mapQ = q;
+	  }
+	}
+	if(b.mapQ<minMapQ)
+	  goto bam_iter_reread;
       }
-      ++(iter->i);
+      
+      
     }
-    //    fprintf(stderr,"in the for looop2 curr_off=%lu\n",iter->curr_off);
-    if ((ret = bam_read2(fp, b)) >= 0) {
-      iter->curr_off = bgzf_tell(fp->fp.bgzf);
-      //      fprintf(stderr,"in the for looop3 curr_off=%lu\n",iter->curr_off);
-      if (b.refID != iter->tid || b.pos >= iter->end) { // no need to proceed
-	//	fprintf(stderr,"in the for looop4 no ned to procedd:%lu\n",iter->curr_off);
-	//	fprintf(stderr,"bamret=%d\n", bam_validate1(NULL, b));
-	ret = bam_validate1(NULL, b)? -1 : -5; // determine whether end of region or error
-
-	break;
-      }
-      else if (is_overlap(iter->beg, iter->end, b)) return ret;
-    } else break; // end of file or error
+    
   }
-  //  fprintf(stderr,"asdf;laksdf;alsdkfj ret=%d\n",ret);
-  iter->finished = 1;
-  return ret;
-}
-
-int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &bb) {
-  //  fprintf(stderr,"[%s] iter:%p iter.hts_hti:%p\n",__FUNCTION__,iter,iter->hts_itr);
-  switch (fp->format.format) {
-  case bam: {
-    return bam_iter_read1_angsd(fp,iter,bb);
-  }
-  case cram:{
-
-    int r;
-    if(iter->hts_itr!=NULL){
-      bam1_t *b=bam_init1();
-      r = sam_itr_next(fp, iter->hts_itr, b);
-      if(r!=-1)
-	bam_t_to_aRead(b,bb);
-      bam_destroy1(b); 
-    }else
-      r= bam_read2(fp, bb);
-   
-    return r; 
-  }
-  default:
-    fprintf(stderr,"not implemented\n");
-  }
-
+  bam_destroy1(bb); 
+  
+  return r; 
 }
 
 

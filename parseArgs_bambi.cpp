@@ -6,7 +6,6 @@
 #include "parseArgs_bambi.h"
 #include "shared.h"
 #include "analysisFunction.h"
-#include "indexer.h"
 
 // below is default samtools parameters
 int uniqueOnly = 0;
@@ -23,6 +22,79 @@ char *regfiles = NULL;
 
 unsigned int includeflags = 2;
 unsigned int discardflags = 4;
+
+
+int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,const aMap *revMap) {
+  aMap::const_iterator it;
+   if(strrchr(extra,':')==NULL){//only chromosomename
+     if((it = revMap->find(extra))==revMap->end()){
+       fprintf(stderr,"[%s.%s():%d] Problems finding chromosome: \'%s\'\n",__FILE__,__FUNCTION__,__LINE__,extra);
+       fflush(stderr);
+       exit(0);
+       return -1;
+     }
+     ref = it->second;
+     start =0;
+     stop = hd->target_len[ref];
+     return 1;
+   }
+
+   char *tok = strtok(extra,":");
+   if((it =revMap->find(tok))==revMap->end()){
+       fprintf(stderr,"[%s.%s():%d] (-r) Problems finding chromosome: \'%s\'\n",__FILE__,__FUNCTION__,__LINE__,extra);
+       fflush(stderr);
+       exit(0);
+       return -1;
+   }
+   ref = it->second;
+
+   start =0;
+   stop = hd->target_len[ref];
+   tok = extra+strlen(tok)+1;//tok now contains the rest of the string
+
+   if(strlen(tok)==0)//not start and/or stop ex: chr21:
+     return 1;
+
+
+   if(tok[0]=='-'){//only contains stop ex: chr21:-stop
+     tok =strtok(tok,"-");
+
+     stop = atoi(tok);
+   }else{
+     //catch single point
+     int isProper =0;
+     for(size_t i=0;i<strlen(tok);i++)
+       if(tok[i]=='-'){
+	 isProper=1;
+	 break;
+       }
+     //fprintf(stderr,"isProper=%d\n",isProper);
+     if(isProper){
+       tok =strtok(tok,"-");
+       start = atoi(tok)-1;//this is important for the zero offset
+       tok = strtok(NULL,"-");
+       if(tok!=NULL)
+	 stop = atoi(tok);
+     }else{
+       //single point
+       stop = atoi(tok);
+       start =stop -1;
+
+     }
+     
+   }
+   if(stop<start){
+     fprintf(stderr,"endpoint:%d is larger than startpoint:%d\n",start,stop);
+     exit(0);
+     
+   }
+   if(0){
+     fprintf(stderr,"[%s] ref=%d,start=%d,stop=%d\n",__FUNCTION__,ref,start,stop);
+     exit(0);
+   }
+   return 1;
+ }
+
 
 
 void printFlagInfo(FILE *fp,unsigned int f){

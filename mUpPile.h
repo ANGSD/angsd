@@ -43,7 +43,7 @@ typedef struct{
 typedef struct{
   htsFile *fp;
   char *fn;
-  bam_hdr_t *hd;
+  bam_hdr_t *hdr;
   int isEOF;
   int regionDone;
   iter_t it;
