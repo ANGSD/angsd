@@ -1,4 +1,12 @@
-//based on SAMtools code
+/*
+  angsd thorfinn@binf.ku.dk
+  27 feb 2015
+  
+  functions to read one single read using htslib
+  
+ */
+
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -6,7 +14,7 @@
 #include <ctype.h>
 #include <cmath>
 #include <htslib/hts.h>
-#include "bams.h"
+#include "pop1_read.h"
 #include "bam_md.h"
 #include "abcGetFasta.h"
 
@@ -72,20 +80,6 @@ int restuff(bam1_t *b){
   
   return 1;
 
-}
-
-htsFile *openBAM(const char *fname){
-  htsFile *fp =NULL;
-  if((fp=sam_open(fname,"r"))==NULL ){
-    fprintf(stderr,"[%s] nonexistant file: %s\n",__FUNCTION__,fname);
-    exit(0);
-  }
-  const char *str = strrchr(fname,'.');
-  if(str&&strcasecmp(str,".bam")!=0&&str&&strcasecmp(str,".cram")!=0){
-    fprintf(stderr,"\t-> file:\"%s\" should be suffixed with \".bam\" or \".cram\"\n",fname);
-    exit(0);
-  }
-  return fp;
 }
 
 int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr) {

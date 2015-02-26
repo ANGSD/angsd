@@ -10,7 +10,6 @@ int SIG_COND =1;
 #include <map>
 #include <zlib.h>
 #include "bambi_interface.h"
-#include "bams.h" // <- only used for getting the header, 
 #include "argStruct.h"
 
 #ifndef _types_t

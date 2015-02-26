@@ -6,9 +6,7 @@
 
 #include <htslib/kstring.h>
 #include <htslib/hts.h>
-#include "bams.h"
-
-
+#include "makeReadPool.h"
 
 /*
   node for uppile for a single individual for a single site
@@ -39,16 +37,6 @@ typedef struct{
   int length;
   int refId;
 }chunky;
-
-typedef struct{
-  htsFile *fp;
-  char *fn;
-  bam_hdr_t *hdr;
-  int isEOF;
-  int regionDone;
-  iter_t it;
-  regs regions;
-}bufReader;
 
 
 

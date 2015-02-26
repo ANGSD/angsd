@@ -13,7 +13,6 @@
 #include <stdint.h>
 #include <algorithm>
 #include <htslib/hts.h>
-#include "bams.h"
 #include "mUpPile.h"
 #include "parseArgs_bambi.h"
 #include "abc.h"
@@ -28,6 +27,21 @@ abcGetFasta *gf=NULL;
 extern int SIG_COND;
 
 static const char *bam_nt16_rev_table2 = "=ACMGRSVTWYHKDBN";
+
+
+htsFile *openBAM(const char *fname){
+  htsFile *fp =NULL;
+  if((fp=sam_open(fname,"r"))==NULL ){
+    fprintf(stderr,"[%s] nonexistant file: %s\n",__FUNCTION__,fname);
+    exit(0);
+  }
+  const char *str = strrchr(fname,'.');
+  if(str&&strcasecmp(str,".bam")!=0&&str&&strcasecmp(str,".cram")!=0){
+    fprintf(stderr,"\t-> file:\"%s\" should be suffixed with \".bam\" or \".cram\"\n",fname);
+    exit(0);
+  }
+  return fp;
+}
 
 
 

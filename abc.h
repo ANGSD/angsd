@@ -4,7 +4,6 @@
 #define EM_START 0.001
 #define EM_NITER 100
 
-#include "bams.h"
 #include "argStruct.h"
 #include "analysisFunction.h"
 class abc{

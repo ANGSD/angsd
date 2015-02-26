@@ -1,12 +1,11 @@
-//based on SAMtools code
-
-#ifndef BAMS_H
-#define BAMS_H
+#pragma once
  
 #include <stdint.h>
 #include <cstdio>
 #include <htslib/hts.h>
 #include <htslib/sam.h>
+#include "pop1_read.h"
+#include "argStruct.h"
 #define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
 //#define NTHREADS 10
 #define UPPILE_LEN 8
@@ -33,13 +32,16 @@ typedef struct{
 }sglPoolb;
 
 
-
-
 typedef struct{
-  hts_idx_t *hts_idx;
-  hts_itr_t *hts_itr;
-}iter_t;
+  htsFile *fp;
+  char *fn;
+  bam_hdr_t *hdr;
+  int isEOF;
+  int regionDone;
+  iter_t it;
+  regs regions;
+}bufReader;
 
-int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr);
-int restuff(bam1_t *b);
-#endif
+
+
+int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPoolb *ret,int &readNlines,int ref,int &pickStop);
