@@ -1,3 +1,4 @@
+##modied from htslib makefile
 CFLAGS += $(FLAGS)
 CXXFLAGS += $(FLAGS)
 
@@ -16,7 +17,28 @@ HTSDIR = ../htslib
 HTSLIB = $(HTSDIR)/libhts.a
 BGZIP  = $(HTSDIR)/bgzip
 
-all: $(PRG)
+PACKAGE_VERSION  = 0.616
+NUMERIC_VERSION = $(PACKAGE_VERSION)
+ifneq "$(wildcard .git)" ""
+original_version := $(PACKAGE_VERSION)
+PACKAGE_VERSION := $(shell git describe --always --dirty)
+ifneq "$(subst ..,.,$(subst 0,,$(subst 1,,$(subst 2,,$(subst 3,,$(subst 4,,$(subst 5,,$(subst 6,,$(subst 7,,$(subst 8,,$(subst 9,,$(PACKAGE_VERSION))))))))))))" "."
+empty :=
+NUMERIC_VERSION := $(subst $(empty) ,.,$(wordlist 1,2,$(subst ., ,$(original_version))) 255)
+endif
+
+
+all: version.h $(PRG)
+
+
+version.h: $(if $(wildcard version.h),$(if $(findstring "$(PACKAGE_VERSION)",$(shell cat version.h)),,force))
+endif
+
+version.h:
+	echo '#define ANGSD_VERSION "$(PACKAGE_VERSION)"' > $@
+
+print-version:
+	@echo $(PACKAGE_VERSION)
 
 .PHONY: misc clean htshook test
 
@@ -42,7 +64,7 @@ angsd: $(OBJ)
 
 
 testclean:
-	rm -rf test/sfstest/output test/tajima/output test/*.log 
+	rm -rf test/sfstest/output test/tajima/output test/*.log version.h
 
 clean:	testclean
 	rm  -f *.o *.d angsd angsd.static *~

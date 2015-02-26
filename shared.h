@@ -1,6 +1,6 @@
-#ifdef __WITH_MAIN__
-int SIG_COND =1;
-#endif
+
+extern int SIG_COND;
+
 
 
 
@@ -22,7 +22,6 @@ typedef unsigned int suint;
 // struct for covar class - classy
 
 enum{INPUT_BAM,INPUT_GLF,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP};
-#define VERSION 0.615
 
 typedef struct {
 

@@ -1,8 +1,10 @@
+#include <libgen.h>//for checking if output dir exists 'dirname'
 #include "abc.h"
 #include "shared.h"
 #include "multiReader.h"
 #include "parseArgs_bambi.h"
-#include <libgen.h>//for checking if output dir exists 'dirname'
+#include "version.h"
+
 #define ARGS ".arg"
 void checkIfDir(char *fname){
   char *dirNam2 = strdup(fname);
@@ -259,8 +261,7 @@ multiReader::multiReader(int argc,char**argv){
   for(int i=0;i<argc;i++)
     fprintf(args->argumentFile,"%s ",argv[i]);
   //  fprintf(args->argumentFile,"\n\n");
-  extern double VERS;
-  fprintf(args->argumentFile,"\n\t-> angsd version: %.3f\t build(%s %s)\n",VERS,__DATE__,__TIME__); 
+  fprintf(args->argumentFile,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
   void printTime(FILE *fp);
   printTime(args->argumentFile); 
 
