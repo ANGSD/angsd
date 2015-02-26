@@ -15,7 +15,7 @@
 #include <cassert>
 #include <cmath>
 
-#include "kstring.h"//<-used for buffered output
+#include <htslib/kstring.h>
 #include "abcFreq.h"
 
 int abcFreq::emIter = EM_NITER;
@@ -353,7 +353,7 @@ void abcFreq::print(funkyPars *pars) {
     if(pars->keepSites[s]==0)
       continue;
     //plugin chr,pos,major,minor
-    kputs(header->name[pars->refId],&bufstr);kputc('\t',&bufstr);
+    kputs(header->target_name[pars->refId],&bufstr);kputc('\t',&bufstr);
     kputw(pars->posi[s]+1,&bufstr);kputc('\t',&bufstr);
     kputc(intToRef[pars->major[s]],&bufstr);kputc('\t',&bufstr);
     kputc(intToRef[pars->minor[s]],&bufstr);kputc('\t',&bufstr);
@@ -395,7 +395,7 @@ void abcFreq::print(funkyPars *pars) {
       if(pars->keepSites[s]==0)
 	continue;
       // fprintf(stderr,"keepsites=%d\n",pars->keepSites[s]);
-      kputs(header->name[pars->refId],&bufstr);
+      kputs(header->target_name[pars->refId],&bufstr);
       kputc('_',&bufstr);
       kputw(pars->posi[s]+1,&bufstr);
       kputc('\t',&bufstr);

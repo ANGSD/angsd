@@ -1,7 +1,11 @@
 CC=gcc
 CXX=g++
 
-FLAGS=-O3 -D_USE_KNETFILE
+FLAGS=-O3
+
+HTSDIR = ../../htslib
+HTSLIB = $(HTSDIR)/libhts.a
+
 
 
 all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix
@@ -26,11 +30,11 @@ splitgl: splitgl.c
 realSFS: realSFS.cpp realSFS_saf2.cpp
 	$(CXX) $(FLAGS) realSFS.cpp bfgs.cpp -o realSFS -lz -lpthread -Wno-write-strings
 	cp realSFS emOptim2
-smartCount:	smartCount.c ../bgzf.o ../knetfile.o ../hfile.o ../hfile_net.o
-	$(CC) $(FLAGS) smartCount.c -I../ ../hfile_net.o  ../bgzf.o -lz -o smartCount -std=gnu99 ../knetfile.o ../hfile.o -lpthread
+smartCount:	smartCount.c  
+	$(CC) $(FLAGS) smartCount.c -I$(HTSDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTSLIB)
 
-thetaStat:	thetaStat.cpp stats.cpp ../kstring.o ../bgzf.o ../knetfile.o ../hfile.o ../hfile_net.o
-	$(CXX) $(FLAGS) thetaStat.cpp -I../ ../hfile_net.o ../kstring.o ../bgzf.o ../knetfile.o ../hfile.o -lz -o thetaStat -lpthread
+thetaStat:	thetaStat.cpp stats.cpp 
+	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTSDIR)/htslib  -lz -o thetaStat -lpthread $(HTSLIB)
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm
 

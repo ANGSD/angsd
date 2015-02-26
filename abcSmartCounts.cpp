@@ -38,22 +38,22 @@ void abcSmartCounts::changeChr(int newRefId){
   //  fprintf(stderr,"cur:%d new:%d\n",curChr,newRefId);
   if(curChr!=-1){
     int64_t retVal =bgzf_tell(fbin); 
-    int clen = strlen(header->name[curChr]);
+    int clen = strlen(header->target_name[curChr]);
     bgzf_write(fbin,&clen,sizeof(int));
-    bgzf_write(fbin,header->name[curChr],clen);
+    bgzf_write(fbin,header->target_name[curChr],clen);
     bgzf_write(fbin,&len,sizeof(int));
     for(int i=0;i<4;i++)
       bgzf_write(fbin,counts[i],len);//write len of chr
     
     //write index stuff
-    fprintf(stderr,"Writing index for chr: %s\n",header->name[curChr]);
+    fprintf(stderr,"Writing index for chr: %s\n",header->target_name[curChr]);
     fwrite(&clen,sizeof(int),1,fidx);
-    fwrite(header->name[curChr] ,sizeof(char),clen,fidx);
+    fwrite(header->target_name[curChr] ,sizeof(char),clen,fidx);
     fwrite(&len,sizeof(int),1,fidx);
     fwrite(&retVal,sizeof(int64_t),1,fidx);
   }
   curChr = newRefId;
-  len = header->l_ref[curChr];
+  len = header->target_len[curChr];
   for(int i=0;i<4;i++){
     delete [] counts[i];
     counts[i] = new unsigned char[len];
@@ -100,16 +100,16 @@ abcSmartCounts::~abcSmartCounts(){
     return;
 
   int64_t retVal =bgzf_tell(fbin); 
-  int clen = strlen(header->name[curChr]);
+  int clen = strlen(header->target_name[curChr]);
   bgzf_write(fbin,&clen,sizeof(int));
-  bgzf_write(fbin,header->name[curChr],clen);
+  bgzf_write(fbin,header->target_name[curChr],clen);
   bgzf_write(fbin,&len,sizeof(int));
   for(int i=0;i<4;i++)
     bgzf_write(fbin,counts[i],len);//write len of chr
   
   //write index stuff
   fwrite(&clen,sizeof(int),1,fidx);
-  fwrite(header->name[curChr],sizeof(char),clen,fidx);
+  fwrite(header->target_name[curChr],sizeof(char),clen,fidx);
   fwrite(&len,sizeof(int),1,fidx);
   fwrite(&retVal,sizeof(int64_t),1,fidx);
 

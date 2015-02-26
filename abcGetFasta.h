@@ -1,6 +1,6 @@
 
 
-#include "faidx.h"
+#include <htslib/faidx.h>
 #include "abc.h"//ONLY USED for reference stuff in mpileup output.
 #include "shared.h"//ONLY USED for reference stuff in mpileup output.
 //generic struct for holding the faidx, the mutex and the actual data.

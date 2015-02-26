@@ -4,10 +4,9 @@
 #include "argStruct.h"
 #include "bambi_interface.h"
 
-#include "kstring.h"
-#include "bams.h"
-
-
+#include <htslib/kstring.h>
+#include <htslib/hts.h>
+#include "makeReadPool.h"
 
 /*
   node for uppile for a single individual for a single site
@@ -38,20 +37,6 @@ typedef struct{
   int length;
   int refId;
 }chunky;
-
-
-
-
-typedef struct{
-  char *bamfname;
-  char *baifname;
-  BGZF *fp;
-  aHead *hd;
-  int isEOF;
-   int regionDone;
-  iter_t it;
-  regs regions;
-}bufReader;
 
 
 

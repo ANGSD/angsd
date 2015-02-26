@@ -37,8 +37,10 @@
 
 const char*fname1 = NULL;
 const char*fname2 = NULL;//only used for 2dsfs
+const char*fname3 = NULL;//only used for 3dsfs
 int chr1=0;
 int chr2=0; //only used for 2dsfs
+int chr3=0; //only used for 2dsfs
 
 int dim =0; //will be (chr1+1)*(chr2+1); for the 2dsfs nChr1+1 for the 1dsfs
 
@@ -125,6 +127,7 @@ typedef struct emPars_t{
   double *outparameters;
   Matrix<double> *GL1;
   Matrix<double> *GL2;
+  Matrix<double> *GL3;
   int from;
   int to;
   double lik;
@@ -688,6 +691,37 @@ void setThreadPars(Matrix<double> *GL1,Matrix<double> *GL2,double *sfs,int nThre
 }
 
 
+void setThreadPars(Matrix<double> *GL1,Matrix<double> *GL2,Matrix<double>*GL3,double *sfs,int nThreads){
+  emp = new emPars[nThreads];
+  int blockSize = GL1->x/nThreads;
+  for(int i=0;i<nThreads;i++){
+    emp[i].threadId = i;
+    emp[i].GL1=GL1;
+    emp[i].GL2=GL2;
+    emp[i].GL3=GL3;
+    emp[i].from =0;
+    emp[i].to=blockSize;
+    emp[i].sfs = sfs;
+    emp[i].post=new double[dim];
+    emp[i].grad=new double[dim-1];
+  }
+  //redo the from,to
+  for(int i=1;i<nThreads;i++){
+    emp[i].from = emp[i-1].to;
+    emp[i].to = emp[i].from+blockSize;
+  }
+  //fix last end point
+  emp[nThreads-1].to=GL1->x;
+#if 0
+  for(int i=0;i<nThreads;i++)
+    fprintf(stderr,"%d:(%d,%d)=%d ",emp[i].threadId,emp[i].from,emp[i].to,emp[i].to-emp[i].from);
+  fprintf(stderr,"\n");
+#endif 
+  
+  thd= new pthread_t[nThreads];
+}
+
+
 
 void *lik2_slave(void *p){
   emPars &pars = emp[(size_t) p];
@@ -802,6 +836,41 @@ void handler(int s) {
 
 
 void em2(double *sfs,Matrix<double> *GL1,Matrix<double> *GL2,double tole=0.01,int maxIter=10){
+  double oldLik,lik;
+  if(nThreads>1)
+    oldLik = lik2_master();
+  else
+    oldLik = lik2(sfs,GL1,GL2,0,GL1->x);
+  fprintf(stderr,"startlik=%f\n",oldLik);
+
+  double *tmp = new double[dim];//<- wont be cleaned up, but is only allocated once
+  for(int it=0;SIG_COND&&it<maxIter;it++) {
+    if(nThreads>1)
+      emStep2_master(tmp);
+    else
+      emStep2(sfs,GL1,GL2,tmp,0,GL1->x);
+
+    for(int i=0;i<dim;i++)
+      sfs[i]= tmp[i];
+    
+    if(nThreads>1)
+      lik = lik2_master();
+    else
+      lik = lik2(sfs,GL1,GL2,0,GL1->x);
+    
+    fprintf(stderr,"[%d] lik=%f diff=%g\n",it,lik,fabs(lik-oldLik));
+
+    if(fabs(lik-oldLik)<tole){
+      oldLik=lik;
+      break;
+    }
+    oldLik=lik;
+  }
+  
+  
+}
+
+void em3(double *sfs,Matrix<double> *GL1,Matrix<double> *GL2,Matrix<double> *GL3,double tole=0.01,int maxIter=10){
   double oldLik,lik;
   if(nThreads>1)
     oldLik = lik2_master();
@@ -972,6 +1041,117 @@ int main_2dsfs(int argc,char **argv){
 }
 
 
+int main_3dsfs(int argc,char **argv){
+  if(argc==1){
+    fprintf(stderr,"./emOptim2 2dsfs pop1 pop2 nChr1 nChr2 [-start FNAME -P nThreds -tole tole -maxIter ] (only works if the two saf files covers the same region)\n");
+    return 0;
+  }
+  argv++;
+  argc--;
+  fname1 = *(argv++);
+  fname2 = *(argv++);
+  fname3 = *(argv++);
+  argc -=3;
+  chr1 = atoi(*(argv++));
+  chr2 = atoi(*(argv++));
+  chr3 = atoi(*(argv++));
+  argc -=3;
+  getArgs(argc,argv);
+  if(nSites==0){
+    if(fsize(fname1)+fsize(fname2)+fsize(fname3)>getTotalSystemMemory())
+      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
+    //this doesnt make sense if ppl supply a filelist containing safs
+     nSites=calcNsites(fname1,chr1);
+  }
+  fprintf(stderr,"fname1:%sfname2:%sfname3:%s chr1:%d chr2:%d chr3:%d startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",fname1,fname2,fname3,chr1,chr2,chr3,sfsfname,nThreads,tole,maxIter,nSites);
+  float bytes_req_megs = nSites*(sizeof(double)*(chr1+1) + sizeof(double)*(chr2+1)+sizeof(double)*(chr3+1)+2*sizeof(double*))/1024/1024;
+  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
+  //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
+  fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+  
+#if 0
+  //read in positions, not used, YET...
+  std::vector<int> p1 = getPosi(fname1);
+  std::vector<int> p2 = getPosi(fname2);
+  fprintf(stderr,"nSites in pop1: %zu nSites in pop2: %zu\n",p1.size(),p2.size());
+#endif
+
+  if(nSites==0){
+    if((calcNsites(fname1,chr1)!=calcNsites(fname2,chr2))||((calcNsites(fname1,chr1)!=calcNsites(fname3,chr2)))){
+      fprintf(stderr,"Problem with number of sites in file: %s and %s and %s\n",fname1,fname2,fname3);
+      exit(0);
+    }
+    nSites=calcNsites(fname1,chr1);
+  }
+  gzFile gz1=getGz(fname1);
+  gzFile gz2=getGz(fname2);
+  gzFile gz3=getGz(fname3);
+  
+  dim=(chr1+1)*(chr2+1)*(chr3+1);
+  
+  Matrix<double> GL1=alloc(nSites,chr1+1);
+  Matrix<double> GL2=alloc(nSites,chr2+1);
+  Matrix<double> GL3=alloc(nSites,chr3+1);
+  dim=GL1.y*GL2.y*GL3.y;
+  
+  double *sfs = new double[dim];
+  while(1){
+    if(isList ==0){
+      readGL(gz1,nSites,chr1,GL1);
+      readGL(gz2,nSites,chr2,GL2);
+      readGL(gz3,nSites,chr3,GL3);
+    }else{
+      readGL2(gz1,nSites,chr1,GL1);
+      readGL2(gz2,nSites,chr2,GL2);
+      readGL2(gz3,nSites,chr3,GL3);
+    }
+      
+    assert(GL1.x==GL2.x);
+    assert(GL1.x==GL3.x);
+    if(GL1.x==0)
+      break;
+    
+    if(sfsfname!=NULL){
+      readSFS(sfsfname,dim,sfs);
+    }else{
+      for(int i=0;i<dim;i++)
+	sfs[i] = (i+1)/((double)dim);
+      normalize(sfs,dim);
+    }
+    
+    setThreadPars(&GL1,&GL2,&GL3,sfs,nThreads);
+    if(calcLike==0){
+      if(SIG_COND) 
+	em3(sfs,&GL1,&GL2,&GL3,tole,maxIter);
+    }
+    double lik;
+    if(nThreads>1)
+      lik = lik1_master();
+    else
+      lik = lik1(sfs,&GL1,0,GL1.x);
+      
+    fprintf(stderr,"likelihood: %f\n",lik);
+#if 1
+    int inc=0;
+    for(int x=0;x<chr1+1;x++){
+      for(int y=0;y<chr2+1;y++)
+	fprintf(stdout,"%f ",log(sfs[inc++]));
+      fprintf(stdout,"\n");
+    }
+#endif
+    if(isList==1)
+      break;
+  }
+  dalloc(GL1,nSites);
+  dalloc(GL2,nSites);
+  dalloc(GL3,nSites);
+  gzclose(gz1);
+  gzclose(gz2);
+  gzclose(gz3);
+  return 0;
+}
+
+
 
 
 int main_1dsfs(int argc,char **argv){
@@ -1097,6 +1277,8 @@ int main(int argc,char **argv){
 
   if(!strcasecmp(*argv,"2dsfs"))
     main_2dsfs(argc,argv);
+  else if(!strcasecmp(*argv,"3dsfs"))
+    main_3dsfs(argc,argv);
   else
     main_1dsfs(argc,argv);
   

@@ -4,17 +4,18 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <cassert>
-#include "bams.h"
-#include "kstring.h"
-#include "indexer.h"
+#include <htslib/hts.h>
 #include "mUpPile.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
-
+#include "makeReadPool.h"
+#include "pop1_read.h"
 extern int SIG_COND;
 extern int minQ;
 extern int trim;
-static const char *bam_nt16_rev_table = "=ACMGRSVTWYHKDBN";
+#define bam_nt16_rev_table seq_nt16_str
+//static const char *bam_nt16_rev_table = "=ACMGRSVTWYHKDBN";
+
 
 /*
   When merging different nodes, we are using a greedy but fast approach,
@@ -33,6 +34,13 @@ T getmax(const T *ary,size_t len){
       high=ary[i];
   }
   return high;
+}
+
+
+void dalloc (sglPoolb &ret){
+  delete [] ret.reads;
+  delete [] ret.first;
+  delete [] ret.last;
 }
 
 
@@ -185,289 +193,12 @@ void realloc(tNode *d,int newsize){
 }
 
 
-void realloc(sglPool &ret,int l){
-  ret.m =l;
-  kroundup32(ret.m);
-  aRead *tmp = new aRead[ret.m];
-  memcpy(tmp,ret.reads,sizeof(aRead)*ret.l);
-  delete [] ret.reads;
-  ret.reads = tmp;
-  
-  int *tmpI = new int[ret.m];
-  memcpy(tmpI,ret.first,sizeof(int)*ret.l);
-  delete [] ret.first;
-  ret.first = tmpI;
-  
-    
-  tmpI = new int[ret.m];
-  memcpy(tmpI,ret.last,sizeof(int)*ret.l);
-  delete [] ret.last;
-  ret.last = tmpI;
-  
-}
-
-
-
-void read_reads_usingStop(BGZF *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone) {
-#if 0
-  fprintf(stderr,"[%s]\n",__FUNCTION__);
-#endif 
-
-  //if should never be in this function if we shouldnt read from the file.
-  assert(rdObjRegionDone!=1 &&rdObjEof!=1 );
-  
-  extern int bam_iter_read1(BGZF *fp, iter_t *iter, aRead &b);
-
-  if((nReads+ret.l)>ret.m)
-    realloc(ret,nReads+ret.l);
-
-
-  //this is the awkward case this could cause an error in some very unlikely scenario.
-  //whith the current buffer empty and the first read being a new chromosome. 
-  //this is fixed good job monkey boy
-  while(ret.l==0){
-    aRead &b = ret.reads[0];
-    int tmp;
-    b.vDat = new uint8_t[RLEN];
-    if((tmp=bam_iter_read1(fp,it,b))<0){//FIXME
-      if(tmp==-2){
-	rdObjEof =1;
-	//	ret.isEOF =1;
-	isEof--;
-      }else
-	rdObjRegionDone =1;
-      break;
-    }
-    if(b.nCig!=0){
-      ret.first[ret.l] = b.pos;
-      ret.last[ret.l] = bam_calend(b,getCig(&b));
-      ret.l++;
-      nReads--;//breaking automaticly due to ret.l++
-    }
-  }
-
-   /*
-    now do the general loop,
-    1) read an alignemnt calulate start and end pos
-    check
-    a) if same chromosome that a new read has a geq FINE
-    b) if same but < then UNSORTED
-    
-  */ 
-  int i=0;
-  int tmp;
-  int buffed=0;
-  while(1) {
-    if(i+ret.l>=(ret.m-1)){
-      ret.l += i;
-      i=0;
-      realloc(ret,ret.m+1);//will double buffer
-    }
-    
-    aRead &b = ret.reads[i+ret.l];
-    b.vDat = new uint8_t[RLEN];
-    if((tmp=bam_iter_read1(fp,it,b))<0){
-      if(tmp==-2){
-	rdObjEof =1;
-	isEof--;
-      }else
-	rdObjRegionDone =1;
-
-      delete [] b.vDat;
-      break;
-    }if(b.nCig==0){
-      delete [] b.vDat;
-      continue;
-    }
-    //general fine case
-    
-    if((refToRead==b.refID)&&( b.pos >= ret.first[ret.l+i-1])&&(b.pos<stop)){
-      ret.first[ret.l+i] = b.pos;
-      ret.last[ret.l+i] = bam_calend(b,getCig(&b));
-    }else if((refToRead==b.refID)&&b.pos>=stop){
-      buffed=1;
-      ret.bufferedRead = b;
-      break;
-    }
-    else if(b.refID>refToRead){
-      buffed=1;
-      ret.bufferedRead = b;
-      rdObjRegionDone =1;
-      break;
-    }else if(ret.first[ret.l+i-1]>b.pos){
-      fprintf(stderr,"unsorted file detected will exit\n");
-      fflush(stderr);
-      exit(0);
-    }
-    i++;
-  }
-  ret.nReads =ret.l+i;
-  ret.l = ret.nReads;
-}
-
-
-//nothing with buffered here
-void read_reads_noStop(BGZF *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int &rdObjEof,int &rdObjRegionDone) {
-#if 0
-  fprintf(stderr,"\t->[%s] buffRefid=%d\trefToRead=%d\n",__FUNCTION__,ret.bufferedRead.refID,refToRead);
-#endif
-  assert(rdObjEof==0 && ret.bufferedRead.refID==-2);
-  
-  extern int bam_iter_read1(BGZF *fp, iter_t *iter, aRead &b);
-
-  if((nReads+ret.l)>ret.m)
-    realloc(ret,nReads+ret.l);
- 
-  //start by allocating the memeory we need
-  for(int i=0;i<nReads;i++){
-    aRead b;
-    b.vDat=new uint8_t[RLEN];
-    ret.reads[ret.l+i] =b;
-  }
-
-  //this is the awkward case this could cause an error in some very unlikely scenario.
-  //whith the current buffer empty and the first read being a new chromosome. 
-  //this is fixed good job monkey boy
-  while(ret.l==0){
-    aRead &b = ret.reads[0];
-    int tmp;
-    if((tmp=bam_iter_read1(fp,it,b))<0){//FIXME
-      if(tmp==-2){
-	rdObjEof =1;
-	isEof--;
-      }else
-	rdObjRegionDone =1;
-      break;
-    }
-    //check that the read is == the refToread
-    if(b.refID!=refToRead){
-       ret.bufferedRead = b;
-       rdObjRegionDone =1;
-       return;
-    }
-
-    if(b.nCig!=0){
-      ret.first[ret.l] = b.pos;
-      ret.last[ret.l] = bam_calend(b,getCig(&b));
-      ret.l++;
-      nReads--;
-    }
-  }
-
-
-  /*
-    now do the general loop,
-    1) read an alignemnt calulate start and end pos
-    check
-    a) if same chromosome that a new read has a geq FINE
-    b) if same but < then UNSORTED
-    
-  */ 
-  int i;
-  int tmp;
-  int buffed=0;
-  for( i=0;i<nReads;i++){
-    aRead &b = ret.reads[i+ret.l];
-
-    if((tmp=bam_iter_read1(fp,it,b))<0){
-      if(tmp==-2){
-	rdObjEof =1;
-	isEof--;
-      }else
-	rdObjRegionDone =1;
-      break;
-    }if(b.nCig==0){//only get reads with CIGAR
-      i--;
-      continue;
-    }
-    //general fine case
-    if((refToRead==b.refID)&&( b.pos >= ret.first[ret.l+i-1])){
-      ret.first[ret.l+i] = b.pos;
-      ret.last[ret.l+i] = bam_calend(b,getCig(&b));
-    }else if(b.refID>refToRead){
-      buffed=1;
-      ret.bufferedRead = b;
-      //      fprintf(stderr,"[%s] new chromosome detected will temporarliy stop reading at read # :%d\n",__FUNCTION__,i);
-      rdObjRegionDone =1;
-      break;
-    }else if(ret.first[ret.l+i-1]>b.pos){
-      // fprintf(stderr,"unsorted file detected will exit new=%d new(-1)=%d\n",ret.first[ret.l+i-1],b.pos);
-      fprintf(stderr,"[%s] unsorted file detected will exit new(-1)=%d new=%d,ret.l=%d i=%d\n",__FUNCTION__,ret.first[ret.l+i-1],b.pos,ret.l,i);
-      exit(0);
-    }
-    
-  }
-
-
-  if(i!=nReads){
-    for(int s=ret.l+i+buffed;s<ret.l+nReads;s++)
-      delete [] ret.reads[s].vDat;
-  }
-
-  ret.nReads =ret.l+i;
-  ret.l = ret.nReads;
-}
-
-
-//function will read data from all bamfiles, return value is the number of 'done' files
-int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPool *ret,int &readNlines,int ref,int &pickStop) {
-#if 0
-  fprintf(stderr,"\t[%s] Reading from referenceID=%d\n",__FUNCTION__,ref);
-#endif
-  int usedPicker=-1;
-  for(int ii=0;ii<nFiles;ii++) {
-    extern int *bamSortedIds;
-    int i=bamSortedIds[ii];
-    if(rd[i].regionDone||rd[i].isEOF){//if file is DONE with region go to next
-      rd[i].regionDone = 1;
-      continue;
-    }
-    
-    int pre=ret[i].l;//number of elements before
-    //function reads readNlines reads, from rd[i].fp and modifies isEOF and regionDone
-    read_reads_noStop(rd[i].fp,readNlines,notDone,ret[i],ref,&rd[i].it,rd[i].isEOF,rd[i].regionDone);
-    
-    //first check if reading caused and end of region event to occur
-    if(rd[i].regionDone||rd[i].isEOF) 
-      rd[i].regionDone = 1;
-    
-    if(ret[i].l>pre){//we could read data
-      usedPicker = i;
-      pickStop = ret[i].first[ret[i].l-1];
-      break;
-    }
-    
-  }
-  if(usedPicker==-1)  //<-this means we are done with the current chr/region
-    return nFiles;
-
-  //at this point we should have picked a picker. Thats a position=pickstop from a fileID=usedPicker that will be used as 'stopping point'
-  for(int i=0;i<nFiles;i++) {
-    if(rd[i].isEOF || rd[i].regionDone||i==usedPicker)
-      continue;
-
-#if 0
-    fprintf(stderr,"i=%d regdone=%d\tiseof=%d\n",i,rd[i].regionDone,rd[i].isEOF);
-1    fprintf(stderr," getpool on i=%d\n",i);
-#endif
-    if(ret[i].l>0&&ret[i].first[ret[i].l-1]>pickStop)
-      continue;
-    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,&rd[i].it,pickStop,rd[i].isEOF,rd[i].regionDone);
-  } 
-  int nDone =0;
-  for(int i=0;i<nFiles;i++)
-    if(rd[i].regionDone)
-      nDone++;
-    return nDone;
-
-}
-
-
 /*
   What does this do?
   returns the number of basepairs covered by np and sgl
 */
-int coverage_in_bp(nodePool *np, sglPool *sgl){
+
+int coverage_in_bp(nodePool *np, sglPoolb *sgl){
 #if 0
   for(int i=0;0&&i<sgl->readIDstop;i++)
     fprintf(stderr,"sglrange[%d]\t %d\t%d\n",i,sgl->first[i],sgl->last[i]);
@@ -496,7 +227,7 @@ int coverage_in_bp(nodePool *np, sglPool *sgl){
   return sumReg;
 }
 
-int coverage_in_bpT(nodePoolT *np, sglPool *sgl){
+int coverage_in_bpT(nodePoolT *np, sglPoolb *sgl){
 #if 0
   for(int i=0;0&&i<sgl->readIDstop;i++)
     fprintf(stderr,"sglrange[%d]\t %d\t%d\n",i,sgl->first[i],sgl->last[i]);
@@ -524,8 +255,8 @@ int coverage_in_bpT(nodePoolT *np, sglPool *sgl){
   sumReg += last-first;
   return sumReg;
 }
- 
-nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
+
+nodePool mkNodes_one_sampleb(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
   int regionLen = coverage_in_bp(np,sgl);//true covered regions
   nodePool dn;
   dn.l =0;
@@ -558,22 +289,23 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
   //parse all reads
   int r;
   for( r=0;r<sgl->readIDstop;r++) {
-    aRead rd = sgl->reads[r];
+    bam1_t *rd=sgl->reads[r];
+
     //    fprintf(stderr,"r=%d\tpos=%d\n",r,rd.pos);
     if(sgl->first[r] > last){
-      int diffs = (rd.pos-last);
+      int diffs = (rd->core.pos-last);
       offs = offs + diffs;
       last = sgl->last[r];
     }else
       last = std::max(sgl->last[r],last);
 
-    char *seq =(char *) getSeq(&rd);
-    char *quals =(char *) getQuals(&rd);
-    int nCig = rd.nCig;
+    char *seq =(char *) bam_get_seq(rd);
+    char *quals =(char *) bam_get_qual(rd);
+    int nCig = rd->core.n_cigar;
 
-    uint32_t *cigs = getCig(&rd);
+    uint32_t *cigs = bam_get_cigar(rd);
     int seq_pos =0; //position within sequence
-    int wpos = rd.pos-offs;//this value is the current position assocatied with the positions at seq_pos
+    int wpos = rd->core.pos-offs;//this value is the current position assocatied with the positions at seq_pos
     node *tmpNode =NULL; //this is a pointer to the last node beeing modified
     int hasInfo =0;//used when first part is a insertion or deletion
     int hasPrintedMaq =0;
@@ -586,8 +318,8 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
 	if(i==0){ //skip indels if beginning of a read, print mapQ
 	  tmpNode = &nds[wpos];
 	  kputc('^', &tmpNode->seq);
-	  if(rd.mapQ!=255)
-	    kputc(rd.mapQ+33, &tmpNode->seq);
+	  if(rd->core.qual!=255)
+	    kputc(rd->core.qual+33, &tmpNode->seq);
 	  else
 	    kputc('~', &tmpNode->seq);
 	  hasPrintedMaq =1;
@@ -609,8 +341,8 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
 	}
 	if(opCode==BAM_CINS){
 	  for(int ii=0;ii<opLen;ii++){
-	    char c = bam_nt16_rev_table[bam1_seqi(seq, seq_pos)];
-	    kputc(bam1_strand(&rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
+	    kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
 	    kputw(seq_pos+1,&tmpNode->pos);
 	    kputc(',',&tmpNode->pos);
 	    seq_pos++;
@@ -620,10 +352,10 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  if(i!=0){
 	    if(gf->ref==NULL)
 	      for(int ii=0;ii<opLen;ii++)
-		kputc(bam1_strand(&rd)? tolower('N') : toupper('N'),&tmpNode->seq);
+		kputc(bam_is_rev(rd)? tolower('N') : toupper('N'),&tmpNode->seq);
 	    else
 	      for(int ii=0;ii<opLen;ii++)
-		kputc(bam1_strand(&rd)? tolower(gf->ref->seqs[offs+wpos+ii+1]) : toupper(gf->ref->seqs[offs+wpos+ii+1]),&tmpNode->seq);
+		kputc(bam_is_rev(rd)? tolower(gf->ref->seqs[offs+wpos+ii+1]) : toupper(gf->ref->seqs[offs+wpos+ii+1]),&tmpNode->seq);
 	    wpos++;//write '*' from the next position and opLen more
 	  }
 	  for(int fix=wpos;wpos<fix+opLen;wpos++){
@@ -644,8 +376,8 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  tmpNode = &nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  kputc('^', &tmpNode->seq);
-	  if(rd.mapQ!=255)
-	    kputc(rd.mapQ+33, &tmpNode->seq);
+	  if(rd->core.qual!=255)
+	    kputc(rd->core.qual+33, &tmpNode->seq);
 	  else
 	    kputc('~', &tmpNode->seq);
 	  seq_pos += opLen;
@@ -660,20 +392,20 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  tmpNode->depth++;
 	  if(seq_pos==0 &&hasPrintedMaq==0){
 	    kputc('^', &tmpNode->seq);
-	    if(rd.mapQ!=255)
-	      kputc(rd.mapQ+33, &tmpNode->seq);
+	    if(rd->core.qual!=255)
+	      kputc(rd->core.qual+33, &tmpNode->seq);
 	    else
 	      kputc('~', &tmpNode->seq);
 	  }
-	  char c = bam_nt16_rev_table[bam1_seqi(seq, seq_pos)];
+	  char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
 
 	  if(gf->ref==NULL ||gf->ref->chrLen<wpos+offs)//prints the oberved allele
-	    kputc(bam1_strand(&rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	    kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
 	  else{
 	    if(refToInt[c]==refToInt[gf->ref->seqs[wpos+offs]])
-	      kputc(bam1_strand(&rd)? ',' : '.', &tmpNode->seq);
+	      kputc(bam_is_rev(rd)? ',' : '.', &tmpNode->seq);
 	    else
-	      kputc(bam1_strand(&rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	      kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
 	  }
 	  kputc(quals[seq_pos]+33, &tmpNode->qs);
 	  kputw(seq_pos+1, &tmpNode->pos);
@@ -686,7 +418,7 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
 	    tmpNode = &nds[wpos];
 	    tmpNode->refPos=wpos+offs;
 	    tmpNode->depth ++;
-	    bam1_strand(&rd)?kputc('<',&tmpNode->seq):kputc('>',&tmpNode->seq);
+	    bam_is_rev(rd)?kputc('<',&tmpNode->seq):kputc('>',&tmpNode->seq);
 	    kputw(seq_pos+1, &tmpNode->pos);
 	    kputc(quals[seq_pos]+33, &tmpNode->qs);
 	  }
@@ -694,14 +426,12 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
 	//dont care
       }else{
 	fprintf(stderr,"Problem with unsupported CIGAR opCode=%d\n",opCode);
-	printErr();//unknown CIGAR
       }
     }
     //after end of read/parsing CIGAR always put the endline char
     //  fprintf(stderr,"printing endpileup for pos=%d\n",rd->pos);
-    if(nCig!=0)
-      kputc('$', &tmpNode->seq);
-    delete [] rd.vDat;
+    kputc('$', &tmpNode->seq);
+    bam_destroy1(rd);
   }
 
   //plug the reads back up //FIXME maybe do list type instead
@@ -749,7 +479,8 @@ nodePool mkNodes_one_sample(sglPool *sgl,nodePool *np,abcGetFasta *gf) {
 }
 
 
-nodePoolT mkNodes_one_sampleT(sglPool *sgl,nodePoolT *np) {
+
+nodePoolT mkNodes_one_sampleTb(sglPoolb *sgl,nodePoolT *np) {
   int regionLen = coverage_in_bpT(np,sgl);//true covered regions
   nodePoolT dn;
   dn.l =0;
@@ -781,24 +512,25 @@ nodePoolT mkNodes_one_sampleT(sglPool *sgl,nodePoolT *np) {
   
   for( r=0;r<sgl->readIDstop;r++) {
 
-    aRead rd = sgl->reads[r];
-    int mapQ = rd.mapQ;
+    bam1_t *rd = sgl->reads[r];
+
+    int mapQ = rd->core.qual;
     if(mapQ>=255) mapQ = 20;
 
     if(sgl->first[r] > last){
-      int diffs = (rd.pos-last);
+      int diffs = (rd->core.pos-last);
       offs = offs + diffs;
       last = sgl->last[r];
     }else
       last = std::max(sgl->last[r],last);
 
-    char *seq =(char *) getSeq(&rd);
-    char *quals =(char *) getQuals(&rd);
-    int nCig = rd.nCig;
+    char *seq =(char *) bam_get_seq(rd);
+    char *quals =(char *) bam_get_qual(rd);
+    int nCig = rd->core.n_cigar;
 
-    uint32_t *cigs = getCig(&rd);
+    uint32_t *cigs = bam_get_cigar(rd);
     int seq_pos =0; //position within sequence
-    int wpos = rd.pos-offs;//this value is the current position assocatied with the positions at seq_pos
+    int wpos = rd->core.pos-offs;//this value is the current position assocatied with the positions at seq_pos
     tNode *tmpNode =NULL; //this is a pointer to the last node beeing modified
     int hasInfo = 0;
     //loop through read by looping through the cigar string
@@ -832,13 +564,13 @@ nodePoolT mkNodes_one_sampleT(sglPool *sgl,nodePoolT *np) {
 	  
 	  tmpNode->insert[tmpNode->l2] = initNodeT(opLen);
 	  for(int ii=0;ii<opLen;ii++){
-	    char c = bam_nt16_rev_table[bam1_seqi(seq, seq_pos)];
-	    tmpNode->insert[tmpNode->l2].seq[ii] = bam1_strand(&rd)? tolower(c) : toupper(c);
+	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
+	    tmpNode->insert[tmpNode->l2].seq[ii] = bam_is_rev(rd)? tolower(c) : toupper(c);
 	    tmpNode->insert[tmpNode->l2].posi[ii] = seq_pos + 1;
-	    tmpNode->insert[tmpNode->l2].isop[ii] =rd.l_seq- seq_pos - 1;
+	    tmpNode->insert[tmpNode->l2].isop[ii] =rd->core.l_qseq- seq_pos - 1;
 	    tmpNode->insert[tmpNode->l2].qs[ii] = quals[seq_pos];
-	    if( quals[seq_pos]<minQ || seq_pos + 1 < trim || rd.l_seq- seq_pos - 1 < trim)  
-	      tmpNode->insert[tmpNode->l2].seq[ii] =  bam1_strand(&rd)? tolower('n') : toupper('N');
+	    if( quals[seq_pos]<minQ || seq_pos + 1 < trim || rd->core.l_qseq- seq_pos - 1 < trim)  
+	      tmpNode->insert[tmpNode->l2].seq[ii] =  bam_is_rev(rd)? tolower('n') : toupper('N');
 	    tmpNode->insert[tmpNode->l2].mapQ[ii] = mapQ;
 	    seq_pos++;// <- important, must be after macro
 	  }
@@ -877,15 +609,15 @@ nodePoolT mkNodes_one_sampleT(sglPool *sgl,nodePoolT *np) {
 	  }
 	  
 
-	  char c = bam_nt16_rev_table[bam1_seqi(seq, seq_pos)];
-	  tmpNode->seq[tmpNode->l] = bam1_strand(&rd)? tolower(c) : toupper(c);
+	  char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
+	  tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower(c) : toupper(c);
 	  tmpNode->qs[tmpNode->l] =  quals[seq_pos];
 	
 	  tmpNode->posi[tmpNode->l] = seq_pos;
-	  tmpNode->isop[tmpNode->l] =rd.l_seq- seq_pos-1;
+	  tmpNode->isop[tmpNode->l] =rd->core.l_qseq- seq_pos-1;
 	  tmpNode->mapQ[tmpNode->l] = mapQ;
-	  if( quals[seq_pos]<minQ || seq_pos  < trim || rd.l_seq - seq_pos - 1 < trim )
-	    tmpNode->seq[tmpNode->l] = bam1_strand(&rd)? tolower('n') : toupper('N');
+	  if( quals[seq_pos]<minQ || seq_pos  < trim || rd->core.l_qseq - seq_pos - 1 < trim )
+	    tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower('n') : toupper('N');
 	  
 	  tmpNode->l++;
 	  seq_pos++;
@@ -899,12 +631,11 @@ nodePoolT mkNodes_one_sampleT(sglPool *sgl,nodePoolT *np) {
 	//dont care
       }else{
 	fprintf(stderr,"Problem with unsupported CIGAR opCode=%d\n",opCode);
-	printErr();//unknown CIGAR
       }
       //      exit(0);
     }
     //after end of read/parsing CIGAR always put the endline char
-    delete [] rd.vDat;
+    bam_destroy1(rd);
   }
 
   //plug the reads back up //FIXME maybe do list type instead
@@ -1270,30 +1001,25 @@ chunky *mergeAllNodes_old(nodePool *dn,int nFiles) {
 
 
 
-sglPool makePool(int l){
-  sglPool ret;
+
+sglPoolb makePoolb(int l){
+  sglPoolb ret;
   ret.l=0;
   ret.m=l;
   kroundup32(ret.m);
-  if(0){
-    ret.reads=(aRead *)malloc(ret.m*sizeof(aRead));
-    ret.first=(int *)malloc(ret.m*sizeof(int));
-    ret.last=(int *)malloc(ret.m*sizeof(int));
-  }else{
-    ret.reads= new aRead[ret.m];
-    ret.first=new int[ret.m];
-    ret.last=new int[ret.m];
+  
+  ret.reads= new bam1_t*[ret.m];
+  ret.first=new int[ret.m];
+  ret.last=new int[ret.m];
+  ret.bufferedRead=NULL;
 
-  }
-
-  ret.bufferedRead.refID = -2;
-  //  fprintf(stderr,"allocing pool with l=%d and m=%d\n",l,ret.m);
   return ret;
 }
 
 
 
-int getSglStop5(sglPool *sglp,int nFiles,int pickStop) {
+
+int getSglStop5(sglPoolb *sglp,int nFiles,int pickStop) {
 #if 0
     fprintf(stderr,"[%s]\n",__FUNCTION__);
     for(int i=0;i<nFiles;i++){
@@ -1339,7 +1065,8 @@ int getSglStop5(sglPool *sglp,int nFiles,int pickStop) {
 /*
   this function just returns the highest position along all buffered nodepools and readpools
  */
-void getMaxMax2(sglPool *sglp,int nFiles,nodePool *nps){
+
+void getMaxMax2(sglPoolb *sglp,int nFiles,nodePool *nps){
 #if 0
     fprintf(stderr,"[%s].nFiles=%d\n",__FUNCTION__,nFiles);
     for(int i=0;i<nFiles;i++){
@@ -1350,7 +1077,7 @@ void getMaxMax2(sglPool *sglp,int nFiles,nodePool *nps){
     int last_bp_in_chr = -1;
     
     for(int i=0;i<nFiles;i++){
-      sglPool *tmp = &sglp[i];
+      sglPoolb *tmp = &sglp[i];
       if(tmp->l>0 && (getmax(tmp->last,tmp->l)>last_bp_in_chr) )
 	last_bp_in_chr = getmax(tmp->last,tmp->l);
       if(nps[i].last>last_bp_in_chr)
@@ -1364,7 +1091,7 @@ void getMaxMax2(sglPool *sglp,int nFiles,nodePool *nps){
     
 }
 
-void getMaxMax2T(sglPool *sglp,int nFiles,nodePoolT *nps){
+void getMaxMax2(sglPoolb *sglp,int nFiles,nodePoolT *nps){
 #if 0
   fprintf(stderr,"[%s].nFiles=%d\n",__FUNCTION__,nFiles);
   for(int i=0;i<nFiles;i++)
@@ -1375,7 +1102,7 @@ void getMaxMax2T(sglPool *sglp,int nFiles,nodePoolT *nps){
   int last_bp_in_chr = -1;
 
   for(int i=0;i<nFiles;i++){
-    sglPool *tmp = &sglp[i];
+    sglPoolb *tmp = &sglp[i];
     if(tmp->l>0 && (getmax(tmp->last,tmp->l)>last_bp_in_chr) )
       last_bp_in_chr = getmax(tmp->last,tmp->l);
     if(nps[i].last>last_bp_in_chr)
@@ -1390,16 +1117,35 @@ void getMaxMax2T(sglPool *sglp,int nFiles,nodePoolT *nps){
 }
 
 
+void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,iter_t &iter,int ref,int start,int stop,bam_hdr_t *hdr){
+  if(iter.hts_idx==NULL)
+    iter.hts_idx = sam_index_load(fp,fn);
+  if (iter.hts_idx == 0) { // index is unavailable
+    fprintf(stderr, "[main_samview] random alignment retrieval only works for indexed BAM or CRAM files.\n");
+    exit(0);
+  }
+  char tmp[1024];
+  snprintf(tmp,1024,"%s:%d-%d",hd->target_name[ref],start+1,stop);
+  if(iter.hts_itr)
+    hts_itr_destroy(iter.hts_itr);
+  iter.hts_itr = sam_itr_querys(iter.hts_idx, hdr, tmp);
+  if (iter.hts_itr == NULL) { // reference name is not found
+    fprintf(stderr, "[main_samview] region \"%s\" specifies an unknown reference name. Continue anyway.\n",tmp);
+    exit(0);
+  }
+
+}
+
+
 
 void *setIterator1(void *args){
   bufReader *rd = (bufReader *) args;
-  free(rd->it.off);
-  //  fprintf(stderr,"[%s]\n",__FUNCTION__,rd->regions[rd->itrPos]);
+
   int start,stop,ref;
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->baifname,rd->hd,rd->it,ref,start,stop);//leak
+  getOffsets(rd->fp,rd->fn,rd->hdr,rd->it,ref,start,stop,rd->hdr);//leak
   return EXIT_SUCCESS;
 }
 
@@ -1408,19 +1154,13 @@ void *setIterator1(void *args){
    //   fprintf(stderr,"[%s]\n",__FUNCTION__);
   bufReader *rds = (bufReader *) args;
   bufReader *rd = &rds[index];
-  free(rd->it.off);
+  // free(rd->it.off);
   int start,stop,ref;
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->baifname,rd->hd,rd->it,ref,start,stop);
+  getOffsets(rd->fp,rd->fn,rd->hdr,rd->it,ref,start,stop,rd->hdr);
 }
-
-typedef struct{
-  bufReader *rds;
-  int index;
-}it_struct;
-
 
 void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
   for(int i=0;1&&i<nFiles;i++){
@@ -1446,13 +1186,6 @@ void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
 
       cnt+=nTimes;
     }
-    
-#if 0
-    threadpool *tp = init_threadpool(nThreads,setIterator1_thread,nFiles,1);
-    threadpool_iter(tp,rd,nFiles);
-    wait_kill(tp);
-    tp = NULL;
-#endif
   }
 }
 
@@ -1472,7 +1205,8 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
   extern abcGetFasta *gf;
 
-  sglPool *sglp= new sglPool[nFiles];
+  //  sglPool *sglp= new sglPool[nFiles];
+  sglPoolb *sglp= new sglPoolb[nFiles];
   
   nodePool *nps =NULL;
   nodePoolT *npsT = NULL;
@@ -1482,7 +1216,8 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     npsT = new nodePoolT[nFiles];// <- buffered nodes
 
   for(int i=0;i<nFiles;i++){
-    sglp[i] = makePool(nLines);
+    sglp[i] = makePoolb(nLines);
+    //sglpb[i] = makePoolb(nLines);
     if(show)
       nps[i] = allocNodePool(MAX_SEQ_LEN);
     else
@@ -1494,6 +1229,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
   int theRef=-1;//<- this is current referenceId,
   while( SIG_COND) {
+
     int notDone = nFiles;
     sumEof =0;
     //reset the done region flag, while checking that any file still has data
@@ -1519,67 +1255,64 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	//fflush(stderr);
 	setIterators(rd,regions[itrPos],nFiles,nThreads);
 	//fprintf(stderr,"done region lookup %d/%lu\n",itrPos+1,regions.size());
-	//fflush(stderr);
+	//fflush(stderr);///BAME
 
-	theRef = rd[0].it.tid;
-	
+	theRef = rd[0].it.hts_itr->tid; 
+	//	fprintf(stderr,"theRef:%d %p %p\n",theRef,rd[0].it.off,rd[0].it.hts_itr->off);
 	//validate we have offsets;
 	int gotData = 0;
 	for(int i=0;i<nFiles;i++)
-	  if(rd[i].it.off!=NULL){
+	  if((rd[i].it.hts_itr &&(rd[i].it.hts_itr->off!=NULL))){
 	    gotData =1;
 	    break;
 	  }
-	if(gotData==0){
-	  regs rrr = regions[itrPos];
-	  fprintf(stderr,"\t[%s] skipping region=%d,%d,%d (noData)\n",__FUNCTION__,rrr.refID,rrr.start,rrr.stop);
-	  continue;
-	}
-
 	//reset eof and region donepointers.
 	for(int i=0;i<nFiles;i++){
 	  rd[i].isEOF = 0;
 	  rd[i].regionDone =0;
 	  sglp[i].l =0;
-	  sglp[i].bufferedRead.refID=-2;
+	  sglp[i].bufferedRead=NULL;
 	}
       }
     }else{
       if(theRef==-1){//init
 	theRef =0;
-      }else if(theRef==rd[0].hd->n_ref-1){
+
+      }else if(theRef==rd[0].hdr->n_targets-1){
 	break;//then we are done
       }else{
-	int minRef = rd[0].hd->n_ref;
+	int minRef = rd[0].hdr->n_targets;
 	for(int i=0;i<nFiles;i++)
-	  if(sglp[i].bufferedRead.refID!=-2 && sglp[i].bufferedRead.refID<minRef)
-	    minRef = sglp[i].bufferedRead.refID;
-	if(minRef==-2||minRef == rd[0].hd->n_ref){
+	  if(sglp[i].bufferedRead && sglp[i].bufferedRead->core.tid<minRef)
+	    minRef = sglp[i].bufferedRead->core.tid;
+	if(minRef==-2||minRef == rd[0].hdr->n_targets){
 	  theRef++;
 	}else
 	  theRef = minRef;
       }
     }
-    if(theRef==rd[0].hd->n_ref)
+
+    if(theRef==rd[0].hdr->n_targets)
       break;
-    assert(theRef>=0 && theRef<rd[0].hd->n_ref);//ref should be inrange [0,#nref in header]
+    assert(theRef>=0 && theRef<rd[0].hdr->n_targets);//ref should be inrange [0,#nref in header]
 
     //load fasta for this ref if needed
     void waiter(int);
     waiter(theRef);//will wait for exisiting threads and then load stuff relating to the chromosome=theRef;
     if(gf->ref!=NULL && theRef!=gf->ref->curChr)
-      gf->loadChr(gf->ref,rd[0].hd->name[theRef],theRef);
+      gf->loadChr(gf->ref,rd[0].hdr->target_name[theRef],theRef);
     
      
 
     //now we have changed chromosome we should plug in buffered, if buffered is same as the new chr
     //this is not needed if we use the indexing
+
     if(regions.size()==0){
       for(int i=0;i<nFiles;i++){
 	extern abcGetFasta *gf;
-	if(sglp[i].bufferedRead.refID==-2)//<- no buffered no nothing
+	if(sglp[i].bufferedRead ==NULL)//<- no buffered no nothing
 	  continue;
-	if(sglp[i].bufferedRead.refID==theRef) {//buffered is on correct chr
+	if(sglp[i].bufferedRead->core.tid==theRef) {//buffered is on correct chr
 	  int doCpy =1;
 	  if(gf->ref!=NULL){
 	    //this will modify the quality and mapQ if -baq >0 or adjustMapQ= SAMtools -c
@@ -1587,33 +1320,36 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	  }
 	  if(doCpy){
 	    sglp[i].reads[sglp[i].l] = sglp[i].bufferedRead;
-	    sglp[i].first[sglp[i].l] = sglp[i].reads[sglp[i].l].pos;
-	    sglp[i].last[sglp[i].l] =   bam_calend(sglp[i].reads[sglp[i].l],getCig(&sglp[i].reads[sglp[i].l]));
+	    sglp[i].first[sglp[i].l] = sglp[i].reads[sglp[i].l]->core.pos;
+	    sglp[i].last[sglp[i].l] =   bam_endpos(sglp[i].reads[sglp[i].l]);
 	    sglp[i].l++;
 	  }
 	  //if we haven't performed the copy its because adjustedMap<minMapQ, in either case we don't need the read anymore
-	  sglp[i].bufferedRead.refID = -2;
+	  sglp[i].bufferedRead = NULL;
 	}else // buffered was not on correct chr say that the 'region' is done
 	  rd[i].regionDone=1;
       }
     }
-    
+
     //below loop will continue untill eoc/oef/eor <- funky abbrev =end of chr, file and region
     while(notDone&& SIG_COND) {
+
       //before collecting reads from the files, lets first check if we should pop reads from the buffered queue in each sgl
       for(int i=0;i<nFiles;i++){
-	if(sglp[i].bufferedRead.refID==theRef){
+	if(sglp[i].bufferedRead&&sglp[i].bufferedRead->core.tid==theRef){
 	  sglp[i].reads[sglp[i].l] = sglp[i].bufferedRead;
-	  sglp[i].first[sglp[i].l] = sglp[i].reads[sglp[i].l].pos;
-	  sglp[i].last[sglp[i].l] = bam_calend(sglp[i].reads[sglp[i].l],getCig(&sglp[i].reads[sglp[i].l]));
+	  sglp[i].first[sglp[i].l] = sglp[i].reads[sglp[i].l]->core.pos;
+	  sglp[i].last[sglp[i].l] = bam_endpos(sglp[i].reads[sglp[i].l]);
 	  sglp[i].l++;
-	  sglp[i].bufferedRead.refID = -2;
+	  sglp[i].bufferedRead = NULL;
 	}
 	
       }
       
       int pickStop=-1;
+      
       int doFlush = (collect_reads(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
+
 #if 0
       for(int i=0;i<nFiles;i++)
 	fprintf(stderr,"[%s] sgl[%d].l=%d (%d,%d)\n",__FUNCTION__,i,sglp[i].l,sglp[i].first[0],sglp[i].last[sglp[i].l-1]);
@@ -1626,7 +1362,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	if(show)
 	  getMaxMax2(sglp,nFiles,nps);
 	else
-	  getMaxMax2T(sglp,nFiles,npsT);
+	  getMaxMax2(sglp,nFiles,npsT);
       }else{
 	//getSglStop returns the sum of reads to parse.
 	int hasData = getSglStop5(sglp,nFiles,pickStop);
@@ -1642,14 +1378,14 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       int tmpSum = 0;
 
       if(show!=1){
-	dnT = new nodePoolT[nFiles];
+	dnT = new nodePoolT[nFiles];//<- this can leak now
 	for(int i=0;i<nFiles;i++){
-	  dnT[i] = mkNodes_one_sampleT(&sglp[i],&npsT[i]);
+	  dnT[i] = mkNodes_one_sampleTb(&sglp[i],&npsT[i]);
 	  tmpSum += dnT[i].l;
 	}
       }else
 	for(int i=0;i<nFiles;i++) {
-	  dn[i] = mkNodes_one_sample(&sglp[i],&nps[i],gf);
+	  dn[i] = mkNodes_one_sampleb(&sglp[i],&nps[i],gf);
 	  tmpSum += dn[i].l;
 	}
 
@@ -1662,14 +1398,16 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 #endif
             
       //simple sanity check for validating that we have indeed something to print.
+
       if(tmpSum==0){
 	if(regions.size()!=0)
 	  notDone=1;
 	else{
-	  fprintf(stderr,"No data for chromoId=%d chromoname=%s\n",theRef,rd[0].hd->name[theRef]);
+	  fprintf(stderr,"No data for chromoId=%d chromoname=%s\n",theRef,rd[0].hdr->target_name[theRef]);
 	  fprintf(stderr,"This could either indicate that there really is no data for this chromosome\n");
 	  fprintf(stderr,"Or it could be problem with this program regSize=%lu notDone=%d\n",regions.size(),notDone);
 	}
+	delete [] dnT;
 	break;
       }
 
@@ -1679,7 +1417,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	regStop = regions[itrPos].stop;
       }else{
 	regStart = -1;
-	regStop = rd[0].hd->l_ref[theRef];
+	regStop = rd[0].hdr->target_len[theRef];
       }
       if(show){
 	//merge the perFile upnodes.FIXME for large regions (with gaps) this will allocate to much...
@@ -1688,7 +1426,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	
 	chk->regStart = regStart;
 	chk->regStop = regStop;
-	chk->refName = rd[0].hd->name[theRef];
+	chk->refName = rd[0].hdr->target_name[theRef];
 	chk->refId = theRef;
 	printChunky2(chk,stdout,chk->refName);
 	
@@ -1697,6 +1435,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	    delete [] dn[i].nds;
 	}
       }else{
+
 	fcb *f = new fcb; //<-for call back
 	f->dn=dnT; f->nFiles = nFiles; f->regStart = regStart; f->regStop = regStop; f->refId = theRef;
 	callBack_bambi(f);
@@ -1713,7 +1452,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     callBack_bambi(NULL);//cleanup signal
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
     for(int i=0;1&&i<nFiles;i++){
-      dalloc(rd[i].it.dasIndex);
       dalloc_nodePoolT(npsT[i]);
       delete [] npsT[i].nds;
       dalloc(sglp[i]);
@@ -1724,7 +1462,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   }else{
     //clean up
     for(int i=0;1&&i<nFiles;i++){
-      dalloc(rd[i].it.dasIndex);
       dalloc_nodePool(nps[i]);
       delete [] nps[i].nds;
       dalloc(sglp[i]);

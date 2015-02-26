@@ -169,7 +169,7 @@ void abcCallGenotypes::printGeno(funkyPars *pars){
     if(pars->keepSites[s]==0)
       continue;
     if(!(doGenoInner&GENO_FOR_COVAR))
-      gzprintf(outfileZ,"%s\t%d\t",header->name[pars->refId],pars->posi[s]+1);
+      gzprintf(outfileZ,"%s\t%d\t",header->target_name[pars->refId],pars->posi[s]+1);
     if(doGenoInner&GENO_MAJOR_MINOR&&!(doGenoInner&GENO_FOR_COVAR))
       gzprintf(outfileZ,"%c\t%c\t",intToRef[pars->major[s]],intToRef[pars->minor[s]]);
     if(doGenoInner&GENO_FOR_COVAR){

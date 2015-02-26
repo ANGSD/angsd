@@ -1,4 +1,3 @@
-
 #pragma once
 #include <map>
 #include "glfReader.h"
@@ -8,7 +7,6 @@
 #include "mpileup.h"
 #include "parseArgs_bambi.h"
 #include "bammer_main.h"
-#include "indexer.h"
 
 class multiReader{
 private:
@@ -31,7 +29,7 @@ private:
   int minQ;
   argStruct *args;
   aMap *revMap;
-  aHead *hd;
+  bam_hdr_t *hd;
 public:
   multiReader(int,char**);
   argStruct *getargs(){return args;}

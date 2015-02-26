@@ -1,6 +1,6 @@
-#ifdef __WITH_MAIN__
-int SIG_COND =1;
-#endif
+
+extern int SIG_COND;
+
 
 
 
@@ -10,20 +10,17 @@ int SIG_COND =1;
 #include <map>
 #include <zlib.h>
 #include "bambi_interface.h"
-#include "bams.h" // <- only used for getting the header, 
 #include "argStruct.h"
 
 #ifndef _types_t
 #define _types_t
-//typedef short unsigned int suint;
 typedef unsigned int suint;
 
 #define LENS 10000
 #define GZOPT "w6h"
-// struct for covar class - classy
+
 
 enum{INPUT_BAM,INPUT_GLF,INPUT_GLF3,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP};
-#define VERSION 0.615
 
 typedef struct {
 

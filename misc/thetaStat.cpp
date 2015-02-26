@@ -4,7 +4,7 @@
 #include <map>
 #include <zlib.h>
 #include <sys/stat.h>
-#include "../bgzf.h"
+#include "../htslib/bgzf.h"
 #include "kstring.h"
 #include "stats.cpp"
 #include <cassert>
@@ -449,7 +449,7 @@ int do_stat(int argc, char**argv){
 
   char *resname = append(outnames,RES);
   FILE *fpres = fopen(resname,"w");
-  fprintf(fpres,"## thetaStat VERSION: %s build:(%s,%s)\n",VERSION,__DATE__,__TIME__);
+  //fprintf(fpres,"## thetaStat VERSION: %s build:(%s,%s)\n",VERSION,__DATE__,__TIME__);
   fprintf(fpres,"#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)\t");
   fprintf(fpres,"Chr\tWinCenter\t");
   fprintf(fpres,"tW\ttP\ttF\ttH\ttL\t");

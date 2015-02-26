@@ -12,14 +12,13 @@
 #include <vector>
 #include <stdint.h>
 #include <algorithm>
-#include "bams.h"
+#include <htslib/hts.h>
 #include "mUpPile.h"
 #include "parseArgs_bambi.h"
-#include "indexer.h"
 #include "abc.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
-#include "knetfile.h"
+
 
 extern abc **allMethods;
 abcGetFasta *gf=NULL;
@@ -30,36 +29,91 @@ extern int SIG_COND;
 static const char *bam_nt16_rev_table2 = "=ACMGRSVTWYHKDBN";
 
 
+htsFile *openBAM(const char *fname){
+  htsFile *fp =NULL;
+  if((fp=sam_open(fname,"r"))==NULL ){
+    fprintf(stderr,"[%s] nonexistant file: %s\n",__FUNCTION__,fname);
+    exit(0);
+  }
+  const char *str = strrchr(fname,'.');
+  if(str&&strcasecmp(str,".bam")!=0&&str&&strcasecmp(str,".cram")!=0){
+    fprintf(stderr,"\t-> file:\"%s\" should be suffixed with \".bam\" or \".cram\"\n",fname);
+    exit(0);
+  }
+  return fp;
+}
+
+
+
+void printHd(const bam_hdr_t *hd,FILE *fp){
+  fprintf(fp,"htext=%s\n",hd->text);
+  fprintf(fp,"n_ref=%d\n",hd->n_targets);
+  for(int i=0;i<hd->n_targets;i++)
+    fprintf(fp,"i=%d name=%s length=%d\n",i,hd->target_name[i],hd->target_len[i]);
+
+}
+
+
+
+
+/*
+  compare all entries in the 2 headers, if difference return 1;
+*/
+
+int compHeader(bam_hdr_t *hd1,bam_hdr_t *hd2){
+  if(0){
+    if(hd1->l_text!=hd2->l_text)
+      fprintf(stderr,"problem with l_text in header\n");
+    if(memcmp(hd1->text,hd2->text,hd1->l_text)!=0)
+      fprintf(stderr,"problem with text in header\n");
+  }
+  if(hd1->n_targets!=hd2->n_targets){
+    fprintf(stderr,"Difference in BAM headers: Problem with number of chromosomes in header\n");
+    return 1;
+  }
+  for(int i=0;i<hd1->n_targets;i++){
+    if(strcasecmp(hd1->target_name[i],hd2->target_name[i])!=0){
+      fprintf(stderr,"Difference in BAM headers: Problem with chromosome ordering");
+      return 1;
+    }
+    if(hd1->target_len[i]!=hd2->target_len[i]){
+      fprintf(stderr,"Difference in BAM headers: Problem with length of chromosomes");
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
+
 void dalloc_bufReader(bufReader &ret){
-  free(ret.bamfname);
-  free(ret.baifname);
-  free(ret.it.off);//cleanup offsets if used
-  bgzf_close(ret.fp);
-  dalloc(ret.hd);
+  if(ret.hdr)
+    bam_hdr_destroy(ret.hdr);
+  if(ret.it.hts_itr)
+    hts_itr_destroy(ret.it.hts_itr);
+  if(ret.it.hts_idx)
+    hts_idx_destroy(ret.it.hts_idx);
+  free(ret.fn);
+  hts_close(ret.fp);
 }
 
 
 
 bufReader initBufReader2(const char*fname){
   bufReader ret;
-  ret.bamfname = strdup(fname);
+  ret.fn = strdup(fname);
   int newlen=strlen(fname);//<-just to avoid valgrind -O3 uninitialized warning
-  ret.baifname =(char *) malloc(newlen+5);
-  snprintf(ret.baifname,newlen+5,"%s.bai",ret.bamfname);
-  if(angsd::fexists(ret.baifname)){
-    //fprintf(stderr,"bai exists\n");
-    if(isNewer(ret.bamfname,ret.baifname)){
-      fprintf(stderr,"\t-> bai index file: \'%s\' looks older than corresponding BAM file: \'%s\'.\n\t-> Please reindex BAM file\n",ret.baifname,ret.bamfname);
-      exit(0);
-    }
-  }
-  ret.fp = openBAM(ret.bamfname);
-  ret.hd = getHd(ret.fp);
+  ret.fp = openBAM(ret.fn);
   ret.isEOF =0;
-  ret.it.from_first=1;//iterator, used when supplying regions
-  ret.it.finished=0;//iterator, used when supplying regions
-  ret.it.off = NULL;
-  ret.it.dasIndex = NULL;
+  ret.it.hts_itr=NULL;
+  ret.it.hts_idx=NULL;
+ 
+  ret.hdr = sam_hdr_read(ret.fp);
+  if(ret.hdr==NULL) {
+    fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
+    exit(0);
+  }
+  
   return ret;
 }
 
@@ -81,11 +135,11 @@ bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError)
     ret[i] = initBufReader2(vec[i]);
   //now all readers are inialized, lets validate the header is the same
   for(size_t i=1;i<vec.size();i++)
-    if(compHeader(ret[0].hd,ret[i].hd)){
+    if(compHeader(ret[0].hdr,ret[i].hdr)){
       fprintf(stderr,"Difference in BAM headers for \'%s\' and \'%s\'\n",vec[0],vec[i]);
       fprintf(stderr,"HEADER BAM1\n");
-      printHd(ret[0].hd,stderr);
-      printHd(ret[i].hd,stderr);
+      printHd(ret[0].hdr,stderr);
+      printHd(ret[i].hdr,stderr);
       if(exitOnError)
 	exit(0);
     }
@@ -236,12 +290,9 @@ int bammer_main(argStruct *args){
   uppile(args->show,maxThreads,rd,args->nLines,args->nams.size(),args->regions);
 
   //cleanup stuff
-  for(unsigned i=0;i<args->nams.size();i++){
-    
+  for(unsigned i=0;i<args->nams.size();i++)
     dalloc_bufReader(rd[i]);
-  }
-
-  delete [] rd;
   
+  delete [] rd;
   return 0;
 }

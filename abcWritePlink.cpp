@@ -6,7 +6,7 @@
 
 #include "analysisFunction.h"
 #include "shared.h"
-#include "kstring.h"//<-used for buffered output
+#include <htslib/kstring.h>
 #include "abcCallGenotypes.h"
 #include "abcWritePlink.h"
 void abcWritePlink::printArg(FILE *argFile){
@@ -47,7 +47,7 @@ void abcWritePlink::print(funkyPars *pars){
   if(doPlink==0)
     return;
   genoCalls *geno =(genoCalls *) pars->extras[10];
-  char *chr = header->name[pars->refId];
+  char *chr = header->target_name[pars->refId];
   if(doPlink==2){
     kstring_t kstr;
     kstr.s=NULL;kstr.l=kstr.m=0;

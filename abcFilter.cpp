@@ -154,5 +154,5 @@ void abcFilter::readSites(int refId) {
   //fprintf(stderr,"[%s].%s():%d -> refId:%d\n",__FILE__,__FUNCTION__,__LINE__,refId);
   if(fl==NULL)
     return;
-  filt_readSites(fl,header->name[refId],header->l_ref[refId]);
+  filt_readSites(fl,header->target_name[refId],header->target_len[refId]);
 }

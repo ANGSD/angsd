@@ -115,7 +115,7 @@ abcAncError::~abcAncError(){
     }
   }
   if(currentChr!=-1){
-    fprintf(outfile2,"Chr: \t %s\n",header->name[currentChr]);
+    fprintf(outfile2,"Chr: \t %s\n",header->target_name[currentChr]);
     for(int i=0;i<nInd;i++){
       for(int j=0;j<125;j++)
 	fprintf(outfile2,"%lu\t",alleleCountsChr[i][j]);
@@ -221,7 +221,7 @@ void abcAncError::print(funkyPars *pars){
     if(currentChr==-1)
       currentChr=pars->refId;
     if(currentChr!=pars->refId){
-      fprintf(outfile2,"Chr: \t %s\n",header->name[currentChr]);
+      fprintf(outfile2,"Chr: \t %s\n",header->target_name[currentChr]);
       for(int i=0;i<nInd;i++){
 	for(int j=0;j<125;j++)
 	  fprintf(outfile2,"%lu\t",alleleCountsChr[i][j]);

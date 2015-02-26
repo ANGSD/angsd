@@ -9,20 +9,19 @@
 
 */
 
-
-
+#include "version.h"
 #include <cassert>
 #include<iostream>//for printing time
 #include<cstring> //for cstring functions
 #include<cstdlib> //for exit()
 #include<cstdio> //for fprintf
 #include <signal.h>//for catching ctrl+c, allow threads to finish
-
+#include <htslib/hts.h>
 
 #include "shared.h"
 #include "multiReader.h"
 
-double VERS = VERSION;
+
 extern std::vector <char *> dumpedFiles;
 
 int SIG_COND =1;//if we catch signal then quit program nicely
@@ -85,7 +84,7 @@ void catchkill(){
 
 //print nice info
 void printProgInfo(FILE *fp){
-  fprintf(fp,"\n\t-> angsd version: %.3f\t build(%s %s)\n",VERS,__DATE__,__TIME__); 
+fprintf(fp,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
   fprintf(fp,"\t-> Please use the website \"http://www.popgen.dk/angsd\" as reference\n");
   fprintf(fp,"\t-> Use -nThreads or -P for number of threads allocated to the program\n\n"); 
  fprintf(fp,"Overview of methods:\n");
@@ -202,14 +201,6 @@ int main(int argc, char** argv){
 
    //intialize our signal handler for ctrl+c
    catchkill();
-
-   //print arguments supplied
-#if 0
-   fprintf(stderr,"Command:\n");
-   for(int i=0;i<argc;i++)
-     fprintf(stderr,"%s ",argv[i]);
-   fprintf(stderr,"\n\t-> angsd version: %.3f\t build(%s %s)\n",VERSION,__DATE__,__TIME__); 
-#endif
 
    argStruct *args=NULL;
    if(argc==2){

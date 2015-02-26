@@ -10,7 +10,7 @@ xs
 #include <assert.h>
 #include <zlib.h>
 #include <algorithm>
-#include "kstring.h"
+#include <htslib/kstring.h>
 #include "abcFreq.h"
 #include "shared.h"
 #include "analysisFunction.h"
@@ -195,7 +195,7 @@ void abcSaf2::print(funkyPars *p){
     realRes2 *r=(realRes2 *) p->extras[index];
     int id=0;
     if(outputBanded)
-      printSparse(p,index,outfileSFS,outfileSFSPOS,header->name[p->refId]);
+      printSparse(p,index,outfileSFS,outfileSFSPOS,header->target_name[p->refId]);
   }
 }
 

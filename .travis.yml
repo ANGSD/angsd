@@ -1,6 +1,18 @@
-language: cpp
+# Control file for continuous integration testing at http://travis-ci.org/
+# taken from samtools
+language: c
 compiler:
-  - gcc
   - clang
-# Change this to your needs
-script: make
+  - gcc
+
+matrix:
+  include:
+    # An unoptimised C99 build, for detecting non-static inline functions
+    - compiler: gcc
+      env: CFLAGS="-std=gnu99 -O0"
+
+before_script:
+  - git clone --depth=5 --branch=develop git://github.com/samtools/htslib.git
+  - export HTSDIR=`pwd`/htslib
+
+script: make -e && make -e test

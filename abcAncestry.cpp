@@ -2,6 +2,7 @@
 #include "shared.h"
 #include "analysisFunction.h"
 #include "abcAncestry.h"
+#include <cassert>
 
 void abcAncestry::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
@@ -50,7 +51,7 @@ void abcAncestry::clean(funkyPars *pars){
 
 
 void abcAncestry::print(funkyPars *pars){
-  
+  assert(pars->anc!=NULL);
   if(doAncestry==1){
   
   }

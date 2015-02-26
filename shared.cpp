@@ -52,7 +52,7 @@ printRes printer;
 int isAtty =1;
 
 
-const aHead *header = NULL;
+const bam_hdr_t *header = NULL;
 
 //Max number of "finished" threads waiting to be printed
 // -1 indicates no limit
@@ -276,7 +276,7 @@ void waiter(int refId){
   //  fprintf(stderr,"_%s_\n",__FUNCTION__);fflush(stderr);
 
   //change of chr detected wait untill all threads are done
-  if(allMethods[0]->header->n_ref<THRESHOLD_FOR_NICEOUTPUT)
+  if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT)
     fprintf(stderr,"Change of chromo detected Waiting for nThreads:%d\n",curRunning);
   while(1){
     pthread_mutex_lock(&counterMut);
@@ -284,7 +284,7 @@ void waiter(int refId){
       pthread_mutex_unlock(&counterMut);//need to do this because rest of while is not used
       break;
     }
-    if(allMethods[0]->header->n_ref<THRESHOLD_FOR_NICEOUTPUT){
+    if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT){
       fprintf(stderr,"Change of chromo detected Waiting for nThreads:%d printer.contains=%lu\n",curRunning,printer.contains());
       fflush(stderr);
     }
@@ -449,9 +449,9 @@ void printFunky(funkyPars *p){
   if(p->killSig==0) {//don't print the empty killSig chunk
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
-	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d",header->name[p->refId],p->posi[0]+1,p->chunkNumber);
+	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
       else
-	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->name[p->refId],p->posi[0]+1,p->chunkNumber);
+	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
     }if(p->numSites!=0){
       for(int i=0;i<andersSux;i++)
 	if(shouldRun[i])
