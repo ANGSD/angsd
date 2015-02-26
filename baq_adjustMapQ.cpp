@@ -63,7 +63,7 @@ unsigned char bam_nt16_table[256] = {
 };
 
 
-int bam_cap_mapQ(aRead &b,char *ref,int thres){
+int bam_cap_mapQ_a(aRead &b,char *ref,int thres){
   //  fprintf(stderr,"thres=%d mapq=%d\n",thres,b.mapQ);
   assert(ref!=NULL);
   char *seq =(char *) getSeq(&b), *qual =(char *) getQuals(&b);
@@ -127,7 +127,7 @@ int bam_cap_mapQ(aRead &b,char *ref,int thres){
 
   //we assume, that the exisiting bq/zq are the simple baq
  */
-int bam_prob_realn_core(aRead &b, const char *ref, int type)
+int bam_prob_realn_core_a(aRead &b, const char *ref, int type)
 {
   //fprintf(stderr,"[%s] b.vDat=%s\n",__FUNCTION__,b.vDat);
   int k, i, bw, x, y, yb, ye, xb, xe;

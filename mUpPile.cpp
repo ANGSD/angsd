@@ -4,13 +4,13 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <cassert>
+#include <htslib/hts.h>
 #include "bams.h"
-#include <htslib/kstring.h>
 #include "mUpPile.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
 #include "bams.h"
-#include <htslib/hts.h>
+
 extern int SIG_COND;
 extern int minQ;
 extern int trim;
@@ -209,6 +209,31 @@ void realloc(sglPool &ret,int l){
 
 
 
+int bam_t_to_aRead (bam1_t *from,aRead &to){
+  to.refID = from->core.tid;
+ to.pos = from->core.pos;
+ to.nBin = from->core.bin;
+ to.mapQ = from->core.qual;
+ to.l_qname = from->core.l_qname;
+ to.flag = from->core.flag;
+ to.nCig = from->core.n_cigar;
+ to.l_seq = from->core.l_qseq;
+ to.next_refID = from->core.mtid;
+ to.next_pos= from->core.mpos;
+ to.tlen = from->core.isize;
+ // fprintf(stderr,"vDat:Rlen:%d l_data:%d m_data:%d\n",RLEN,from->l_data,from->m_data);
+ if(from->l_data+32>RLEN){
+   delete [] to.vDat;
+   to.vDat = new uint8_t[from->m_data];
+ }
+ memcpy(to.vDat,from->data,sizeof(uint8_t)*from->l_data);
+ // fprintf(stderr,"refId:%d pos:%d flag:%d\n",to.refID,to.pos,to.flag);
+ to.block_size= from->l_data;
+ return 1;
+}
+
+
+
 void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 #if 0
   fprintf(stderr,"[%s]\n",__FUNCTION__);
@@ -224,11 +249,13 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
   //this is the awkward case this could cause an error in some very unlikely scenario.
   //whith the current buffer empty and the first read being a new chromosome. 
   //this is fixed good job monkey boy
+  bam1_t *bb = bam_init1();
   while(ret.l==0){
     aRead &b = ret.reads[0];
     int tmp;
     b.vDat = new uint8_t[RLEN];
-    if((tmp=bam_iter_read1(fp,it,b,hdr))<0){//FIXME
+
+    if((tmp=bam_iter_read2(fp,it,bb,hdr))<0){//FIXME
       if(tmp==-1){
 	rdObjEof =1;
 	//	ret.isEOF =1;
@@ -237,6 +264,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
 	rdObjRegionDone =1;
       break;
     }
+    bam_t_to_aRead(bb,b);
     if(b.nCig!=0){
       ret.first[ret.l] = b.pos;
       ret.last[ret.l] = bam_calend(b,getCig(&b));
@@ -245,7 +273,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
     }
   }
 
-   /*
+  /*
     now do the general loop,
     1) read an alignemnt calulate start and end pos
     check
@@ -265,7 +293,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
     
     aRead &b = ret.reads[i+ret.l];
     b.vDat = new uint8_t[RLEN];
-    if((tmp=bam_iter_read1(fp,it,b,hdr))<0){
+    if((tmp=bam_iter_read2(fp,it,bb,hdr))<0) {
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -274,7 +302,9 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
 
       delete [] b.vDat;
       break;
-    }if(b.nCig==0){
+    }
+    bam_t_to_aRead(bb,b);
+    if(b.nCig==0){
       delete [] b.vDat;
       continue;
     }
@@ -302,6 +332,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int ref
   }
   ret.nReads =ret.l+i;
   ret.l = ret.nReads;
+  bam_destroy1(bb);
 }
 
 
@@ -311,7 +342,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToR
   fprintf(stderr,"\t->[%s] buffRefid=%d\trefToRead=%d\n",__FUNCTION__,ret.bufferedRead.refID,refToRead);
 #endif
   assert(rdObjEof==0 && ret.bufferedRead.refID==-2);
-  
+  bam1_t *bb=bam_init1();
   if((nReads+ret.l)>ret.m)
     realloc(ret,nReads+ret.l);
  
@@ -321,14 +352,14 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToR
     b.vDat=new uint8_t[RLEN];
     ret.reads[ret.l+i] =b;
   }
-
+  
   //this is the awkward case this could cause an error in some very unlikely scenario.
   //whith the current buffer empty and the first read being a new chromosome. 
   //this is fixed good job monkey boy
   while(ret.l==0){
     aRead &b = ret.reads[0];
     int tmp;
-    if((tmp=bam_iter_read1(fp,it,b,hdr))<0){//FIXME
+    if((tmp=bam_iter_read2(fp,it,bb,hdr))<0){//FIXME
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -336,10 +367,13 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToR
 	rdObjRegionDone =1;
       break;
     }
+    bam_t_to_aRead(bb,b);
+    //    exit(0);
     //check that the read is == the refToread
     if(b.refID!=refToRead){
        ret.bufferedRead = b;
        rdObjRegionDone =1;
+       bam_destroy1(bb);
        return;
     }
 
@@ -366,14 +400,16 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToR
   for( i=0;i<nReads;i++){
     aRead &b = ret.reads[i+ret.l];
 
-    if((tmp=bam_iter_read1(fp,it,b,hdr))<0){
+    if((tmp=bam_iter_read2(fp,it,bb,hdr))<0){
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
       }else
 	rdObjRegionDone =1;
       break;
-    }if(b.nCig==0){//only get reads with CIGAR
+    }
+    bam_t_to_aRead(bb,b);
+    if(b.nCig==0){//only get reads with CIGAR
       i--;
       continue;
     }
@@ -403,6 +439,8 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPool &ret,int refToR
 
   ret.nReads =ret.l+i;
   ret.l = ret.nReads;
+  
+  bam_destroy1(bb);
 }
 
 

@@ -104,8 +104,8 @@ typedef struct{
 
 void printIter(const iter_t& it,FILE *fp);
 
-int bam_iter_read1(htsFile *fp, iter_t *iter, aRead &b,bam_hdr_t *hdr);
-int bam_iter_read(htsFile *fp, iter_t *iter, aRead &b,bam_hdr_t *hdr);
+int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr);
+int bam_iter_read1(htsFile *fp, iter_t *iter,aRead &b,bam_hdr_t *hdr);
 
 //xaHead *getHd_andClose(const char *fname);
 int restuff(aRead &b);
