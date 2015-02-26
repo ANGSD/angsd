@@ -9,9 +9,10 @@ I'm still using my own readpools. Users should therefore also download
 and install htslib.
 
 =====
-git clone https://github.com/samtools/htslib.git
-git clone https://github.com/angsd/angsd.git
-cd angsd;make HTSDIR=../htslib
+
+git clone https://github.com/samtools/htslib.git;git clone https://github.com/angsd/angsd.git
+cd angsd;make HTSDIR=../htslib;
+
 =====
 Manual for ANGSD 
 http://www.popgen.dk/angsd/
