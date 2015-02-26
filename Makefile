@@ -9,7 +9,7 @@ OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
 FLAGS=-O3
 
-PRG=htshook angsd misc
+
 
 
 # Adjust $(HTSDIR) to point to your top-level htslib directory
@@ -17,8 +17,9 @@ HTSDIR = ../htslib
 HTSLIB = $(HTSDIR)/libhts.a
 BGZIP  = $(HTSDIR)/bgzip
 
-PACKAGE_VERSION  = 0.616
+PACKAGE_VERSION  = 0.700
 NUMERIC_VERSION = $(PACKAGE_VERSION)
+
 ifneq "$(wildcard .git)" ""
 original_version := $(PACKAGE_VERSION)
 PACKAGE_VERSION := $(shell git describe --always --dirty)
@@ -27,12 +28,16 @@ empty :=
 NUMERIC_VERSION := $(subst $(empty) ,.,$(wordlist 1,2,$(subst ., ,$(original_version))) 255)
 endif
 
-
-all: version.h $(PRG)
-
-
 version.h: $(if $(wildcard version.h),$(if $(findstring "$(PACKAGE_VERSION)",$(shell cat version.h)),,force))
 endif
+
+
+
+PRG=htshook angsd misc
+
+all: $(PRG)
+
+
 
 version.h:
 	echo '#define ANGSD_VERSION "$(PACKAGE_VERSION)"' > $@
@@ -73,3 +78,5 @@ clean:	testclean
 test:
 	echo "Only subset of analyses is being tested"
 	cd test;./testAll.sh ../angsd
+
+force:
