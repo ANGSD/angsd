@@ -23,8 +23,7 @@ all: $(PRG)
 misc:
 	make -C misc/
 
-htshook: string_alloc.h
-	cmp string_alloc.h $(HTSDIR)/cram/string_alloc.h || cp -f string_alloc.h $(HTSDIR)/cram/string_alloc.h 
+htshook: 
 	make -C $(HTSDIR)
 
 -include $(OBJ:.o=.d)
