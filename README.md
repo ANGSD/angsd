@@ -10,7 +10,7 @@ and install htslib.
 
 =====
 
-git clone https://github.com/samtools/htslib.git;git clone https://github.com/angsd/angsd.git
+git clone https://github.com/samtools/htslib.git;git clone https://github.com/angsd/angsd.git;
 cd angsd;make HTSDIR=../htslib;
 
 =====
