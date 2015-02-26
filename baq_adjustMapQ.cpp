@@ -27,7 +27,7 @@ static inline int bam_aux_type2size(int x)
 		else (s) += bam_aux_type2size(type); \
 	} while(0)
 
-
+#define getAuxStart(b) ((b)->vDat + (b)->nCig*sizeof(uint32_t) + (b)->l_qname + (b)->l_seq + ((b)->l_seq + 1)/2)
 
 uint8_t *bam_aux_get(const aRead &b, const char tag[2])
 {

@@ -402,7 +402,7 @@ int main(int argc,char **argv){
   const char *prefix=NULL;
   int regLen = 0;
   int singleOut = 0;
-  gzFile *in = Z_NULL;
+  gzFile in = Z_NULL;
   argv++;
   char *depthFile = NULL;
   double *depths = NULL;
@@ -537,7 +537,7 @@ int main(int argc,char **argv){
       positInt[i] = atof(strtok(NULL," \t\n\r"))*regLen;
 
     for( i=0; i<nsam;i++) 
-      if(0==gzgets(in,list[i],32768 ))
+      if(gzgets(in,list[i],32768 ))
 	 fprintf(stderr,"Problem reading stuff:\n");
 
   }

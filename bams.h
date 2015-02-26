@@ -9,17 +9,13 @@
 #include <htslib/sam.h>
 #include <cstdio>
 #include <htslib/hts.h>
+
 #define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
 //#define NTHREADS 10
 #define UPPILE_LEN 8
 
 // macros taken from samtools
 #define bam1_seqi(s, i) ((s)[(i)/2] >> 4*(1-(i)%2) & 0xf)
-
-
-#define RLEN 512
-
-
 #define bam1_strand(b) (((b)->flag&BAM_FREVERSE) != 0)
 
 
@@ -46,55 +42,28 @@ typedef struct {
 #define getSeq(b) ((b)->vDat + (b)->nCig*sizeof(uint32_t) + (b)->l_qname)
 #define getCig(b) ((uint32_t*)((b)->vDat + (b)->l_qname))
 #define getQuals(b) ((b)->vDat + (b)->nCig*sizeof(uint32_t) + (b)->l_qname + (((b)->l_seq + 1)>>1))
-#define getAuxStart(b) ((b)->vDat + (b)->nCig*sizeof(uint32_t) + (b)->l_qname + (b)->l_seq + ((b)->l_seq + 1)/2)
 
-//utility forprinting out problematic stuff
-#define printErr(b) (({fprintf(stderr,"\t-> Problems: in func:%s at line:%d in file:%s \n",__FUNCTION__,__LINE__,__FILE__),  exit(0);}))
-
-
-
-uint32_t bam_calend(const aRead& rd, const uint32_t *cigar);
+//uint32_t bam_calend(const aRead& rd, const uint32_t *cigar);
 int is_overlap(uint32_t beg, uint32_t end, const aRead &b);
-//int bam_validate1(const aHead *header, const aRead b);
-//aHead *getHd(htsFile *gz);
-int getAlign(htsFile *gz,int block_size,aRead &st);
-//void dalloc(const aHead *hd);
 htsFile *openBAM(const char *fname);
-
-
-
 
 typedef struct{
   int nReads;
-
   int *first;//first postition of read, relative to reference
   int *last;//last position of read,relative to reference
   int l;
   int m;
-  aRead *reads;
+  bam1_t **reads;
   
   int readIDstop;//an intervalue represeing how many reads we want to process
   int lowestStart;//the lowestStartacroos an array of sglPool
   
   //int regionDone;//can be either chromosomeDone or regionDone (whens supplying regions)
-  aRead bufferedRead;//this is used for buffering a read, in the case of chromosome change
+  bam1_t *bufferedRead;//this is used for buffering a read, in the case of chromosome change
   //int isEOF;
-}sglPool;
+}sglPoolb;
 
 
-
-
-sglPool getPool(BGZF *fp,int nReads,aRead &bufRead,int &keepGoing);
-//void printSglPool(const sglPool& sgl,FILE *fp,aHead *hd);
-void dalloc (sglPool &ret);
-
-typedef struct{
-  uint64_t chunk_beg;
-  uint64_t chunk_end;
-}pair64_t;
-
-
-typedef struct __tindex *tindex;
 
 
 typedef struct{
@@ -102,11 +71,6 @@ typedef struct{
   hts_itr_t *hts_itr;
 }iter_t;
 
-void printIter(const iter_t& it,FILE *fp);
-
 int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr);
-int bam_iter_read1(htsFile *fp, iter_t *iter,aRead &b,bam_hdr_t *hdr);
-
-//xaHead *getHd_andClose(const char *fname);
-int restuff(aRead &b);
+int restuff(bam1_t *b);
 #endif

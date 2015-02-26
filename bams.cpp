@@ -5,10 +5,6 @@
 #include <cassert>
 #include <ctype.h>
 #include <cmath>
-#include <htslib/sam.h>
-#include <htslib/bgzf.h>
-#include <cram/cram.h>
-
 #include <htslib/hts.h>
 #include "bams.h"
 #include "baq_adjustMapQ.h"
@@ -79,26 +75,27 @@ int getNumBest2(bam1_t *b) {
 }
 
 //simple function to perform additional analysis, only used when we have to redo a single read when we change chr
-int restuff(aRead &b){
+
+int restuff(bam1_t *b){
   //  fprintf(stderr,"ohh yes: b.refID=%d b.pos=%d\n",b.refID,b.pos);
  extern abcGetFasta *gf;
- assert(gf->ref->curChr==b.refID);
+ assert(gf->ref->curChr==b->core.tid);
 
  if(baq){
    assert(gf->ref!=NULL);
-   assert(gf->ref->curChr==b.refID);
-   bam_prob_realn_core_a(b,gf->ref->seqs,baq);
+   assert(gf->ref->curChr==b->core.tid);
+   bam_prob_realn_core(b,gf->ref->seqs,baq);
  }
 
  if(adjustMapQ!=0){
    assert(gf->ref!=NULL);
-   int q = bam_cap_mapQ_a(b,gf->ref->seqs,adjustMapQ);
+   int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
    if(q<0)
      return 0;
-   if(q<b.mapQ)
-     b.mapQ = q;
+   if(q<b->core.qual)
+     b->core.qual = q;
  }
- if(b.mapQ<minMapQ)
+ if(b->core.qual<minMapQ)
    return 0;
   
   return 1;
@@ -129,7 +126,7 @@ int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr) {
     r = sam_itr_next(fp, iter->hts_itr, b);
   if(r!=-1) {
     extern abcGetFasta *gf;
-    if(b->core.flag&4)
+    if(b->core.flag&4||b->core.n_cigar==0)
       goto bam_iter_reread;
     
     
@@ -174,19 +171,3 @@ int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr) {
   return r; 
 }
 
-
-void dalloc (sglPool &ret){
-  for(int i=0;i<ret.l;i++)
-    delete [] ret.reads[i].vDat;
-  if(0){
-    free( ret.reads);
-    free(ret.first);
-    free(ret.last);
-  }else{
-    delete [] ret.reads;
-    delete [] ret.first;
-    delete [] ret.last;
-
-
-  }
-}
