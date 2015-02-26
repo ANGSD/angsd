@@ -7,7 +7,6 @@
 #include <cmath>
 #include <htslib/hts.h>
 #include "bams.h"
-#include "baq_adjustMapQ.h"
 #include "bam_md.h"
 #include "abcGetFasta.h"
 
@@ -18,33 +17,6 @@ extern int remove_bads;
 extern int minMapQ;
 extern int adjustMapQ;
 extern int baq;
-
-uint32_t bam_calend_old(const aRead& rd, const uint32_t *cigar){
-  uint32_t end = rd.pos;
-  for (int k = 0; k < rd.nCig; ++k) {
-    int op = cigar[k] & BAM_CIGAR_MASK;
-    if (op == BAM_CMATCH || op == BAM_CDEL || op == BAM_CREF_SKIP)
-      end += cigar[k] >> BAM_CIGAR_SHIFT;
-  }
-  return end;
-}
-uint32_t bam_calend(const aRead& rd, const uint32_t *cigar){
-  uint32_t end = rd.pos;
-  for (int k = 0; k < rd.nCig; ++k) {
-    int op = cigar[k] & BAM_CIGAR_MASK;
-    if (op==BAM_CEQUAL||op==BAM_CDIFF||op == BAM_CMATCH || op == BAM_CDEL || op == BAM_CREF_SKIP)
-      end += cigar[k] >> BAM_CIGAR_SHIFT;
-  }
-  //  fprintf(stderr,"end=%d\n",end);
-  return end;
-}
-
-int is_overlap(uint32_t beg, uint32_t end, const aRead &b) {
-  uint32_t rbeg = b.pos;
-  uint32_t rend = b.nCig ? bam_calend(b, getCig(&b)) : b.pos + 1;
-  int ret = (rend > beg && rbeg < end);
-  return ret;
-}
 
 int getNumBest2(bam1_t *b) {
   uint8_t *s= bam_get_aux(b);

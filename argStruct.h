@@ -1,17 +1,16 @@
 #pragma once
 #include <cstring>
-
-
+#include <vector>
+#include <map>
+#include <htslib/hts.h>
+#include <htslib/sam.h>
+#include <cstdio>
 //little struct for keeping information of regions to extract
 typedef struct{
   int refID;
   int start;
   int stop;
 }regs;
-
-
-#include "bams.h"
-
 
 struct ltstr
 {

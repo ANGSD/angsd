@@ -214,30 +214,6 @@ void realloc(sglPoolb &ret,int l){
   
 }
 
-
-
-int bam_t_to_aRead (bam1_t *from,aRead &to){
-  to.refID = from->core.tid;
- to.pos = from->core.pos;
- to.nBin = from->core.bin;
- to.mapQ = from->core.qual;
- to.l_qname = from->core.l_qname;
- to.flag = from->core.flag;
- to.nCig = from->core.n_cigar;
- to.l_seq = from->core.l_qseq;
- to.next_refID = from->core.mtid;
- to.next_pos= from->core.mpos;
- to.tlen = from->core.isize;
- to.vDat = new uint8_t[from->m_data];
- 
- memcpy(to.vDat,from->data,sizeof(uint8_t)*from->l_data);
- // fprintf(stderr,"refId:%d pos:%d flag:%d\n",to.refID,to.pos,to.flag);
- to.block_size= from->l_data;
- return 1;
-}
-
-
-
 void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 #if 0
   fprintf(stderr,"[%s]\n",__FUNCTION__);
@@ -539,7 +515,8 @@ int coverage_in_bpT(nodePoolT *np, sglPoolb *sgl){
   sumReg += last-first;
   return sumReg;
 }
-nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
+
+nodePool mkNodes_one_sampleb(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
   int regionLen = coverage_in_bp(np,sgl);//true covered regions
   nodePool dn;
   dn.l =0;
@@ -572,24 +549,23 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
   //parse all reads
   int r;
   for( r=0;r<sgl->readIDstop;r++) {
-    aRead rd;
-    bam_t_to_aRead(sgl->reads[r],rd);
-    bam_destroy1(sgl->reads[r]);
+    bam1_t *rd=sgl->reads[r];
+
     //    fprintf(stderr,"r=%d\tpos=%d\n",r,rd.pos);
     if(sgl->first[r] > last){
-      int diffs = (rd.pos-last);
+      int diffs = (rd->core.pos-last);
       offs = offs + diffs;
       last = sgl->last[r];
     }else
       last = std::max(sgl->last[r],last);
 
-    char *seq =(char *) getSeq(&rd);
-    char *quals =(char *) getQuals(&rd);
-    int nCig = rd.nCig;
+    char *seq =(char *) bam_get_seq(rd);
+    char *quals =(char *) bam_get_qual(rd);
+    int nCig = rd->core.n_cigar;
 
-    uint32_t *cigs = getCig(&rd);
+    uint32_t *cigs = bam_get_cigar(rd);
     int seq_pos =0; //position within sequence
-    int wpos = rd.pos-offs;//this value is the current position assocatied with the positions at seq_pos
+    int wpos = rd->core.pos-offs;//this value is the current position assocatied with the positions at seq_pos
     node *tmpNode =NULL; //this is a pointer to the last node beeing modified
     int hasInfo =0;//used when first part is a insertion or deletion
     int hasPrintedMaq =0;
@@ -602,8 +578,8 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
 	if(i==0){ //skip indels if beginning of a read, print mapQ
 	  tmpNode = &nds[wpos];
 	  kputc('^', &tmpNode->seq);
-	  if(rd.mapQ!=255)
-	    kputc(rd.mapQ+33, &tmpNode->seq);
+	  if(rd->core.qual!=255)
+	    kputc(rd->core.qual+33, &tmpNode->seq);
 	  else
 	    kputc('~', &tmpNode->seq);
 	  hasPrintedMaq =1;
@@ -625,8 +601,8 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
 	}
 	if(opCode==BAM_CINS){
 	  for(int ii=0;ii<opLen;ii++){
-	    char c = bam_nt16_rev_table[bam1_seqi(seq, seq_pos)];
-	    kputc(bam1_strand(&rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
+	    kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
 	    kputw(seq_pos+1,&tmpNode->pos);
 	    kputc(',',&tmpNode->pos);
 	    seq_pos++;
@@ -636,10 +612,10 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
 	  if(i!=0){
 	    if(gf->ref==NULL)
 	      for(int ii=0;ii<opLen;ii++)
-		kputc(bam1_strand(&rd)? tolower('N') : toupper('N'),&tmpNode->seq);
+		kputc(bam_is_rev(rd)? tolower('N') : toupper('N'),&tmpNode->seq);
 	    else
 	      for(int ii=0;ii<opLen;ii++)
-		kputc(bam1_strand(&rd)? tolower(gf->ref->seqs[offs+wpos+ii+1]) : toupper(gf->ref->seqs[offs+wpos+ii+1]),&tmpNode->seq);
+		kputc(bam_is_rev(rd)? tolower(gf->ref->seqs[offs+wpos+ii+1]) : toupper(gf->ref->seqs[offs+wpos+ii+1]),&tmpNode->seq);
 	    wpos++;//write '*' from the next position and opLen more
 	  }
 	  for(int fix=wpos;wpos<fix+opLen;wpos++){
@@ -660,8 +636,8 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
 	  tmpNode = &nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  kputc('^', &tmpNode->seq);
-	  if(rd.mapQ!=255)
-	    kputc(rd.mapQ+33, &tmpNode->seq);
+	  if(rd->core.qual!=255)
+	    kputc(rd->core.qual+33, &tmpNode->seq);
 	  else
 	    kputc('~', &tmpNode->seq);
 	  seq_pos += opLen;
@@ -676,20 +652,20 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
 	  tmpNode->depth++;
 	  if(seq_pos==0 &&hasPrintedMaq==0){
 	    kputc('^', &tmpNode->seq);
-	    if(rd.mapQ!=255)
-	      kputc(rd.mapQ+33, &tmpNode->seq);
+	    if(rd->core.qual!=255)
+	      kputc(rd->core.qual+33, &tmpNode->seq);
 	    else
 	      kputc('~', &tmpNode->seq);
 	  }
-	  char c = bam_nt16_rev_table[bam1_seqi(seq, seq_pos)];
+	  char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
 
 	  if(gf->ref==NULL ||gf->ref->chrLen<wpos+offs)//prints the oberved allele
-	    kputc(bam1_strand(&rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	    kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
 	  else{
 	    if(refToInt[c]==refToInt[gf->ref->seqs[wpos+offs]])
-	      kputc(bam1_strand(&rd)? ',' : '.', &tmpNode->seq);
+	      kputc(bam_is_rev(rd)? ',' : '.', &tmpNode->seq);
 	    else
-	      kputc(bam1_strand(&rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	      kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
 	  }
 	  kputc(quals[seq_pos]+33, &tmpNode->qs);
 	  kputw(seq_pos+1, &tmpNode->pos);
@@ -702,7 +678,7 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
 	    tmpNode = &nds[wpos];
 	    tmpNode->refPos=wpos+offs;
 	    tmpNode->depth ++;
-	    bam1_strand(&rd)?kputc('<',&tmpNode->seq):kputc('>',&tmpNode->seq);
+	    bam_is_rev(rd)?kputc('<',&tmpNode->seq):kputc('>',&tmpNode->seq);
 	    kputw(seq_pos+1, &tmpNode->pos);
 	    kputc(quals[seq_pos]+33, &tmpNode->qs);
 	  }
@@ -715,7 +691,7 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
     //after end of read/parsing CIGAR always put the endline char
     //  fprintf(stderr,"printing endpileup for pos=%d\n",rd->pos);
     kputc('$', &tmpNode->seq);
-    delete [] rd.vDat;
+    bam_destroy1(rd);
   }
 
   //plug the reads back up //FIXME maybe do list type instead
@@ -764,7 +740,7 @@ nodePool mkNodes_one_sample(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
 
 
 
-nodePoolT mkNodes_one_sampleT(sglPoolb *sgl,nodePoolT *np) {
+nodePoolT mkNodes_one_sampleTb(sglPoolb *sgl,nodePoolT *np) {
   int regionLen = coverage_in_bpT(np,sgl);//true covered regions
   nodePoolT dn;
   dn.l =0;
@@ -796,26 +772,25 @@ nodePoolT mkNodes_one_sampleT(sglPoolb *sgl,nodePoolT *np) {
   
   for( r=0;r<sgl->readIDstop;r++) {
 
-    aRead rd;
-    bam_t_to_aRead(sgl->reads[r],rd);
-    bam_destroy1(sgl->reads[r]);
-    int mapQ = rd.mapQ;
+    bam1_t *rd = sgl->reads[r];
+
+    int mapQ = rd->core.qual;
     if(mapQ>=255) mapQ = 20;
 
     if(sgl->first[r] > last){
-      int diffs = (rd.pos-last);
+      int diffs = (rd->core.pos-last);
       offs = offs + diffs;
       last = sgl->last[r];
     }else
       last = std::max(sgl->last[r],last);
 
-    char *seq =(char *) getSeq(&rd);
-    char *quals =(char *) getQuals(&rd);
-    int nCig = rd.nCig;
+    char *seq =(char *) bam_get_seq(rd);
+    char *quals =(char *) bam_get_qual(rd);
+    int nCig = rd->core.n_cigar;
 
-    uint32_t *cigs = getCig(&rd);
+    uint32_t *cigs = bam_get_cigar(rd);
     int seq_pos =0; //position within sequence
-    int wpos = rd.pos-offs;//this value is the current position assocatied with the positions at seq_pos
+    int wpos = rd->core.pos-offs;//this value is the current position assocatied with the positions at seq_pos
     tNode *tmpNode =NULL; //this is a pointer to the last node beeing modified
     int hasInfo = 0;
     //loop through read by looping through the cigar string
@@ -849,13 +824,13 @@ nodePoolT mkNodes_one_sampleT(sglPoolb *sgl,nodePoolT *np) {
 	  
 	  tmpNode->insert[tmpNode->l2] = initNodeT(opLen);
 	  for(int ii=0;ii<opLen;ii++){
-	    char c = bam_nt16_rev_table[bam1_seqi(seq, seq_pos)];
-	    tmpNode->insert[tmpNode->l2].seq[ii] = bam1_strand(&rd)? tolower(c) : toupper(c);
+	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
+	    tmpNode->insert[tmpNode->l2].seq[ii] = bam_is_rev(rd)? tolower(c) : toupper(c);
 	    tmpNode->insert[tmpNode->l2].posi[ii] = seq_pos + 1;
-	    tmpNode->insert[tmpNode->l2].isop[ii] =rd.l_seq- seq_pos - 1;
+	    tmpNode->insert[tmpNode->l2].isop[ii] =rd->core.l_qseq- seq_pos - 1;
 	    tmpNode->insert[tmpNode->l2].qs[ii] = quals[seq_pos];
-	    if( quals[seq_pos]<minQ || seq_pos + 1 < trim || rd.l_seq- seq_pos - 1 < trim)  
-	      tmpNode->insert[tmpNode->l2].seq[ii] =  bam1_strand(&rd)? tolower('n') : toupper('N');
+	    if( quals[seq_pos]<minQ || seq_pos + 1 < trim || rd->core.l_qseq- seq_pos - 1 < trim)  
+	      tmpNode->insert[tmpNode->l2].seq[ii] =  bam_is_rev(rd)? tolower('n') : toupper('N');
 	    tmpNode->insert[tmpNode->l2].mapQ[ii] = mapQ;
 	    seq_pos++;// <- important, must be after macro
 	  }
@@ -894,15 +869,15 @@ nodePoolT mkNodes_one_sampleT(sglPoolb *sgl,nodePoolT *np) {
 	  }
 	  
 
-	  char c = bam_nt16_rev_table[bam1_seqi(seq, seq_pos)];
-	  tmpNode->seq[tmpNode->l] = bam1_strand(&rd)? tolower(c) : toupper(c);
+	  char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
+	  tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower(c) : toupper(c);
 	  tmpNode->qs[tmpNode->l] =  quals[seq_pos];
 	
 	  tmpNode->posi[tmpNode->l] = seq_pos;
-	  tmpNode->isop[tmpNode->l] =rd.l_seq- seq_pos-1;
+	  tmpNode->isop[tmpNode->l] =rd->core.l_qseq- seq_pos-1;
 	  tmpNode->mapQ[tmpNode->l] = mapQ;
-	  if( quals[seq_pos]<minQ || seq_pos  < trim || rd.l_seq - seq_pos - 1 < trim )
-	    tmpNode->seq[tmpNode->l] = bam1_strand(&rd)? tolower('n') : toupper('N');
+	  if( quals[seq_pos]<minQ || seq_pos  < trim || rd->core.l_qseq - seq_pos - 1 < trim )
+	    tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower('n') : toupper('N');
 	  
 	  tmpNode->l++;
 	  seq_pos++;
@@ -920,7 +895,7 @@ nodePoolT mkNodes_one_sampleT(sglPoolb *sgl,nodePoolT *np) {
       //      exit(0);
     }
     //after end of read/parsing CIGAR always put the endline char
-    delete [] rd.vDat;
+    bam_destroy1(rd);
   }
 
   //plug the reads back up //FIXME maybe do list type instead
@@ -1665,12 +1640,12 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       if(show!=1){
 	dnT = new nodePoolT[nFiles];//<- this can leak now
 	for(int i=0;i<nFiles;i++){
-	  dnT[i] = mkNodes_one_sampleT(&sglp[i],&npsT[i]);
+	  dnT[i] = mkNodes_one_sampleTb(&sglp[i],&npsT[i]);
 	  tmpSum += dnT[i].l;
 	}
       }else
 	for(int i=0;i<nFiles;i++) {
-	  dn[i] = mkNodes_one_sample(&sglp[i],&nps[i],gf);
+	  dn[i] = mkNodes_one_sampleb(&sglp[i],&nps[i],gf);
 	  tmpSum += dn[i].l;
 	}
 
