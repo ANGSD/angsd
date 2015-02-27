@@ -9,57 +9,44 @@ OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
 FLAGS=-O3
 
-PRG=htshook angsd misc
+all: htshook angsd misc
 
 
 # Adjust $(HTSDIR) to point to your top-level htslib directory
 HTSDIR = ../htslib
-HTSLIB = $(HTSDIR)/libhts.a
-BGZIP  = $(HTSDIR)/bgzip
+HTS = $(realpath $(HTSDIR))
+HTSLIB = $(HTS)/libhts.a
 
-PACKAGE_VERSION  = 0.616
-NUMERIC_VERSION = $(PACKAGE_VERSION)
+PACKAGE_VERSION  = 0.700
+
 ifneq "$(wildcard .git)" ""
-original_version := $(PACKAGE_VERSION)
 PACKAGE_VERSION := $(shell git describe --always --dirty)
-ifneq "$(subst ..,.,$(subst 0,,$(subst 1,,$(subst 2,,$(subst 3,,$(subst 4,,$(subst 5,,$(subst 6,,$(subst 7,,$(subst 8,,$(subst 9,,$(PACKAGE_VERSION))))))))))))" "."
-empty :=
-NUMERIC_VERSION := $(subst $(empty) ,.,$(wordlist 1,2,$(subst ., ,$(original_version))) 255)
-endif
-
-
-all: version.h $(PRG)
-
-
 version.h: $(if $(wildcard version.h),$(if $(findstring "$(PACKAGE_VERSION)",$(shell cat version.h)),,force))
 endif
 
 version.h:
 	echo '#define ANGSD_VERSION "$(PACKAGE_VERSION)"' > $@
 
-print-version:
-	@echo $(PACKAGE_VERSION)
-
 .PHONY: misc clean htshook test
 
 misc:
-	make -C misc/
+	make -C misc/ HTSDIR=$(HTS)
 
 htshook: 
-	make -C $(HTSDIR)
+	make -C $(HTS)
 
 -include $(OBJ:.o=.d)
 
 
 %.o: %.c
-	$(CC) -c  $(CFLAGS) -I$(HTSDIR) $*.c
-	$(CC) -MM $(CFLAGS)  -I$(HTSDIR) $*.c >$*.d
+	$(CC) -c  $(CFLAGS) -I$(HTS) $*.c
+	$(CC) -MM $(CFLAGS)  -I$(HTS) $*.c >$*.d
 
 %.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS)  -I$(HTSDIR) $*.cpp
-	$(CXX) -MM $(CXXFLAGS)  -I$(HTSDIR) $*.cpp >$*.d
+	$(CXX) -c  $(CXXFLAGS)  -I$(HTS) $*.cpp
+	$(CXX) -MM $(CXXFLAGS)  -I$(HTS) $*.cpp >$*.d
 
-angsd: $(OBJ)
+angsd: version.h $(OBJ)
 	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread $(HTSLIB)
 
 
