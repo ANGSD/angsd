@@ -501,7 +501,7 @@ int charToNum(char c){
 }
 
 
-aMap readhap( char *fname,int minDist,double minMaf){
+aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int skiptrans){
   //  fprintf(stderr,"[%s] fname:%s\tminDist:%d LENS:%d\n",__FUNCTION__,fname,minDist,LENS);
   gzFile gz=getgz(fname,"rb");
   
@@ -513,6 +513,10 @@ aMap readhap( char *fname,int minDist,double minMaf){
   while(gzgets(gz,buf,LENS)){
     hapSite hs;
     int p = atoi(strtok(buf,"\t\n "));
+    if(p<startPos)
+      continue;
+    if(p>stopPos)
+      break;
     hs.allele1 = charToNum(strtok(NULL,"\t\n ")[0]);
     hs.freq = atof(strtok(NULL,"\t\n "));
     if(hs.freq<minMaf||(1-hs.freq)<minMaf)
@@ -525,7 +529,17 @@ aMap readhap( char *fname,int minDist,double minMaf){
       hs.allele1 = flip(hs.allele1);
       hs.allele2 = flip(hs.allele2);
     }
-    
+    if(skiptrans){
+      if(hs.allele1 == 0 && hs.allele1 == 2)
+	continue;
+      if(hs.allele1 == 2 && hs.allele1 == 0)
+	continue;
+      if(hs.allele1 == 1 && hs.allele1 == 3)
+	continue;
+      if(hs.allele1 == 3 && hs.allele1 == 1)
+	continue;
+
+    }
     if(myMap.count(p)>0){
       if(viggo>0){
 	//	fprintf(stderr,"[%s] Duplicate positions found in file: %s, pos:%d\n",__FUNCTION__,fname,p);
@@ -571,7 +585,8 @@ aMap readhap( char *fname,int minDist,double minMaf){
   gzclose(gz);
   return newMap;
 }
- 
+
+
 
 
 void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,int minDepth,int maxDepth){
@@ -606,30 +621,37 @@ int main(int argc,char**argv){
   char *hapfile=NULL;
   char *icounts=NULL;
   double minMaf = 0.05;
+  int startPos = 5e6;
+  int stopPos = 154900000;
+  int minDepth=2;
+  int maxDepth=200;
+  int skipTrans = 0;
+
   int n;
-  while ((n = getopt(argc, argv, "h:a:m:")) >= 0) {
+  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:")) >= 0) {
     switch (n) {
     case 'h': hapfile = strdup(optarg); break;
     case 'a': icounts = strdup(optarg); break;
     case 'm': minMaf = atof(optarg); break;
+    case 'b': startPos = atoi(optarg); break;
+    case 'c': stopPos = atoi(optarg); break;
+    case 'd': minDepth = atoi(optarg); break;
+    case 'e': maxDepth = atoi(optarg); break;
+    case 'f': skipTrans = atoi(optarg); break;
     default: {fprintf(stderr,"unknown arg:\n");return 0;}
     }
   }
   if(!hapfile||!icounts){
     fprintf(stderr,"\t-> Must supply -h hapmapfile -a angsd.icnts.gz file\n");
+    fprintf(stderr,"\t-> Other options: -m minaf -b startpos -c stoppos -d mindepth -e maxdepth -f skiptrans\n");
     return 0;
   }
   
   int minDist = 10;
-  int minDepth=2;
-  int maxDepth=20;
-  //  hapfile="../RES/hapMapCeuXlift.map.gz";
-  //icounts="../angsdput.icnts.gz";
-  // mapfile="../RES/chrX.unique.gz";
-  fprintf(stderr,"hapmap:%s counts:%s minMaf:%f\n",hapfile,icounts,minMaf);
+  fprintf(stderr,"hapmap:%s counts:%s minMaf:%f startPos:%d stopPos:%d minDepth:%d maxDepth:%d skiptrans:%d\n",hapfile,icounts,minMaf,startPos,stopPos,minDepth,maxDepth,skipTrans);
 
   
-  aMap myMap = readhap(hapfile,minDist,minMaf);
+  aMap myMap = readhap(hapfile,minDist,minMaf,startPos,stopPos,skipTrans);
   std::vector<int> ipos;
   std::vector<int*> cnt;
   readicnts(icounts,ipos,cnt,minDepth,maxDepth);
