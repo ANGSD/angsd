@@ -3,7 +3,7 @@
   
 
  */
-
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -69,6 +69,40 @@ double likeNew(double x,int len,int *seqDepth,int *nonMajor,double *freq,double 
   return t;
 }
 
+double like_optim(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int isNew){
+  double a = 0+DBL_EPSILON;
+  double b = 1-DBL_EPSILON;
+  double k = (sqrt(5.) - 1.) / 2.;
+  double xL = b - k * (b - a);
+  double xR = a + k * (b - a);
+  while (b - a > DBL_EPSILON)
+  {
+    double left,right;
+    if(isNew){
+      left = likeOld(xL,len,seqDepth,nonMajor,freq,eps);
+      right = likeOld(xR,len,seqDepth,nonMajor,freq,eps);
+    }else{
+      left = likeNew(xL,len,seqDepth,nonMajor,freq,eps);
+      right = likeNew(xR,len,seqDepth,nonMajor,freq,eps);
+
+    }
+    if (left > right)
+    {
+      b = xR;
+      xR = xL;
+      xL = b - k*(b - a);
+    }
+    else
+    {
+      a = xL;
+      xL = xR;
+      xR = a + k * (b - a);
+    }
+  }
+  return (a + b) / 2.;
+}
+
+
 
 double likeOldMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int jump){
   //  return(mean(error/d-eps)/(mean(freq)-eps))
@@ -120,14 +154,21 @@ double calcEps(int *e1,int *d1,int len,int skip){
 
 //mehtod==0 => OLD;
 // method==1 => NEW
-double jack(int len,int *seqDepth,int *nonMajor,double *freq,int method,int *e1,int *d1){
+double jack(int len,int *seqDepth,int *nonMajor,double *freq,int method,int *e1,int *d1,int ML){
 
   double *thetas =new double[len];
   for(int i=0;i<len;i++)
-    if(method==0){
-      thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
-    }else
-      thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
+    if(ML==0){
+      if(method==0){
+	thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
+      }else
+	thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
+    }else{
+      if(method==0){
+	thetas[i] = like_optim(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),1) ;
+      }else
+	thetas[i] = like_optim(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),0) ;
+    }
   double esd = sd(thetas,len);
   //  fprintf(stderr,"jackknife sd: %f\n\n",esd);
   delete [] thetas;
@@ -308,14 +349,18 @@ void analysis(dat &d) {
     
   }
 
-  double llh=likeOld(0.027,d.cn.size()/9,d0,err0,freq,c);
   double mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  fprintf(stderr,"Method1: old Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,0,err1,d1));
+  double momJack= jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
+  double ML =like_optim(d.cn.size()/9,d0,err0,freq,c,0);
+  double mlJack= jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
+  fprintf(stderr,"Method1: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
 
 
-  //llh=likeNew(0.027,d.cn.size()/9,d0,err0,freq,c);
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  fprintf(stderr,"Method1: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,1,err1,d1));
+  momJack= jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
+  ML =like_optim(d.cn.size()/9,d0,err0,freq,c,0);
+  mlJack= jack(d.cn.size()/9,d0,err0,freq,1,err1,d1,1);
+  fprintf(stderr,"Method1: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
  
 
   for(int i=0;i<d.cn.size()/9;i++){
@@ -344,15 +389,17 @@ void analysis(dat &d) {
     //    fprintf(stdout,"cont\t%d\t%d\t%d\t%d\t%f\n",err0[i],err1[i],d0[i],d1[i],freq[i]);
     
   }
-
-  llh=likeOld(0.027,d.cn.size()/9,d0,err0,freq,c);
   mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  fprintf(stderr,"Method2: old Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,0,err1,d1));
+  momJack=jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
+  ML = like_optim(d.cn.size()/9,d0,err0,freq,c,0);
+  mlJack = jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
+  fprintf(stderr,"Method2: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%f\n",mom,momJack,ML,mlJack);
 
-
-  //llh=likeNew(0.027,d.cn.size()/9,d0,err0,freq,c);
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e\n",mom,jack(d.cn.size()/9,d0,err0,freq,1,err1,d1));
+  momJack=jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
+  ML = like_optim(d.cn.size()/9,d0,err0,freq,c,0);
+  mlJack = jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
+  fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%f\n",mom,momJack,ML,mlJack);
 
   delete [] rowSum;
   delete [] rowMax;

@@ -1,9 +1,3 @@
-/*
-  2 leaks
-  1) when choosing region
-  2) when doing strdup in indexing
-*/
-
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -25,8 +19,8 @@ abcGetFasta *gf=NULL;
 
 
 extern int SIG_COND;
+#define bam_nt16_rev_table seq_nt16_str
 
-static const char *bam_nt16_rev_table2 = "=ACMGRSVTWYHKDBN";
 
 
 htsFile *openBAM(const char *fname){
@@ -42,19 +36,6 @@ htsFile *openBAM(const char *fname){
   }
   return fp;
 }
-
-
-
-void printHd(const bam_hdr_t *hd,FILE *fp){
-  fprintf(fp,"htext=%s\n",hd->text);
-  fprintf(fp,"n_ref=%d\n",hd->n_targets);
-  for(int i=0;i<hd->n_targets;i++)
-    fprintf(fp,"i=%d name=%s length=%d\n",i,hd->target_name[i],hd->target_len[i]);
-
-}
-
-
-
 
 /*
   compare all entries in the 2 headers, if difference return 1;
@@ -96,6 +77,20 @@ void dalloc_bufReader(bufReader &ret){
   free(ret.fn);
   hts_close(ret.fp);
 }
+
+
+
+
+void printHd(const bam_hdr_t *hd,FILE *fp){
+  fprintf(fp,"htext=%s\n",hd->text);
+  fprintf(fp,"n_ref=%d\n",hd->n_targets);
+  for(int i=0;i<hd->n_targets;i++)
+    fprintf(fp,"i=%d name=%s length=%d\n",i,hd->target_name[i],hd->target_len[i]);
+
+}
+
+
+
 
 
 

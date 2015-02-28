@@ -14,16 +14,15 @@ extern int SIG_COND;
 extern int minQ;
 extern int trim;
 #define bam_nt16_rev_table seq_nt16_str
-//static const char *bam_nt16_rev_table = "=ACMGRSVTWYHKDBN";
 
-
+#define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
 /*
   When merging different nodes, we are using a greedy but fast approach,
   however if we have a large genomic region with no data we are are allocating huge chunks.
   So the cutoff below will make a fallback to a slower but memsecure version
  */
 #define BUG_THRES 1000000 //<- we allow 1mio sites to be allocated,
-
+#define UPPILE_LEN 8
 template<typename T>
 T getmax(const T *ary,size_t len){
   assert(len>0&&ary!=NULL);
@@ -34,13 +33,6 @@ T getmax(const T *ary,size_t len){
       high=ary[i];
   }
   return high;
-}
-
-
-void dalloc (sglPoolb &ret){
-  delete [] ret.reads;
-  delete [] ret.first;
-  delete [] ret.last;
 }
 
 
@@ -1002,22 +994,6 @@ chunky *mergeAllNodes_old(nodePool *dn,int nFiles) {
 
 
 
-sglPoolb makePoolb(int l){
-  sglPoolb ret;
-  ret.l=0;
-  ret.m=l;
-  kroundup32(ret.m);
-  
-  ret.reads= new bam1_t*[ret.m];
-  ret.first=new int[ret.m];
-  ret.last=new int[ret.m];
-  ret.bufferedRead=NULL;
-
-  return ret;
-}
-
-
-
 
 int getSglStop5(sglPoolb *sglp,int nFiles,int pickStop) {
 #if 0
@@ -1454,7 +1430,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     for(int i=0;1&&i<nFiles;i++){
       dalloc_nodePoolT(npsT[i]);
       delete [] npsT[i].nds;
-      dalloc(sglp[i]);
+      dalloc(&sglp[i]);
     }
     delete [] npsT;
     delete [] sglp;
@@ -1464,7 +1440,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     for(int i=0;1&&i<nFiles;i++){
       dalloc_nodePool(nps[i]);
       delete [] nps[i].nds;
-      dalloc(sglp[i]);
+      dalloc(&sglp[i]);
     }
 
     delete [] nps;

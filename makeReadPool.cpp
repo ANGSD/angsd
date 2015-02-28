@@ -1,27 +1,34 @@
 #include "makeReadPool.h"
 #include <cassert>
 #include <cstdlib>
-void realloc(sglPoolb &ret,int l){
-  ret.m =l;
+
+sglPoolb makePoolb(int l){
+  sglPoolb ret;
+  ret.l=0;
+  ret.m=l;
   kroundup32(ret.m);
-  bam1_t **tmp = new bam1_t*[ret.m];
-  memcpy(tmp,ret.reads,sizeof(bam1_t**)*ret.l);
-  delete [] ret.reads;
-  ret.reads = tmp;
   
-  int *tmpI = new int[ret.m];
-  memcpy(tmpI,ret.first,sizeof(int)*ret.l);
-  delete [] ret.first;
-  ret.first = tmpI;
-  
-    
-  tmpI = new int[ret.m];
-  memcpy(tmpI,ret.last,sizeof(int)*ret.l);
-  delete [] ret.last;
-  ret.last = tmpI;
-  
+  ret.reads=(bam1_t**)malloc(ret.m*sizeof(bam1_t**));// new bam1_t*[ret.m];
+  ret.first=(int *)malloc(ret.m*sizeof(int));//new int[ret.m];
+  ret.last=(int *)malloc(ret.m*sizeof(int));//new int[ret.m];
+  ret.bufferedRead=NULL;
+
+  return ret;
 }
 
+void dalloc (sglPoolb *ret){
+  free(ret->reads);
+  free(ret->first);
+  free(ret->last);
+}
+
+void realloc(sglPoolb *ret,int l){
+  ret->m =l;
+  kroundup32(ret->m);
+  ret->reads =(bam1_t**) realloc(ret->reads,sizeof(bam1_t**)*ret->l);
+  ret->first =(int*) realloc(ret->first,sizeof(int)*ret->l);
+  ret->last =(int*) realloc(ret->last,sizeof(int)*ret->l);
+}
 
 void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 #if 0
@@ -32,7 +39,7 @@ void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int r
   assert(rdObjRegionDone!=1 &&rdObjEof!=1 );
   
   if((nReads+ret.l)>ret.m)
-    realloc(ret,nReads+ret.l);
+    realloc(&ret,nReads+ret.l);
 
 
   //this is the awkward case this could cause an error in some very unlikely scenario.
@@ -74,7 +81,7 @@ void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int r
     if(i+ret.l>=(ret.m-1)){
       ret.l += i;
       i=0;
-      realloc(ret,ret.m+1);//will double buffer
+      realloc(&ret,ret.m+1);//will double buffer
     }
     
     bam1_t *b = ret.reads[i+ret.l]=bam_init1();
@@ -111,8 +118,7 @@ void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int r
     }
     i++;
   }
-  ret.nReads =ret.l+i;
-  ret.l = ret.nReads;
+  ret.l += i;
 }
 
 
@@ -124,7 +130,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refTo
   assert(rdObjEof==0 && ret.bufferedRead ==NULL);
  
   if((nReads+ret.l)>ret.m)
-    realloc(ret,nReads+ret.l);
+    realloc(&ret,nReads+ret.l);
  
   //this is the awkward case this could cause an error in some very unlikely scenario.
   //whith the current buffer empty and the first read being a new chromosome. 
@@ -196,8 +202,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refTo
     
   }
 
-  ret.nReads =ret.l+i;
-  ret.l = ret.nReads;
+  ret.l += i;
 
 }
 
