@@ -3,8 +3,7 @@
   27 feb 2015
   
   functions to read one single read using htslib
-  
- */
+*/
 
 
 #include <cstdio>
@@ -26,7 +25,7 @@ extern int minMapQ;
 extern int adjustMapQ;
 extern int baq;
 
-int getNumBest2(bam1_t *b) {
+int getNumBest(bam1_t *b) {
   uint8_t *s= bam_get_aux(b);
   uint8_t *sStop = s+bam_get_l_aux(b);
   int retVal =1;
@@ -82,14 +81,14 @@ int restuff(bam1_t *b){
 
 }
 
-int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr) {
+int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
   int r;
  bam_iter_reread:
   
-  if(iter->hts_itr==NULL)
+  if(itr==NULL)
     r= sam_read1(fp,hdr,b);
   else
-    r = sam_itr_next(fp, iter->hts_itr, b);
+    r = sam_itr_next(fp, itr, b);
   if(r!=-1) {
     extern abcGetFasta *gf;
     if(b->core.flag&4||b->core.n_cigar==0)
@@ -97,7 +96,8 @@ int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr) {
     
     
     if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
-      return 1;
+      //fprintf(stderr,"r:%d\n",r);
+      return r;
     }
     
     //check if read was bad
@@ -111,7 +111,7 @@ int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr) {
     if(only_proper_pairs&&(b->core.flag%2) ){//only check if pairend
       if(!(b->core.flag&BAM_FPROPER_PAIR))
 	goto bam_iter_reread;
-    }if(uniqueOnly&& getNumBest2(b)!=1)
+    }if(uniqueOnly&& getNumBest(b)!=1)
        goto bam_iter_reread;
     
     
@@ -134,6 +134,7 @@ int bam_iter_read2(htsFile *fp, iter_t *iter,bam1_t *b,bam_hdr_t *hdr) {
     if(b->core.qual<minMapQ)
       goto bam_iter_reread;
   }
+  // fprintf(stderr,"r:%d\n",r);
   return r; 
 }
 

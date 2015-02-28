@@ -1,9 +1,8 @@
-#include "makeReadPool.h"
-#include <cassert>
-#include <cstdlib>
 
-sglPoolb makePoolb(int l){
-  sglPoolb ret;
+#include "makeReadPool.h"
+
+readPool makePoolb(int l){
+  readPool ret;
   ret.l=0;
   ret.m=l;
   kroundup32(ret.m);
@@ -16,13 +15,13 @@ sglPoolb makePoolb(int l){
   return ret;
 }
 
-void dalloc (sglPoolb *ret){
+void dalloc (readPool *ret){
   free(ret->reads);
   free(ret->first);
   free(ret->last);
 }
 
-void realloc(sglPoolb *ret,int l){
+void realloc(readPool *ret,int l){
   ret->m =l;
   kroundup32(ret->m);
   ret->reads =(bam1_t**) realloc(ret->reads,sizeof(bam1_t**)*ret->l);
@@ -30,10 +29,7 @@ void realloc(sglPoolb *ret,int l){
   ret->last =(int*) realloc(ret->last,sizeof(int)*ret->l);
 }
 
-void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refToRead,iter_t *it,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
-#if 0
-  fprintf(stderr,"[%s]\n",__FUNCTION__);
-#endif 
+void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 
   //if should never be in this function if we shouldnt read from the file.
   assert(rdObjRegionDone!=1 &&rdObjEof!=1 );
@@ -50,7 +46,7 @@ void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int r
     bam1_t *b = ret.reads[0]=bam_init1();
     int tmp;
 
-    if((tmp=bam_iter_read2(fp,it,b,hdr))<0){//FIXME
+    if((tmp=pop1_read(fp,itr,b,hdr))<0){//FIXME
       if(tmp==-1){
 	rdObjEof =1;
 	//	ret.isEOF =1;
@@ -85,7 +81,7 @@ void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int r
     }
     
     bam1_t *b = ret.reads[i+ret.l]=bam_init1();
-    if((tmp=bam_iter_read2(fp,it,b,hdr))<0) {
+    if((tmp=pop1_read(fp,itr,b,hdr))<0) {
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -123,7 +119,7 @@ void read_reads_usingStopb(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int r
 
 
 //nothing with buffered here
-void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refToRead,iter_t *it,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
+void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 #if 0
   fprintf(stderr,"\t->[%s] buffRefid=%d\trefToRead=%d\n",__FUNCTION__,ret.bufferedRead.refID,refToRead);
 #endif
@@ -138,7 +134,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refTo
   while(ret.l==0){
     bam1_t *b = ret.reads[0]=bam_init1();
     int tmp;
-    if((tmp=bam_iter_read2(fp,it,b,hdr))<0){//FIXME
+    if((tmp=pop1_read(fp,itr,b,hdr))<0){//FIXME
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -175,7 +171,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refTo
   for( i=0;i<nReads;i++){
     bam1_t *b = ret.reads[i+ret.l]=bam_init1();
 
-    if((tmp=bam_iter_read2(fp,it,b,hdr))<0){
+    if((tmp=pop1_read(fp,itr,b,hdr))<0){
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -209,7 +205,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,sglPoolb &ret,int refTo
 
 
 //function will read data from all bamfiles, return value is the number of 'done' files
-int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPoolb *ret,int &readNlines,int ref,int &pickStop) {
+int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop) {
 #if 0
   fprintf(stderr,"\t[%s] Reading from referenceID=%d\n",__FUNCTION__,ref);
 #endif
@@ -225,7 +221,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPoolb *ret,int &readN
     
     int pre=ret[i].l;//number of elements before
     //function reads readNlines reads, from rd[i].fp and modifies isEOF and regionDone
-    read_reads_noStop(rd[i].fp,readNlines,notDone,ret[i],ref,&rd[i].it,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+    read_reads_noStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
     
     //first check if reading caused and end of region event to occur
     if(rd[i].regionDone||rd[i].isEOF) 
@@ -256,7 +252,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,sglPoolb *ret,int &readN
 #endif
     if(ret[i].l>0&&ret[i].first[ret[i].l-1]>pickStop)
       continue;
-    read_reads_usingStopb(rd[i].fp,readNlines,notDone,ret[i],ref,&rd[i].it,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
   } 
   int nDone =0;
   for(int i=0;i<nFiles;i++)

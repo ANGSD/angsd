@@ -190,7 +190,7 @@ void realloc(tNode *d,int newsize){
   returns the number of basepairs covered by np and sgl
 */
 
-int coverage_in_bp(nodePool *np, sglPoolb *sgl){
+int coverage_in_bp(nodePool *np, readPool *sgl){
 #if 0
   for(int i=0;0&&i<sgl->readIDstop;i++)
     fprintf(stderr,"sglrange[%d]\t %d\t%d\n",i,sgl->first[i],sgl->last[i]);
@@ -219,7 +219,7 @@ int coverage_in_bp(nodePool *np, sglPoolb *sgl){
   return sumReg;
 }
 
-int coverage_in_bpT(nodePoolT *np, sglPoolb *sgl){
+int coverage_in_bpT(nodePoolT *np, readPool *sgl){
 #if 0
   for(int i=0;0&&i<sgl->readIDstop;i++)
     fprintf(stderr,"sglrange[%d]\t %d\t%d\n",i,sgl->first[i],sgl->last[i]);
@@ -248,7 +248,7 @@ int coverage_in_bpT(nodePoolT *np, sglPoolb *sgl){
   return sumReg;
 }
 
-nodePool mkNodes_one_sampleb(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
+nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
   int regionLen = coverage_in_bp(np,sgl);//true covered regions
   nodePool dn;
   dn.l =0;
@@ -472,7 +472,7 @@ nodePool mkNodes_one_sampleb(sglPoolb *sgl,nodePool *np,abcGetFasta *gf) {
 
 
 
-nodePoolT mkNodes_one_sampleTb(sglPoolb *sgl,nodePoolT *np) {
+nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
   int regionLen = coverage_in_bpT(np,sgl);//true covered regions
   nodePoolT dn;
   dn.l =0;
@@ -995,7 +995,7 @@ chunky *mergeAllNodes_old(nodePool *dn,int nFiles) {
 
 
 
-int getSglStop5(sglPoolb *sglp,int nFiles,int pickStop) {
+int getSglStop5(readPool *sglp,int nFiles,int pickStop) {
 #if 0
     fprintf(stderr,"[%s]\n",__FUNCTION__);
     for(int i=0;i<nFiles;i++){
@@ -1042,7 +1042,7 @@ int getSglStop5(sglPoolb *sglp,int nFiles,int pickStop) {
   this function just returns the highest position along all buffered nodepools and readpools
  */
 
-void getMaxMax2(sglPoolb *sglp,int nFiles,nodePool *nps){
+void getMaxMax2(readPool *sglp,int nFiles,nodePool *nps){
 #if 0
     fprintf(stderr,"[%s].nFiles=%d\n",__FUNCTION__,nFiles);
     for(int i=0;i<nFiles;i++){
@@ -1053,7 +1053,7 @@ void getMaxMax2(sglPoolb *sglp,int nFiles,nodePool *nps){
     int last_bp_in_chr = -1;
     
     for(int i=0;i<nFiles;i++){
-      sglPoolb *tmp = &sglp[i];
+      readPool *tmp = &sglp[i];
       if(tmp->l>0 && (getmax(tmp->last,tmp->l)>last_bp_in_chr) )
 	last_bp_in_chr = getmax(tmp->last,tmp->l);
       if(nps[i].last>last_bp_in_chr)
@@ -1067,7 +1067,7 @@ void getMaxMax2(sglPoolb *sglp,int nFiles,nodePool *nps){
     
 }
 
-void getMaxMax2(sglPoolb *sglp,int nFiles,nodePoolT *nps){
+void getMaxMax2(readPool *sglp,int nFiles,nodePoolT *nps){
 #if 0
   fprintf(stderr,"[%s].nFiles=%d\n",__FUNCTION__,nFiles);
   for(int i=0;i<nFiles;i++)
@@ -1078,7 +1078,7 @@ void getMaxMax2(sglPoolb *sglp,int nFiles,nodePoolT *nps){
   int last_bp_in_chr = -1;
 
   for(int i=0;i<nFiles;i++){
-    sglPoolb *tmp = &sglp[i];
+    readPool *tmp = &sglp[i];
     if(tmp->l>0 && (getmax(tmp->last,tmp->l)>last_bp_in_chr) )
       last_bp_in_chr = getmax(tmp->last,tmp->l);
     if(nps[i].last>last_bp_in_chr)
@@ -1093,19 +1093,19 @@ void getMaxMax2(sglPoolb *sglp,int nFiles,nodePoolT *nps){
 }
 
 
-void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,iter_t &iter,int ref,int start,int stop,bam_hdr_t *hdr){
-  if(iter.hts_idx==NULL)
-    iter.hts_idx = sam_index_load(fp,fn);
-  if (iter.hts_idx == 0) { // index is unavailable
+void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,hts_idx_t **idx,hts_itr_t **itr,int ref,int start,int stop,bam_hdr_t *hdr){
+  if(*idx==NULL)
+    *idx = sam_index_load(fp,fn);
+  if (idx == 0) { // index is unavailable
     fprintf(stderr, "[main_samview] random alignment retrieval only works for indexed BAM or CRAM files.\n");
     exit(0);
   }
   char tmp[1024];
   snprintf(tmp,1024,"%s:%d-%d",hd->target_name[ref],start+1,stop);
-  if(iter.hts_itr)
-    hts_itr_destroy(iter.hts_itr);
-  iter.hts_itr = sam_itr_querys(iter.hts_idx, hdr, tmp);
-  if (iter.hts_itr == NULL) { // reference name is not found
+  if(*itr)
+    hts_itr_destroy(*itr);
+  *itr = sam_itr_querys(*idx, hdr, tmp);
+  if (*itr == NULL) { // reference name is not found
     fprintf(stderr, "[main_samview] region \"%s\" specifies an unknown reference name. Continue anyway.\n",tmp);
     exit(0);
   }
@@ -1121,7 +1121,7 @@ void *setIterator1(void *args){
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->fp,rd->fn,rd->hdr,rd->it,ref,start,stop,rd->hdr);//leak
+  getOffsets(rd->fp,rd->fn,rd->hdr,&rd->idx,&rd->itr,ref,start,stop,rd->hdr);//leak
   return EXIT_SUCCESS;
 }
 
@@ -1135,7 +1135,7 @@ void *setIterator1(void *args){
   start = rd->regions.start;
   stop = rd->regions.stop;
   ref = rd->regions.refID;
-  getOffsets(rd->fp,rd->fn,rd->hdr,rd->it,ref,start,stop,rd->hdr);
+  getOffsets(rd->fp,rd->fn,rd->hdr,&rd->idx,&rd->itr,ref,start,stop,rd->hdr);
 }
 
 void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
@@ -1182,7 +1182,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   extern abcGetFasta *gf;
 
   //  sglPool *sglp= new sglPool[nFiles];
-  sglPoolb *sglp= new sglPoolb[nFiles];
+  readPool *sglp= new readPool[nFiles];
   
   nodePool *nps =NULL;
   nodePoolT *npsT = NULL;
@@ -1233,12 +1233,12 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	//fprintf(stderr,"done region lookup %d/%lu\n",itrPos+1,regions.size());
 	//fflush(stderr);///BAME
 
-	theRef = rd[0].it.hts_itr->tid; 
+	theRef = rd[0].itr->tid; 
 	//	fprintf(stderr,"theRef:%d %p %p\n",theRef,rd[0].it.off,rd[0].it.hts_itr->off);
 	//validate we have offsets;
 	int gotData = 0;
 	for(int i=0;i<nFiles;i++)
-	  if((rd[i].it.hts_itr &&(rd[i].it.hts_itr->off!=NULL))){
+	  if((rd[i].itr &&(rd[i].itr->off!=NULL))){
 	    gotData =1;
 	    break;
 	  }

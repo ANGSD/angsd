@@ -70,10 +70,10 @@ int compHeader(bam_hdr_t *hd1,bam_hdr_t *hd2){
 void dalloc_bufReader(bufReader &ret){
   if(ret.hdr)
     bam_hdr_destroy(ret.hdr);
-  if(ret.it.hts_itr)
-    hts_itr_destroy(ret.it.hts_itr);
-  if(ret.it.hts_idx)
-    hts_idx_destroy(ret.it.hts_idx);
+  if(ret.itr)
+    hts_itr_destroy(ret.itr);
+  if(ret.idx)
+    hts_idx_destroy(ret.idx);
   free(ret.fn);
   hts_close(ret.fp);
 }
@@ -100,8 +100,8 @@ bufReader initBufReader2(const char*fname){
   int newlen=strlen(fname);//<-just to avoid valgrind -O3 uninitialized warning
   ret.fp = openBAM(ret.fn);
   ret.isEOF =0;
-  ret.it.hts_itr=NULL;
-  ret.it.hts_idx=NULL;
+  ret.itr=NULL;
+  ret.idx=NULL;
  
   ret.hdr = sam_hdr_read(ret.fp);
   if(ret.hdr==NULL) {
