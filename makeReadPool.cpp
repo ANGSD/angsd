@@ -1,4 +1,3 @@
-
 #include "makeReadPool.h"
 
 readPool makePoolb(int l){
@@ -206,10 +205,6 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
 
 //function will read data from all bamfiles, return value is the number of 'done' files
 int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop) {
-#if 0
-  fprintf(stderr,"\t[%s] Reading from referenceID=%d\n",__FUNCTION__,ref);
-#endif
-
   int usedPicker=-1;
   for(int ii=0;ii<nFiles;ii++) {
     extern int *bamSortedIds;
@@ -233,10 +228,6 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readN
       break;
     }
   }
-#if 0
-  fprintf(stderr,"usedPicker:%d\n",usedPicker);
-  exit(0);
-#endif
  
   if(usedPicker==-1)  //<-this means we are done with the current chr/region
     return nFiles;
@@ -245,11 +236,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readN
   for(int i=0;i<nFiles;i++) {
     if(rd[i].isEOF || rd[i].regionDone||i==usedPicker)
       continue;
-
-#if 0
-    fprintf(stderr,"i=%d regdone=%d\tiseof=%d\n",i,rd[i].regionDone,rd[i].isEOF);
-    fprintf(stderr," getpool on i=%d\n",i);
-#endif
+    
     if(ret[i].l>0&&ret[i].first[ret[i].l-1]>pickStop)
       continue;
     read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
