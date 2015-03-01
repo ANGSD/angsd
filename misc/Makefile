@@ -10,6 +10,10 @@ HTSLIB = $(HTSDIR)/libhts.a
 
 all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix
 
+kmath.o: kmath.c kmath.h
+	$(CC) $(FLAGS) -c kmath.c 
+
+
 bfgs.o: bfgs.c bfgs.h
 	$(CC) $(FLAGS) -c bfgs.c -Wno-vexing-parse
 
@@ -22,8 +26,8 @@ NGSadmix: ngsadmix32.cpp
 supersim: supersim.cpp rbeta.cpp
 	$(CXX) $(FLAGS) supersim.cpp -lz -o supersim
 
-contamination: contamination.cpp 
-	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination
+contamination: contamination.cpp kmath.o
+	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination kmath.o
 splitgl: splitgl.c
 	$(CC) $(FLAGS) splitgl.c -lz -o splitgl
 

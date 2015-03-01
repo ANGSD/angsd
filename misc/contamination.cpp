@@ -14,6 +14,7 @@
 #include <map>
 #include <cassert>
 #include <ctype.h>
+#include "kmath.h"
 #include "../fet.c"
 #define LENS 4096
 
@@ -67,11 +68,12 @@ double likeNew(double x,int len,int *seqDepth,int *nonMajor,double *freq,double 
   for(int i=0;i<len;i++)
     t += ldbinom(nonMajor[i],seqDepth[i],x*freq[i]*(1-4*eps/3.0)+eps);
   return t;
+  
 }
 
 double like_optim(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int isNew){
   double a = 0+DBL_EPSILON;
-  double b = 1-DBL_EPSILON;
+  double b = 0.5-DBL_EPSILON;
   double k = (sqrt(5.) - 1.) / 2.;
   double xL = b - k * (b - a);
   double xR = a + k * (b - a);
@@ -102,6 +104,26 @@ double like_optim(int len,int *seqDepth,int *nonMajor,double *freq,double eps,in
   return (a + b) / 2.;
 }
 
+typedef struct{
+  int len;
+  int* seqDepth;
+  int *nonMajor;
+  double *freq;
+  double eps;
+  int isNew;
+  int doMom;
+  int *e1;
+  int *d1;
+}allPars;
+
+
+double myfun(double x,void *d){
+  allPars *ap = (allPars *)d;
+  if(ap->isNew)
+    return -likeNew(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps);
+  else
+    return -likeOld(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps);
+}
 
 
 double likeOldMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int jump){
@@ -154,21 +176,30 @@ double calcEps(int *e1,int *d1,int len,int skip){
 
 //mehtod==0 => OLD;
 // method==1 => NEW
-double jack(int len,int *seqDepth,int *nonMajor,double *freq,int method,int *e1,int *d1,int ML){
-
+double jack(allPars *ap){
+  int len=ap->len;
+  int *seqDepth=ap->seqDepth;
+  int *nonMajor=ap->nonMajor;
+  double *freq =ap->freq;
+  int isnew = ap->isNew;
+  int *e1 = ap->e1;
+  int *d1 = ap->d1;
+  int doMom= ap->doMom;
   double *thetas =new double[len];
-  for(int i=0;i<len;i++)
-    if(ML==0){
-      if(method==0){
+  for(int i=0;i<len;i++){
+    if((i % 100 )==0)
+      fprintf(stderr,"\r-> %d/%d",i,len);
+    if(doMom){
+      if(isnew==0){
 	thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
       }else
 	thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
     }else{
-      if(method==0){
-	thetas[i] = like_optim(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),1) ;
-      }else
-	thetas[i] = like_optim(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),0) ;
+      double xmin,val;
+      val = kmin_brent(myfun,1e-6,0.5-1e-6,ap,0.0001,&xmin);
+      thetas[i] = xmin;
     }
+  }
   double esd = sd(thetas,len);
   //  fprintf(stderr,"jackknife sd: %f\n\n",esd);
   delete [] thetas;
@@ -349,31 +380,43 @@ void analysis(dat &d) {
     
   }
 
-  double mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  double momJack= jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
-  double ML =like_optim(d.cn.size()/9,d0,err0,freq,c,0);
-  double mlJack= jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
-  fprintf(stderr,"Method1: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
 
+  allPars ap;
+  ap.len=d.cn.size()/9;
+  ap.seqDepth = d0;
+  ap.nonMajor = err0;
+  ap.freq = freq;
+  ap.eps = c;
+  ap.isNew =0;
+  ap.e1 = err1;
+  ap.d1=d1;
+  ap.doMom = 1;
+  double mom,momJack,ML,mlJack;
 
+  ap.doMom =1;ap.isNew =0;
+  mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
+  momJack = jack(&ap);
+
+  kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
+  ap.doMom = 0;
+  mlJack= jack(&ap);
+  fprintf(stderr,"\nMethod1: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  ap.doMom =1;ap.isNew =1;
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack= jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
-  ML =like_optim(d.cn.size()/9,d0,err0,freq,c,0);
-  mlJack= jack(d.cn.size()/9,d0,err0,freq,1,err1,d1,1);
-  fprintf(stderr,"Method1: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  momJack= jack(&ap);
+  kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
+  ap.doMom =0;
+  mlJack= jack(&ap);
+  fprintf(stderr,"\nMethod1: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
  
 
   for(int i=0;i<d.cn.size()/9;i++){
     int adj=0;
-    //    int dep=0;
     for(int j=0;j<9;j++){
-      
       if(d.dist[i*9+j]!=0){
 	adj += error2[i*9+j];
-	//	dep += rowSum[i*9+j];
       }else{
 	err0[i] = error2[i*9+j];
-	//d0[i] = rowSum[i*9+j];
 	freq[i] =d.myMap.find(d.pos[i*9+j])->second.freq;
       }
     }
@@ -389,6 +432,34 @@ void analysis(dat &d) {
     //    fprintf(stdout,"cont\t%d\t%d\t%d\t%d\t%f\n",err0[i],err1[i],d0[i],d1[i],freq[i]);
     
   }
+
+  ap.seqDepth = d0;
+  ap.nonMajor = err0;
+  ap.e1=err1;
+  ap.d1=d1;
+
+
+  ap.isNew =0; ap.doMom= 1;
+  mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
+  momJack = jack(&ap);
+  kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
+  ap.doMom = 0;
+  mlJack= jack(&ap);
+  fprintf(stderr,"\nMethod1: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+
+  ap.isNew =1;
+  ap.doMom=1;
+  mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
+  momJack= jack(&ap);
+  ap.doMom =0;
+  kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
+  mlJack= jack(&ap);
+  fprintf(stderr,"\nMethod1: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+ 
+
+
+
+#if 0
   mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
   momJack=jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
   ML = like_optim(d.cn.size()/9,d0,err0,freq,c,0);
@@ -400,7 +471,7 @@ void analysis(dat &d) {
   ML = like_optim(d.cn.size()/9,d0,err0,freq,c,0);
   mlJack = jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
   fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%f\n",mom,momJack,ML,mlJack);
-
+#endif
   delete [] rowSum;
   delete [] rowMax;
   delete [] rowMaxW;
