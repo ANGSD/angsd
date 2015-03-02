@@ -9,6 +9,7 @@
   2) Simple GATK model
   3) SOAPsnp
   4) SYK
+  5) new fancy method
 
   4 different output formats are supplied
   
@@ -31,6 +32,7 @@
 
 #include "abcGL.h"
 #include "abcError.h"
+#include "phys_likes.h"
 extern int refToInt[256];
 
 static float *logfactorial=NULL;
@@ -73,7 +75,7 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t2: GATK\n");
   fprintf(argFile,"\t3: SOAPsnp\n");
   fprintf(argFile,"\t4: SYK\n");
-
+  fprintf(argFile,"\t5: phys\n");
   fprintf(argFile,"\t-trim\t\t%d\t\t(zero means no trimming)\n",trim);
   fprintf(argFile,"\t-tmpdir\t\t%s/\t(used by SOAPsnp)\n",angsd_tmpdir);
   fprintf(argFile,"\t-errors\t\t%s\t\t(used by SYK)\n",errorFname);
@@ -121,8 +123,8 @@ void abcGL::getOptions(argStruct *arguments){
   if(GL==0)
     return;
 
-  if(GL<0||GL>4){
-    fprintf(stderr,"\t-> You've choosen a GL model=%d, only 1,2,3,4 are implemented\n",GL);
+  if(GL<0||GL>5){
+    fprintf(stderr,"\t-> You've choosen a GL model=%d, only 1,2,3,4,5,7 are implemented\n",GL);
     exit(0);
   }
   if(GL==4&&(doCounts==0)){
@@ -203,6 +205,8 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
     if(errorFname!=NULL)
       readError(errors,errorFname);
     errorProbs = abcError::generateErrorPointers(errors,3,4);
+  }else if(GL==5){
+      phys_init();
   }
   
   gzoutfile = gzoutfile2 = Z_NULL;
@@ -247,6 +251,8 @@ abcGL::~abcGL(){
     gatk_destroy();
   else if(GL==4)
     abcError::killGlobalErrorProbs(errorProbs);
+  else if(GL==5)
+    phys_destroy();
   if(doGlf)    gzclose(gzoutfile);
     
   if(gzoutfile!=Z_NULL)
@@ -303,7 +309,8 @@ void abcGL::run(funkyPars *pars){
 
   }else if(GL==4)
     getLikesFullError10Genotypes(pars->numSites,pars->nInd,pars->counts,errorProbs,pars->keepSites,likes);
-
+  else if(GL==5)
+    call_phys(pars->chk,likes,trim);
   pars->likes = likes;
   
 
