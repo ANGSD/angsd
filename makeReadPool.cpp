@@ -23,9 +23,9 @@ void dalloc (readPool *ret){
 void realloc(readPool *ret,int l){
   ret->m =l;
   kroundup32(ret->m);
-  ret->reads =(bam1_t**) realloc(ret->reads,sizeof(bam1_t**)*ret->l);
-  ret->first =(int*) realloc(ret->first,sizeof(int)*ret->l);
-  ret->last =(int*) realloc(ret->last,sizeof(int)*ret->l);
+  ret->reads =(bam1_t**) realloc(ret->reads,sizeof(bam1_t**)*ret->m);
+  ret->first =(int*) realloc(ret->first,sizeof(int)*ret->m);
+  ret->last =(int*) realloc(ret->last,sizeof(int)*ret->m);
 }
 
 void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
