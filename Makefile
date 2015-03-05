@@ -1,4 +1,6 @@
 #modied from htslib makefile
+FLAGS=-O3
+
 CFLAGS += $(FLAGS)
 CXXFLAGS += $(FLAGS)
 
@@ -6,11 +8,7 @@ CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
-
-FLAGS=-O3
-
 all: htshook angsd misc
-
 
 # Adjust $(HTSDIR) to point to your top-level htslib directory
 BAMDIR=""

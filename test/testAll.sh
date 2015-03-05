@@ -28,7 +28,7 @@ WDIR=`dirname $PRG`
 RVAL=0
 
 echo "Testing neutrality test statistics"
-#./testTaj.sh $WDIR
+./testTaj.sh $WDIR
 if [ ! $? -eq 0 ] ;then
     echo "Problem with neutrality test statistics exit code: $?"
     cat ./testTaj.sh.log
@@ -37,7 +37,7 @@ fi
 
 
 echo "Testing SFS"
-#./testSFS.sh $WDIR
+./testSFS.sh $WDIR
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with SFS exit code: $?"
     cat ./testSFS.sh.log
@@ -56,8 +56,6 @@ fi
 exit ${RVAL}
 
 if false; then
-    echo ./testBam.sh $PRG
-    ./testBam.sh $PRG
     
     echo testAsso6.sh $PRG
     ./testAsso6.sh $PRG
