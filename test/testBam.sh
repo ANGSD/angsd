@@ -1,27 +1,51 @@
-echo "==========$0=(seconds)=============="
-if [[ $# == 0 ]]
+if [[ ! $# -eq 2 ]]
 then
-    echo "Supply an angsd binary"
+    echo "Supply an angsd binary and BAMdir"
+    exit 1
 exit
 fi
 
-rm -f oldResults/mpile output/mpile oldResults/mpile30q output/mpile30q
+LOG=${0}.log
+rm -f ${LOG}
 
 ANGSD=$1
-SAM=/opt/samtools-0.1.19/samtools
+BDIR=$2
 
-${SAM} mpileup -b smallBam.filelist -r 1:14000000-14030000 -q 0 -Q 0 2>>temp.txt |cut -f3 --complement >oldResults/mpile
-$ANGSD -out temp -bam smallBam.filelist -show 1 -r 1:14000000-14030000  >output/mpile 2>>temp.txt
+echo $ANGSD $BDIR
+
+ls $BDIR/*.bam >smallBam.filelist
 
 
-${SAM} mpileup -q 30 -b smallBam.filelist -r 1:14000000-14030000 -Q 0 2>>temp.txt|cut -f3 --complement   >oldResults/mpile30q
-$ANGSD -out temp -bam smallBam.filelist -minMapQ 30 -show 1 -r 1:14000000-14030000 2>>temp.txt  >output/mpile30q
 
-echo "List of errors:"
-#dont print N for the reference if not supplied
-cmp oldResults/mpile output/mpile
-cmp oldResults/mpile30q output/mpile30q
-#md5sum oldResults/mpile output/mpile oldResults/mpile30q output/mpile30q
-echo "end of list. bang BANG"
+#SAM=/home/thorfinn/install/samtools/samtools
+#${SAM} mpileup -b smallBam.filelist -r 1:14000000-14030000 -q 0 -Q 0 -Bx 2>>temp.txt |cut -f3 --complement >oldResults/mpile
+#md5=`md5sum oldResults/mpile|cut -f1 -d" "`
+md5=7af69295d04e8b76ebc2073a0d836884
+md5new=`$ANGSD -out temp -bam smallBam.filelist -show 1 -r 1:14000000-14030000 -minMapQ 0 -minQ 0 2>>${LOG}|md5sum |cut -f1 -d" "`
+RVAL=0
+if [ ! "$md5" = "$md5new"  ] ;then
+    echo "--------------"
+    echo "Problem with first bam pileup test"
+    echo "--------------"
+    cat ${LOG}
+    echo "--------------"
+    RVAL=2
+fi
 
-echo "==========$0==============="
+
+#${SAM} mpileup -q 30 -b smallBam.filelist -r 1:14000000-14030000 -Q 0 -Bx 2>>temp.txt|cut -f3 --complement   >oldResults/mpile30q
+#md5=`md5sum oldResults/mpile30q|cut -f1 -d" "`
+md5=a1cd980300100064e0116bc4a470f787
+
+md5new=`$ANGSD -out temp -bam smallBam.filelist -minMapQ 30 -show 1 -r 1:14000000-14030000 2>>${LOG}|md5sum|cut -f1 -d" "` 
+
+if [ ! "$md5" = "$md5new"  ] ;then
+    echo "--------------"
+    echo "Problem with second bam pileup test"
+    echo "--------------"
+    cat ${LOG}
+    echo "--------------"
+    RVAL=3
+fi
+
+exit $RVAL

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PRG=""
-
+BAMDIR=""
 if [ $# -eq 0 ] 
 then
     exit 1;
@@ -12,12 +12,23 @@ then
     PRG=$1
 fi
 
+if [ $# -eq 2 ]
+then
+    PRG=$1
+    BAMDIR=$2
+fi
+echo "--------------------"
+echo "Using PRG: '${PRG}' and BAMDIR: '${BAMDIR}'"
+echo "--------------------"
+
+
+
 WDIR=`dirname $PRG`
 
 RVAL=0
 
 echo "Testing neutrality test statistics"
-./testTaj.sh $WDIR
+#./testTaj.sh $WDIR
 if [ ! $? -eq 0 ] ;then
     echo "Problem with neutrality test statistics exit code: $?"
     cat ./testTaj.sh.log
@@ -26,21 +37,22 @@ fi
 
 
 echo "Testing SFS"
-./testSFS.sh $WDIR
+#./testSFS.sh $WDIR
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with SFS exit code: $?"
     cat ./testSFS.sh.log
     RVAL=1
 fi
 
+if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing basic mpileup"
-./testBam.sh $WDIR
+./testBam.sh $WDIR/angsd $BAMDIR
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with basic pileup exit code: $?"
     cat ./testBam.sh.log
     RVAL=1
 fi
-
+fi
 exit ${RVAL}
 
 if false; then

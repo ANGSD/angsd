@@ -1,4 +1,4 @@
-##modied from htslib makefile
+#modied from htslib makefile
 CFLAGS += $(FLAGS)
 CXXFLAGS += $(FLAGS)
 
@@ -13,6 +13,8 @@ all: htshook angsd misc
 
 
 # Adjust $(HTSDIR) to point to your top-level htslib directory
+BAMDIR=""
+BDIR=$(realpath $(BAMDIR))
 HTSDIR = ../htslib
 HTS = $(realpath $(HTSDIR))
 HTSLIB = $(HTS)/libhts.a
@@ -51,7 +53,7 @@ angsd: version.h $(OBJ)
 
 
 testclean:
-	rm -rf test/sfstest/output test/tajima/output test/*.log version.h
+	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
 
 clean:	testclean
 	rm  -f *.o *.d angsd angsd.static *~
@@ -59,5 +61,5 @@ clean:	testclean
 
 test:
 	echo "Only subset of analyses is being tested"
-	cd test;./testAll.sh ../angsd
+	cd test;./testAll.sh ../angsd $(BDIR)
 force:
