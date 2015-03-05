@@ -60,3 +60,4 @@ clean:	testclean
 test:
 	echo "Only subset of analyses is being tested"
 	cd test;./testAll.sh ../angsd
+force:
