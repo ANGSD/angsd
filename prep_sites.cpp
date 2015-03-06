@@ -365,9 +365,9 @@ void filt_gen(const char *fname,int posi_off) {
 	memset(minor->d,4,keep->m);
 	major->l=minor->l=0;
       }
-	
     }
-
+    char *position_in_sites_file = parsed[1];
+    assert(atol(position_in_sites_file)>=0);
     size_t posS=atol(parsed[1]);
     assert(posS>0);
     posS--;
