@@ -1,4 +1,4 @@
-
+#pragma once
 
 #include <htslib/faidx.h>
 #include "abc.h"//ONLY USED for reference stuff in mpileup output.
@@ -12,9 +12,6 @@ typedef struct{
   int curChr;//the exact chromosome name for the seqs above
   int chrLen;//length of chromosome
 }perFasta;
-
-
-
 
 class abcGetFasta : public abc{
   char *ancName;
@@ -35,6 +32,4 @@ public:
   void run(funkyPars  *pars);//plugs in reference and ancestral
   void print(funkyPars *pars);
   void clean(funkyPars *pars);
-
 };
-

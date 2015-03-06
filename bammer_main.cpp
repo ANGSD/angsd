@@ -14,9 +14,6 @@
 #include "analysisFunction.h"
 
 
-extern abc **allMethods;
-abcGetFasta *gf=NULL;
-
 
 extern int SIG_COND;
 #define bam_nt16_rev_table seq_nt16_str
@@ -169,99 +166,6 @@ bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError)
   return ret;
 }
 
-
-
-void printAuxBuffered(uint8_t *s, uint8_t *sStop,kstring_t &str ) {
-  //  fprintf(stderr,"\ncomp:%p vs %p\n",s,sStop);
-  
-  while (s < sStop) {
-    uint8_t type;
-    kputc('\t', &str);kputc(s[0], &str);kputc(s[1], &str); kputc(':', &str); 
-    //    fprintf(stderr,"\t%c%c:",s[0],s[1]);
-    s += 2; type = *s; ++s;
-    //    fprintf(stderr,"\ntype=%c\n",type);//,(char)*s);
-    //    kputc('\t', &str); kputsn((char*)key, 2, &str); kputc(':', &str);
-    if (type == 'A') { kputsn("A:", 2, &str); kputc(*s, &str); ++s; }
-    else if (type == 'C') { kputsn("i:", 2, &str); kputw(*s, &str); ++s; }
-    else if (type == 'c') { kputsn("i:", 2, &str); kputw(*(int8_t*)s, &str); ++s; }
-    else if (type == 'S') { kputsn("i:", 2, &str); kputw(*(uint16_t*)s, &str); s += 2; }
-    else if (type == 's') { kputsn("i:", 2, &str); kputw(*(int16_t*)s, &str); s += 2; }
-    else if (type == 'I') { kputsn("i:", 2, &str); kputuw(*(uint32_t*)s, &str); s += 4; }
-    else if (type == 'i') { kputsn("i:", 2, &str); kputw(*(int32_t*)s, &str); s += 4; }
-    else if (type == 'f') { ksprintf(&str, "f:%g", *(float*)s); s += 4; }
-    else if (type == 'd') { ksprintf(&str, "d:%lg", *(double*)s); s += 8; }
-    else if (type == 'Z' || type == 'H') { kputc(type, &str); kputc(':', &str); while (*s) kputc(*s++, &str); ++s; }
-    else if (type == 'B') {
-      uint8_t sub_type = *(s++);
-      int32_t n;
-      memcpy(&n, s, 4);
-      s += 4; // no point to the start of the array
-      kputc(type, &str); kputc(':', &str); kputc(sub_type, &str); // write the typing
-      for (int i = 0; i < n; ++i) {
-	kputc(',', &str);
-	if ('c' == sub_type || 'c' == sub_type) { kputw(*(int8_t*)s, &str); ++s; }
-	else if ('C' == sub_type) { kputw(*(uint8_t*)s, &str); ++s; }
-	else if ('s' == sub_type) { kputw(*(int16_t*)s, &str); s += 2; }
-	else if ('S' == sub_type) { kputw(*(uint16_t*)s, &str); s += 2; }
-	else if ('i' == sub_type) { kputw(*(int32_t*)s, &str); s += 4; }
-	else if ('I' == sub_type) { kputuw(*(uint32_t*)s, &str); s += 4; }
-	else if ('f' == sub_type) { ksprintf(&str, "%g", *(float*)s); s += 4; }
-      }
-    }
-  }
-  //  fprintf(stderr,"done\n");
-}
-
-void printChunky2(const chunky* chk,FILE *fp,char *refStr) {
-  //  fprintf(stderr,"[%s] nsites=%d region=(%d,%d) itrReg=(%d,%d)\n",__FUNCTION__,chk->nSites,chk->refPos[0],chk->refPos[chk->nSites-1],chk->regStart,chk->regStop);
-  if(chk->refPos[0]>chk->regStop){
-    fprintf(stderr,"\t->Problems with stuff\n");
-    exit(0);
-  }
-  int refId = chk->refId;
-  for(int s=0;s<chk->nSites;s++) {
-    if(chk->refPos[s]<chk->regStart || chk->refPos[s]>chk->regStop-1 ){
-      for(int i=0;i<chk->nSamples;i++)
-	dalloc_node(chk->nd[s][i]);
-      delete [] chk->nd[s];
-      continue;
-    }
-    fprintf(fp,"%s\t%d",refStr,chk->refPos[s]+1);     
-    if(gf->ref!=NULL){
-      if(refId!=gf->ref->curChr)
-	gf->loadChr(gf->ref,refStr,refId);
-      if(gf->ref->seqs!=NULL){
-	fprintf(fp,"\t%c",gf->ref->seqs[chk->refPos[s]]);
-      }
-    }
-    for(int i=0;i<chk->nSamples;i++) {
-
-      //      fprintf(stderr,"seqlen[%d,%d]=%lu\t",s,i,chk->nd[s][i].seq->l);
-      if(chk->nd[s][i].seq.l!=0){
-	fprintf(fp,"\t%d\t",chk->nd[s][i].depth);
-	for(size_t l=0;l<chk->nd[s][i].seq.l;l++)
-	  fprintf(fp,"%c",chk->nd[s][i].seq.s[l]);
-	fprintf(fp,"\t");
-		
-	for(size_t l=0;l<chk->nd[s][i].qs.l;l++)
-	  fprintf(fp,"%c",chk->nd[s][i].qs.s[l]);
-	//	fprintf(fp,"\t");
-
-      }else
-	fprintf(fp,"\t0\t*\t*");
-      dalloc_node(chk->nd[s][i]);
-    }
-    //    fprintf(stderr,"\n");
-    fprintf(fp,"\n");
-    delete [] chk->nd[s];
-  }
-  delete [] chk->nd;
-  delete [] chk->refPos;
-  delete chk;
-} 
-
-void (*func)(void *) = NULL;
-
 void printReg(FILE *fp,std::vector<regs> &regions){
   fprintf(fp,"-------------\n");
   fprintf(fp,"regions.size()=%lu\n",regions.size());
@@ -271,6 +175,8 @@ void printReg(FILE *fp,std::vector<regs> &regions){
 }
 
 
+extern abc **allMethods;
+abcGetFasta *gf=NULL;
 
 int bammer_main(argStruct *args){
 
@@ -282,7 +188,7 @@ int bammer_main(argStruct *args){
 
   extern int maxThreads;
   
-  uppile(args->show,maxThreads,rd,args->nLines,args->nams.size(),args->regions);
+  uppile(args->show,maxThreads,rd,args->nLines,args->nams.size(),args->regions,gf);
 
   //cleanup stuff
   for(unsigned i=0;i<args->nams.size();i++)

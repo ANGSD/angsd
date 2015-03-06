@@ -23,6 +23,23 @@ extern int trim;
  */
 #define BUG_THRES 1000000 //<- we allow 1mio sites to be allocated,
 #define UPPILE_LEN 8
+
+
+/*
+  node for uppile for a single individual for a single site
+  this is used for textoutput emulating samtools mpileup
+ */
+
+typedef struct{
+  int len;//length of seq,qs,pos
+  int maxLen;//maxlength of seq,qs.pos, maybe do realloc
+  kstring_t seq;
+  kstring_t qs;
+  kstring_t pos;
+  int depth;
+  int refPos;
+}node;
+
 template<typename T>
 T getmax(const T *ary,size_t len){
   assert(len>0&&ary!=NULL);
@@ -33,6 +50,12 @@ T getmax(const T *ary,size_t len){
       high=ary[i];
   }
   return high;
+}
+
+void dalloc_node(node &n){
+  free(n.seq.s);
+  free(n.qs.s);
+  free(n.pos.s);
 }
 
 
@@ -47,6 +70,70 @@ void dalloc_node(tNode &n){
   }
 }
 
+typedef struct{
+  char *refName;
+  int regStart;
+  int regStop;
+  int nSites;
+  int nSamples;
+  node **nd;//nd[site][ind]
+  int *refPos;//length is nSites
+  int first;
+  int last;
+  int start;
+  int length;
+  int refId;
+}chunky;
+
+
+
+void printChunky2(const chunky* chk,FILE *fp,char *refStr,abcGetFasta *gf) {
+  //  fprintf(stderr,"[%s] nsites=%d region=(%d,%d) itrReg=(%d,%d)\n",__FUNCTION__,chk->nSites,chk->refPos[0],chk->refPos[chk->nSites-1],chk->regStart,chk->regStop);
+  if(chk->refPos[0]>chk->regStop){
+    fprintf(stderr,"\t->Problems with stuff\n");
+    exit(0);
+  }
+  int refId = chk->refId;
+  for(int s=0;s<chk->nSites;s++) {
+    if(chk->refPos[s]<chk->regStart || chk->refPos[s]>chk->regStop-1 ){
+      for(int i=0;i<chk->nSamples;i++)
+	dalloc_node(chk->nd[s][i]);
+      delete [] chk->nd[s];
+      continue;
+    }
+    fprintf(fp,"%s\t%d",refStr,chk->refPos[s]+1);     
+    if(gf->ref!=NULL){
+      if(refId!=gf->ref->curChr)
+	gf->loadChr(gf->ref,refStr,refId);
+      if(gf->ref->seqs!=NULL){
+	fprintf(fp,"\t%c",gf->ref->seqs[chk->refPos[s]]);
+      }
+    }
+    for(int i=0;i<chk->nSamples;i++) {
+
+      //      fprintf(stderr,"seqlen[%d,%d]=%lu\t",s,i,chk->nd[s][i].seq->l);
+      if(chk->nd[s][i].seq.l!=0){
+	fprintf(fp,"\t%d\t",chk->nd[s][i].depth);
+	for(size_t l=0;l<chk->nd[s][i].seq.l;l++)
+	  fprintf(fp,"%c",chk->nd[s][i].seq.s[l]);
+	fprintf(fp,"\t");
+		
+	for(size_t l=0;l<chk->nd[s][i].qs.l;l++)
+	  fprintf(fp,"%c",chk->nd[s][i].qs.s[l]);
+	//	fprintf(fp,"\t");
+
+      }else
+	fprintf(fp,"\t0\t*\t*");
+      dalloc_node(chk->nd[s][i]);
+    }
+    //    fprintf(stderr,"\n");
+    fprintf(fp,"\n");
+    delete [] chk->nd[s];
+  }
+  delete [] chk->nd;
+  delete [] chk->refPos;
+  delete chk;
+} 
 
 
 typedef struct{
@@ -83,12 +170,6 @@ nodePoolT allocNodePoolT(int l){
   return np;
 }
 
-
-void dalloc_node(node &n){
-  free(n.seq.s);
-  free(n.qs.s);
-  free(n.pos.s);
-}
 
 
 void dalloc_nodePool (nodePool& np){
@@ -1166,14 +1247,13 @@ void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
 }
 
 
-void printChunky2(const chunky* chk,FILE *fp,char *refStr); //<-bammer_main
 void callBack_bambi(fcb *fff);//<-angsd.cpp
 //type=1 -> samtool mpileup textoutput
 //type=0 -> callback to angsd
 
 //function below is a merge between the original TESTOUTPUT and the angsdcallback. Typenames with T are the ones for the callback
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
-int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions) {
+int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
   assert(nLines&&nFiles);
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);
  fflush(stderr);
@@ -1404,7 +1484,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	chk->regStop = regStop;
 	chk->refName = rd[0].hdr->target_name[theRef];
 	chk->refId = theRef;
-	printChunky2(chk,stdout,chk->refName);
+	printChunky2(chk,stdout,chk->refName,gf);
 	
 	for(int i=0;1&&i<nFiles;i++){
 	  if(dn[i].l!=0)
