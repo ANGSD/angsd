@@ -185,9 +185,10 @@ nodePoolT allocNodePoolT(int l){
 
 
 void dalloc_nodePool (nodePool& np){
-  for(int i=0;i<np.l;i++)
+  for(int i=0;i<np.l;i++){
+    fprintf(stderr,"np[i]:%d\n",i);
     dalloc_node(np.nds[i]);
-  
+  }
 }
 
 void dalloc_nodePoolT (nodePoolT& np){
@@ -1270,19 +1271,22 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   extern abcGetFasta *gf;
 
   readPool *sglp= new readPool[nFiles];
-  nodePool *nps =NULL;
-  nodePool done_nodes[nFiles];
+  
+  nodePool *old_nodes,*done_nodes;
+  old_nodes = done_nodes = NULL;
+  
   nodePoolT *npsT = NULL;
-  if(show)
-    nps = new nodePool[nFiles];// <- buffered nodes
-  else
+  if(show){
+    old_nodes = new nodePool[nFiles];// <- buffered nodes
+    done_nodes = new nodePool[nFiles];//<-nodes that are done
+  }else
     npsT = new nodePoolT[nFiles];// <- buffered nodes
 
   for(int i=0;i<nFiles;i++){
     sglp[i] = makePoolb(nLines);
     //sglpb[i] = makePoolb(nLines);
     if(show){
-      nps[i] = allocNodePool(MAX_SEQ_LEN);
+      old_nodes[i] = allocNodePool(MAX_SEQ_LEN);
       done_nodes[i] = allocNodePool(5);
     }else
       npsT[i] = allocNodePoolT(MAX_SEQ_LEN);
@@ -1424,7 +1428,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       if(doFlush||notDone==0){
 	//fprintf(stderr,"[%s]Last chunk Will flush all remaining reads\n",__FUNCTION__);
 	if(show)
-	  getMaxMax2(sglp,nFiles,nps);
+	  getMaxMax2(sglp,nFiles,old_nodes);
 	else
 	  getMaxMax2(sglp,nFiles,npsT);
       }else{
@@ -1449,7 +1453,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	}
       }else
 	for(int i=0;i<nFiles;i++) {
-	  mkNodes_one_sampleb(&sglp[i],done_nodes[i],&nps[i],gf);
+	  mkNodes_one_sampleb(&sglp[i],done_nodes[i],&old_nodes[i],gf);
 	  tmpSum += done_nodes[i].l;
 	}
 
@@ -1525,13 +1529,17 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     pthread_mutex_unlock(&mUpPile_mutex);//just to make sure, its okey to clean up
   }else{
     //clean up
-    for(int i=0;1&&i<nFiles;i++){
-      dalloc_nodePool(nps[i]);
-      delete [] nps[i].nds;
+    for(int i=0;i<nFiles;i++){
       dalloc(&sglp[i]);
+      // dalloc_nodePool(old_nodes[i]);
+      //dalloc_nodePool(done_nodes[i]);
+      delete [] old_nodes[i].nds;
+      delete [] done_nodes[i].nds;
+      
     }
 
-    delete [] nps;
+    delete [] old_nodes;
+    delete [] done_nodes;
     delete [] sglp;
   }
   return 0;
