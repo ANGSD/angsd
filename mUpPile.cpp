@@ -159,6 +159,18 @@ nodePool allocNodePool(int l){
   return np;
 }
 
+void setAllocNodePool(nodePool &np,int l){
+  if(l>=np.m){
+    np.m = l;
+    kroundup32(np.m);
+    np.first=np.last=-1;
+    delete [] np.nds;
+    np.nds= new node[np.m];
+  }
+
+}
+
+
 nodePoolT allocNodePoolT(int l){
   nodePoolT np;
   np.l=0;
@@ -329,32 +341,29 @@ int coverage_in_bpT(nodePoolT *np, readPool *sgl){
   return sumReg;
 }
 
-nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
-  int regionLen = coverage_in_bp(np,sgl);//true covered regions
-  nodePool dn;
-  dn.l =0;
+void mkNodes_one_sampleb(readPool *sgl,nodePool &done_nodes,nodePool *old,abcGetFasta *gf) {
+  int regionLen = coverage_in_bp(old,sgl);//true covered regions
+  //nodePool done_nodes;
+  done_nodes.l =0;
   if(regionLen==0)
-    return dn;
+    return;
   int lastSecure = sgl->lowestStart;
   
-  dn = allocNodePool(regionLen);
-  nodePool *ret = &dn;
-
-  node *nds = ret->nds;
-
-
-  int offs = np->first;//first position from buffered
-  int last = np->last+1;//because we are comparing with calc_end
+  //done_nodes = allocNodePool(regionLen);
+  setAllocNodePool(done_nodes,regionLen);
+ 
+  int offs = old->first;//first position from buffered
+  int last = old->last+1;//because we are comparing with calc_end
 
   //plug in the old buffered nodes
-  for(int i=0;i<np->l;i++)
-    nds[np->nds[i].refPos-offs] = np->nds[i];
+  for(int i=0;i<old->l;i++)
+    done_nodes.nds[old->nds[i].refPos-offs] = old->nds[i];
 
   //initialize new nodes for the rest of the region
-  for(int i=np->l;i<regionLen;i++)
-    nds[i] = initNode(UPPILE_LEN,-1,-1);
+  for(int i=old->l;i<regionLen;i++)
+     done_nodes.nds[i] = initNode(UPPILE_LEN,-1,-1);
 
-  if(np->l==0){//if we didn't have have anybuffered then
+  if(old->l==0){//if we didone_nodes't have have anybuffered then
     offs = sgl->first[0];
     last = sgl->last[0];
   }
@@ -389,7 +398,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 
       if(opCode==BAM_CINS||opCode==BAM_CDEL){//handle insertions and deletions
 	if(i==0){ //skip indels if beginning of a read, print mapQ
-	  tmpNode = &nds[wpos];
+	  tmpNode = & done_nodes.nds[wpos];
 	  kputc('^', &tmpNode->seq);
 	  if(rd->core.qual!=255)
 	    kputc(rd->core.qual+33, &tmpNode->seq);
@@ -407,7 +416,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	}
 	if(i!=0){
 	  wpos--; //insertion/deletion is bound to the last position of the read
-	  tmpNode = &nds[wpos];
+	  tmpNode = &done_nodes.nds[wpos];
 	  kputc(opCode&BAM_CINS?'+':'-',&tmpNode->seq);
 	  kputw(opLen,&tmpNode->seq);
 	  hasInfo++;
@@ -433,7 +442,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  }
 	  for(int fix=wpos;wpos<fix+opLen;wpos++){
 
-	    tmpNode = &nds[wpos];
+	    tmpNode = &done_nodes.nds[wpos];
 	    tmpNode->refPos=wpos+offs;
 	    tmpNode->depth ++;
 	    kputc('*',&tmpNode->seq);
@@ -446,7 +455,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	//occurs only at the ends of the read
 	if(seq_pos == 0){
 	  //then we are at beginning of read and need to write mapQ
-	  tmpNode = &nds[wpos];
+	  tmpNode = &done_nodes.nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  kputc('^', &tmpNode->seq);
 	  if(rd->core.qual!=255)
@@ -460,7 +469,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
       }else if(opCode==BAM_CMATCH||opCode==BAM_CEQUAL||opCode==BAM_CDIFF) {
 	hasInfo++;
 	for(int fix=wpos ;wpos<(fix+opLen) ;wpos++) {
-	  tmpNode =  &nds[wpos];
+	  tmpNode =  &done_nodes.nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  tmpNode->depth++;
 	  if(seq_pos==0 &&hasPrintedMaq==0){
@@ -488,7 +497,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	}
       }else if(opCode==BAM_CREF_SKIP) {
 	  for(int fix=wpos;wpos<fix+opLen;wpos++){
-	    tmpNode = &nds[wpos];
+	    tmpNode = &done_nodes.nds[wpos];
 	    tmpNode->refPos=wpos+offs;
 	    tmpNode->depth ++;
 	    bam_is_rev(rd)?kputc('<',&tmpNode->seq):kputc('>',&tmpNode->seq);
@@ -522,33 +531,32 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 
   int lastSecureIndex =regionLen;
   //fprintf(stderr,"lastSecureIndex=%d\tregionLen=%d\t ret->nds.refpos=%d\n",lastSecureIndex,regionLen,ret->nds[regionLen-1].refPos);
-  int tailPos = ret->nds[regionLen-1].refPos;
+  int tailPos = done_nodes.nds[regionLen-1].refPos;
   if(tailPos>lastSecure)
     lastSecureIndex = regionLen-tailPos+lastSecure;
-  ret->l = lastSecureIndex;
+  done_nodes.l = lastSecureIndex;
   
-  if(regionLen-lastSecureIndex+4>np->m){
-    delete [] np->nds;
-    np->m=regionLen;
-    kroundup32(np->m);
-    np->nds = new node[np->m];
+  if(regionLen-lastSecureIndex+4>old->m){
+    delete [] old->nds;
+    old->m=regionLen;
+    kroundup32(old->m);
+    old->nds = new node[old->m];
   }
-  np->l=0;
-  assert(regionLen-lastSecureIndex+4<=np->m);
+  old->l=0;
+  assert(regionLen-lastSecureIndex+4<=old->m);
   for(int i=lastSecureIndex;i<regionLen;i++)
-    np->nds[np->l++] = nds[i];
+    old->nds[old->l++] = done_nodes.nds[i];
 
 
-  if(np->l!=0){
-    np->first = np->nds[0].refPos;
-    np->last = np->nds[np->l-1].refPos;
+  if(old->l!=0){
+    old->first = old->nds[0].refPos;
+    old->last = old->nds[old->l-1].refPos;
   }
 
-  if(ret->l!=0){
-    ret->first = ret->nds[0].refPos;
-    ret->last = ret->nds[ret->l-1].refPos;
+  if(done_nodes.l!=0){
+    done_nodes.first = done_nodes.nds[0].refPos;
+    done_nodes.last = done_nodes.nds[done_nodes.l-1].refPos;
   }
-  return dn;
 }
 
 
@@ -1255,16 +1263,15 @@ void callBack_bambi(fcb *fff);//<-angsd.cpp
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
 int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
   assert(nLines&&nFiles);
-  fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);
- fflush(stderr);
+  fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);fflush(stderr);
+  
   if(show!=1)
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
   extern abcGetFasta *gf;
 
-  //  sglPool *sglp= new sglPool[nFiles];
   readPool *sglp= new readPool[nFiles];
-  
   nodePool *nps =NULL;
+  nodePool done_nodes[nFiles];
   nodePoolT *npsT = NULL;
   if(show)
     nps = new nodePool[nFiles];// <- buffered nodes
@@ -1274,9 +1281,10 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   for(int i=0;i<nFiles;i++){
     sglp[i] = makePoolb(nLines);
     //sglpb[i] = makePoolb(nLines);
-    if(show)
+    if(show){
       nps[i] = allocNodePool(MAX_SEQ_LEN);
-    else
+      done_nodes[i] = allocNodePool(5);
+    }else
       npsT[i] = allocNodePoolT(MAX_SEQ_LEN);
   }
 
@@ -1429,7 +1437,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       }
 
       //make uppile nodes
-      nodePool dn[nFiles];
+      
       nodePoolT *dnT = NULL;
       int tmpSum = 0;
 
@@ -1441,14 +1449,14 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	}
       }else
 	for(int i=0;i<nFiles;i++) {
-	  dn[i] = mkNodes_one_sampleb(&sglp[i],&nps[i],gf);
-	  tmpSum += dn[i].l;
+	  mkNodes_one_sampleb(&sglp[i],done_nodes[i],&nps[i],gf);
+	  tmpSum += done_nodes[i].l;
 	}
 
 #if 0
 	for(int i=0;i<nFiles;i++)
 	  if(show!=1)
-	    fprintf(stderr,"[%s.%s():%d] l=%d first=%d last=%d\n",__FILE__,__FUNCTION__,__LINE__,dn[i].l,dn[i].first,dn[i].last);
+	    fprintf(stderr,"[%s.%s():%d] l=%d first=%d last=%d\n",__FILE__,__FUNCTION__,__LINE__,done_nodes[i].l,done_nodes[i].first,done_nodes[i].last);
 	  else
 	    fprintf(stderr,"[%s.%s():%d] l=%d first=%d last=%d\n",__FILE__,__FUNCTION__,__LINE__,dnT[i].l,dnT[i].first,dnT[i].last);
 #endif
@@ -1477,7 +1485,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       }
       if(show){
 	//merge the perFile upnodes.FIXME for large regions (with gaps) this will allocate to much...
-	chunky *chk =mergeAllNodes_old(dn,nFiles);
+	chunky *chk =mergeAllNodes_old(done_nodes,nFiles);
 	assert(chk->refPos[0]<=regStop);
 	
 	chk->regStart = regStart;
@@ -1486,9 +1494,9 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	chk->refId = theRef;
 	printChunky2(chk,stdout,chk->refName,gf);
 	
-	for(int i=0;1&&i<nFiles;i++){
-	  if(dn[i].l!=0)
-	    delete [] dn[i].nds;
+	for(int i=0;0&&i<nFiles;i++){
+	  if(done_nodes[i].l!=0)
+	    delete [] done_nodes[i].nds;
 	}
       }else{
 
