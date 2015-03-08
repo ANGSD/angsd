@@ -56,6 +56,7 @@ void dalloc_node(node *n){
   free(n->seq.s);
   free(n->qs.s);
   free(n->pos.s);
+  free(n);
 }
 
 
@@ -99,7 +100,7 @@ void printChunky2(const chunky* chk,FILE *fp,char *refStr,abcGetFasta *gf) {
       for(int i=0;i<chk->nSamples;i++)
 	if(chk->nd[s][i])
 	  dalloc_node(chk->nd[s][i]);
-      delete [] chk->nd[s];
+      //      free(chk->nd[s]);
       continue;
     }
     fprintf(fp,"%s\t%d",refStr,chk->refPos[s]+1);     
@@ -129,7 +130,7 @@ void printChunky2(const chunky* chk,FILE *fp,char *refStr,abcGetFasta *gf) {
     }
     //    fprintf(stderr,"\n");
     fprintf(fp,"\n");
-    delete [] chk->nd[s];
+    free(chk->nd[s]);
   }
   delete [] chk->nd;
   delete [] chk->refPos;
@@ -170,7 +171,7 @@ nodePool *ndPool_initl(int l){
 
 
 void realloc(nodePool *np,int l){
-  if(l>=np->m){
+  if(l>=np->m-4){
     delete [] np->nds;
     np->m = l;
     kroundup32(np->m);
@@ -351,7 +352,7 @@ void mkNodes_one_sampleb(readPool *sgl,nodePool *done_nodes,nodePool *old,abcGet
   fprintf(stderr,"dn.m: %d dn.l: %d old.m:%d old.l:%d\n",done_nodes->m,done_nodes->l,old->m,old->l);
 #endif
   int regionLen = coverage_in_bp(old,sgl);//true covered regions
-  //nodePool done_nodes;
+
   done_nodes->l =0;
   if(regionLen==0)
     return;
@@ -373,7 +374,7 @@ void mkNodes_one_sampleb(readPool *sgl,nodePool *done_nodes,nodePool *old,abcGet
 
   //parse all reads
   int r;
-  for( r=0;r<sgl->readIDstop;r++) {
+  for(r=0;r<sgl->readIDstop;r++) {
     bam1_t *rd=sgl->reads[r];
 
     //    fprintf(stderr,"r=%d\tpos=%d\n",r,rd.pos);
@@ -401,7 +402,7 @@ void mkNodes_one_sampleb(readPool *sgl,nodePool *done_nodes,nodePool *old,abcGet
 
       if(opCode==BAM_CINS||opCode==BAM_CDEL){//handle insertions and deletions
 	if(i==0){ //skip indels if beginning of a read, print mapQ
-	  tmpNode =  done_nodes->nds[wpos];
+	  tmpNode = done_nodes->nds[wpos]?done_nodes->nds[wpos]:(done_nodes->nds[wpos]=node_init1()); 
 	  kputc('^', &tmpNode->seq);
 	  if(rd->core.qual!=255)
 	    kputc(rd->core.qual+33, &tmpNode->seq);
@@ -1018,7 +1019,7 @@ chunky *mergeAllNodes_old(nodePool **dn,int nFiles) {
   
   int depth[rlen];
   
-  node ***super;
+  node ***super=NULL;
   try{
     //    fprintf(stderr,"rlen=%d\n",rlen);
     fflush(stderr);
@@ -1528,8 +1529,11 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     //clean up
     for(int i=0;i<nFiles;i++){
       dalloc(&sglp[i]);
+
       delete [] old_nodes[i]->nds;
       delete [] done_nodes[i]->nds;
+      free(old_nodes[i]);
+      free(done_nodes[i]);
     }
 
     delete [] old_nodes;
