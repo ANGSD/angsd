@@ -112,7 +112,7 @@ void printChunky2(const chunky* chk,FILE *fp,char *refStr,abcGetFasta *gf) {
       for(int i=0;i<chk->nSamples;i++)
 	if(chk->nd[s][i])
 	  dalloc_node(chk->nd[s][i]);
-      //      free(chk->nd[s]);
+      free(chk->nd[s]);
       continue;
     }
     fprintf(fp,"%s\t%d",refStr,chk->refPos[s]+1);     
