@@ -247,13 +247,14 @@ node initNode(int l,int refPos,int arypos){
 node* node_init1(){
 #ifdef __WITH_POOL__
   {
-    fprintf(stderr,"allocing node\n");
+    //    fprintf(stderr,"allocing node\n");
   node *nd = (node*)tpool_alloc(nodes);
+  // memset(nd,0,sizeof(node));
   nd->seq.l=0;
   nd->qs.l=0;
   nd->pos.l=0;
-  // nd =(node*) memset(nd,0,sizeof(node));
-  //  fprintf(stderr,"with poollling\n");
+  nd->refPos = -999;
+  nd->depth =0;
   return nd;
   }
 #else
@@ -485,7 +486,6 @@ void mkNodes_one_sampleb(readPool *sgl,nodePool *done_nodes,nodePool *old,abcGet
 	if(seq_pos == 0){
 	  //then we are at beginning of read and need to write mapQ
 	  tmpNode = done_nodes->nds[wpos]?done_nodes->nds[wpos]:(done_nodes->nds[wpos]=node_init1());
-	  //  tmpNode = &done_nodes.nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  kputc('^', &tmpNode->seq);
 	  if(rd->core.qual!=255)
@@ -1569,7 +1569,17 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     delete [] done_nodes;
     delete [] sglp;
   }
-#ifdef __WITH_POOL
+
+#ifdef __WITH_POOL__
+  for(int i=0;i<nodes->ntpools;i++){
+    node *nd  =(node*)nodes->tpools[i].tpool;
+    int nitem = 1024*1024/ sizeof(node);
+    for(int j=0;j<nitem;j++){
+      free(nd[j].seq.s);
+      free(nd[j].qs.s);
+      free(nd[j].pos.s);
+    }
+  }
   tpool_destroy(nodes);
 #endif
   
