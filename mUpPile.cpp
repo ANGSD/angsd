@@ -5,11 +5,15 @@
 #include <pthread.h>
 #include <cassert>
 #include <htslib/hts.h>
+#include "tpooled_alloc.h"
 #include "mUpPile.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
 #include "makeReadPool.h"
 #include "pop1_read.h"
+
+//#define __WITH_POOL__
+
 extern int SIG_COND;
 extern int minQ;
 extern int trim;
@@ -24,7 +28,9 @@ extern int trim;
 #define BUG_THRES 1000000 //<- we allow 1mio sites to be allocated,
 #define UPPILE_LEN 8
 
-
+#ifdef __WITH_POOL__
+tpool_alloc_t *nodes = NULL;
+#endif 
 /*
   node for uppile for a single individual for a single site
   this is used for textoutput emulating samtools mpileup
@@ -53,10 +59,16 @@ T getmax(const T *ary,size_t len){
 }
 
 void dalloc_node(node *n){
+
+#ifdef __WITH_POOL__
+
+  tpool_free(nodes,n);
+#else
   free(n->seq.s);
   free(n->qs.s);
   free(n->pos.s);
   free(n);
+#endif
 }
 
 
@@ -233,7 +245,20 @@ node initNode(int l,int refPos,int arypos){
 }
 
 node* node_init1(){
+#ifdef __WITH_POOL__
+  {
+    fprintf(stderr,"allocing node\n");
+  node *nd = (node*)tpool_alloc(nodes);
+  nd->seq.l=0;
+  nd->qs.l=0;
+  nd->pos.l=0;
+  // nd =(node*) memset(nd,0,sizeof(node));
+  //  fprintf(stderr,"with poollling\n");
+  return nd;
+  }
+#else
   return (node*)calloc(1,sizeof(node));
+#endif
 }
 
 
@@ -1264,6 +1289,10 @@ void callBack_bambi(fcb *fff);//<-angsd.cpp
 //function below is a merge between the original TESTOUTPUT and the angsdcallback. Typenames with T are the ones for the callback
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
 int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
+#ifdef __WITH_POOL__
+  //  fprintf(stderr,"alloc pool\n");
+  nodes = tpool_create(sizeof(node));
+#endif  
   assert(nLines&&nFiles);
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);fflush(stderr);
   
@@ -1540,6 +1569,10 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     delete [] done_nodes;
     delete [] sglp;
   }
+#ifdef __WITH_POOL
+  tpool_destroy(nodes);
+#endif
+  
   return 0;
 }
 
