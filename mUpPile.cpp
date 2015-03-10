@@ -30,15 +30,17 @@ extern int trim;
 
 #ifdef __WITH_POOL__
 tpool_alloc_t *nodes = NULL;
-#endif 
+#endif
+
 /*
   node for uppile for a single individual for a single site
   this is used for textoutput emulating samtools mpileup
+  this is only kept for debugging purposes.
+
  */
 
 typedef struct{
   int len;//length of seq,qs,pos
-  int maxLen;//maxlength of seq,qs.pos, maybe do realloc
   kstring_t seq;
   kstring_t qs;
   kstring_t pos;
@@ -61,7 +63,6 @@ T getmax(const T *ary,size_t len){
 void dalloc_node(node *n){
 
 #ifdef __WITH_POOL__
-
   tpool_free(nodes,n);
 #else
   free(n->seq.s);
@@ -72,14 +73,13 @@ void dalloc_node(node *n){
 }
 
 
-void dalloc_node(tNode &n){
-  //  fprintf(stderr,"[%s]\n",__FUNCTION__);
-  if(n.l!=0||n.m!=0){
-    free(n.seq);
-    free(n.qs);
-    free(n.posi);
-    free(n.mapQ);
-    free(n.isop);
+void dalloc_node(tNode *n){
+  if(n->l!=0||n->m!=0){
+    free(n->seq);
+    free(n->qs);
+    free(n->posi);
+    free(n->mapQ);
+    free(n->isop);
   }
 }
 
@@ -160,16 +160,16 @@ typedef struct{
 }nodePool;
 
 
-nodePoolT allocNodePoolT(int l){
-  nodePoolT np;
-  np.l=0;
-  np.m = l;
-  kroundup32(np.m);
-
-  np.first=np.last=-1;
-  np.nds = new tNode[np.m];
+nodePoolT *tndPool_initl(int l){
+  nodePoolT *np = (nodePoolT*) calloc(1,sizeof(nodePoolT));
+  np->m = l;
+  kroundup32(np->m);
+  np->l = 0;
+  np->nds = new tNode*[np->m];
+  np->nds = (tNode**) memset(np->nds,0,np->m*sizeof(tNode*));
   return np;
 }
+
 
 nodePool *ndPool_initl(int l){
   nodePool *np = (nodePool*) calloc(1,sizeof(nodePool));
@@ -196,6 +196,19 @@ void realloc(nodePool *np,int l){
 }
 
 
+void realloc(nodePoolT *np,int l){
+  if(l>=np->m-4){
+    delete [] np->nds;
+    np->m = l;
+    kroundup32(np->m);
+    np->nds = new tNode*[np->m];  
+  }
+  np->nds = (tNode**) memset(np->nds,0,np->m*sizeof(node*));
+  np->l=0;
+  np->first=np->last=-1;
+  
+}
+
 
 void dalloc_nodePool (nodePool* np){
   for(int i=0;i<np->l;i++){
@@ -204,9 +217,9 @@ void dalloc_nodePool (nodePool* np){
   }
 }
 
-void dalloc_nodePoolT (nodePoolT& np){
-  for(int i=0;i<np.l;i++)
-    dalloc_node(np.nds[i]);
+void dalloc_nodePoolT (nodePoolT* np){
+  for(int i=0;i<np->l;i++)
+    dalloc_node(np->nds[i]);
   
 }
 
@@ -215,11 +228,11 @@ void dalloc_nodePoolT (nodePoolT& np){
 void cleanUpChunkyT(chunkyT *chk){
   for(int s=0;s<chk->nSites;s++) {
     for(int i=0;i<chk->nSamples;i++) {
-      if(chk->nd[s][i].l2!=0)
-	for(int j=0;j<chk->nd[s][i].l2;j++){
-	  dalloc_node(chk->nd[s][i].insert[j]);
+      if(chk->nd[s][i]->l2!=0)
+	for(int j=0;j<chk->nd[s][i]->l2;j++){
+	  dalloc_node(&chk->nd[s][i]->insert[j]);//DRAGON
 	}
-      free(chk->nd[s][i].insert);
+      free(chk->nd[s][i]->insert);
       dalloc_node(chk->nd[s][i]);
     }
     delete [] chk->nd[s];
@@ -230,32 +243,17 @@ void cleanUpChunkyT(chunkyT *chk){
   
 }
 
-
-
-
-node initNode(int l,int refPos,int arypos){
-  node nd;
-  nd.maxLen = l;
-  nd.seq.s=NULL; nd.seq.l=nd.seq.m=0;
-  nd.qs.s =NULL; nd.qs.l=nd.qs.m=0;
-  nd.pos.s=NULL; nd.pos.l=nd.pos.m=0;
-  nd.refPos = refPos;//not used anymore
-  nd.depth = 0;
-  return nd;
-}
-
 node* node_init1(){
 #ifdef __WITH_POOL__
   {
-    //    fprintf(stderr,"allocing node\n");
-  node *nd = (node*)tpool_alloc(nodes);
-  // memset(nd,0,sizeof(node));
-  nd->seq.l=0;
-  nd->qs.l=0;
-  nd->pos.l=0;
-  nd->refPos = -999;
-  nd->depth =0;
-  return nd;
+    node *nd = (node*)tpool_alloc(nodes);
+    nd->seq.l=0;
+    nd->qs.l=0;
+    nd->pos.l=0;
+    nd->refPos = -999;
+    nd->depth =0;
+    //notice we only set the l to zero, not m. This way we will avoid expensize reallocs in the kstring_t
+    return nd;
   }
 #else
   return (node*)calloc(1,sizeof(node));
@@ -283,6 +281,49 @@ tNode initNodeT(int l){
   return d;
 }
 
+tNode *tNode_init1(){
+  fprintf(stderr,"alloc\n");
+  tNode *d =  (tNode*)calloc(1,sizeof(tNode));
+  d->m =1;
+  d->l=d->l2=d->m2=0;
+
+  if(d->m==0){
+    d->seq=d->qs=NULL;
+    d->posi=d->isop=d->mapQ=NULL;
+  }else{
+    d->seq=(char *)malloc(d->m);
+    d->qs=(char *)malloc(d->m);
+    d->posi=(unsigned char *)malloc(d->m);
+    d->isop=(unsigned char *)malloc(d->m);
+    d->mapQ=(unsigned char *)malloc(d->m);
+  }
+  d->refPos= -999;
+  d->insert = NULL;
+  
+  return d;
+}
+
+tNode *tNode_init1(int l){
+  tNode *d =  (tNode*)calloc(1,sizeof(tNode));
+
+  d->l = d->l2 = d->m2 = 0;
+  d->m = l;
+  kroundup32(d->m);
+  if(d->m==0){
+    d->seq=d->qs=NULL;
+    d->posi=d->isop=d->mapQ=NULL;
+  }else{
+    d->seq=(char *)malloc(d->m);
+    d->qs=(char *)malloc(d->m);
+    d->posi=(unsigned char *)malloc(d->m);
+    d->isop=(unsigned char *)malloc(d->m);
+    d->mapQ=(unsigned char *)malloc(d->m);
+  }
+  d->refPos= -999;
+  d->insert = NULL;
+  return d;
+  
+}
 
 void realloc(char **c,int l,int m){
   char *tmp =(char *) malloc(m);
@@ -374,9 +415,6 @@ int coverage_in_bpT(nodePoolT *np, readPool *sgl){
 }
 
 void mkNodes_one_sampleb(readPool *sgl,nodePool *done_nodes,nodePool *old,abcGetFasta *gf) {
-#if 0
-  fprintf(stderr,"dn.m: %d dn.l: %d old.m:%d old.l:%d\n",done_nodes->m,done_nodes->l,old->m,old->l);
-#endif
   int regionLen = coverage_in_bp(old,sgl);//true covered regions
 
   done_nodes->l =0;
@@ -594,27 +632,22 @@ void mkNodes_one_sampleb(readPool *sgl,nodePool *done_nodes,nodePool *old,abcGet
 
 
 
-nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
+void mkNodes_one_sampleTb(readPool *sgl,nodePoolT *dn,nodePoolT *np) {
   int regionLen = coverage_in_bpT(np,sgl);//true covered regions
-  nodePoolT dn;
-  dn.l =0;
+  //nodePoolT dn;
+  dn->l =0;
   if(regionLen==0)
-    return dn;
+    return;
   int lastSecure = sgl->lowestStart;
-  
-  dn = allocNodePoolT(regionLen);
-  nodePoolT *ret = &dn;
-  tNode *nds = ret->nds;
+
+  realloc(dn,regionLen);
+    
   int offs = np->first;//first position from buffered
   int last = np->last+1;//because we are comparing with calc_end
 
   //plug in the old buffered nodes
   for(int i=0;i<np->l;i++)
-    nds[np->nds[i].refPos-offs] = np->nds[i];
-
-  //initialize new nodes for the rest of the region
-  for(int i=np->l;i<regionLen;i++)
-    nds[i] = initNodeT(UPPILE_LEN);
+    dn->nds[np->nds[i]->refPos-offs] = np->nds[i];
 
   if(np->l==0){//if we didn't have have anybuffered then
     offs = sgl->first[0];
@@ -665,7 +698,8 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	hasInfo++;
 	if(opCode&BAM_CINS){
 	  wpos--; //insertion/deletion is bound to the last position of the read
-	  tmpNode = &nds[wpos];  
+	  tmpNode = dn->nds[wpos]?dn->nds[wpos]:(dn->nds[wpos]=tNode_init1()); 
+	  //tmpNode = &nds[wpos];  
 	  if(tmpNode->l2 >= tmpNode->m2){
 	    tmpNode->m2++;
 	    kroundup32(tmpNode->m2);
@@ -693,7 +727,8 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	}else {//this is the deletion part
 	  
 	  for(int ii=0;ii<opLen;ii++){
-	    tmpNode = &nds[wpos+ii];
+	    tmpNode = dn->nds[wpos+ii]?dn->nds[wpos+ii]:(dn->nds[wpos+ii]=tNode_init1()); 
+	    //tmpNode = &nds[wpos+ii];
 	    tmpNode->refPos = wpos +ii + offs;
 	    tmpNode->deletion ++;
 	  }
@@ -704,14 +739,16 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	//occurs only at the ends of the read
 	if(seq_pos == 0){
 	  //then we are at beginning of read and need to write mapQ
-	  tmpNode = &nds[wpos];
+	  tmpNode = dn->nds[wpos]?dn->nds[wpos]:(dn->nds[wpos]=tNode_init1()); 
+	  //tmpNode = &nds[wpos];
 	  seq_pos += opLen;
 	}else//we are at the end of read, then break CIGAR loop
 	  break;
       }else if(opCode==BAM_CMATCH||opCode==BAM_CEQUAL||opCode==BAM_CDIFF) {
 	hasInfo++;
 	for(int fix=wpos ;wpos<(fix+opLen) ;wpos++) {
-	  tmpNode =  &nds[wpos];
+	  tmpNode = dn->nds[wpos]?dn->nds[wpos]:(dn->nds[wpos]=tNode_init1()); 
+	  //tmpNode =  &nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  if(tmpNode->l>=tmpNode->m){
 	    tmpNode->m = tmpNode->m*2;
@@ -738,7 +775,8 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	}
       }else if(opCode==BAM_CREF_SKIP) {
 	  for(int fix=wpos;wpos<fix+opLen;wpos++){
-	    tmpNode = &nds[wpos];
+	    tmpNode = dn->nds[wpos]?dn->nds[wpos]:(dn->nds[wpos]=tNode_init1()); 
+	    //tmpNode = &nds[wpos];
 	    tmpNode->refPos=wpos+offs;
 	  }
       }else if(opCode==BAM_CPAD||opCode==BAM_CHARD_CLIP) {
@@ -766,40 +804,37 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 
 
   int lastSecureIndex =regionLen;
-  //fprintf(stderr,"lastSecureIndex=%d\tregionLen=%d\t ret->nds.refpos=%d\n",lastSecureIndex,regionLen,ret->nds[regionLen-1].refPos);
-  for(int i=0;0&&i<regionLen;i++)
-    fprintf(stderr,"TYTYYTTYYTYT: refpos[%d]=%d seq.l=%d\n",i,ret->nds[i].refPos,ret->nds[i].l);
-  int tailPos = ret->nds[regionLen-1].refPos;
+  int tailPos = dn->nds[regionLen-1]->refPos;
   if(tailPos>lastSecure)
     lastSecureIndex = regionLen-tailPos+lastSecure;
-  ret->l = lastSecureIndex;
+  dn->l = lastSecureIndex;
   
   if(regionLen-lastSecureIndex+4>np->m){
     delete [] np->nds;
     np->m=regionLen+4;
     kroundup32(np->m);
-    np->nds = new tNode[np->m];
+    np->nds = new tNode*[np->m];
   }
   assert(regionLen-lastSecureIndex+4<=np->m);
   //  fprintf(stderr,"np->m:%d\n",np->m)
   np->l=0;
   for(int i=lastSecureIndex;i<regionLen;i++)
-    np->nds[np->l++] = nds[i];
+    np->nds[np->l++] = dn->nds[i];
 
 
   if(np->l!=0){
-    np->first = np->nds[0].refPos;
-    np->last = np->nds[np->l-1].refPos;
+    np->first = np->nds[0]->refPos;
+    np->last = np->nds[np->l-1]->refPos;
   }
 
-  if(ret->l!=0){
-    ret->first = ret->nds[0].refPos;
-    ret->last = ret->nds[ret->l-1].refPos;
+  if(dn->l!=0){
+    dn->first = dn->nds[0]->refPos;
+    dn->last = dn->nds[dn->l-1]->refPos;
     #if 0
-    fprintf(stderr,"[%s] first=%d last=%d\n",__FUNCTION__,ret->first,ret->last);
+    fprintf(stderr,"[%s] first=%d last=%d\n",__FUNCTION__,dn->first,dn->last);
     #endif
-}
-  return dn;
+  }
+  // return dn;
 }
 
 
@@ -835,56 +870,53 @@ void get_span_all_samples(nodePool **dn,int nFiles,int &from,int &to){
 }
 
 
-void get_span_all_samplesT(const nodePoolT *dn,int nFiles,int &from,int &to){
-  for(int i=0;0&&i<nFiles;i++)
-    fprintf(stderr,"[%s]i=%d (%d,%d)=%d\n",__FUNCTION__,i,dn[i].first,dn[i].last,dn[i].l);
-
+void get_span_all_samplesT(nodePoolT **dn,int nFiles,int &from,int &to){
   for(int i=0;i<nFiles;i++)
-    if(dn[i].l!=0){
-      from = dn[i].first;
-      to = dn[i].last;
+    if(dn[i]->l!=0){
+      from = dn[i]->first;
+      to = dn[i]->last;
       break;
     }
   
   for(int i=0;i<nFiles;i++){//might skip the 'i' used above
-    if(dn[i].l==0)
+    if(dn[i]->l==0)
       continue;
-    if(dn[i].last>to)
-      to = dn[i].last;
-    if(dn[i].first<from)
-      from = dn[i].first;
+    if(dn[i]->last>to)
+      to = dn[i]->last;
+    if(dn[i]->first<from)
+      from = dn[i]->first;
   }
 }
 
 
-typedef std::map<int,tNode *> umapT; 
+typedef std::map<int,tNode **> umapT; 
 
-chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
+chunkyT *slow_mergeAllNodes_new(nodePoolT **dn,int nFiles){
   //  fprintf(stderr,"starting [%s]\n",__FUNCTION__);
   
   umapT ret;
   umapT::iterator it;
   for(int f=0;f<nFiles;f++) {
-    nodePoolT sm = dn[f];
-    for(int l=0;l<sm.l;l++) {
-      tNode *perSite = NULL;
-      int thepos =sm.nds[l].refPos;
+    nodePoolT *sm = dn[f];
+    for(int l=0;l<sm->l;l++) {
+      tNode **perSite = NULL;
+      int thepos =sm->nds[l]->refPos;
       it=ret.find(thepos);
       if(it!=ret.end())
 	perSite = it->second;
       else{
-	perSite = new tNode[nFiles];
+	perSite = new tNode*[nFiles];
 	for(int ii=0;ii<nFiles;ii++){
-	  perSite[ii].l=perSite[ii].l2=perSite[ii].m=0;
-	  perSite[ii].insert =NULL;
-	  perSite[ii].refPos = thepos;
+	  perSite[ii]->l=perSite[ii]->l2=perSite[ii]->m=0;
+	  perSite[ii]->insert =NULL;
+	  perSite[ii]->refPos = thepos;
 	}
 
 	
 	ret.insert(std::make_pair(thepos,perSite));
 		
       }
-      perSite[f] = sm.nds[l];
+      perSite[f] = sm->nds[l];
     }
 
   }
@@ -893,11 +925,11 @@ chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
   int *refPos = new int [ret.size()];
   //  fprintf(stderr,"nnodes=%d\n",nnodes);
   chunkyT *chk =new chunkyT;  
-  chk->nd = new tNode*[nnodes];
+  chk->nd = new tNode**[nnodes];
   int p=0;
   for(it = ret.begin();it!=ret.end();++it){
     chk->nd[p++] = it->second;
-    refPos[p-1] = chk->nd[p-1][0].refPos;
+    refPos[p-1] = chk->nd[p-1][0]->refPos;
   }
 
   chk->nSamples=nFiles;
@@ -907,11 +939,11 @@ chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
 }
 
 
-chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
+chunkyT *mergeAllNodes_new(nodePoolT **dn,int nFiles) {
 
   int *depth = NULL;
   int *refPos2 = NULL;
-  tNode **super = NULL;
+  tNode ***super = NULL;
   
   if(dn==NULL){//cleanup called after end of looping through all files.
     return NULL;
@@ -924,7 +956,7 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
   if(rlen>BUG_THRES)
     return slow_mergeAllNodes_new(dn,nFiles);
 
-  super = new tNode*[rlen];
+  super = new tNode**[rlen];
   depth = new int[rlen];
   refPos2 = new int[rlen];
   
@@ -932,27 +964,27 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
   int offs = first;
   //looping through the different samples
   for(int n=0;n<nFiles;n++) {
-    nodePoolT sm = dn[n];
+    nodePoolT *sm = dn[n];
     int i;
     //looping through all nodes
-    for( i=0;((i<sm.l)&&(sm.nds[i].refPos <= std::min(sm.last,last) ));i++) {
+    for( i=0;((i<sm->l)&&(sm->nds[i]->refPos <= std::min(sm->last,last) ));i++) {
       
-      int posi = sm.nds[i].refPos-offs;
+      int posi = sm->nds[i]->refPos-offs;
       if(depth[posi]==0){
 	//	fprintf(stderr,"posi=%d\n",posi);
-	super[posi] = new tNode[nFiles];
+	super[posi] = new tNode*[nFiles];
 	for(int ii=0;ii<nFiles;ii++){
-	  super[posi][ii].l=super[posi][ii].l2=super[posi][ii].m=0;
-	  super[posi][ii].insert =NULL;
-	  super[posi][ii].refPos = posi+offs;
+	  super[posi][ii]->l=super[posi][ii]->l2=super[posi][ii]->m=0;
+	  super[posi][ii]->insert =NULL;
+	  super[posi][ii]->refPos = posi+offs;
 	  //super[posi][ii] = initNodeT(UPPILE_LEN,posi+offs,posi);
 	}
 	
-	refPos2[posi]=sm.nds[i].refPos;
+	refPos2[posi]=sm->nds[i]->refPos;
       }
       depth[posi]++;
-      super[posi][n] = sm.nds[i];
-      //      super[posi][n].len++;
+      super[posi][n] = sm->nds[i];
+      //      super[posi][n]->len++;
     }
   }
   int nnodes =0;
@@ -962,7 +994,7 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
   
   //  fprintf(stderr,"YYYY nnnosed=%d\n",nnodes);
   chunkyT *chk =new chunkyT;  
-  chk->nd = new tNode*[nnodes];
+  chk->nd = new tNode**[nnodes];
   int p=0;
   int *refPos = new int[nnodes];
   for(int i=0;i<nnodes;i++)
@@ -1183,7 +1215,7 @@ void getMaxMax2(readPool *sglp,int nFiles,nodePool **nps){
     
 }
 
-void getMaxMax2(readPool *sglp,int nFiles,nodePoolT *nps){
+void getMaxMax2(readPool *sglp,int nFiles,nodePoolT **nps){
 #if 0
   fprintf(stderr,"[%s].nFiles=%d\n",__FUNCTION__,nFiles);
   for(int i=0;i<nFiles;i++)
@@ -1197,8 +1229,8 @@ void getMaxMax2(readPool *sglp,int nFiles,nodePoolT *nps){
     readPool *tmp = &sglp[i];
     if(tmp->l>0 && (getmax(tmp->last,tmp->l)>last_bp_in_chr) )
       last_bp_in_chr = getmax(tmp->last,tmp->l);
-    if(nps[i].last>last_bp_in_chr)
-      last_bp_in_chr = nps[i].last;
+    if(nps[i]->last>last_bp_in_chr)
+      last_bp_in_chr = nps[i]->last;
   }
   //  assert(last_bp_in_chr!=-1); This assertion should not be active, since it might be true if we don't have data for a whole chromosomes
   for(int i=0;i<nFiles;i++){
@@ -1298,20 +1330,24 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   
   if(show!=1)
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
-  extern abcGetFasta *gf;
+  extern abcGetFasta *gf;//<- only used for textoutput
 
-  readPool *sglp= new readPool[nFiles];
+  readPool *sglp= new readPool[nFiles];//<- one readpool per bam/cram
   
   nodePool **old_nodes,**done_nodes;
   old_nodes = done_nodes = NULL;
+
+  nodePoolT **old_nodesT,**done_nodesT;
+  old_nodesT = done_nodesT = NULL;
   
-  nodePoolT *npsT = NULL;
+  //nodePoolT *npsT = NULL;
   if(show){
     old_nodes = new nodePool*[nFiles];// <- buffered nodes
     done_nodes = new nodePool*[nFiles];//<-nodes that are done
-  }else
-    npsT = new nodePoolT[nFiles];// <- buffered nodes
-
+  }else{
+    old_nodesT = new nodePoolT*[nFiles];// <- buffered nodes
+    done_nodesT = new nodePoolT*[nFiles];//<-contains the finished notes
+  }
   for(int i=0;i<nFiles;i++){
     sglp[i] = makePoolb(nLines);
     //sglpb[i] = makePoolb(nLines);
@@ -1319,8 +1355,10 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       old_nodes[i] = ndPool_initl(MAX_SEQ_LEN);
       done_nodes[i] = ndPool_initl(MAX_SEQ_LEN);
       //      fprintf(stderr,"%d) on.m:%d on.l:%d dn.m:%d dn.l:%d\n",i, old_nodes[i].m,old_nodes[i].l,done_nodes[i].m, done_nodes[i].l);
-    }else
-      npsT[i] = allocNodePoolT(MAX_SEQ_LEN);
+    }else{
+      old_nodesT[i] = tndPool_initl(MAX_SEQ_LEN);
+      done_nodesT[i] = tndPool_initl(MAX_SEQ_LEN);
+    }
   }
 
   int itrPos = -1;
@@ -1461,7 +1499,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	if(show)
 	  getMaxMax2(sglp,nFiles,old_nodes);
 	else
-	  getMaxMax2(sglp,nFiles,npsT);
+	  getMaxMax2(sglp,nFiles,old_nodesT);
       }else{
 	//getSglStop returns the sum of reads to parse.
 	int hasData = getSglStop5(sglp,nFiles,pickStop);
@@ -1473,14 +1511,14 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
       //make uppile nodes
       
-      nodePoolT *dnT = NULL;
+      //  nodePoolT *dnT = NULL;
       int tmpSum = 0;
 
       if(show!=1){
-	dnT = new nodePoolT[nFiles];//<- this can leak now
+	//dnT = new nodePoolT[nFiles];//<- this can leak now
 	for(int i=0;i<nFiles;i++){
-	  dnT[i] = mkNodes_one_sampleTb(&sglp[i],&npsT[i]);
-	  tmpSum += dnT[i].l;
+	  mkNodes_one_sampleTb(&sglp[i],done_nodesT[i],old_nodesT[i]);
+	  tmpSum += done_nodesT[i]->l;
 	}
       }else
 	for(int i=0;i<nFiles;i++) {
@@ -1506,7 +1544,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	  fprintf(stderr,"This could either indicate that there really is no data for this chromosome\n");
 	  fprintf(stderr,"Or it could be problem with this program regSize=%lu notDone=%d\n",regions.size(),notDone);
 	}
-	delete [] dnT;
+	//delete [] dnT;
 	break;
       }
 
@@ -1532,7 +1570,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       }else{
 
 	fcb *f = new fcb; //<-for call back
-	f->dn=dnT; f->nFiles = nFiles; f->regStart = regStart; f->regStop = regStop; f->refId = theRef;
+	f->dn=done_nodesT; f->nFiles = nFiles; f->regStart = regStart; f->regStop = regStop; f->refId = theRef;
 	callBack_bambi(f);
       }
 
@@ -1547,11 +1585,11 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     callBack_bambi(NULL);//cleanup signal
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
     for(int i=0;1&&i<nFiles;i++){
-      dalloc_nodePoolT(npsT[i]);
-      delete [] npsT[i].nds;
+      dalloc_nodePoolT(old_nodesT[i]);
+      delete [] old_nodesT[i]->nds;
       dalloc(&sglp[i]);
     }
-    delete [] npsT;
+    delete [] old_nodesT;
     delete [] sglp;
     pthread_mutex_unlock(&mUpPile_mutex);//just to make sure, its okey to clean up
   }else{

@@ -22,7 +22,7 @@ typedef struct{
   int regStop;
   int nSites;
   int nSamples;
-  tNode **nd;//nd[site][ind]
+  tNode ***nd;//nd[site][ind]
   int *refPos;//length is nSites
 }chunkyT;
 
@@ -33,19 +33,19 @@ typedef struct{
   int m; //possible number of of nodes
   int first;//simply a value which is equal to nodes[0].refPos;
   int last;
-  tNode *nds;//this length can maximum be the maxlenght of a read.NOTANYMORE
+  tNode **nds;//this length can maximum be the maxlenght of a read.NOTANYMORE
 
 }nodePoolT;
 
 
 typedef struct{
-  nodePoolT *dn;
+  nodePoolT **dn;
   int nFiles;
   int regStart;
   int regStop;
   int refId;
 }fcb;//forcallback
 
-void dalloc_node(tNode &n);
-chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles);
+void dalloc_node(tNode *n);
+chunkyT *mergeAllNodes_new(nodePoolT **dn,int nFiles);
 void cleanUpChunkyT(chunkyT *chk);

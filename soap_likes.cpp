@@ -89,32 +89,32 @@ int calc_gl(chunkyT *chk,double *p_matrix,int which_sample,double **lk,int trim)
     int pcr_dep_count[4][2*read_len];
     for(int ii=0;ii<4;ii++) 
       memset(pcr_dep_count[ii],0,sizeof(int)*2*read_len);
-    tNode &nd = chk->nd[s][which_sample];
+    tNode *nd = chk->nd[s][which_sample];
     double type_likely[4][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
     soapMap aMap;
 
     //roll values into the map
-    for(int j=0;j<nd.l;j++) {
+    for(int j=0;j<nd->l;j++) {
       //soapsnp only allows 255s
       if(aMap.size()>=0xFF)
 	break;
       tmpStruct t;
-      if(nd.qs[j]<0){
+      if(nd->qs[j]<0){
 	fprintf(stderr,"Meaningless low quality\n");
 	continue;
       }
-      if(nd.posi[j]<trim||nd.isop[j]<trim|| refToInt[nd.seq[j]]==4 ){
+      if(nd->posi[j]<trim||nd->isop[j]<trim|| refToInt[nd->seq[j]]==4 ){
 	continue;
       }
 
 
-      t.qs=nd.qs[j];
-      if(1&&isupper(nd.seq[j]))
-	t.pos= nd.posi[j];
+      t.qs=nd->qs[j];
+      if(1&&isupper(nd->seq[j]))
+	t.pos= nd->posi[j];
       else
-	t.pos= nd.isop[j];
-      t.isUpper = isupper(nd.seq[j]);
+	t.pos= nd->isop[j];
+      t.isUpper = isupper(nd->seq[j]);
       aMap.insert(std::pair<tmpStruct,int>(t,j));
     }
 
@@ -122,8 +122,8 @@ int calc_gl(chunkyT *chk,double *p_matrix,int which_sample,double **lk,int trim)
     //    for(int j=0;j<nd.l;j++) {
     for(soapMap::iterator it=aMap.begin();it!=aMap.end();++it) {
       int j=it->second;
-      int workId = isupper(nd.seq[j])?nd.posi[j]:read_len+nd.isop[j];
-      int alleleID = conv[refToInt[nd.seq[j]]];//{0,1,2,3}
+      int workId = isupper(nd->seq[j])?nd->posi[j]:read_len+nd->isop[j];
+      int alleleID = conv[refToInt[nd->seq[j]]];//{0,1,2,3}
       
       if(pcr_dep_count[alleleID][workId]==0)
 	global_dep_count[alleleID] += 1;
@@ -132,7 +132,7 @@ int calc_gl(chunkyT *chk,double *p_matrix,int which_sample,double **lk,int trim)
 
       double led1= (pcr_dep_count[alleleID][workId]-1)*pcr_dependency;
       double led2 =  global_dep_count[alleleID]*global_dependency;
-      double led3 =nd.qs[j]*pow(10,led1+led2)+0.5;//+0.5000001;//this small eps addition is to make it work like soapsnp.
+      double led3 =nd->qs[j]*pow(10,led1+led2)+0.5;//+0.5000001;//this small eps addition is to make it work like soapsnp.
 
       int q_adjusted = int(led3);
       
@@ -140,10 +140,10 @@ int calc_gl(chunkyT *chk,double *p_matrix,int which_sample,double **lk,int trim)
 	q_adjusted = 1;
       //      fprintf(stderr,"qadj=%d\n",q_adjusted);
       int coord;
-      if(isupper(nd.seq[j]))
-	coord = nd.posi[j];
+      if(isupper(nd->seq[j]))
+	coord = nd->posi[j];
       else
-	coord = nd.isop[j];
+	coord = nd->isop[j];
       //      fprintf(stderr,"coord=%d\n",coord);
       for(int allele1 = 0;allele1 != 4;allele1++ ) {
 	for(int allele2 = allele1; allele2 != 4; allele2++) {
@@ -314,8 +314,8 @@ void soap_likes::gen_counts(chunkyT *chk,size_t *count_matrix,int whichSample,ch
     if(refs[s]==4)
       continue;
     
-    for(int l=0;l<chk->nd[s][whichSample].l;l++){
-      char nuc = chk->nd[s][whichSample].seq[l];
+    for(int l=0;l<chk->nd[s][whichSample]->l;l++){
+      char nuc = chk->nd[s][whichSample]->seq[l];
       if(nuc =='n' || nuc=='N')
         continue;
       /*
@@ -324,9 +324,9 @@ void soap_likes::gen_counts(chunkyT *chk,size_t *count_matrix,int whichSample,ch
       */
       int funkyOffset =0;
       if(isupper(nuc))//qs not +33 anymore
-	funkyOffset = co(chk->nd[s][whichSample].qs[l], chk->nd[s][whichSample].posi[l],refs[s],refToInt[chk->nd[s][whichSample].seq[l]]);
+	funkyOffset = co(chk->nd[s][whichSample]->qs[l], chk->nd[s][whichSample]->posi[l],refs[s],refToInt[chk->nd[s][whichSample]->seq[l]]);
       else
-	funkyOffset = co(chk->nd[s][whichSample].qs[l], chk->nd[s][whichSample].isop[l],refs[s],refToInt[chk->nd[s][whichSample].seq[l]]);
+	funkyOffset = co(chk->nd[s][whichSample]->qs[l], chk->nd[s][whichSample]->isop[l],refs[s],refToInt[chk->nd[s][whichSample]->seq[l]]);
       
       count_matrix[funkyOffset]++;//increment the correct offset.
 	

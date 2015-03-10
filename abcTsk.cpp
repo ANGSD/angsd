@@ -126,15 +126,15 @@ void abcTsk::print(funkyPars *pars){
   for(int i=0;i<pars->nInd;i++){
     //loop over sites;
     for(int s=0;s<pars->numSites;s++){
-      tNode nd = chk->nd[s][i];
+      tNode *nd = chk->nd[s][i];
       
-      for(int l=0;l<nd.l;l++){
+      for(int l=0;l<nd->l;l++){
 	int refB = refToInt[pars->ref[s]];
-	int obB = refToInt[nd.seq[l]];
-	int strand = isupper(nd.seq[l])==0;
+	int obB = refToInt[nd->seq[l]];
+	int strand = isupper(nd->seq[l])==0;
 	if(refB==4||obB==4)
 	  continue;
-	mat[nd.posi[l]][nd.isop[l]][nd.qs[l]][strand][refB][obB]++;
+	mat[nd->posi[l]][nd->isop[l]][nd->qs[l]][strand][refB][obB]++;
 
 	
       }

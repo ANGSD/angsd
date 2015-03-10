@@ -114,7 +114,7 @@ void destroy(){
 int *populatePositions(const chunkyT *chk){
   int *ret = new int[chk->nSites];
   for(int i=0;i<chk->nSites;i++)
-    ret[i] = chk->nd[i][0].refPos;
+    ret[i] = chk->nd[i][0]->refPos;
 
   return ret;
 }
@@ -122,13 +122,13 @@ int *populatePositions(const chunkyT *chk){
 
 
 
-void cleanUptNodeArray(tNode *row,int nSamples){
+void cleanUptNodeArray(tNode **row,int nSamples){
     for(int i=0;i< nSamples;i++) {
-      if(row[i].l2!=0)
-	for(int j=0;j<row[i].l2;j++)
-	  dalloc_node(row[i].insert[j]);
+      if(row[i]->l2!=0)
+	for(int j=0;j<row[i]->l2;j++)
+	  dalloc_node(&row[i]->insert[j]);
 	
-      free(row[i].insert);
+      free(row[i]->insert);
       dalloc_node(row[i]);
     }
     delete [] row;
@@ -144,13 +144,13 @@ void collapse(funkyPars *p){
     // assert(!(chk->refPos[0]>f->regStop));//this could happen when we work with regions
 
     //regstop and regstart are the usersupplied startstop region, strip ends if needed
-    if((chk->nd[0][0].refPos<chk->regStart)||(chk->nd[chk->nSites-1][0].refPos>chk->regStop)){
+    if((chk->nd[0][0]->refPos<chk->regStart)||(chk->nd[chk->nSites-1][0]->refPos>chk->regStop)){
 
       int at=0;
       for(int i=0;i<chk->nSites;i++){//can be written faster
-	if(chk->nd[i][0].refPos<chk->regStart)//should cleanup
+	if(chk->nd[i][0]->refPos<chk->regStart)//should cleanup
 	  cleanUptNodeArray(chk->nd[i],chk->nSamples);
-	else if(chk->nd[i][0].refPos<chk->regStop)
+	else if(chk->nd[i][0]->refPos<chk->regStop)
 	  chk->nd[at++] = chk->nd[i];
 	else
 	  cleanUptNodeArray(chk->nd[i],chk->nSamples);
@@ -379,8 +379,8 @@ void deallocFunkyPars(funkyPars *p) {
   if(p->for_callback!=NULL){
     fcb *f = p->for_callback;
     for(int i=0;i<f->nFiles;i++)
-      if(f->dn[i].l!=0)//this is nescesarry...
-	delete [] f->dn[i].nds;
+      if(f->dn[i]->l!=0)//this is nescesarry...
+	delete [] f->dn[i]->nds;
     delete [] f->dn;
     delete f;
     f=NULL;
@@ -414,17 +414,17 @@ void deallocFunkyPars(funkyPars *p) {
 //plus one, plus 33
 void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
   for(int s=0;s<chk->nSites;s++){
-    fprintf(fp,"%d\t%d\t",chk->refId,chk->nd[s][0].refPos+1);
+    fprintf(fp,"%d\t%d\t",chk->refId,chk->nd[s][0]->refPos+1);
     if(refs!=NULL)
       fprintf(fp,"%c\t",intToRef[refs[s]]);
     for(int n=0;n<chk->nSamples;n++){
-      tNode &nd = chk->nd[s][n];
-      fprintf(fp,"%d\t",nd.l);
-      for(int i=0;i<nd.l;i++)
-	fprintf(fp,"%c",nd.seq[i]);
+      tNode *nd = chk->nd[s][n];
+      fprintf(fp,"%d\t",nd->l);
+      for(int i=0;i<nd->l;i++)
+	fprintf(fp,"%c",nd->seq[i]);
       fprintf(fp,"\t");
-      for(int i=0;i<nd.l;i++)
-	fprintf(fp,"%c",nd.qs[i]+33);
+      for(int i=0;i<nd->l;i++)
+	fprintf(fp,"%c",nd->qs[i]+33);
       fprintf(fp,"\t");
       for(int i=0;i<10;i++)
 	fprintf(fp,"%f ",liks[s][n*10+i]);

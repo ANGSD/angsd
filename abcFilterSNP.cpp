@@ -48,7 +48,7 @@ double phi(double x){
 
 
 
-double baseQbias(tNode *tn,int nInd,int maj,int min){
+double baseQbias(tNode **tn,int nInd,int maj,int min){
   //  fprintf(stderr,"phi:%f\n",phi(3));
   int majD[64];
   int minD[64];
@@ -56,14 +56,14 @@ double baseQbias(tNode *tn,int nInd,int maj,int min){
   memset(minD,0,sizeof(int)*64);
 
   for(int i=0;i<nInd;i++){
-    tNode &nd = tn[i];
-    for(int l=0;l<nd.l;l++){
-      int obB = refToInt[nd.seq[l]];
+    tNode *nd = tn[i];
+    for(int l=0;l<nd->l;l++){
+      int obB = refToInt[nd->seq[l]];
 
       if(obB==maj)
-	majD[nd.qs[l]]++;
+	majD[nd->qs[l]]++;
       else if(obB==min)
-	minD[nd.qs[l]]++;
+	minD[nd->qs[l]]++;
     }
   }
   
@@ -151,11 +151,11 @@ void abcFilterSNP::run(funkyPars *pars){
       //loop over samples
       int cnts[4]={0,0,0,0};
       for(int i=0;i<pars->nInd;i++){
-	tNode &nd = chk->nd[s][i];
-	for(int l=0;l<nd.l;l++){
-	  int obB = refToInt[nd.seq[l]];
+	tNode *nd = chk->nd[s][i];
+	for(int l=0;l<nd->l;l++){
+	  int obB = refToInt[nd->seq[l]];
 	  //	    fprintf(stderr,"%c ",nd.seq[l]);
-	  int strand = (isupper(nd.seq[l])==0)<<1;
+	  int strand = (isupper(nd->seq[l])==0)<<1;
 	  //  fprintf(stderr,"strand:%d\n",strand);
 	  if(obB==4)
 	    continue;

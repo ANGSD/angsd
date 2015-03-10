@@ -113,12 +113,12 @@ void abcTemplate::print(funkyPars *pars){
       //loop over samples
       for(int i=0;i<pars->nInd;i++){
 	//all seqdata associated with single bamfile is in a tNode
-	tNode nd = chk->nd[s][i];
+	tNode *nd = chk->nd[s][i];
 	//loop over the individual bases
-	for(int l=0;l<nd.l;l++){
-	  char c = nd.seq[l]; //this is the base
-	  char q = nd.qs[l]; //this is the associated qscore, fancy shit
-	  int strand = isupper(nd.seq[l])==0; //strand is defined as either small/big letters
+	for(int l=0;l<nd->l;l++){
+	  char c = nd->seq[l]; //this is the base
+	  char q = nd->qs[l]; //this is the associated qscore, fancy shit
+	  int strand = isupper(nd->seq[l])==0; //strand is defined as either small/big letters
 	  
 	  //there is a lookuptable called refToInt which maps
 	  //a->0,A->0,c->1,C->1,g->2,G->2,t->3,T=>3,n->4,N->5

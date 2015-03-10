@@ -150,7 +150,7 @@ void abcHetPlas::doNew(funkyPars *pars){
       rs->nItr[s] = new int [pars->nInd];  
 
       for(int i=0;i<pars->nInd;i++){
-	int seqdepth=makellhs(&pars->chk->nd[s][i],liks,&oldsize);
+	int seqdepth=makellhs(pars->chk->nd[s][i],liks,&oldsize);
 	if(seqdepth==0){
 	  pars->keepSites[s]=0;
 	  continue;//DRAGON should only skip ind, is ok with 1 sample

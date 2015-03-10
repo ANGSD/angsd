@@ -374,9 +374,9 @@ void countQs(const chunkyT *chk,size_t *ret,int *keepSites){
     //loop over sites
     for(int n=0;n<chk->nSamples;n++){
       //loop over samples
-      for(int l=0;l<chk->nd[s][n].l;l++){
+      for(int l=0;l<chk->nd[s][n]->l;l++){
 	//loop over persample reads for this position/sample
-	ret[chk->nd[s][n].qs[l]]++;
+	ret[chk->nd[s][n]->qs[l]]++;
 	
       }
     }
@@ -444,29 +444,29 @@ void abcCounts::print(funkyPars *pars){
 
     for(int s=0;s<pars->chk->nSites;s++){
       //      fprintf(stderr,"TT: %d %d\n",pars->chk->nd[s][0].l2,pars->chk->nd[s][0].deletion);
-      if(pars->keepSites[s]==0||pars->chk->nd[s][0].l2||pars->chk->nd[s][0].deletion)
+      if(pars->keepSites[s]==0||pars->chk->nd[s][0]->l2||pars->chk->nd[s][0]->deletion)
 	continue;
       ////BELOW IS SOLELY TO KEEP format similar
-      if(0&&s<pars->chk->nSites-1&&pars->chk->nd[s+1][0].deletion)
+      if(0&&s<pars->chk->nSites-1&&pars->chk->nd[s+1][0]->deletion)
 	continue;
       ////THE ABOVE IS SOLELY TO KEEP FORMAT SIMILAR
 
       int count[4]={0,0,0,0};
       //loop over persample reads
-      for(int l=0;l<pars->chk->nd[s][0].l;l++){
-	int allele = refToInt[pars->chk->nd[s][0].seq[l]];
-	int tmp=lookup[pars->chk->nd[s][0].seq[l]];
+      for(int l=0;l<pars->chk->nd[s][0]->l;l++){
+	int allele = refToInt[pars->chk->nd[s][0]->seq[l]];
+	int tmp=lookup[pars->chk->nd[s][0]->seq[l]];
 #if 0
 	fprintf(stderr,"l:%d b:%c qs:%d\n",l,pars->chk->nd[s][0].seq[l],pars->chk->nd[s][0].qs[l]);
 #endif
 	if(allele==4)//skip of 'n'/'N'
 	  continue;
 
-	if(qfileFname&&pars->chk->nd[s][0].qs[l]<=qCutoff[tmp]) //skip if we are using qscores and we are below
+	if(qfileFname&&pars->chk->nd[s][0]->qs[l]<=qCutoff[tmp]) //skip if we are using qscores and we are below
 	  continue;
 	  
 	// if q score bin to sample from: count if sampled 
-	if(pars->chk->nd[s][0].qs[l]==qCutoff[tmp]+1){
+	if(pars->chk->nd[s][0]->qs[l]==qCutoff[tmp]+1){
 	  double x =drand48();
 	  //fprintf(stderr,"skipping\n");
 	  if(x>=fCutoff[tmp])
@@ -508,9 +508,9 @@ suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites){
       //loop over samples
       for(int n=0;n<chk->nSamples;n++){
 	//loop over persample reads
-	for(int l=0;l<chk->nd[s][n].l;l++){
+	for(int l=0;l<chk->nd[s][n]->l;l++){
 	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c\n",s,n,chk->nd[s][n].l,l,chk->nd[s][n].seq[l]);
-	  int allele = refToInt[chk->nd[s][n].seq[l]];
+	  int allele = refToInt[chk->nd[s][n]->seq[l]];
 	
 	  if(allele==4){
 	    continue;
@@ -529,11 +529,11 @@ suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites){
       //loop over samples
       for(int n=0;n<chk->nSamples;n++){
 	//loop over persample reads
-	for(int l=0;l<chk->nd[s][n].l;l++){
-	  int allele = refToInt[chk->nd[s][n].seq[l]];	  
+	for(int l=0;l<chk->nd[s][n]->l;l++){
+	  int allele = refToInt[chk->nd[s][n]->seq[l]];	  
 	  if(allele==4)
 	    continue;
-	  if(chk->nd[s][n].qs[l] < minQmat.matrix[n][allele]){
+	  if(chk->nd[s][n]->qs[l] < minQmat.matrix[n][allele]){
 	  continue;
 	  }
 	  cnts[s][4*n+allele]++;
@@ -551,9 +551,9 @@ suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites){
       //loop over samples
       for(int n=0;n<chk->nSamples;n++){
 	//loop over persample reads
-	for(int l=0;l<chk->nd[s][n].l;l++){
-	  int allele = refToInt[chk->nd[s][n].seq[l]];
-	  if(chk->nd[s][n].qs[l] < minQmat.matrix[n][0]||allele==4){
+	for(int l=0;l<chk->nd[s][n]->l;l++){
+	  int allele = refToInt[chk->nd[s][n]->seq[l]];
+	  if(chk->nd[s][n]->qs[l] < minQmat.matrix[n][0]||allele==4){
  
 	  continue;
 	  }

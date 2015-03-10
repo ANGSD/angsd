@@ -67,15 +67,15 @@ void call_gatk(chunkyT *chk,double **lk,int trim){
 	  lk[s][ii] = -0.0;//set default values
       }
       
-      tNode &nd = chk->nd[s][i];
+      tNode *nd = chk->nd[s][i];
       
       //calc like persample
       double *likes1 = lk[s]+10*i;
-      for(int j=0;j<nd.l;j++){
-	int allele = refToInt[nd.seq[j]];
-	int qs = nd.qs[j];
+      for(int j=0;j<nd->l;j++){
+	int allele = refToInt[nd->seq[j]];
+	int qs = nd->qs[j];
 	//filter qscore, mapQ,trimming, and always skip n/N
-	if(nd.posi[j]<trim||nd.isop[j]<trim||allele==4){
+	if(nd->posi[j]<trim||nd->isop[j]<trim||allele==4){
 	  continue;
 	}
 
