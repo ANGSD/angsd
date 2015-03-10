@@ -504,16 +504,15 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
     //after end of read/parsing CIGAR always put the endline char
     //  fprintf(stderr,"printing endpileup for pos=%d\n",rd->pos);
     kputc('$', &tmpNode->seq);
-    bam_destroy1(rd);
   }
 
   //plug the reads back up //FIXME maybe do list type instead
 
   int miss= sgl->l-r;
   for(int i=0;i<(sgl->l-r);i++){
-    sgl->reads[i] =sgl->reads[i+r];
     sgl->first[i] =sgl->first[i+r];
     sgl->last[i] =sgl->last[i+r];
+    std::swap(sgl->reads[i],sgl->reads[i+r]);
   }
   sgl->l = miss;
   //copy the part not meant for printing in this round into the buffer
@@ -708,16 +707,15 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
       //      exit(0);
     }
     //after end of read/parsing CIGAR always put the endline char
-    bam_destroy1(rd);
   }
 
   //plug the reads back up //FIXME maybe do list type instead
 
   int miss= sgl->l-r;
   for(int i=0;i<(sgl->l-r);i++){
-    sgl->reads[i] =sgl->reads[i+r];
     sgl->first[i] =sgl->first[i+r];
     sgl->last[i] =sgl->last[i+r];
+    std::swap(sgl->reads[i],sgl->reads[i+r]);
   }
   sgl->l = miss;
   //copy the part not meant for printing in this round into the buffer
@@ -1327,6 +1325,8 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	  rd[i].isEOF = 0;
 	  rd[i].regionDone =0;
 	  sglp[i].l =0;
+	  if(sglp[i].bufferedRead)
+	    bam_destroy1(sglp[i].bufferedRead);
 	  sglp[i].bufferedRead=NULL;
 	}
       }
@@ -1375,12 +1375,14 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	    doCpy = restuff(sglp[i].bufferedRead);
 	  }
 	  if(doCpy){
-	    sglp[i].reads[sglp[i].l] = sglp[i].bufferedRead;
+	    std::swap(sglp[i].reads[sglp[i].l],sglp[i].bufferedRead);
 	    sglp[i].first[sglp[i].l] = sglp[i].reads[sglp[i].l]->core.pos;
 	    sglp[i].last[sglp[i].l] =   bam_endpos(sglp[i].reads[sglp[i].l]);
 	    sglp[i].l++;
 	  }
 	  //if we haven't performed the copy its because adjustedMap<minMapQ, in either case we don't need the read anymore
+	  if(sglp[i].bufferedRead)
+	    bam_destroy1(sglp[i].bufferedRead);
 	  sglp[i].bufferedRead = NULL;
 	}else // buffered was not on correct chr say that the 'region' is done
 	  rd[i].regionDone=1;
@@ -1393,10 +1395,12 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       //before collecting reads from the files, lets first check if we should pop reads from the buffered queue in each sgl
       for(int i=0;i<nFiles;i++){
 	if(sglp[i].bufferedRead&&sglp[i].bufferedRead->core.tid==theRef){
-	  sglp[i].reads[sglp[i].l] = sglp[i].bufferedRead;
+	  std::swap(sglp[i].reads[sglp[i].l] , sglp[i].bufferedRead);
 	  sglp[i].first[sglp[i].l] = sglp[i].reads[sglp[i].l]->core.pos;
 	  sglp[i].last[sglp[i].l] = bam_endpos(sglp[i].reads[sglp[i].l]);
 	  sglp[i].l++;
+	  if(sglp[i].bufferedRead)
+	    bam_destroy1(sglp[i].bufferedRead);
 	  sglp[i].bufferedRead = NULL;
 	}
 	

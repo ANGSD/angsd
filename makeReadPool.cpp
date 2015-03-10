@@ -1,12 +1,14 @@
 #include "makeReadPool.h"
-
+#define bam_dup(b) bam_copy1(bam_init1(), (b))
 readPool makePoolb(int l){
   readPool ret;
   ret.l=0;
   ret.m=l;
   kroundup32(ret.m);
   
-  ret.reads=(bam1_t**)malloc(ret.m*sizeof(bam1_t**));// new bam1_t*[ret.m];
+  ret.reads=(bam1_t**)malloc(ret.m*sizeof(bam1_t*));// new bam1_t*[ret.m];
+  for(int i=0;i<ret.m;i++)
+    ret.reads[i] = bam_init1();
   ret.first=(int *)malloc(ret.m*sizeof(int));//new int[ret.m];
   ret.last=(int *)malloc(ret.m*sizeof(int));//new int[ret.m];
   ret.bufferedRead=NULL;
@@ -15,15 +17,20 @@ readPool makePoolb(int l){
 }
 
 void dalloc (readPool *ret){
+  for(int i=0;i<ret->m;i++)
+    bam_destroy1(ret->reads[i]);
   free(ret->reads);
   free(ret->first);
   free(ret->last);
 }
 
 void realloc(readPool *ret,int l){
+  int old=ret->m;
   ret->m =l;
   kroundup32(ret->m);
-  ret->reads =(bam1_t**) realloc(ret->reads,sizeof(bam1_t**)*ret->m);
+  ret->reads =(bam1_t**) realloc(ret->reads,sizeof(bam1_t*)*ret->m);
+  for(int i=old;i<ret->m;i++)
+    ret->reads[i]= bam_init1();
   ret->first =(int*) realloc(ret->first,sizeof(int)*ret->m);
   ret->last =(int*) realloc(ret->last,sizeof(int)*ret->m);
 }
@@ -42,7 +49,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
   //this is fixed good job monkey boy
 
   while(ret.l==0){
-    bam1_t *b = ret.reads[0]=bam_init1();
+    bam1_t *b = ret.reads[0];
     int tmp;
 
     if((tmp=pop1_read(fp,itr,b,hdr))<0){//FIXME
@@ -71,7 +78,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
   */ 
   int i=0;
   int tmp;
-  int buffed=0;
+  //  int buffed=0;
   while(1) {
     if(i+ret.l>=(ret.m-1)){
       ret.l += i;
@@ -79,15 +86,13 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
       realloc(&ret,ret.m+1);//will double buffer
     }
     
-    bam1_t *b = ret.reads[i+ret.l]=bam_init1();
+    bam1_t *b = ret.reads[i+ret.l];
     if((tmp=pop1_read(fp,itr,b,hdr))<0) {
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
       }else
 	rdObjRegionDone =1;
-      bam_destroy1(b);
-      //DRAGON should we destroy b here?
       break;
     }
  
@@ -97,13 +102,13 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
       ret.first[ret.l+i] = b->core.pos;
       ret.last[ret.l+i] = bam_endpos(b);
     }else if((refToRead==b->core.tid)&&b->core.pos>=stop){
-      buffed=1;
-      ret.bufferedRead = b;
+      //buffed=1;
+      ret.bufferedRead = bam_dup(b);
       break;
     }
     else if(b->core.tid>refToRead){
-      buffed=1;
-      ret.bufferedRead = b;
+      //buffed=1;
+      ret.bufferedRead = bam_dup(b);
       rdObjRegionDone =1;
       break;
     }else if(ret.first[ret.l+i-1]>b->core.pos){
@@ -131,7 +136,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
   //whith the current buffer empty and the first read being a new chromosome. 
   //this is fixed good job monkey boy
   while(ret.l==0){
-    bam1_t *b = ret.reads[0]=bam_init1();
+    bam1_t *b = ret.reads[0];
     int tmp;
     if((tmp=pop1_read(fp,itr,b,hdr))<0){//FIXME
       if(tmp==-1){
@@ -144,9 +149,9 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
    
     //check that the read is == the refToread
     if(b->core.tid!=refToRead){
-       ret.bufferedRead = b;
-       rdObjRegionDone =1;
-       return;
+      ret.bufferedRead = bam_dup(b);
+      rdObjRegionDone =1;
+      return;
     }
     ret.first[ret.l] = b->core.pos;
     ret.last[ret.l] = bam_endpos(b);
@@ -168,7 +173,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
   int tmp;
   int buffed=0;
   for( i=0;i<nReads;i++){
-    bam1_t *b = ret.reads[i+ret.l]=bam_init1();
+    bam1_t *b = ret.reads[i+ret.l];
 
     if((tmp=pop1_read(fp,itr,b,hdr))<0){
       if(tmp==-1){
@@ -176,7 +181,6 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
 	isEof--;
       }else
 	rdObjRegionDone =1;
-      bam_destroy1(b);
       break;
     }
 
@@ -186,7 +190,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
       ret.last[ret.l+i] = bam_endpos(b);
     }else if(b->core.tid>refToRead){
       buffed=1;
-      ret.bufferedRead = b;
+      ret.bufferedRead = bam_dup(b);
       //      fprintf(stderr,"[%s] new chromosome detected will temporarliy stop reading at read # :%d\n",__FUNCTION__,i);
       rdObjRegionDone =1;
       break;
