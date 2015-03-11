@@ -561,18 +561,16 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
   int lastSecure = sgl->lowestStart;
   
   dn = allocNodePoolT(regionLen);
-  nodePoolT *ret = &dn;
-  tNode *nds = ret->nds;
   int offs = np->first;//first position from buffered
   int last = np->last+1;//because we are comparing with calc_end
 
   //plug in the old buffered nodes
   for(int i=0;i<np->l;i++)
-    nds[np->nds[i].refPos-offs] = np->nds[i];
+    dn.nds[np->nds[i].refPos-offs] = np->nds[i];
 
   //initialize new nodes for the rest of the region
   for(int i=np->l;i<regionLen;i++)
-    nds[i] = initNodeT(UPPILE_LEN);
+    dn.nds[i] = initNodeT(UPPILE_LEN);
 
   if(np->l==0){//if we didn't have have anybuffered then
     offs = sgl->first[0];
@@ -623,7 +621,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	hasInfo++;
 	if(opCode&BAM_CINS){
 	  wpos--; //insertion/deletion is bound to the last position of the read
-	  tmpNode = &nds[wpos];  
+	  tmpNode = &dn.nds[wpos];  
 	  if(tmpNode->l2 >= tmpNode->m2){
 	    tmpNode->m2++;
 	    kroundup32(tmpNode->m2);
@@ -651,7 +649,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	}else {//this is the deletion part
 	  
 	  for(int ii=0;ii<opLen;ii++){
-	    tmpNode = &nds[wpos+ii];
+	    tmpNode = &dn.nds[wpos+ii];
 	    tmpNode->refPos = wpos +ii + offs;
 	    tmpNode->deletion ++;
 	  }
@@ -662,14 +660,14 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	//occurs only at the ends of the read
 	if(seq_pos == 0){
 	  //then we are at beginning of read and need to write mapQ
-	  tmpNode = &nds[wpos];
+	  tmpNode = &dn.nds[wpos];
 	  seq_pos += opLen;
 	}else//we are at the end of read, then break CIGAR loop
 	  break;
       }else if(opCode==BAM_CMATCH||opCode==BAM_CEQUAL||opCode==BAM_CDIFF) {
 	hasInfo++;
 	for(int fix=wpos ;wpos<(fix+opLen) ;wpos++) {
-	  tmpNode =  &nds[wpos];
+	  tmpNode =  &dn.nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  if(tmpNode->l>=tmpNode->m){
 	    tmpNode->m = tmpNode->m*2;
@@ -696,7 +694,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	}
       }else if(opCode==BAM_CREF_SKIP) {
 	  for(int fix=wpos;wpos<fix+opLen;wpos++){
-	    tmpNode = &nds[wpos];
+	    tmpNode = &dn.nds[wpos];
 	    tmpNode->refPos=wpos+offs;
 	  }
       }else if(opCode==BAM_CPAD||opCode==BAM_CHARD_CLIP) {
@@ -723,13 +721,10 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 
 
   int lastSecureIndex =regionLen;
-  //fprintf(stderr,"lastSecureIndex=%d\tregionLen=%d\t ret->nds.refpos=%d\n",lastSecureIndex,regionLen,ret->nds[regionLen-1].refPos);
-  for(int i=0;0&&i<regionLen;i++)
-    fprintf(stderr,"TYTYYTTYYTYT: refpos[%d]=%d seq.l=%d\n",i,ret->nds[i].refPos,ret->nds[i].l);
-  int tailPos = ret->nds[regionLen-1].refPos;
+  int tailPos = dn.nds[regionLen-1].refPos;
   if(tailPos>lastSecure)
     lastSecureIndex = regionLen-tailPos+lastSecure;
-  ret->l = lastSecureIndex;
+  dn.l = lastSecureIndex;
   
   if(regionLen-lastSecureIndex+4>np->m){
     delete [] np->nds;
@@ -741,7 +736,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
   //  fprintf(stderr,"np->m:%d\n",np->m)
   np->l=0;
   for(int i=lastSecureIndex;i<regionLen;i++)
-    np->nds[np->l++] = nds[i];
+    np->nds[np->l++] = dn.nds[i];
 
 
   if(np->l!=0){
@@ -749,9 +744,9 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
     np->last = np->nds[np->l-1].refPos;
   }
 
-  if(ret->l!=0){
-    ret->first = ret->nds[0].refPos;
-    ret->last = ret->nds[ret->l-1].refPos;
+  if(dn.l!=0){
+    dn.first = dn.nds[0].refPos;
+    dn.last = dn.nds[dn.l-1].refPos;
     #if 0
     fprintf(stderr,"[%s] first=%d last=%d\n",__FUNCTION__,ret->first,ret->last);
     #endif
