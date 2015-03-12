@@ -411,6 +411,8 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
       fprintf(fp,"%c\t",intToRef[refs[s]]);
     for(int n=0;n<chk->nSamples;n++){
       tNode *nd = chk->nd[s][n];
+      if(nd==NULL)
+	continue;
       fprintf(fp,"%d\t",nd->l);
       for(int i=0;i<nd->l;i++)
 	fprintf(fp,"%c",nd->seq[i]);

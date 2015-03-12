@@ -130,7 +130,7 @@ void abcFilter::run(funkyPars *p){
 	tNode **tn = p->chk->nd[s];
 	//loop over samples;
 	for(int i=0;i<p->nInd;i++){
-	  if(tn[i])
+	  if(tn[i]&&tn[i]->l!=0)
 	    nInfo++;
 	}
 	p->keepSites[s] =nInfo;
