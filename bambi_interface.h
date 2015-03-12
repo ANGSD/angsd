@@ -46,6 +46,6 @@ typedef struct{
   int refId;
 }fcb;//forcallback
 
-void dalloc_node(tNode &n);
+void dalloc_node(tNode *n);
 chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles);
 void cleanUpChunkyT(chunkyT *chk);

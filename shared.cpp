@@ -116,10 +116,10 @@ void cleanUptNodeArray(tNode **row,int nSamples){
 	continue;
       if(row[i]->l2!=0)
 	for(int j=0;j<row[i]->l2;j++)
-	  dalloc_node(*row[i]->insert[j]);
+	  dalloc_node(row[i]->insert[j]);
 	
       free(row[i]->insert);
-      dalloc_node(*row[i]);
+      dalloc_node(row[i]);
     }
     delete [] row;
 }
@@ -372,7 +372,7 @@ void deallocFunkyPars(funkyPars *p) {
     fcb *f = p->for_callback;
     for(int i=0;i<f->nFiles;i++)
       if(f->dn[i].l!=0)//this is nescesarry...
-	delete [] f->dn[i].nds;
+	free(f->dn[i].nds);
     delete [] f->dn;
     delete f;
     f=NULL;
