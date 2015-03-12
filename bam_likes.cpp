@@ -299,7 +299,7 @@ void call_bam(chunkyT *chk,double **lk,int trim){
 
       tNode *nd = chk->nd[s][i];
       if(nd==NULL)
-	continue
+	continue;
       uint16_t bases[nd->l];
       int numItems =0;
       for(int j=0;j<nd->l;j++) {
