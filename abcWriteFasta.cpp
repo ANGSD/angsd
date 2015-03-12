@@ -157,10 +157,10 @@ void abcWriteFasta::run(funkyPars *pars){
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
       if(pars->keepSites[s]==0)
 	continue;
-      if(pars->chk->nd[s][0].l==0)
+      if(pars->chk->nd[s][0]->l==0)
 	continue;
-      int j = std::rand() % pars->chk->nd[s][0].l;
-      myFasta[pars->posi[s]] = pars->chk->nd[s][0].seq[j];
+      int j = std::rand() % pars->chk->nd[s][0]->l;
+      myFasta[pars->posi[s]] = pars->chk->nd[s][0]->seq[j];
       
     }
   }else if(doFasta==2) {//most common
@@ -212,14 +212,14 @@ void abcWriteFasta::run(funkyPars *pars){
     for(int i=0;i<pars->nInd;i++){
       //      fprintf(stderr,"numSites: %d\n",pars->numSites);
       for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
-	tNode &tn = pars->chk->nd[s][i];
+	tNode *tn = pars->chk->nd[s][i];
 	double ebds[]= {0.0,0.0,0.0,0.0};
-	for(int b=0;b<tn.l;b++){
-	  int bof = refToInt[tn.seq[b]];
+	for(int b=0;b<tn->l;b++){
+	  int bof = refToInt[tn->seq[b]];
 	  if(bof==4)
 	    continue;
 	  //	  fprintf(stderr,"pos:%d b:%d  bas:%c mapQ:%d qxcore:%c bof:%d qs:%d mapQ:%d %f %f \n",pars->posi[s],b,tn.seq[b],tn.mapQ[b],33+tn.qs[b],bof,tn.qs[b],tn.mapQ[b],lphred[tn.qs[b]],lphred[tn.mapQ[b]]);
-	  ebds[bof] += exp(lphred[tn.qs[b]]+lphred[tn.mapQ[b]]);
+	  ebds[bof] += exp(lphred[tn->qs[b]]+lphred[tn->mapQ[b]]);
 
 	}
 	for(int b=0;0&&b<4;b++)

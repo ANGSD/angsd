@@ -166,7 +166,8 @@ nodePoolT allocNodePoolT(int l){
   kroundup32(np.m);
 
   np.first=np.last=-1;
-  np.nds = new tNode[np.m];
+  np.nds =(tNode**) calloc(np.m,sizeof(tNode*));
+  
   return np;
 }
 
@@ -180,7 +181,7 @@ void dalloc_nodePool (nodePool& np){
 
 void dalloc_nodePoolT (nodePoolT& np){
   for(int i=0;i<np.l;i++)
-    dalloc_node(np.nds[i]);
+    dalloc_node(*np.nds[i]);
   
 }
 
@@ -189,17 +190,18 @@ void dalloc_nodePoolT (nodePoolT& np){
 void cleanUpChunkyT(chunkyT *chk){
   for(int s=0;s<chk->nSites;s++) {
     for(int i=0;i<chk->nSamples;i++) {
-      if(chk->nd[s][i].l2!=0)
-	for(int j=0;j<chk->nd[s][i].l2;j++){
-	  dalloc_node(chk->nd[s][i].insert[j]);
+      if(chk->nd[s][i]==NULL)
+	continue;
+      if(chk->nd[s][i]&&chk->nd[s][i]->l2!=0)
+	for(int j=0;j<chk->nd[s][i]->l2;j++){
+	  dalloc_node(*chk->nd[s][i]->insert[j]);
 	}
-      free(chk->nd[s][i].insert);
-      dalloc_node(chk->nd[s][i]);
+      free(chk->nd[s][i]->insert);
+      dalloc_node(*chk->nd[s][i]);
     }
     delete [] chk->nd[s];
   }
   delete [] chk->nd;
-  delete [] chk->refPos;
   delete chk;
   
 }
@@ -219,23 +221,23 @@ node initNode(int l,int refPos,int arypos){
 }
 
 
-tNode initNodeT(int l){
-  tNode d;
-  d.l = d.l2 = d.m2 = 0;
-  d.m = l;
-  kroundup32(d.m);
-  if(d.m==0){
-    d.seq=d.qs=NULL;
-    d.posi=d.isop=d.mapQ=NULL;
+tNode *initNodeT(int l){
+  tNode *d=(tNode*)calloc(1,sizeof(tNode));
+  d->l = d->l2 = d->m2 = 0;
+  d->m = l;
+  kroundup32(d->m);
+  if(d->m==0){
+    d->seq=d->qs=NULL;
+    d->posi=d->isop=d->mapQ=NULL;
   }else{
-    d.seq=(char *)malloc(d.m);
-    d.qs=(char *)malloc(d.m);
-    d.posi=(unsigned char *)malloc(d.m);
-    d.isop=(unsigned char *)malloc(d.m);
-    d.mapQ=(unsigned char *)malloc(d.m);
+    d->seq=(char *)malloc(d->m);
+    d->qs=(char *)malloc(d->m);
+    d->posi=(unsigned char *)malloc(d->m);
+    d->isop=(unsigned char *)malloc(d->m);
+    d->mapQ=(unsigned char *)malloc(d->m);
   }
-  d.refPos= -999;
-  d.insert = NULL;
+  d->refPos= -999;
+  d->insert = NULL;
   return d;
 }
 
@@ -487,14 +489,14 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  seq_pos++;
 	}
       }else if(opCode==BAM_CREF_SKIP) {
-	  for(int fix=wpos;wpos<fix+opLen;wpos++){
-	    tmpNode = &nds[wpos];
-	    tmpNode->refPos=wpos+offs;
-	    tmpNode->depth ++;
-	    bam_is_rev(rd)?kputc('<',&tmpNode->seq):kputc('>',&tmpNode->seq);
-	    kputw(seq_pos+1, &tmpNode->pos);
-	    kputc(quals[seq_pos]+33, &tmpNode->qs);
-	  }
+	for(int fix=wpos;wpos<fix+opLen;wpos++){
+	  tmpNode = &nds[wpos];
+	  tmpNode->refPos=wpos+offs;
+	  tmpNode->depth ++;
+	  bam_is_rev(rd)?kputc('<',&tmpNode->seq):kputc('>',&tmpNode->seq);
+	  kputw(seq_pos+1, &tmpNode->pos);
+	  kputc(quals[seq_pos]+33, &tmpNode->qs);
+	}
       }else if(opCode==BAM_CPAD||opCode==BAM_CHARD_CLIP) {
 	//dont care
       }else{
@@ -566,7 +568,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 
   //plug in the old buffered nodes
   for(int i=0;i<np->l;i++)
-    dn.nds[np->nds[i].refPos-offs] = np->nds[i];
+    dn.nds[np->nds[i]->refPos-offs] = np->nds[i];
 
   //initialize new nodes for the rest of the region
   for(int i=np->l;i<regionLen;i++)
@@ -621,27 +623,23 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	hasInfo++;
 	if(opCode&BAM_CINS){
 	  wpos--; //insertion/deletion is bound to the last position of the read
-	  tmpNode = &dn.nds[wpos];  
-	  if(tmpNode->l2 >= tmpNode->m2){
+	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN)); 
+	  if(tmpNode->l2 >= tmpNode->m2){//check if we need to make a new vector because we have another insertion
 	    tmpNode->m2++;
 	    kroundup32(tmpNode->m2);
-	    tNode *dddd =(tNode *) malloc(tmpNode->m2*sizeof(tNode));
-	    for(int ddddd=0;ddddd<tmpNode->l2;ddddd++)
-	      dddd[ddddd] = tmpNode->insert[ddddd];
-	    free(tmpNode->insert);
-	    tmpNode->insert = dddd;
+	    tmpNode->insert =(tNode**) realloc(tmpNode->insert,tmpNode->m2*sizeof(tNode*));
 	  }
 	  
 	  tmpNode->insert[tmpNode->l2] = initNodeT(opLen);
 	  for(int ii=0;ii<opLen;ii++){
 	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
-	    tmpNode->insert[tmpNode->l2].seq[ii] = bam_is_rev(rd)? tolower(c) : toupper(c);
-	    tmpNode->insert[tmpNode->l2].posi[ii] = seq_pos + 1;
-	    tmpNode->insert[tmpNode->l2].isop[ii] =rd->core.l_qseq- seq_pos - 1;
-	    tmpNode->insert[tmpNode->l2].qs[ii] = quals[seq_pos];
+	    tmpNode->insert[tmpNode->l2]->seq[ii] = bam_is_rev(rd)? tolower(c) : toupper(c);
+	    tmpNode->insert[tmpNode->l2]->posi[ii] = seq_pos + 1;
+	    tmpNode->insert[tmpNode->l2]->isop[ii] =rd->core.l_qseq- seq_pos - 1;
+	    tmpNode->insert[tmpNode->l2]->qs[ii] = quals[seq_pos];
 	    if( quals[seq_pos]<minQ || seq_pos + 1 < trim || rd->core.l_qseq- seq_pos - 1 < trim)  
-	      tmpNode->insert[tmpNode->l2].seq[ii] =  bam_is_rev(rd)? tolower('n') : toupper('N');
-	    tmpNode->insert[tmpNode->l2].mapQ[ii] = mapQ;
+	      tmpNode->insert[tmpNode->l2]->seq[ii] =  bam_is_rev(rd)? tolower('n') : toupper('N');
+	    tmpNode->insert[tmpNode->l2]->mapQ[ii] = mapQ;
 	    seq_pos++;// <- important, must be after macro
 	  }
 	  tmpNode->l2++;//incrementor!
@@ -649,7 +647,8 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	}else {//this is the deletion part
 	  
 	  for(int ii=0;ii<opLen;ii++){
-	    tmpNode = &dn.nds[wpos+ii];
+	    tmpNode = dn.nds[wpos+ii]?dn.nds[wpos+ii]:(dn.nds[wpos+ii]=initNodeT(UPPILE_LEN));  
+	    //	    tmpNode = dn.nds[wpos+ii];
 	    tmpNode->refPos = wpos +ii + offs;
 	    tmpNode->deletion ++;
 	  }
@@ -660,14 +659,16 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	//occurs only at the ends of the read
 	if(seq_pos == 0){
 	  //then we are at beginning of read and need to write mapQ
-	  tmpNode = &dn.nds[wpos];
+	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN)); 
+	  //	  tmpNode = dn.nds[wpos];
 	  seq_pos += opLen;
 	}else//we are at the end of read, then break CIGAR loop
 	  break;
       }else if(opCode==BAM_CMATCH||opCode==BAM_CEQUAL||opCode==BAM_CDIFF) {
 	hasInfo++;
 	for(int fix=wpos ;wpos<(fix+opLen) ;wpos++) {
-	  tmpNode =  &dn.nds[wpos];
+	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN)); 
+	  // tmpNode =  dn.nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  if(tmpNode->l>=tmpNode->m){
 	    tmpNode->m = tmpNode->m*2;
@@ -693,10 +694,11 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	  seq_pos++;
 	}
       }else if(opCode==BAM_CREF_SKIP) {
-	  for(int fix=wpos;wpos<fix+opLen;wpos++){
-	    tmpNode = &dn.nds[wpos];
-	    tmpNode->refPos=wpos+offs;
-	  }
+	for(int fix=wpos;wpos<fix+opLen;wpos++){
+	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN)); 
+	  //	    tmpNode = dn.nds[wpos];
+	  tmpNode->refPos=wpos+offs;
+	}
       }else if(opCode==BAM_CPAD||opCode==BAM_CHARD_CLIP) {
 	//dont care
       }else{
@@ -721,7 +723,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 
 
   int lastSecureIndex =regionLen;
-  int tailPos = dn.nds[regionLen-1].refPos;
+  int tailPos = dn.nds[regionLen-1]->refPos;
   if(tailPos>lastSecure)
     lastSecureIndex = regionLen-tailPos+lastSecure;
   dn.l = lastSecureIndex;
@@ -730,7 +732,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
     delete [] np->nds;
     np->m=regionLen+4;
     kroundup32(np->m);
-    np->nds = new tNode[np->m];
+    np->nds =(tNode**) realloc(np->nds,np->m*sizeof(tNode*));
   }
   assert(regionLen-lastSecureIndex+4<=np->m);
   //  fprintf(stderr,"np->m:%d\n",np->m)
@@ -740,17 +742,17 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 
 
   if(np->l!=0){
-    np->first = np->nds[0].refPos;
-    np->last = np->nds[np->l-1].refPos;
+    np->first = np->nds[0]->refPos;
+    np->last = np->nds[np->l-1]->refPos;
   }
 
   if(dn.l!=0){
-    dn.first = dn.nds[0].refPos;
-    dn.last = dn.nds[dn.l-1].refPos;
-    #if 0
+    dn.first = dn.nds[0]->refPos;
+    dn.last = dn.nds[dn.l-1]->refPos;
+#if 0
     fprintf(stderr,"[%s] first=%d last=%d\n",__FUNCTION__,ret->first,ret->last);
-    #endif
-}
+#endif
+  }
   return dn;
 }
 
@@ -761,7 +763,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
   from:= min(dn);
   to:=min(max{dn[1],dn[2],...})
 
- */
+*/
 
 
 void get_span_all_samples(const nodePool *dn,int nFiles,int &from,int &to){
@@ -808,7 +810,7 @@ void get_span_all_samplesT(const nodePoolT *dn,int nFiles,int &from,int &to){
 }
 
 
-typedef std::map<int,tNode *> umapT; 
+typedef std::map<int,tNode **> umapT; 
 
 chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
   //  fprintf(stderr,"starting [%s]\n",__FUNCTION__);
@@ -818,17 +820,17 @@ chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
   for(int f=0;f<nFiles;f++) {
     nodePoolT sm = dn[f];
     for(int l=0;l<sm.l;l++) {
-      tNode *perSite = NULL;
-      int thepos =sm.nds[l].refPos;
+      tNode **perSite = NULL;
+      int thepos =sm.nds[l]->refPos;
       it=ret.find(thepos);
       if(it!=ret.end())
 	perSite = it->second;
       else{
-	perSite = new tNode[nFiles];
+	perSite = new tNode*[nFiles];
 	for(int ii=0;ii<nFiles;ii++){
-	  perSite[ii].l=perSite[ii].l2=perSite[ii].m=0;
-	  perSite[ii].insert =NULL;
-	  perSite[ii].refPos = thepos;
+	  perSite[ii]->l=perSite[ii]->l2=perSite[ii]->m=0;
+	  perSite[ii]->insert =NULL;
+	  perSite[ii]->refPos = thepos;
 	}
 
 	
@@ -844,11 +846,11 @@ chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
   int *refPos = new int [ret.size()];
   //  fprintf(stderr,"nnodes=%d\n",nnodes);
   chunkyT *chk =new chunkyT;  
-  chk->nd = new tNode*[nnodes];
+  chk->nd = new tNode**[nnodes];
   int p=0;
   for(it = ret.begin();it!=ret.end();++it){
     chk->nd[p++] = it->second;
-    refPos[p-1] = chk->nd[p-1][0].refPos;
+    refPos[p-1] = chk->nd[p-1][0]->refPos;
   }
 
   chk->nSamples=nFiles;
@@ -862,7 +864,7 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
 
   int *depth = NULL;
   int *refPos2 = NULL;
-  tNode **super = NULL;
+  tNode ***super = NULL;
   
   if(dn==NULL){//cleanup called after end of looping through all files.
     return NULL;
@@ -875,7 +877,7 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
   if(rlen>BUG_THRES)
     return slow_mergeAllNodes_new(dn,nFiles);
 
-  super = new tNode*[rlen];
+  super = new tNode**[rlen];
   depth = new int[rlen];
   refPos2 = new int[rlen];
   
@@ -886,20 +888,13 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
     nodePoolT sm = dn[n];
     int i;
     //looping through all nodes
-    for( i=0;((i<sm.l)&&(sm.nds[i].refPos <= std::min(sm.last,last) ));i++) {
+    for( i=0;((i<sm.l)&&(sm.nds[i]->refPos <= std::min(sm.last,last) ));i++) {
       
-      int posi = sm.nds[i].refPos-offs;
+      int posi = sm.nds[i]->refPos-offs;
       if(depth[posi]==0){
 	//	fprintf(stderr,"posi=%d\n",posi);
-	super[posi] = new tNode[nFiles];
-	for(int ii=0;ii<nFiles;ii++){
-	  super[posi][ii].l=super[posi][ii].l2=super[posi][ii].m=0;
-	  super[posi][ii].insert =NULL;
-	  super[posi][ii].refPos = posi+offs;
-	  //super[posi][ii] = initNodeT(UPPILE_LEN,posi+offs,posi);
-	}
-	
-	refPos2[posi]=sm.nds[i].refPos;
+	super[posi] =(tNode**) calloc(nFiles,sizeof(tNode*));
+	refPos2[posi]=sm.nds[i]->refPos;
       }
       depth[posi]++;
       super[posi][n] = sm.nds[i];
@@ -913,7 +908,7 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
   
   //  fprintf(stderr,"YYYY nnnosed=%d\n",nnodes);
   chunkyT *chk =new chunkyT;  
-  chk->nd = new tNode*[nnodes];
+  chk->nd = new tNode**[nnodes];
   int p=0;
   int *refPos = new int[nnodes];
   for(int i=0;i<nnodes;i++)

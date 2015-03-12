@@ -110,61 +110,53 @@ void destroy(){
 
 }
 
-
-int *populatePositions(const chunkyT *chk){
-  int *ret = new int[chk->nSites];
-  for(int i=0;i<chk->nSites;i++)
-    ret[i] = chk->nd[i][0].refPos;
-
-  return ret;
-}
-
-
-
-
-void cleanUptNodeArray(tNode *row,int nSamples){
+void cleanUptNodeArray(tNode **row,int nSamples){
     for(int i=0;i< nSamples;i++) {
-      if(row[i].l2!=0)
-	for(int j=0;j<row[i].l2;j++)
-	  dalloc_node(row[i].insert[j]);
+      if(row[i]==NULL)
+	continue;
+      if(row[i]->l2!=0)
+	for(int j=0;j<row[i]->l2;j++)
+	  dalloc_node(*row[i]->insert[j]);
 	
-      free(row[i].insert);
-      dalloc_node(row[i]);
+      free(row[i]->insert);
+      dalloc_node(*row[i]);
     }
     delete [] row;
 }
 
 void collapse(funkyPars *p){
-   fcb *f = p->for_callback;
-    chunkyT *chk = mergeAllNodes_new(f->dn,f->nFiles);
-    chk->regStart = f->regStart;
-    chk->regStop = f->regStop;
-    chk->refId = f->refId;
+  fcb *f = p->for_callback;
+  chunkyT *chk = mergeAllNodes_new(f->dn,f->nFiles);
+  chk->regStart = f->regStart;
+  chk->regStop = f->regStop;
+  chk->refId = f->refId;
 
-    // assert(!(chk->refPos[0]>f->regStop));//this could happen when we work with regions
+  // assert(!(chk->refPos[0]>f->regStop));//this could happen when we work with regions
 
-    //regstop and regstart are the usersupplied startstop region, strip ends if needed
-    if((chk->nd[0][0].refPos<chk->regStart)||(chk->nd[chk->nSites-1][0].refPos>chk->regStop)){
+  //regstop and regstart are the usersupplied startstop region, strip ends if needed
 
-      int at=0;
-      for(int i=0;i<chk->nSites;i++){//can be written faster
-	if(chk->nd[i][0].refPos<chk->regStart)//should cleanup
-	  cleanUptNodeArray(chk->nd[i],chk->nSamples);
-	else if(chk->nd[i][0].refPos<chk->regStop)
-	  chk->nd[at++] = chk->nd[i];
-	else
-	  cleanUptNodeArray(chk->nd[i],chk->nSamples);
+  if((chk->refPos[0]<chk->regStart)||(chk->refPos[chk->nSites-1]>chk->regStop)){
+
+    int at=0;
+    for(int i=0;i<chk->nSites;i++){//can be written faster
+      if(chk->refPos[i]<chk->regStart)//should cleanup
+	cleanUptNodeArray(chk->nd[i],chk->nSamples);
+      else if(chk->refPos[i]<chk->regStop)
+	chk->nd[at++] = chk->nd[i];
+      else
+	cleanUptNodeArray(chk->nd[i],chk->nSamples);
 	
-      }
-      chk->nSites = at;
     }
-    //now chk contains the merged data
-    p->chk = chk;
-    p->posi = populatePositions(chk);//<-will be new approach
-    p->refId = chk->refId;//thiss will be new approach
-    p->numSites=chk->nSites;
+    chk->nSites = at;
+  }
+  //now chk contains the merged data
+  p->chk = chk;
+  p->posi = chk->refPos;//<-will be new approach
+  chk->refPos=NULL;
+  p->refId = chk->refId;//thiss will be new approach
+  p->numSites=chk->nSites;
   
-    p->nInd = chk->nSamples;  
+  p->nInd = chk->nSamples;  
 
 }
 
@@ -323,7 +315,7 @@ void selector(funkyPars *p){
 
 /*
   initialize all pointers to zero
- */
+*/
 
 funkyPars *allocFunkyPars(){
 
@@ -414,17 +406,17 @@ void deallocFunkyPars(funkyPars *p) {
 //plus one, plus 33
 void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
   for(int s=0;s<chk->nSites;s++){
-    fprintf(fp,"%d\t%d\t",chk->refId,chk->nd[s][0].refPos+1);
+    fprintf(fp,"%d\t%d\t",chk->refId,chk->nd[s][0]->refPos+1);
     if(refs!=NULL)
       fprintf(fp,"%c\t",intToRef[refs[s]]);
     for(int n=0;n<chk->nSamples;n++){
-      tNode &nd = chk->nd[s][n];
-      fprintf(fp,"%d\t",nd.l);
-      for(int i=0;i<nd.l;i++)
-	fprintf(fp,"%c",nd.seq[i]);
+      tNode *nd = chk->nd[s][n];
+      fprintf(fp,"%d\t",nd->l);
+      for(int i=0;i<nd->l;i++)
+	fprintf(fp,"%c",nd->seq[i]);
       fprintf(fp,"\t");
-      for(int i=0;i<nd.l;i++)
-	fprintf(fp,"%c",nd.qs[i]+33);
+      for(int i=0;i<nd->l;i++)
+	fprintf(fp,"%c",nd->qs[i]+33);
       fprintf(fp,"\t");
       for(int i=0;i<10;i++)
 	fprintf(fp,"%f ",liks[s][n*10+i]);

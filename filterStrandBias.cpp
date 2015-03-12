@@ -24,9 +24,9 @@ char *calcStuff(funkyPars *p){
   for(int i=0;i<p->nInd;i++){
     for(int s=0;s<p->numSites;s++){
       int tmp[2]={0,0};
-      tNode tsk =p->chk->nd[i][s];      
-      for (int c=0;c<tsk.l;c++){
-	if(isupper(tsk.seq[c]))
+      tNode *tsk =p->chk->nd[i][s];      
+      for (int c=0;c<tsk->l;c++){
+	if(isupper(tsk->seq[c]))
 	  tmp[0]++;
 	else
 	  tmp[1]++;

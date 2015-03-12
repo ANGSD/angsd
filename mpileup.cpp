@@ -15,9 +15,9 @@ mpileup::~mpileup(){
  delete [] original;
 }
 
-tNode *parseNd(char *line,int nInd,const char *delims,int minQ){
+tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
 
-  tNode *ret = new tNode[nInd];
+  tNode **ret = new tNode*[nInd];
 
   for(int i=0;i<nInd;i++) {
 
@@ -25,8 +25,8 @@ tNode *parseNd(char *line,int nInd,const char *delims,int minQ){
     assert(tok);
     int seqDepth = atoi(tok);
     ret[i] = initNodeT(seqDepth);
-    ret[i].l = seqDepth;
-    if(ret[i].l==0){
+    ret[i]->l = seqDepth;
+    if(ret[i]->l==0){
       strtok_r(NULL,delims,&line);
       strtok_r(NULL,delims,&line);
     }else{
@@ -40,7 +40,7 @@ tNode *parseNd(char *line,int nInd,const char *delims,int minQ){
 	else if (tok[inner]=='^'){
 	  inner+=2;
 	}else if(isalpha(tok[inner])){
-	  ret[i].seq[at] =tok[inner];
+	  ret[i]->seq[at] =tok[inner];
 	  at++;inner++;
 	}else if(tok[inner]=='-'||tok[inner]=='+'){
 	  static int show =1;
@@ -58,7 +58,7 @@ tNode *parseNd(char *line,int nInd,const char *delims,int minQ){
 	    inner +=3+opLen;
 	  delete [] bb;
 	}else if(tok[inner]=='*'){
-	  ret[i].seq[at++]='N';
+	  ret[i]->seq[at++]='N';
 	  inner++;
 	}else{
 	  fprintf(stderr,"This will never happen, ever...:%s sub:%s\n",tok,tok+inner);
@@ -71,10 +71,10 @@ tNode *parseNd(char *line,int nInd,const char *delims,int minQ){
 #endif
       tok =strtok_r(NULL,delims,&line);
       for(unsigned inner=0;inner<strlen(tok);inner++){
-	ret[i].qs[inner] = tok[inner]-33;
+	ret[i]->qs[inner] = tok[inner]-33;
 	//	fprintf(stderr,"qs[%d]:%d\n",inner,ret[i].qs[inner]);
-	if(ret[i].qs[inner]<minQ)
-	  ret[i].seq[inner] = 'n';
+	if(ret[i]->qs[inner]<minQ)
+	  ret[i]->seq[inner] = 'n';
       }
 
     }
@@ -90,7 +90,7 @@ funkyPars *mpileup::fetch(int chunksize){
   myfunky->posi = new int[chunksize];
   myfunky->ref = new char[chunksize];
   myfunky->chk = new chunkyT;
-  myfunky->chk->nd = new tNode *[chunksize];
+  myfunky->chk->nd = new tNode **[chunksize];
   myfunky->chk->refPos = NULL;
   int nSites=0;
   static int lastRefId =-1;

@@ -643,7 +643,7 @@ char *angsd::strpop(char **str,char split){
 
 
 void angsd::svd_inverse(double mat[],int xLen, int yLen){
-  if(xLen !=xLen){
+  if(xLen !=yLen){
 
     fprintf(stderr,"non square matrix [%s]\t[%s]\n",__FILE__,__FUNCTION__);
     exit(0);

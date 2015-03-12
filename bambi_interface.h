@@ -12,7 +12,7 @@ typedef struct  tNode_t{
   unsigned char *posi;//8
   unsigned char *isop;//8
   unsigned char *mapQ;//8
-  tNode_t *insert;//8 an insertion 8bytes;
+  tNode_t **insert;//8 an insertion 8bytes;
   int deletion;//4 //counter 
 }tNode;
 
@@ -22,7 +22,7 @@ typedef struct{
   int regStop;
   int nSites;
   int nSamples;
-  tNode **nd;//nd[site][ind]
+  tNode ***nd;//nd[site][ind]
   int *refPos;//length is nSites
 }chunkyT;
 
@@ -33,7 +33,7 @@ typedef struct{
   int m; //possible number of of nodes
   int first;//simply a value which is equal to nodes[0].refPos;
   int last;
-  tNode *nds;//this length can maximum be the maxlenght of a read.NOTANYMORE
+  tNode **nds;//this length can maximum be the maxlenght of a read.NOTANYMORE
 
 }nodePoolT;
 

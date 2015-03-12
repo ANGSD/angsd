@@ -297,19 +297,19 @@ void call_bam(chunkyT *chk,double **lk,int trim){
     //fprintf(stderr,"chr=%s minbaseq=%d\n",chk->refName,minQ);
     for(int i=0;i<chk->nSamples;i++){
 
-      tNode &nd = chk->nd[s][i];
+      tNode *nd = chk->nd[s][i];
 
-      uint16_t bases[nd.l];
+      uint16_t bases[nd->l];
       int numItems =0;
-      for(int j=0;j<nd.l;j++) {
+      for(int j=0;j<nd->l;j++) {
 	//	fprintf(stderr,"posi=%d isop=%d +=%d\n",nd.posi[j],nd.isop[j],nd.posi[j]+nd.isop[j]);
-	int q=nd.qs[j];
+	int q=nd->qs[j];
 	//	fprintf(stderr,"q=%c\n",q+33);
 	//fprintf(stderr,"skipping q=%d mapQ=%d posi=%d isop=%d\n",q,nd.mapQ[j],nd.posi[j],nd.isop[j]);
 
 
 	extern int minQ;
-	if(q<minQ || nd.posi[j]<trim||nd.isop[j]<trim){
+	if(q<minQ || nd->posi[j]<trim||nd->isop[j]<trim){
 	  // fprintf(stderr,"skipping q=%d mapQ=%d posi=%d isop=%d ind=%d\n",q,nd.mapQ[j],nd.posi[j],nd.isop[j],i);
 	continue;
 	}
@@ -322,16 +322,16 @@ void call_bam(chunkyT *chk,double **lk,int trim){
 	  continue;
 	  }
 	 */
-	if (q>nd.mapQ[j])//dont allow qscores in read to exceed mapping quality
-	  q=nd.mapQ[j];
+	if (q>nd->mapQ[j])//dont allow qscores in read to exceed mapping quality
+	  q=nd->mapQ[j];
 	if (q > 63) q = 63;
 	if (q < 4) q = 4;
 	//	fprintf(stderr,"q=%d qshift=%d\n",q,q<<5);
 	//plug in values
 	//	bca->bases[n++] = q<<5 | (int)bam1_strand(p->b)<<4 | b;
-	int isLower = islower(nd.seq[j])>0;
+	int isLower = islower(nd->seq[j])>0;
 	//fprintf(stderr,"strandstuff=%d\tshiftstrandstuff=%d\n",isLower, isLower<<4 );
-	bases[numItems++] = q<<5 | isLower<<4 | refToInt[nd.seq[j]];
+	bases[numItems++] = q<<5 | isLower<<4 | refToInt[nd->seq[j]];
 	//	fprintf(stderr,"bases[%d]=%d\n",j,bases[numItems-1]);
       }
       float likes[25];
