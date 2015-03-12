@@ -114,6 +114,8 @@ void abcTemplate::print(funkyPars *pars){
       for(int i=0;i<pars->nInd;i++){
 	//all seqdata associated with single bamfile is in a tNode
 	tNode *nd = chk->nd[s][i];
+	if(nd==NULL)
+	  continue;
 	//loop over the individual bases
 	for(int l=0;l<nd->l;l++){
 	  char c = nd->seq[l]; //this is the base

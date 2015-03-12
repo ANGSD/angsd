@@ -68,7 +68,8 @@ void call_gatk(chunkyT *chk,double **lk,int trim){
       }
       
       tNode *nd = chk->nd[s][i];
-      
+      if(nd==NULL)
+	continue;
       //calc like persample
       double *likes1 = lk[s]+10*i;
       for(int j=0;j<nd->l;j++){

@@ -157,7 +157,7 @@ void abcWriteFasta::run(funkyPars *pars){
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
       if(pars->keepSites[s]==0)
 	continue;
-      if(pars->chk->nd[s][0]->l==0)
+      if(pars->chk->nd[s][0]==NULL||pars->chk->nd[s][0]->l==0)
 	continue;
       int j = std::rand() % pars->chk->nd[s][0]->l;
       myFasta[pars->posi[s]] = pars->chk->nd[s][0]->seq[j];
@@ -213,6 +213,8 @@ void abcWriteFasta::run(funkyPars *pars){
       //      fprintf(stderr,"numSites: %d\n",pars->numSites);
       for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
 	tNode *tn = pars->chk->nd[s][i];
+	if(tn==NULL)
+	  continue;
 	double ebds[]= {0.0,0.0,0.0,0.0};
 	for(int b=0;b<tn->l;b++){
 	  int bof = refToInt[tn->seq[b]];

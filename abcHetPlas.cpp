@@ -150,6 +150,8 @@ void abcHetPlas::doNew(funkyPars *pars){
       rs->nItr[s] = new int [pars->nInd];  
 
       for(int i=0;i<pars->nInd;i++){
+	if(pars->chk->nd[s][i]==NULL)
+	  continue;
 	int seqdepth=makellhs(pars->chk->nd[s][i],liks,&oldsize);
 	if(seqdepth==0){
 	  pars->keepSites[s]=0;

@@ -95,7 +95,7 @@ int calc_gl(chunkyT *chk,double *p_matrix,int which_sample,double **lk,int trim)
     soapMap aMap;
 
     //roll values into the map
-for(int j=0;j<nd->l;j++) {
+for(int j=0;nd&&j<nd->l;j++) {
       //soapsnp only allows 255s
       if(aMap.size()>=0xFF)
 	break;
@@ -314,7 +314,7 @@ void soap_likes::gen_counts(chunkyT *chk,size_t *count_matrix,int whichSample,ch
     if(refs[s]==4)
       continue;
     
-    for(int l=0;l<chk->nd[s][whichSample]->l;l++){
+    for(int l=0;chk->nd[s][whichSample]&&l<chk->nd[s][whichSample]->l;l++){
       char nuc = chk->nd[s][whichSample]->seq[l];
       if(nuc =='n' || nuc=='N')
         continue;

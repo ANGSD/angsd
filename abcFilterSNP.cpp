@@ -57,6 +57,8 @@ double baseQbias(tNode **tn,int nInd,int maj,int min){
 
   for(int i=0;i<nInd;i++){
     tNode *nd = tn[i];
+    if(nd==NULL)
+      continue;
     for(int l=0;l<nd->l;l++){
       int obB = refToInt[nd->seq[l]];
 
@@ -152,6 +154,8 @@ void abcFilterSNP::run(funkyPars *pars){
       int cnts[4]={0,0,0,0};
       for(int i=0;i<pars->nInd;i++){
 	tNode *nd = chk->nd[s][i];
+	if(nd==NULL)
+	  continue;
 	for(int l=0;l<nd->l;l++){
 	  int obB = refToInt[nd->seq[l]];
 	  //	    fprintf(stderr,"%c ",nd.seq[l]);

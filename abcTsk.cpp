@@ -127,7 +127,8 @@ void abcTsk::print(funkyPars *pars){
     //loop over sites;
     for(int s=0;s<pars->numSites;s++){
       tNode *nd = chk->nd[s][i];
-      
+      if(nd==NULL)
+	continue;
       for(int l=0;l<nd->l;l++){
 	int refB = refToInt[pars->ref[s]];
 	int obB = refToInt[nd->seq[l]];

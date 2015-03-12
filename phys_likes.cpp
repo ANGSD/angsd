@@ -72,7 +72,7 @@ void call_phys(chunkyT *chk,double **lk,int trim){
       
       //calc like persample
       double *likes1 = lk[s]+10*i;
-      for(int j=0;j<nd->l;j++){
+      for(int j=0;nd&&j<nd->l;j++){
 	int allele = refToInt[nd->seq[j]];
 	int qs = nd->qs[j];
 	//filter qscore, mapQ,trimming, and always skip n/N

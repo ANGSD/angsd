@@ -155,7 +155,7 @@ void abcAncError::model2(funkyPars *pars){
     
     for(int i=0;i<pars->nInd;i++){
       int allele=4;
-      if(pars->chk->nd[s][i]->l!=0)
+      if(pars->chk->nd[s][i]&&pars->chk->nd[s][i]->l!=0)
 	refToInt[pars->chk->nd[s][i]->seq[0]];
       fprintf(outfile,"\t%c",intToRef[allele]);
     }
@@ -171,7 +171,7 @@ void abcAncError::model1(funkyPars *pars){
 	if(pars->keepSites[s]==0)
 	  continue;
 	for(int i=0;i<pars->nInd;i++){
-	  for(int j=0;j<pars->chk->nd[s][i]->l;j++){
+	  for(int j=0;pars->chk->nd[s][i]&&j<pars->chk->nd[s][i]->l;j++){
 	      alleleCounts[i][pars->anc[s]*25+pars->ref[s]*5+refToInt[pars->chk->nd[s][i]->seq[j]]]++;
 	      alleleCountsChr[i][pars->anc[s]*25+pars->ref[s]*5+refToInt[pars->chk->nd[s][i]->seq[j]]]++;
 	  }
@@ -183,7 +183,7 @@ void abcAncError::model1(funkyPars *pars){
 	if(pars->keepSites[s]==0)
 	  continue;
 	for(int i=0;i<pars->nInd;i++){
-	  if(pars->chk->nd[s][i]->l==0)
+	  if(pars->chk->nd[s][i]==NULL||pars->chk->nd[s][i]->l==0)
 	    continue;
 	  int j = std::rand() % pars->chk->nd[s][i]->l;
 	  alleleCounts[i][pars->anc[s]*25+pars->ref[s]*5+refToInt[pars->chk->nd[s][i]->seq[j]]]++;
@@ -196,7 +196,7 @@ void abcAncError::model1(funkyPars *pars){
 	if(pars->keepSites[s]==0)
 	  continue;
 	for(int i=0;i<pars->nInd;i++){
-	  if(pars->chk->nd[s][i]->l!=0){
+	  if(pars->chk->nd[s][i]&&pars->chk->nd[s][i]->l!=0){
 	    alleleCounts[i][pars->anc[s]*25+pars->ref[s]*5+refToInt[pars->chk->nd[s][i]->seq[0]]]++;
 	    alleleCountsChr[i][pars->anc[s]*25+pars->ref[s]*5+refToInt[pars->chk->nd[s][i]->seq[0]]]++;
 	  }

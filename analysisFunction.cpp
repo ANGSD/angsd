@@ -361,7 +361,7 @@ double **angsd::getlikes(funkyPars *pars,int *keepInd){
   return loglike;
 
 }
-
+//DRAGON just use std::swap
 void angsd::swapDouble (double& first, double& second)
 {
         double temp = first;
