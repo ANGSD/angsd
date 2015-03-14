@@ -862,14 +862,7 @@ chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
       if(it!=ret.end())
 	perSite = it->second;
       else{
-	perSite = new tNode*[nFiles];
-	for(int ii=0;ii<nFiles;ii++){
-	  perSite[ii]->l=perSite[ii]->l2=perSite[ii]->m=0;
-	  perSite[ii]->insert =NULL;
-	  perSite[ii]->refPos = thepos;
-	}
-
-	
+	perSite = (tNode**)calloc(nFiles,sizeof(tNode*));
 	ret.insert(std::make_pair(thepos,perSite));
 		
       }
@@ -1201,7 +1194,7 @@ void getMaxMax2(readPool *sglp,int nFiles,nodePoolT *nps){
 void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,hts_idx_t **idx,hts_itr_t **itr,int ref,int start,int stop,bam_hdr_t *hdr){
   if(*idx==NULL)
     *idx = sam_index_load(fp,fn);
-  if (idx == 0) { // index is unavailable
+  if (idx == NULL) { // index is unavailable
     fprintf(stderr, "[main_samview] random alignment retrieval only works for indexed BAM or CRAM files.\n");
     exit(0);
   }

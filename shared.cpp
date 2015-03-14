@@ -111,7 +111,7 @@ void destroy(){
 }
 
 void cleanUptNodeArray(tNode **row,int nSamples){
-  fprintf(stderr,"nodearray\n");
+  //  fprintf(stderr,"nodearray\n");
     for(int i=0;i< nSamples;i++) {
       if(row[i]==NULL)
 	continue;
