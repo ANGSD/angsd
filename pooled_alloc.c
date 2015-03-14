@@ -36,16 +36,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdint.h>
 
-#include "cram/pooled_alloc.h"
+#include "pooled_alloc.h"
 
 //#define TEST_MAIN
 
 #define PSIZE 1024*1024
 
-pool_alloc_t *pool_create(size_t dsize) {
-    pool_alloc_t *p;
+tpool_alloc_t *tpool_create(size_t dsize) {
+    tpool_alloc_t *p;
 
-    if (NULL == (p = (pool_alloc_t *)malloc(sizeof(*p))))
+    if (NULL == (p = (tpool_alloc_t *)malloc(sizeof(*p))))
 	return NULL;
 
     /* Minimum size is a pointer, for free list */
@@ -61,16 +61,17 @@ pool_alloc_t *pool_create(size_t dsize) {
     return p;
 }
 
-static pool_t *new_pool(pool_alloc_t *p) {
+static tpool_t *new_pool(tpool_alloc_t *p) {
     size_t n = PSIZE / p->dsize;
-    pool_t *pool;
+    tpool_t *pool;
     
     pool = realloc(p->pools, (p->npools + 1) * sizeof(*p->pools));
     if (NULL == pool) return NULL;
     p->pools = pool;
     pool = &p->pools[p->npools];
 
-    pool->pool = calloc(1,n * p->dsize);//<-modified from malloc to calloc thorfinn
+    pool->pool = calloc(n, p->dsize);//modified by tsk 14march 2015
+    fprintf(stderr,"calling\n");
     if (NULL == pool->pool) return NULL;
 
     pool->used = 0;
@@ -80,7 +81,7 @@ static pool_t *new_pool(pool_alloc_t *p) {
     return pool;
 }
 
-void pool_destroy(pool_alloc_t *p) {
+void tpool_destroy(tpool_alloc_t *p) {
     size_t i;
 
     for (i = 0; i < p->npools; i++) {
@@ -90,8 +91,8 @@ void pool_destroy(pool_alloc_t *p) {
     free(p);
 }
 
-void *pool_alloc(pool_alloc_t *p) {
-    pool_t *pool;
+void *tpool_alloc(tpool_alloc_t *p) {
+    tpool_t *pool;
     void *ret;
 
     /* Look on free list */
@@ -119,7 +120,7 @@ void *pool_alloc(pool_alloc_t *p) {
     return pool->pool;
 }
 
-void pool_free(pool_alloc_t *p, void *ptr) {
+void tpool_free(tpool_alloc_t *p, void *ptr) {
     *(void **)ptr = p->free;
     p->free = ptr;
 }

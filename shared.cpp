@@ -111,17 +111,19 @@ void destroy(){
 }
 
 void cleanUptNodeArray(tNode **row,int nSamples){
+  fprintf(stderr,"nodearray\n");
     for(int i=0;i< nSamples;i++) {
       if(row[i]==NULL)
 	continue;
-      if(row[i]->l2!=0)
+      if(row[i]->l2!=0){
 	for(int j=0;j<row[i]->l2;j++)
 	  dalloc_node(row[i]->insert[j]);
-	
-      free(row[i]->insert);
+	free(row[i]->insert);
+      }
+      
       dalloc_node(row[i]);
     }
-    delete [] row;
+    free(row);
 }
 
 void collapse(funkyPars *p){
@@ -194,7 +196,7 @@ void *slave(void *ptr){
   pthread_mutex_lock( &counterMut );
   curRunning--;
 
-
+  
   if(nQueueSize==-1){//no limit on queuesize, always signal
     pthread_cond_signal(&cvMaxThread);
   }else{

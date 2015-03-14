@@ -28,8 +28,8 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _POOLED_ALLOC_H_
-#define _POOLED_ALLOC_H_
+#ifndef _TPOOLED_ALLOC_H_
+#define _TPOOLED_ALLOC_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,22 +42,22 @@ extern "C" {
 typedef struct {
     void   *pool;
     size_t  used;
-} pool_t;
+} tpool_t;
 
 typedef struct {
     size_t dsize;
     size_t npools;
-    pool_t *pools;
+    tpool_t *pools;
     void *free;
-} pool_alloc_t;
+} tpool_alloc_t;
 
-pool_alloc_t *pool_create(size_t dsize);
-void pool_destroy(pool_alloc_t *p);
-void *pool_alloc(pool_alloc_t *p);
-void pool_free(pool_alloc_t *p, void *ptr);
+tpool_alloc_t *tpool_create(size_t dsize);
+void tpool_destroy(tpool_alloc_t *p);
+void *tpool_alloc(tpool_alloc_t *p);
+void tpool_free(tpool_alloc_t *p, void *ptr);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /*_POOLED_ALLOC_H_*/
+#endif /*_TPOOLED_ALLOC_H_*/

@@ -12,7 +12,7 @@
 #include "pop1_read.h"
 #include "pooled_alloc.h"
 
-pool_alloc_t *tnodes = NULL;
+tpool_alloc_t *tnodes = NULL;
 
 extern int SIG_COND;
 extern int minQ;
@@ -28,6 +28,7 @@ extern int trim;
 #define BUG_THRES 1000000 //<- we allow 1mio sites to be allocated,
 #define UPPILE_LEN 8
 
+int currentnodes=0;
 
 /*
   node for uppile for a single individual for a single site
@@ -64,8 +65,8 @@ void dalloc_node(node &n){
 
 
 void dalloc_node(tNode *n){
-  //  fprintf(stderr,"[%s]\n",__FUNCTION__);
-  pool_free(tnodes,n);
+  //  fprintf(stderr,"[%s] current_nodes:%d refPos.%d\n",__FUNCTION__,currentnodes--,n->refPos);
+  tpool_free(tnodes,n);
 
 }
 
@@ -196,8 +197,9 @@ void cleanUpChunkyT(chunkyT *chk){
 	  dalloc_node(chk->nd[s][i]->insert[j]);
 	}
 	free(chk->nd[s][i]->insert);
-	dalloc_node(chk->nd[s][i]);
+
       }
+      dalloc_node(chk->nd[s][i]);
     }
     free(chk->nd[s]);
   }
@@ -242,24 +244,6 @@ tNode *initNodeT_old(int l){
 }
 
 
-tNode *initNodeT(int l){
-  tNode *d=(tNode*)pool_alloc(tnodes);
-  if(d->m==0){
-    d->m = l;
-    kroundup32(d->m);
-    d->seq=(char *)malloc(d->m);
-    d->qs=(char *)malloc(d->m);
-    d->posi=(unsigned char *)malloc(d->m);
-    d->isop=(unsigned char *)malloc(d->m);
-    d->mapQ=(unsigned char *)malloc(d->m);
-  }
-  
-  d->l = d->l2 = 0;
-  d->refPos= -999;
-  return d;
-}
-
-
 void realloc(char **c,int l,int m){
   char *tmp =(char *) malloc(m);
   memcpy(tmp,*c,l);
@@ -273,16 +257,54 @@ void realloc(unsigned char **c,int l,int m){
   free(*c);
   *c= tmp;
 }
+
+
 void realloc(tNode *d,int newsize){
+
   kroundup32(newsize);
   if(newsize<=d->m)
     fprintf(stderr,"[%s] problems newsize should be bigger than oldesize\n",__FUNCTION__);
   d->m=newsize;
+
+  d->seq=(char*)realloc(d->seq,d->m*sizeof(char));
+  d->qs =(char*) realloc(d->qs,d->m*sizeof(char));
+  d->posi = (unsigned char*)realloc(d->posi,d->m*sizeof(unsigned char));
+  d->isop = (unsigned char*)realloc(d->isop,d->m*sizeof(unsigned char));
+  d->mapQ = (unsigned char*)realloc(d->mapQ,d->m*sizeof(unsigned char));
+  
+#if 0
   realloc(&(d->seq),d->l,d->m);
   realloc(&(d->qs),d->l,d->m);
   realloc(&(d->posi),d->l,d->m);
   realloc(&(d->isop),d->l,d->m);
   realloc(&(d->mapQ),d->l,d->m);
+#endif
+}
+
+
+tNode *initNodeT(int l){
+  if(l<UPPILE_LEN)
+    l=UPPILE_LEN;
+  tNode *d=(tNode*)tpool_alloc(tnodes);
+  
+  if(d->m==0){
+    d->m = l;
+    kroundup32(d->m);
+    d->seq=(char *)malloc(d->m);
+    d->qs=(char *)malloc(d->m);
+    d->posi=(unsigned char *)malloc(d->m);
+    d->isop=(unsigned char *)malloc(d->m);
+    d->mapQ=(unsigned char *)malloc(d->m);
+    d->m2=0;
+  }else if(l>d->m){
+    realloc(d,l);
+  }
+  d->l = d->l2 =d->m2 =0;
+  //d->l = d->l2 = d->m2 = 0;
+  d->refPos= -999;
+  d->insert = NULL;
+
+  return d;
 }
 
 
@@ -588,10 +610,6 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
   for(int i=0;i<np->l;i++)
     dn.nds[np->nds[i]->refPos-offs] = np->nds[i];
 
-  //initialize new nodes for the rest of the region
-  for(int i=np->l;i<regionLen;i++)
-    dn.nds[i] = initNodeT(UPPILE_LEN);
-
   if(np->l==0){//if we didn't have have anybuffered then
     offs = sgl->first[0];
     last = sgl->last[0];
@@ -647,8 +665,8 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	    kroundup32(tmpNode->m2);
 	    tmpNode->insert =(tNode**) realloc(tmpNode->insert,tmpNode->m2*sizeof(tNode*));
 	  }
-	  
-	  tmpNode->insert[tmpNode->l2] = initNodeT(opLen);
+	  tNode *ins = initNodeT(opLen);
+	  tmpNode->insert[tmpNode->l2] = ins; 
 	  for(int ii=0;ii<opLen;ii++){
 	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
 	    tmpNode->insert[tmpNode->l2]->seq[ii] = bam_is_rev(rd)? tolower(c) : toupper(c);
@@ -1257,37 +1275,31 @@ void callBack_bambi(fcb *fff);//<-angsd.cpp
 //type=1 -> samtool mpileup textoutput
 //type=0 -> callback to angsd
 
-void destroy_tnode_pool(int l){
-  tNode **ary = new tNode*[l];
-  for(int i=0;i<l;i++){
-    ary[i] =initNodeT(UPPILE_LEN);
-    fprintf(stderr,"nd[%d] :%p tn.refPos:%d tn.l:%d tn.m:%d\n",i,ary[i],ary[i]->refPos,ary[i]->l,ary[i]->m);
-  }
-  for(int i=0;1&i<l;i++)
-    pool_free(tnodes,ary[i]);
-
-  fprintf(stderr,"npools:%zu\n",tnodes->npools);
+void destroy_tnode_pool(){
+  fprintf(stderr,"npools:%zu unfreed tnodes before clean:%d\n",tnodes->npools,currentnodes);
   for(int i=0;i<tnodes->npools;i++){
+    fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
     tNode **nd =(tNode**)tnodes->pools[i].pool;
-    fprintf(stderr,"nodepoolblock:%p\n",nd);
+    
     int nitem = 1024*1024/ sizeof(tnodes->dsize);
-    fprintf(stderr,"nitem:%d\n",nitem);
+
     for(int j=0;j<nitem;j++){
+      //fprintf(stderr,"nitem:%d j:%d\n",nitem,j);
       tNode *tn =(tNode*) nd+j;
-      fprintf(stderr,"nd[%d] :%p tn.refPos:%d tn.l:%d tn.m:%d\n",j,ary[j],ary[j]->refPos,ary[j]->l,ary[j]->m);
-      fprintf(stderr,"nd[%d] :%p tn.refPos:%d tn.l:%d tn.m:%d\n",j,tn,tn->refPos,tn->l,tn->m);
-      //      fprintf(stderr,"%c \n",tn->seq[0]);
-      if(tn){
+      if(tn->m){
+	//	fprintf(stdout,"nd[%d] :%p tn.refPos:%d tn.l:%d tn.m:%d\n",j,tn,tn->refPos,tn->l,tn->m);
 	free(tn->seq);
 	free(tn->qs);
 	free(tn->posi);
 	free(tn->isop);
-      }
+	free(tn->mapQ);
+      }else
+	break;
     }
   }
 
-  delete [] ary;
-  pool_destroy(tnodes);
+  //  delete [] ary;
+  tpool_destroy(tnodes);
 
 }
 
@@ -1295,12 +1307,12 @@ void destroy_tnode_pool(int l){
 //function below is a merge between the original TESTOUTPUT and the angsdcallback. Typenames with T are the ones for the callback
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
 int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
-  tnodes = pool_create(sizeof(tNode));
-  destroy_tnode_pool(10);
-  return 0;
+  tnodes = tpool_create(sizeof(tNode));
+
+
   assert(nLines&&nFiles);
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);
- fflush(stderr);
+  fflush(stderr);
   if(show!=1)
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
   extern abcGetFasta *gf;
@@ -1567,8 +1579,8 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     pthread_mutex_unlock(&mUpPile_mutex);//just to make sure, its okey to clean up
   }else{
     //clean up
-    for(int i=0;1&&i<nFiles;i++){
-      dalloc_nodePool(nps[i]);
+    for(int i=0;0&&i<nFiles;i++){
+      // dalloc_nodePool(nps[i]);
       delete [] nps[i].nds;
       dalloc(&sglp[i]);
     }
@@ -1577,7 +1589,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     delete [] sglp;
   }
   //  test()
-
+  destroy_tnode_pool();
   return 0;
 }
 

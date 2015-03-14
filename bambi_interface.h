@@ -1,12 +1,12 @@
 #pragma once
 
 
-typedef struct  tNode_t{
+typedef struct  tNode_t{//order is important. First 8 bytes will be modified by pool_alloc structure (James Bonfield)
   int l;//4
   int l2;//4//length of "insert"
-  int m2;//4//possible length of insert before realloc
-  int m;//4
   int refPos;//4
+  int m;//4
+  int m2;//4//possible length of insert before realloc
   char *seq;//8
   char *qs;//8
   unsigned char *posi;//8
