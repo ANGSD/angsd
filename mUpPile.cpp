@@ -10,18 +10,19 @@
 #include "analysisFunction.h"
 #include "makeReadPool.h"
 #include "pop1_read.h"
+
+#ifdef __WITH_POOL__
 #include "pooled_alloc.h"
-
-
-  size_t sl_l;
-  size_t sl_m;
-  tNode **sl_d;
+size_t sl_l;
+size_t sl_m;
+tNode **sl_d;
+pthread_mutex_t slist_mutex = PTHREAD_MUTEX_INITIALIZER;
+tpool_alloc_t *tnodes = NULL;
+int currentnodes=0;
+#endif
 
 pthread_mutex_t mUpPile_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t slist_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-
-tpool_alloc_t *tnodes = NULL;
 //slist *sl = NULL;
 
 extern int SIG_COND;
@@ -38,7 +39,6 @@ extern int trim;
 #define BUG_THRES 1000000 //<- we allow 1mio sites to be allocated,
 #define UPPILE_LEN 8
 
-int currentnodes=0;
 
 /*
   node for uppile for a single individual for a single site
@@ -73,17 +73,31 @@ void dalloc_node(node &n){
   free(n.pos.s);
 }
 
+void tnode_destroy1(tNode *n){
+  free(n->posi);
+  free(n->isop);
+  free(n->mapQ);
+  free(n->seq);
+  free(n->qs);
+}
+
 //this will only be called from a threadsafe context
 void tnode_destroy(tNode *n){
-
+  if(n==NULL)
+    return;
+#ifdef __WITH_POOL__
   if(sl_l == sl_m){
-    fprintf(stderr,"%zu %zu\n",sl_l, sl_m);
+    //    fprintf(stderr,"%zu %zu\n",sl_l, sl_m);
     int newsize = sl_m+500;
     sl_d = (tNode **) realloc(sl_d,sizeof(tNode *)*newsize);
     sl_m = newsize;
   }
   sl_d[sl_l++] = n;
-  
+#else
+  tnode_destroy1(n);
+  free(n);
+  n=NULL;
+#endif
 }
 
 typedef struct{
@@ -196,7 +210,9 @@ void dalloc_nodePool (nodePool& np){
 }
 
 void cleanUpChunkyT(chunkyT *chk){
+#ifdef __WITH_POOL__
   pthread_mutex_lock(&slist_mutex);//just to make sure, its okey to clean up
+#endif
   for(int s=0;s<chk->nSites;s++) {
     for(int i=0;i<chk->nSamples;i++) {
       if(chk->nd[s][i]==NULL)
@@ -214,7 +230,9 @@ void cleanUpChunkyT(chunkyT *chk){
   }
   delete [] chk->nd;
   delete chk;
+#ifdef __WITH_POOL__
   pthread_mutex_unlock(&slist_mutex);//just to make sure, its okey to clean up
+#endif
 }
 
 
@@ -280,16 +298,10 @@ void realloc(tNode *d,int newsize){
   d->posi = (unsigned char*)realloc(d->posi,d->m*sizeof(unsigned char));
   d->isop = (unsigned char*)realloc(d->isop,d->m*sizeof(unsigned char));
   d->mapQ = (unsigned char*)realloc(d->mapQ,d->m*sizeof(unsigned char));
-  
-#if 0
-  realloc(&(d->seq),d->l,d->m);
-  realloc(&(d->qs),d->l,d->m);
-  realloc(&(d->posi),d->l,d->m);
-  realloc(&(d->isop),d->l,d->m);
-  realloc(&(d->mapQ),d->l,d->m);
-#endif
+ 
 }
 
+#ifdef __WITH_POOL__
 void flush_queue(){
   pthread_mutex_lock(&slist_mutex);
   for(int i=0;i<sl_l;i++)
@@ -298,14 +310,18 @@ void flush_queue(){
   sl_l =0;
   pthread_mutex_unlock(&slist_mutex);
 }
-
+#endif
 
 tNode *initNodeT(int l){
   if(l<UPPILE_LEN)
     l=UPPILE_LEN;
+#ifdef __WITH_POOL__
   tNode *d=(tNode*)tpool_alloc(tnodes);
-  
+#else
+  tNode *d=(tNode*)calloc(1,sizeof(tNode));
+#endif
   if(d->m==0){
+    //    fprintf(stderr,"HRERE\n");
     d->m = l;
     kroundup32(d->m);
     d->seq=(char *)malloc(d->m);
@@ -321,9 +337,11 @@ tNode *initNodeT(int l){
   //d->l = d->l2 = d->m2 = 0;
   d->refPos= -999;
   d->insert = NULL;
+#ifdef __WITH_POOL__
   currentnodes++;
   if(currentnodes>10000)
     flush_queue();
+#endif
 
   return d;
 }
@@ -1286,7 +1304,7 @@ void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
 void callBack_bambi(fcb *fff);//<-angsd.cpp
 //type=1 -> samtool mpileup textoutput
 //type=0 -> callback to angsd
-
+#ifdef __WITH_POOL__
 void destroy_tnode_pool(){
   fprintf(stderr,"npools:%zu unfreed tnodes before clean:%d\n",tnodes->npools,currentnodes);
   for(int i=0;i<tnodes->npools;i++){
@@ -1314,22 +1332,20 @@ void destroy_tnode_pool(){
 
   //  delete [] ary;
   tpool_destroy(tnodes);
-
+  free(sl_d);
 }
-
+#endif
 
 //function below is a merge between the original TESTOUTPUT and the angsdcallback. Typenames with T are the ones for the callback
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
 int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
   
-  //sl = (slist*) calloc(1,sizeof(slist));
-  //fprintf(stderr,"sl:%p\n",sl);
+#ifdef __WITH_POOL__
   sl_l =0;
   sl_m =10000;
   sl_d =(tNode**) calloc(sl_m,sizeof(tNode*));
-  
   tnodes = tpool_create(sizeof(tNode));
-  
+#endif
 
   assert(nLines&&nFiles);
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);
@@ -1350,7 +1366,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
   for(int i=0;i<nFiles;i++){
     sglp[i] = makePoolb(nLines);
-    //sglpb[i] = makePoolb(nLines);
     if(show)
       nps[i] = allocNodePool(MAX_SEQ_LEN);
     else
@@ -1591,7 +1606,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     callBack_bambi(NULL);//cleanup signal
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
     for(int i=0;1&&i<nFiles;i++){
-      //      free(npsT[i].nds);
+      free(npsT[i].nds);
       dalloc(&sglp[i]);
     }
     delete [] npsT;
@@ -1608,9 +1623,10 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     delete [] nps;
     delete [] sglp;
   }
-  //  test()
+#ifdef __WITH_POOL__
   flush_queue();
   destroy_tnode_pool();
+#endif
   return 0;
 }
 

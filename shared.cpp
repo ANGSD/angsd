@@ -263,8 +263,10 @@ void changeChr(int refId){
   ((abcFilter *)allMethods[0])->readSites(refId);
   ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
+#ifdef __WITH_POOL__
   void flush_queue();
   flush_queue();
+#endif 
 }
 
 
@@ -430,10 +432,10 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
     fprintf(fp,"\n");
   }
 }
-
+#ifdef __WITH_POOL__
 extern int currentnodes;
 extern size_t *sl_l;
-
+#endif
 
 //only one instance at a time is running this function
 void printFunky(funkyPars *p){
@@ -441,7 +443,11 @@ void printFunky(funkyPars *p){
   if(p->killSig==0) {//don't print the empty killSig chunk
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
+#ifdef __WITH_POOL__
 	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d (%d,%zu) numSites:%d",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,currentnodes,sl_l,p->numSites);
+#else
+      fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
+#endif
       else
 	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
     }if(p->numSites!=0){
