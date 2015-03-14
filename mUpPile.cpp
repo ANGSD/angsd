@@ -12,7 +12,17 @@
 #include "pop1_read.h"
 #include "pooled_alloc.h"
 
+
+  size_t sl_l;
+  size_t sl_m;
+  tNode **sl_d;
+
+pthread_mutex_t mUpPile_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t slist_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
 tpool_alloc_t *tnodes = NULL;
+//slist *sl = NULL;
 
 extern int SIG_COND;
 extern int minQ;
@@ -63,11 +73,17 @@ void dalloc_node(node &n){
   free(n.pos.s);
 }
 
+//this will only be called from a threadsafe context
+void tnode_destroy(tNode *n){
 
-void dalloc_node(tNode *n){
-  //  fprintf(stderr,"[%s] current_nodes:%d refPos.%d\n",__FUNCTION__,currentnodes--,n->refPos);
-  tpool_free(tnodes,n);
-
+  if(sl_l == sl_m){
+    fprintf(stderr,"%zu %zu\n",sl_l, sl_m);
+    int newsize = sl_m+500;
+    sl_d = (tNode **) realloc(sl_d,sizeof(tNode *)*newsize);
+    sl_m = newsize;
+  }
+  sl_d[sl_l++] = n;
+  
 }
 
 typedef struct{
@@ -179,33 +195,26 @@ void dalloc_nodePool (nodePool& np){
   
 }
 
-void dalloc_nodePoolT (nodePoolT& np){
-  for(int i=0;i<np.l;i++)
-    dalloc_node(np.nds[i]);
-  
-}
-
- 
-
 void cleanUpChunkyT(chunkyT *chk){
+  pthread_mutex_lock(&slist_mutex);//just to make sure, its okey to clean up
   for(int s=0;s<chk->nSites;s++) {
     for(int i=0;i<chk->nSamples;i++) {
       if(chk->nd[s][i]==NULL)
 	continue;
       if(chk->nd[s][i]&&chk->nd[s][i]->l2!=0){
 	for(int j=0;j<chk->nd[s][i]->l2;j++){
-	  dalloc_node(chk->nd[s][i]->insert[j]);
+	  tnode_destroy(chk->nd[s][i]->insert[j]);
 	}
 	free(chk->nd[s][i]->insert);
 
       }
-      dalloc_node(chk->nd[s][i]);
+      tnode_destroy(chk->nd[s][i]);
     }
     free(chk->nd[s]);
   }
   delete [] chk->nd;
   delete chk;
-  
+  pthread_mutex_unlock(&slist_mutex);//just to make sure, its okey to clean up
 }
 
 
@@ -281,6 +290,15 @@ void realloc(tNode *d,int newsize){
 #endif
 }
 
+void flush_queue(){
+  pthread_mutex_lock(&slist_mutex);
+  for(int i=0;i<sl_l;i++)
+    tpool_free(tnodes,sl_d[i]);
+  currentnodes -= sl_l;
+  sl_l =0;
+  pthread_mutex_unlock(&slist_mutex);
+}
+
 
 tNode *initNodeT(int l){
   if(l<UPPILE_LEN)
@@ -303,6 +321,9 @@ tNode *initNodeT(int l){
   //d->l = d->l2 = d->m2 = 0;
   d->refPos= -999;
   d->insert = NULL;
+  currentnodes++;
+  if(currentnodes>10000)
+    flush_queue();
 
   return d;
 }
@@ -960,8 +981,6 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
   return chk;
 }
 
-pthread_mutex_t mUpPile_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 typedef std::map<int,node *> umap; 
 
@@ -1291,6 +1310,8 @@ void destroy_tnode_pool(){
     }
   }
 
+
+
   //  delete [] ary;
   tpool_destroy(tnodes);
 
@@ -1300,8 +1321,15 @@ void destroy_tnode_pool(){
 //function below is a merge between the original TESTOUTPUT and the angsdcallback. Typenames with T are the ones for the callback
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
 int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
+  
+  //sl = (slist*) calloc(1,sizeof(slist));
+  //fprintf(stderr,"sl:%p\n",sl);
+  sl_l =0;
+  sl_m =10000;
+  sl_d =(tNode**) calloc(sl_m,sizeof(tNode*));
+  
   tnodes = tpool_create(sizeof(tNode));
-
+  
 
   assert(nLines&&nFiles);
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);
@@ -1563,8 +1591,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     callBack_bambi(NULL);//cleanup signal
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
     for(int i=0;1&&i<nFiles;i++){
-      dalloc_nodePoolT(npsT[i]);
-      free(npsT[i].nds);
+      //      free(npsT[i].nds);
       dalloc(&sglp[i]);
     }
     delete [] npsT;
@@ -1582,6 +1609,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     delete [] sglp;
   }
   //  test()
+  flush_queue();
   destroy_tnode_pool();
   return 0;
 }

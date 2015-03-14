@@ -29,7 +29,7 @@
 #include "abcWriteFasta.h"
 //class to keep track of chunk order when dumping results
 #include "printRes.h"
-
+#include "mUpPile.h"
 
 pthread_attr_t attr;
 int andersSux =0;
@@ -109,7 +109,7 @@ void destroy(){
   delete [] allMethods;
 
 }
-
+void tnode_destroy(tNode*);
 void cleanUptNodeArray(tNode **row,int nSamples){
   //  fprintf(stderr,"nodearray\n");
     for(int i=0;i< nSamples;i++) {
@@ -117,11 +117,11 @@ void cleanUptNodeArray(tNode **row,int nSamples){
 	continue;
       if(row[i]->l2!=0){
 	for(int j=0;j<row[i]->l2;j++)
-	  dalloc_node(row[i]->insert[j]);
+	  tnode_destroy(row[i]->insert[j]);
 	free(row[i]->insert);
       }
       
-      dalloc_node(row[i]);
+      tnode_destroy(row[i]);
     }
     free(row);
 }
@@ -263,6 +263,8 @@ void changeChr(int refId){
   ((abcFilter *)allMethods[0])->readSites(refId);
   ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
+  void flush_queue();
+  flush_queue();
 }
 
 
@@ -429,23 +431,17 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
   }
 }
 
+extern int currentnodes;
+extern size_t *sl_l;
 
 
-void *cleanFunky(void *pars){
-  funkyPars *p = (funkyPars *) pars;
-  deallocFunkyPars(p);
-  pthread_exit(NULL);
-}
-
-
-pthread_t cleanThread;
 //only one instance at a time is running this function
 void printFunky(funkyPars *p){
   //  fprintf(stderr,"printFunky killsig=%d nsites=%d refid:%d\n",p->killSig,p->numSites,p->refId);
   if(p->killSig==0) {//don't print the empty killSig chunk
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
-	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
+	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d (%d,%zu) numSites:%d",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,currentnodes,sl_l,p->numSites);
       else
 	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
     }if(p->numSites!=0){
@@ -454,18 +450,8 @@ void printFunky(funkyPars *p){
 	  allMethods[i]->print(p);
     }
    
-    //for nThreads>2 we will thread the deallocation
-    if(1||maxThreads<=2)//DRAGON always do clean unthreaded ANDERS
-      deallocFunkyPars(p);
-    else{
-      if(pthread_create( &cleanThread, NULL, cleanFunky, (void*) p)){
-	fprintf(stderr,"[%s] Problem spawning thread\n%s\n",__FUNCTION__,strerror(errno));
-	exit(0);
-      }
-      // fprintf(stderr,"ret=%d\n",ret);
-      pthread_detach(cleanThread);
-    }
- 
+    deallocFunkyPars(p);
+    
   }else{
     deallocFunkyPars(p);
     pthread_mutex_unlock(&mUpPile_mutex);

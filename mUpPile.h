@@ -1,6 +1,4 @@
-#ifndef muppile_
-#define muppile_
-
+#pragma once
 #include "argStruct.h"
 #include "bambi_interface.h"
 
@@ -14,4 +12,6 @@ int uppile(int show,int nThreads,bufReader *rd,int NLINES,int nFiles,std::vector
 tNode *initNodeT(int l);
 
 
-#endif
+//typedef struct{
+
+//}slist;//<simple list, just an array.
