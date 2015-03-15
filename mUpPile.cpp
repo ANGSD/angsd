@@ -37,7 +37,7 @@ extern int trim;
   So the cutoff below will make a fallback to a slower but memsecure version
  */
 #define BUG_THRES 1000000 //<- we allow 1mio sites to be allocated,
-#define UPPILE_LEN 8
+#define UPPILE_LEN 4
 
 
 /*
@@ -339,7 +339,7 @@ tNode *initNodeT(int l){
   d->insert = NULL;
 #ifdef __WITH_POOL__
   currentnodes++;
-  if(currentnodes>10000)
+  if(currentnodes>5000)
     flush_queue();
 #endif
 
@@ -1542,7 +1542,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	  dn[i] = mkNodes_one_sampleb(&sglp[i],&nps[i],gf);
 	  tmpSum += dn[i].l;
 	}
-
+      //fprintf(stderr,"tmpSum:%d\n",tmpSum);
 #if 0
 	for(int i=0;i<nFiles;i++)
 	  if(show!=1)
