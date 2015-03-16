@@ -1229,9 +1229,11 @@ void getMaxMax2(readPool *sglp,int nFiles,nodePoolT *nps){
 
 
 void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,hts_idx_t **idx,hts_itr_t **itr,int ref,int start,int stop,bam_hdr_t *hdr){
+  fprintf(stderr,"idx:%p\n",*idx);
   if(*idx==NULL)
     *idx = sam_index_load(fp,fn);
-  if (idx == NULL) { // index is unavailable
+  fprintf(stderr,"idx:%p\n",*idx);
+  if (*idx == NULL) { // index is unavailable
     fprintf(stderr, "[main_samview] random alignment retrieval only works for indexed BAM or CRAM files.\n");
     exit(0);
   }
