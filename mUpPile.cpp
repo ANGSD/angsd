@@ -903,7 +903,6 @@ chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
       else{
 	perSite = (tNode**)calloc(nFiles,sizeof(tNode*));
 	ret.insert(std::make_pair(thepos,perSite));
-		
       }
       perSite[f] = sm.nds[l];
     }
@@ -912,13 +911,12 @@ chunkyT *slow_mergeAllNodes_new(nodePoolT *dn,int nFiles){
   //now we perform the backrool
   int nnodes = ret.size();
   int *refPos = new int [ret.size()];
-  //  fprintf(stderr,"nnodes=%d\n",nnodes);
   chunkyT *chk =new chunkyT;  
   chk->nd = new tNode**[nnodes];
   int p=0;
   for(it = ret.begin();it!=ret.end();++it){
     chk->nd[p++] = it->second;
-    refPos[p-1] = chk->nd[p-1][0]->refPos;
+    refPos[p-1] = it->first;
   }
 
   chk->nSamples=nFiles;
