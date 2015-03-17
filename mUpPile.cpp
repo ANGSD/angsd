@@ -29,8 +29,8 @@ extern int SIG_COND;
 extern int minQ;
 extern int trim;
 #define bam_nt16_rev_table seq_nt16_str
-
-#define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
+#define __NEW__
+//#define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
 /*
   When merging different nodes, we are using a greedy but fast approach,
   however if we have a large genomic region with no data we are are allocating huge chunks.
@@ -39,6 +39,7 @@ extern int trim;
 #define BUG_THRES 1000000 //<- we allow 1mio sites to be allocated,
 #define UPPILE_LEN 4
 
+extern int MAX_SEQ_LEN;
 
 /*
   node for uppile for a single individual for a single site
@@ -1500,10 +1501,13 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	
       }
       
-      int pickStop=-1;
+      int pickStop=MAX_SEQ_LEN;
       
+#ifndef __NEW__
       int doFlush = (collect_reads(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
-
+#else
+      int doFlush = (collect_reads2(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
+#endif
 #if 0
       for(int i=0;i<nFiles;i++)
 	fprintf(stderr,"[%s] sgl[%d].l=%d (%d,%d)\n",__FUNCTION__,i,sglp[i].l,sglp[i].first[0],sglp[i].last[sglp[i].l-1]);
@@ -1532,7 +1536,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       int tmpSum = 0;
 
       if(show!=1){
-	dnT = new nodePoolT[nFiles];//<- this can leak now
+	dnT = new nodePoolT[nFiles];
 	for(int i=0;i<nFiles;i++){
 	  dnT[i] = mkNodes_one_sampleTb(&sglp[i],&npsT[i]);
 	  tmpSum += dnT[i].l;

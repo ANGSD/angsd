@@ -71,7 +71,7 @@ static tpool_t *new_pool(tpool_alloc_t *p) {
     pool = &p->pools[p->npools];
 
     pool->pool = calloc(n, p->dsize);//modified by tsk 14march 2015
-    fprintf(stderr,"calling\n");
+    //    fprintf(stderr,"calling\n");
     if (NULL == pool->pool) return NULL;
 
     pool->used = 0;

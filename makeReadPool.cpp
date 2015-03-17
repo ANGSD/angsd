@@ -122,6 +122,61 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
 }
 
 
+void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
+  //  fprintf(stderr,"stop:%d nreads:%d reftoread:%d ret.m:%d ret.l:%d\n",stop,nReads,refToRead,ret.m,ret.l);
+  //if should never be in this function if we shouldnt read from the file.
+  assert(rdObjRegionDone!=1 &&rdObjEof!=1 );
+  
+
+  /*
+      1) read an alignemnt calulate start and end pos
+    check
+    a) if same chromosome that a new read has a geq FINE
+    b) if same but < then UNSORTED
+    
+  */ 
+  int i=0;
+  int tmp;
+
+  while(1) {
+  
+    if(i+ret.l>=(ret.m-4)){//minus four will ofcourse work.
+      realloc(&ret,ret.m+ret.l+i);
+    }
+    //fprintf(stderr,"ret.l:%d,i:%d\n",ret.l,i);
+    bam1_t *b = ret.reads[i+ret.l];
+    if((tmp=pop1_read(fp,itr,b,hdr))<0) {
+      if(tmp==-1){
+	rdObjEof =1;
+	isEof--;
+      }else
+	rdObjRegionDone =1;
+      break;
+    }
+
+    //general fine case
+    
+    if(refToRead==b->core.tid){
+      ret.first[ret.l+i] = b->core.pos;
+      ret.last[ret.l+i] = bam_endpos(b);
+      //      fprintf(stderr,"(%d,%d)\n",ret.first[ret.l+i],ret.last[ret.l+i]);
+    }else if(b->core.tid!=refToRead){
+      //buffed=1;
+      ret.bufferedRead = bam_dup(b);
+      rdObjRegionDone =1;
+      break;
+    }
+
+    i++;
+    //fprintf(stderr,"i:%d first:%d\n",i,ret.first[ret.l+i-1]);
+    if(i>nReads&&ret.first[ret.l+i-1]>stop)
+      break;
+  }
+  ret.l += i;
+  stop=ret.first[ret.l-1];
+}
+
+
 //nothing with buffered here
 void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 #if 0
@@ -238,6 +293,57 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readN
 
   //at this point we should have picked a picker. Thats a position=pickstop from a fileID=usedPicker that will be used as 'stopping point'
   for(int i=0;i<nFiles;i++) {
+    if(rd[i].isEOF || rd[i].regionDone||i==usedPicker)
+      continue;
+    
+    if(ret[i].l>0&&ret[i].first[ret[i].l-1]>pickStop)
+      continue;
+    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+  } 
+  int nDone =0;
+  for(int i=0;i<nFiles;i++)
+    if(rd[i].regionDone)
+      nDone++;
+  
+  return nDone;
+
+}
+
+int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop) {
+  int usedPicker=-1;
+  for(int ii=0;ii<nFiles;ii++) {
+    //    fprintf(stderr,"read reads[%d]\n",ii);
+    extern int *bamSortedIds;
+    int i=bamSortedIds[ii];
+    if(rd[i].regionDone||rd[i].isEOF){//if file is DONE with region go to next
+      rd[i].regionDone = 1;
+      continue;
+    }
+    
+    int pre=ret[i].l;//number of elements before
+    //function reads readNlines reads, from rd[i].fp and modifies isEOF and regionDone
+    if(ret[i].l>0)
+      pickStop += ret[i].first[ret[i].l-1];
+    // fprintf(stderr,"reading until:%d\n",pickStop);
+    read_reads(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+
+    //first check if reading caused and end of region event to occur
+    if(rd[i].regionDone||rd[i].isEOF) 
+      rd[i].regionDone = 1;
+    
+    if(ret[i].l>pre){//we could read data
+      usedPicker = i;
+      pickStop = ret[i].first[ret[i].l-1];
+      break;
+    }
+  }
+  //fprintf(stderr,"pickstop:%d\n",pickStop);
+  if(usedPicker==-1)  //<-this means we are done with the current chr/region
+    return nFiles;
+
+  //at this point we should have picked a picker. Thats a position=pickstop from a fileID=usedPicker that will be used as 'stopping point'
+  for(int i=0;i<nFiles;i++) {
+    //    fprintf(stderr,"using stop[%d] \n",i);
     if(rd[i].isEOF || rd[i].regionDone||i==usedPicker)
       continue;
     

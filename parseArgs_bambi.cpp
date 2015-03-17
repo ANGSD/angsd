@@ -17,6 +17,7 @@ int trim = 0;
 int adjustMapQ =0;
 int baq =0;
 int checkBamHeaders = 1;
+int MAX_SEQ_LEN = 250;
 char *regfile = NULL;
 char *regfiles = NULL;
 
@@ -143,7 +144,8 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders\t%d\tExit if difference in BAM headers\n",checkBamHeaders);
-
+  fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
+  
   fprintf(argFile,"\n");
   fprintf(argFile,"Examples for region specification:\n");
   fprintf(argFile,"\t\tchr:\t\tUse entire chromosome: chr\n");
@@ -170,6 +172,7 @@ void setArgsBam(argStruct *arguments){
   baq = angsd::getArg("-baq",baq,arguments);
   regfile =angsd::getArg("-r",regfile,arguments);
   regfiles = angsd::getArg("-rf",regfiles,arguments);
+  MAX_SEQ_LEN = angsd::getArg("-setMinChunkSize",MAX_SEQ_LEN,arguments);
   checkBamHeaders = angsd::getArg("-checkBamHeaders",checkBamHeaders,arguments);
   arguments->show = angsd::getArg("-show",arguments->show,arguments);
 
