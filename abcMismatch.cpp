@@ -139,27 +139,29 @@ abcTsk::~abcTsk(){
   if(doMismatch){
     printMat(outfilegz);
     if(outfilegz) gzclose(outfilegz);
+ 
+    for(int p1=0;p1<rlen;p1++){
+      for(int p2=0;p2<rlen;p2++){
+	for(int q=0;q<qslen;q++){
+	  for(int s=0;s<2;s++){
+	    for(int rb=0;rb<4;rb++)
+	      delete [] mat[p1][p2][q][s][rb];
+	    delete [] mat[p1][p2][q][s];
+	  }
+	  delete [] mat[p1][p2][q];
+	}
+	delete [] mat[p1][p2];
+      }
+      delete [] mat[p1];
+    }
+    
+    delete [] mat;
   }
+
   free(refName);
 
   
-  for(int p1=0;p1<rlen;p1++){
-    for(int p2=0;p2<rlen;p2++){
-      for(int q=0;q<qslen;q++){
-	for(int s=0;s<2;s++){
-	  for(int rb=0;rb<4;rb++)
-	    delete [] mat[p1][p2][q][s][rb];
-	  delete [] mat[p1][p2][q][s];
-	}
-	delete [] mat[p1][p2][q];
-      }
-      delete [] mat[p1][p2];
-    }
-    delete [] mat[p1];
-  }
-
-  delete [] mat;
-
+ 
 }
 
 

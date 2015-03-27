@@ -645,6 +645,7 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
 
       freq->freq_EM[s]=emFrequency(loglike[s],pars->nInd,emIter,mstart,keepList,keepInd[s]);
       if(doSNP){
+	//	fprintf(stderr,"en:%f to:%f\n",likeFixedMinor(0.0,loglike[s],pars->nInd),likeFixedMinor(freq->freq_EM[s],loglike[s],pars->nInd));
       	freq->lrt_EM[s]= 2*likeFixedMinor(0.0,loglike[s],pars->nInd)-2*likeFixedMinor(freq->freq_EM[s],loglike[s],pars->nInd);
 	if(freq->lrt_EM[s]<0)
 	  freq->lrt_EM[s]=0;

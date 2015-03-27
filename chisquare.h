@@ -3,7 +3,7 @@
 #ifndef _chisq_
 #define _chisq_
 
-
+#include <cstdlib>
 /*
   taken from numerical recipis 2007 third edition
   modified by thorfinn@binf.ku.dk 30 aug 2013
@@ -45,7 +45,11 @@ struct Chisqdist : chisq::Gamma {
     return exp(-0.5*(x2-(nu-2.)*log(x2))-fac);
   }
   double cdf(double x2) {
-    if (x2 < 0.) throw("bad x2 in Chisqdist");
+    //fprintf(stderr,"x2:%f\n",x2);
+    if (x2 < 0.) {
+      fprintf(stderr,"bad x2 in Chisqdist:%f \n",x2);
+      exit(0);
+    }
     return gammp(0.5*nu,0.5*x2);
   }
   double invcdf(double p) {

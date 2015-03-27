@@ -40,8 +40,8 @@ void abcHWE::getOptions(argStruct *arguments){
     fprintf(stderr,"You supplied -HWE_pval, you should also choose -doMaf\n");
     exit(0);
   }
-  if(arguments->inputtype==INPUT_BEAGLE){
-    fprintf(stderr,"Error: you cannot estimate HWE based on posterior probabilities (beagle)\n");
+  if(arguments->inputtype==INPUT_BEAGLE||arguments->inputtype==INPUT_VCF_GP){
+    fprintf(stderr,"Error: you cannot estimate HWE based on posterior probabilities \n");
     exit(0);
   }
   

@@ -175,9 +175,13 @@ void abcFilterSNP::run(funkyPars *pars){
       ksprintf(bufstr,"%s\t%d\t%d %d %d %d\t",header->target_name[pars->refId],pars->posi[s]+1, cnts[0],cnts[1],cnts[2],cnts[3]);
       ksprintf(bufstr,"%f:%f:%f\t",sb1(cnts),sb2(cnts),sb3(cnts));
       funkyHWE *hweStruct = (funkyHWE *) pars->extras[8];//THIS IS VERY NASTY! the ordering within general.cpp is now important
-      double llh = 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
-      double pval = chi.cdf(-llh);
-      ksprintf(bufstr,"%f:%e\t",llh,1-pval);
+      double lrt = 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
+      double pval;
+      if(lrt<0)
+	pval =1;
+      else
+	pval =1- chi.cdf(lrt);
+      ksprintf(bufstr,"%f:%e\t",lrt,pval);
       
       double Z = baseQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(bufstr,"%f:%e\n",Z,2*phi(Z));
@@ -216,10 +220,10 @@ void abcFilterSNP::getOptions(argStruct *arguments){
   int domajmin=0;
   //from command line
   int doHWE =0;
-  domajmin=angsd::getArg("-doSNP",domajmin,arguments);
-  doHWE=angsd::getArg("-doHWE",doHWE,arguments);
+  domajmin=angsd::getArg("-snp_pval",domajmin,arguments);
+  doHWE=angsd::getArg("-hwe_pval",doHWE,arguments);
   if(!domajmin||!doHWE){
-    fprintf(stderr,"-doSnpStat require -doSNP and -doHWE \n");
+    fprintf(stderr,"-doSnpStat require -snp_pval and -hwe_pval \n");
     exit(0);
   }
     
