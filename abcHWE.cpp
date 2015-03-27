@@ -185,7 +185,7 @@ void abcHWE::run(funkyPars *pars){
 }
 
 double abcHWE::differ(double *x,double *y){
-  return (abs(x[1]-y[1]) + abs(x[0]-y[0]));
+  return (fabs(x[1]-y[1]) + fabs(x[0]-y[0]));
 }
 
 
