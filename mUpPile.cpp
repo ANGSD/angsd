@@ -805,7 +805,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
   dn.l = lastSecureIndex;
   
   if(regionLen-lastSecureIndex+4>np->m){
-    delete [] np->nds;
+    //delete [] np->nds;
     np->m=regionLen+4;
     kroundup32(np->m);
     np->nds =(tNode**) realloc(np->nds,np->m*sizeof(tNode*));
