@@ -1,11 +1,11 @@
 #include "shared.h"
 #include <cmath>
 #include "analysisFunction.h"
-#include "abcTsk.h"
+#include "abcMismatch.h"
 #include <ctype.h>
 
-#define rlen 100
-#define qslen 55
+#define rlen 150
+#define qslen 64
 
 size_t mat[rlen][rlen][qslen][2][4][4];
 
@@ -21,21 +21,34 @@ void setZero(){
 }
 
 
-void printMat(FILE *fp){
+void printMat(gzFile fp){
   for(int p1=0;p1<rlen;p1++)
-    for(int p2=0;p2<rlen;p2++)
-      for(int q=0;q<qslen;q++)
+    for(int p2=0;p2<rlen;p2++){
+      for(int q=0;q<qslen;q++){
 	for(int s=0;s<2;s++){
-	  fprintf(fp,"%d\t%d\t%d\t%d\t",p1,p2,q,s);
-	  for(int rb=0;rb<4;rb++)
-	    for(int ob=0;ob<4;ob++)
+	  for(int rb=0;rb<4;rb++){
+	    size_t ts = 0;
+	    for(int ob=0;ob<4;ob++){
 	      if(s==1)
-		fprintf(fp,"%lu\t",mat[p1][p2][q][s][rb][ob]);
+		ts += mat[p1][p2][q][s][rb][ob];
 	      else
-		fprintf(fp,"%lu\t",mat[p2][p1][q][s][rb][ob]);
-	  fprintf(fp,"\n");
+		ts += mat[p2][p1][q][s][rb][ob];
+	    }
+	    if(ts>0){
+	      gzprintf(fp,"%d\t%d\t%d\t%d\t%d",p1,p2,q,s,rb);
+	      for(int ob=0;ob<4;ob++){
+		if(s==1)
+		  gzprintf(fp,"\t%d",mat[p1][p2][q][s][rb][ob]);
+		else
+		  gzprintf(fp,"\t%d",mat[p2][p1][q][s][rb][ob]);
+		
+	      }
+	      gzprintf(fp,"\n");
+	    }
+	  }
 	}
-
+      }
+    }
 }
 
 
@@ -43,20 +56,20 @@ void printMat(FILE *fp){
 
 void abcTsk::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__); 
-  fprintf(argFile,"-doThorfinn\t%d (This will simply dump a mismatch matrix)\n",doThorfinn);
+  fprintf(argFile,"-doMisMatch\t%d (This will simply dump a mismatch matrix)\n",doMismatch);
   fprintf(argFile,"-ref\t%s\n",refName);
 
 }
 
 void abcTsk::getOptions(argStruct *arguments){
  
-  doThorfinn=angsd::getArg("-doThorfinn",doThorfinn,arguments);
+  doMismatch=angsd::getArg("-doMismatch",doMismatch,arguments);
   refName = angsd::getArg("-ref",refName,arguments);
 
-  if(doThorfinn==0)
+  if(doMismatch==0)
     return;
   
-  if(doThorfinn&&(refName==NULL)){
+  if(doMismatch&&(refName==NULL)){
     fprintf(stderr,"Must supply -ref\n");
     printArg(stderr);
     exit(0);
@@ -67,11 +80,11 @@ void abcTsk::getOptions(argStruct *arguments){
 }
 
 abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
- doThorfinn=0;
+ doMismatch=0;
  refName = NULL;
 
   if(arguments->argc==2){
-    if(!strcasecmp(arguments->argv[1],"-doThorfinn")){
+    if(!strcasecmp(arguments->argv[1],"-doMismatch")){
       printArg(stdout);
       exit(0);
     }else
@@ -82,43 +95,42 @@ abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
 
   getOptions(arguments);
   printArg(arguments->argumentFile);
-  if(doThorfinn==0){
+  if(doMismatch==0){
     shouldRun[index]=0;
     return;
   }
   fprintf(stderr,"Estimating calibration matrix: %s\n",outfiles);
   //make output files
   const char* postfix;
-  postfix=".thorfinn";
-  outfile=NULL;
-  outfile = aio::openFile(outfiles,postfix);
-  fprintf(outfile,"posi\tisop\tqs\tstrand");
-  for(int i=0;i<4;i++)
-    for(int j=0;j<4;j++)
-      fprintf(outfile,"\t%c%c",intToRef[i],intToRef[j]);
-  fprintf(outfile,"\n");
+  postfix=".mismatch.gz";
+  outfilegz=Z_NULL;
+  outfilegz = aio::openFileGz(outfiles,postfix,GZOPT);
+  gzprintf(outfilegz,"posi\tisop\tqs\tstrand\tRef");
+  for(int j=0;j<4;j++)
+    gzprintf(outfilegz,"\t%c",intToRef[j]);
+  gzprintf(outfilegz,"\n");
   setZero();
   
 }
 
 
 abcTsk::~abcTsk(){
-  if(doThorfinn){
-    printMat(outfile);
-    if(outfile) fclose(outfile);
+  if(doMismatch){
+    printMat(outfilegz);
+    if(outfilegz) gzclose(outfilegz);
   }
   free(refName);
 }
 
 
 void abcTsk::clean(funkyPars *pars){
-  if(doThorfinn==0)
+  if(doMismatch==0)
     return;
 
 }
 
 void abcTsk::print(funkyPars *pars){
-  if(doThorfinn==0)
+  if(doMismatch==0)
     return;
   chunkyT *chk = pars->chk;
   

@@ -18,7 +18,7 @@
 #include "abcSaf.h" //original
 #include "abcSaf2.h" //<- EJ version, banded dynamic programming recursion (cite paper, add more infor etc)
 #include "abcCovar.h" //calculate covar
-#include "abcTsk.h" //mismatch matrix used for GL project
+#include "abcMismatch.h" //mismatch matrix used for GL project
 #include "abcFilterSNP.h" //some snp filters, not finished yet
 #include "abcSnpTools.h" //<-implementation of some stuff from snptools, not finished yet 
 #include "abcHetPlas.h" //<-implementation of hetero plasmic

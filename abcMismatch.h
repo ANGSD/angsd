@@ -3,9 +3,9 @@
 
 class abcTsk:public abc{
 private:
-  int doThorfinn;
+  int doMismatch;
   char *refName;
-  FILE *outfile;
+  gzFile outfilegz;
 public:
   void run(funkyPars  *pars);
   void clean(funkyPars *pars);  
