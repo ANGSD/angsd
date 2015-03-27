@@ -69,7 +69,7 @@ void dalloc_bufReader(bufReader &ret){
     bam_hdr_destroy(ret.hdr);
   if(ret.itr)
     hts_itr_destroy(ret.itr);
-  fprintf(stderr,"idx:%p\n",ret.idx);
+  //  fprintf(stderr,"idx:%p\n",ret.idx);
   //  exit(0);
   if(ret.idx)
     hts_idx_destroy(ret.idx);
