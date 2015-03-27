@@ -123,7 +123,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
 
 
 void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
-  //  fprintf(stderr,"stop:%d nreads:%d reftoread:%d ret.m:%d ret.l:%d\n",stop,nReads,refToRead,ret.m,ret.l);
+  // fprintf(stderr,"stop:%d nreads:%d reftoread:%d ret.m:%d ret.l:%d\n",stop,nReads,refToRead,ret.m,ret.l);
   //if should never be in this function if we shouldnt read from the file.
   assert(rdObjRegionDone!=1 &&rdObjEof!=1 );
   
@@ -173,7 +173,10 @@ void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,ht
       break;
   }
   ret.l += i;
-  stop=ret.first[ret.l-1];
+  if(ret.l>0){
+    // fprintf(stderr,"asdf:%d\n",ret.first[ret.l-1]);
+    stop=ret.first[ret.l-1];
+  }
 }
 
 

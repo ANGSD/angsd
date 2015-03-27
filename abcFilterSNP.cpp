@@ -252,7 +252,7 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
   
 
   if(doSnpStat){
-    fprintf(stderr,"running doSnpStat=%d\n",doSnpStat);
+    //    fprintf(stderr,"running doSnpStat=%d\n",doSnpStat);
     const char *postfix=".snpStat.gz";
     outfileZ = aio::openFileGz(outfiles,postfix,GZOPT);
     gzprintf(outfileZ,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\n");

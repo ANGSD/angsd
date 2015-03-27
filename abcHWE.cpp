@@ -254,7 +254,7 @@ void abcHWE::estHWE(double *x,double *loglike,int nInd){
     l=HWE_like(x,loglike,nInd);
     d=l;
   }
-  double *y = new double[2];
+  double y[2];// = new double[2];
   y[0] = x[0]+2;
   y[1] = x[1]+2;
   int iter=50;
