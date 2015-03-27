@@ -7,7 +7,7 @@
 #define rlen 150
 #define qslen 64
 
-size_t mat[rlen][rlen][qslen][2][4][4];
+size_t ******mat=NULL;//[rlen][rlen][qslen][2][4][4];
 
 void setZero(){
   for(int p1=0;p1<rlen;p1++)
@@ -18,6 +18,27 @@ void setZero(){
 	    for(int ob=0;ob<4;ob++)
 	      mat[p1][p2][q][s][rb][ob] =0;
 
+}
+
+void setZero2(){
+  mat = new size_t*****[rlen];
+  for(int p1=0;p1<rlen;p1++){
+    mat[p1] = new size_t****[rlen];
+    for(int p2=0;p2<rlen;p2++){
+      mat[p1][p2] = new size_t***[qslen];
+      for(int q=0;q<qslen;q++){
+	mat[p1][p2][q] = new size_t**[2];
+	for(int s=0;s<2;s++){
+	  mat[p1][p2][q][s] = new size_t*[4];
+	  for(int rb=0;rb<4;rb++){
+	    mat[p1][p2][q][s][rb] = new size_t[4];
+	    for(int ob=0;ob<4;ob++)
+	      mat[p1][p2][q][s][rb][ob] =0;
+	  }
+	}
+      }
+    }
+  }
 }
 
 
@@ -38,9 +59,9 @@ void printMat(gzFile fp){
 	      gzprintf(fp,"%d\t%d\t%d\t%d\t%d",p1,p2,q,s,rb);
 	      for(int ob=0;ob<4;ob++){
 		if(s==1)
-		  gzprintf(fp,"\t%d",mat[p1][p2][q][s][rb][ob]);
+		  gzprintf(fp,"\t%zu",mat[p1][p2][q][s][rb][ob]);
 		else
-		  gzprintf(fp,"\t%d",mat[p2][p1][q][s][rb][ob]);
+		  gzprintf(fp,"\t%zu",mat[p2][p1][q][s][rb][ob]);
 		
 	      }
 	      gzprintf(fp,"\n");
@@ -109,7 +130,7 @@ abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
   for(int j=0;j<4;j++)
     gzprintf(outfilegz,"\t%c",intToRef[j]);
   gzprintf(outfilegz,"\n");
-  setZero();
+  setZero2();
   
 }
 
@@ -120,6 +141,25 @@ abcTsk::~abcTsk(){
     if(outfilegz) gzclose(outfilegz);
   }
   free(refName);
+
+  
+  for(int p1=0;p1<rlen;p1++){
+    for(int p2=0;p2<rlen;p2++){
+      for(int q=0;q<qslen;q++){
+	for(int s=0;s<2;s++){
+	  for(int rb=0;rb<4;rb++)
+	    delete [] mat[p1][p2][q][s][rb];
+	  delete [] mat[p1][p2][q][s];
+	}
+	delete [] mat[p1][p2][q];
+      }
+      delete [] mat[p1][p2];
+    }
+    delete [] mat[p1];
+  }
+
+  delete [] mat;
+
 }
 
 
