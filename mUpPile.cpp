@@ -312,7 +312,7 @@ void flush_queue(){
   pthread_mutex_unlock(&slist_mutex);
 }
 #endif
-
+//int staaa =0;
 tNode *initNodeT(int l){
   if(l<UPPILE_LEN)
     l=UPPILE_LEN;
@@ -321,8 +321,8 @@ tNode *initNodeT(int l){
 #else
   tNode *d=(tNode*)calloc(1,sizeof(tNode));
 #endif
+
   if(d->m==0){
-    //    fprintf(stderr,"HRERE\n");
     d->m = l;
     kroundup32(d->m);
     d->seq=(char *)malloc(d->m);
@@ -1309,13 +1309,12 @@ void callBack_bambi(fcb *fff);//<-angsd.cpp
 void destroy_tnode_pool(){
   fprintf(stderr,"npools:%zu unfreed tnodes before clean:%d\n",tnodes->npools,currentnodes);
   for(int i=0;i<tnodes->npools;i++){
-    fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
+    //fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
     tNode **nd =(tNode**)tnodes->pools[i].pool;
     
-    int nitem = 1024*1024/ sizeof(tnodes->dsize);
+    int nitem = 1024*1024/tnodes->dsize;
 
     for(int j=0;j<nitem;j++){
-      //fprintf(stderr,"nitem:%d j:%d\n",nitem,j);
       tNode *tn =(tNode*) nd+j;
       if(tn->m){
 	//	fprintf(stdout,"nd[%d] :%p tn.refPos:%d tn.l:%d tn.m:%d\n",j,tn,tn->refPos,tn->l,tn->m);
@@ -1324,8 +1323,8 @@ void destroy_tnode_pool(){
 	free(tn->posi);
 	free(tn->isop);
 	free(tn->mapQ);
-      }else
-	break;
+	tn=NULL;
+      }
     }
   }
 

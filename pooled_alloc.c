@@ -43,26 +43,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PSIZE 1024*1024
 
 tpool_alloc_t *tpool_create(size_t dsize) {
-    tpool_alloc_t *p;
+  tpool_alloc_t *p;
 
-    if (NULL == (p = (tpool_alloc_t *)malloc(sizeof(*p))))
-	return NULL;
-
-    /* Minimum size is a pointer, for free list */
-    dsize = (dsize + sizeof(void *) - 1) & ~(sizeof(void *)-1);
-    if (dsize < sizeof(void *))
-	dsize = sizeof(void *);
-    p->dsize = dsize;
-
-    p->npools = 0;
-    p->pools = NULL;
-    p->free  = NULL;
-
-    return p;
+  if (NULL == (p = (tpool_alloc_t *)malloc(sizeof(*p))))
+    return NULL;
+  
+  /* Minimum size is a pointer, for free list */
+  dsize = (dsize + sizeof(void *) - 1) & ~(sizeof(void *)-1);
+  if (dsize < sizeof(void *))
+    dsize = sizeof(void *);
+  p->dsize = dsize;
+  
+  p->npools = 0;
+  p->pools = NULL;
+  p->free  = NULL;
+  
+  return p;
 }
 
 static tpool_t *new_pool(tpool_alloc_t *p) {
-    size_t n = PSIZE / p->dsize;
+  size_t n = PSIZE / p->dsize;
     tpool_t *pool;
     
     pool = realloc(p->pools, (p->npools + 1) * sizeof(*p->pools));
