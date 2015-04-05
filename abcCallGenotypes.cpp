@@ -1,7 +1,7 @@
 /*
   thorfinn@binf.ku.dk april 15 2012
   class to call genotypes
- */
+*/
 
 #include "shared.h"
 #include <cmath>
@@ -24,7 +24,7 @@ void abcCallGenotypes::printArg(FILE *argFile){
   fprintf(argFile,"-----------------\n%s:\n\n",__FILE__);
   fprintf(argFile,"-doGeno\t%d\n",doGeno);
   fprintf(argFile,"\t1: write major and minor\n");
-  fprintf(argFile,"\t2: write the called genotype encoded as -1,0,1,2, -1=not called otherwise counts of derived\n");
+  fprintf(argFile,"\t2: write the called genotype encoded as -1,0,1,2, -1=not called\n");
   fprintf(argFile,"\t4: write the called genotype directly: eg AA,AC etc \n");
   fprintf(argFile,"\t8: write the posterior probability of all possible genotypes\n");
   fprintf(argFile,"\t16: write the posterior probability of called gentype\n");
@@ -32,11 +32,12 @@ void abcCallGenotypes::printArg(FILE *argFile){
   //  fprintf(argFile,"\t64: write the three posterior probability (Beagle style)\n");
   fprintf(argFile,"\t-> A combination of the above can be choosen by summing the values, EG write 0,1,2 types with majorminor as -doGeno 3\n");
   fprintf(argFile,"\t-postCutoff=%f (Only genotype to missing if below this threshold)\n",postCutoff);
- fprintf(argFile,"\t-geno_minDepth=%d\t(-1 indicates no cutof)\n",geno_minDepth);
- fprintf(argFile,"\t-geno_maxDepth=%d\t(-1 indicates no cutof)\n",geno_maxDepth);
- fprintf(argFile,"\n\tNB When writing the posterior the -postCutoff is not used\n\n");
- fprintf(argFile,"\n\tNB geno_minDepth requires -doCounts\n\n");
- fprintf(argFile,"\n\tNB geno_maxDepth requires -doCounts\n\n");
+  fprintf(argFile,"\t-geno_minDepth=%d\t(-1 indicates no cutof)\n",geno_minDepth);
+  fprintf(argFile,"\t-geno_maxDepth=%d\t(-1 indicates no cutof)\n",geno_maxDepth);
+  fprintf(argFile,"\t-geno_minMM=%d\t(-1 indicates no cutof)\n",geno_minMM);
+  fprintf(argFile,"\n\tNB When writing the posterior the -postCutoff is not used\n");
+  fprintf(argFile,"\tNB geno_minDepth requires -doCounts\n");
+  fprintf(argFile,"\tNB geno_maxDepth requires -doCounts\n");
  
 }
 
@@ -58,12 +59,13 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
   postCutoff=angsd::getArg("-postCutoff",postCutoff,arguments);
 
 
+  geno_minMM=angsd::getArg("-geno_minMM",geno_minMM,arguments);
   geno_minDepth=angsd::getArg("-geno_minDepth",geno_minDepth,arguments);
   geno_maxDepth=angsd::getArg("-geno_maxDepth",geno_maxDepth,arguments);
   
   int doCounts=0;
   doCounts = angsd::getArg("-doCounts",doCounts,arguments);
-  if((geno_minDepth!=-1 || geno_maxDepth!=-1 ) &&doCounts==0){
+  if((geno_minDepth!=-1 || geno_maxDepth!=-1 || geno_minMM!=-1 ) &&doCounts==0){
     fprintf(stderr,"Must supply -doCounts to use a minimum depth for GC calling\n");
     exit(0);
   }
@@ -91,6 +93,7 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
   doGeno=0;
   postCutoff= 1.0/3.0;
   outfileZ = Z_NULL;
+  geno_minMM = -1;
   geno_minDepth = -1;
   geno_maxDepth = -1;
   if(arguments->argc==2){
@@ -151,6 +154,16 @@ void abcCallGenotypes::getGeno(funkyPars *pars){
 	int geno_Depth = pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3];
 	if(geno_Depth>geno_maxDepth)
 	  maxGeno=-1;
+      }
+      if(geno_minMM!=-1){
+	int geno_Depth = pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3];
+	int mm_Depth = pars->counts[s][i*4+pars->major[s]] + pars->counts[s][i*4+pars->minor[s]];
+
+	if(mm_Depth * 1.0 / geno_Depth < geno_minMM)
+	  maxGeno=-1;
+
+
+
       }
 
       geno->dat[s][i]=maxGeno;

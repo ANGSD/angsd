@@ -12,6 +12,7 @@ private:
   int doGeno;
   float postCutoff;
   gzFile outfileZ;
+  double geno_minMM;
   int geno_minDepth;
   int geno_maxDepth;
 public:
