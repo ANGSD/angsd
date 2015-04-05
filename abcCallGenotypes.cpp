@@ -34,7 +34,7 @@ void abcCallGenotypes::printArg(FILE *argFile){
   fprintf(argFile,"\t-postCutoff=%f (Only genotype to missing if below this threshold)\n",postCutoff);
   fprintf(argFile,"\t-geno_minDepth=%d\t(-1 indicates no cutof)\n",geno_minDepth);
   fprintf(argFile,"\t-geno_maxDepth=%d\t(-1 indicates no cutof)\n",geno_maxDepth);
-  fprintf(argFile,"\t-geno_minMM=%d\t(-1 indicates no cutof)\n",geno_minMM);
+  fprintf(argFile,"\t-geno_minMM=%f\t(-1 indicates no cutof)\n",geno_minMM);
   fprintf(argFile,"\n\tNB When writing the posterior the -postCutoff is not used\n");
   fprintf(argFile,"\tNB geno_minDepth requires -doCounts\n");
   fprintf(argFile,"\tNB geno_maxDepth requires -doCounts\n");
