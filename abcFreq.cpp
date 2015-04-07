@@ -150,7 +150,7 @@ void abcFreq::getOptions(argStruct *arguments){
     //    fprintf(stderr,"ind:%f :%p: \t",SNP_pval,chisq3);
     if(SNP_pval <=1){
       if(abs(doMaf) ==2)
-	SNP_pval = chisq1->invcdf(1-SNP_pval);
+	SNP_pval = chisq3->invcdf(1-SNP_pval);
       if(abs(doMaf) ==1)
 	SNP_pval = chisq1->invcdf(1-SNP_pval);
     }
@@ -245,7 +245,6 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   outfileZ = Z_NULL;
   indFname = NULL;
   doMaf=0;
-  rmTriallelic=0;
   GL=0;
   doSNP=0;
   doPost=0;
@@ -380,7 +379,7 @@ void abcFreq::print(funkyPars *pars) {
       if(doMaf &1)
 	ksprintf(&bufstr,"%e\t",to_pval(chisq1,freq->lrt_EM[s]));
       if(doMaf &2)
-	ksprintf(&bufstr,"%e\t",to_pval(chisq1,freq->lrt_EM_unknown[s]));
+	ksprintf(&bufstr,"%e\t",to_pval(chisq3,freq->lrt_EM_unknown[s]));
     }
 
     kputw(pars->keepSites[s],&bufstr);kputc('\n',&bufstr);
@@ -531,7 +530,7 @@ void abcFreq::run(funkyPars *pars) {
       else if(freq->freq[s] > 1 - minMaf)
 	pars->keepSites[s]=0;
      
-      if(doSNP && (freq->lrt[s] < SNP_pval))
+      if(doSNP&&(freq->lrt[s] < SNP_pval))
       	pars->keepSites[s]=0;
 
     }
@@ -564,11 +563,8 @@ void abcFreq::run(funkyPars *pars) {
       delete [] like[s];
     }
     pars->post = post; 
-    delete[] like;  
-  }
-  if(rmTriallelic!=0){
-
-
+    delete[] like;
+   
   }
   
 }
