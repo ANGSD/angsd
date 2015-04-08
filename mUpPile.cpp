@@ -1307,7 +1307,7 @@ void callBack_bambi(fcb *fff);//<-angsd.cpp
 //type=0 -> callback to angsd
 #ifdef __WITH_POOL__
 void destroy_tnode_pool(){
-  fprintf(stderr,"npools:%zu unfreed tnodes before clean:%d\n",tnodes->npools,currentnodes);
+  //  fprintf(stderr,"npools:%zu unfreed tnodes before clean:%d\n",tnodes->npools,currentnodes);
   for(int i=0;i<tnodes->npools;i++){
     //fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
     tNode **nd =(tNode**)tnodes->pools[i].pool;
