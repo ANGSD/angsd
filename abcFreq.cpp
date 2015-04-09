@@ -82,7 +82,8 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"Filters:\n");
   fprintf(argFile,"\t-minMaf  \t%f\t(Remove sites with MAF below)\n",minMaf);
   fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",SNP_pval);
-  fprintf(argFile,"Extras:\n");
+  fprintf(argFile,"\t-rmTriallelic\t%f\t(Remove sites with a pvalue lower)\n",rmTriallelic);
+ fprintf(argFile,"Extras:\n");
   fprintf(argFile,"\t-ref\t%s\t(Filename for fasta reference)\n",refName);
   fprintf(argFile,"\t-anc\t%s\t(Filename for fasta ancestral)\n",ancName);
   fprintf(argFile,"\t-eps\t%f [Only used for -doMaf &8]\n",eps);
@@ -103,6 +104,7 @@ void abcFreq::getOptions(argStruct *arguments){
   int inputtype = arguments->inputtype;
   
 
+  rmTriallelic=angsd::getArg("-rmTriallelic",rmTriallelic,arguments);
 
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
   doPost=angsd::getArg("-doPost",doPost,arguments);
@@ -135,6 +137,7 @@ void abcFreq::getOptions(argStruct *arguments){
   if(doMaf==0 )//&& doPost==0?
     return;
   chisq1 = new Chisqdist(1);
+  chisq2 = new Chisqdist(2);
   chisq3 = new Chisqdist(3);
 
 
@@ -150,9 +153,11 @@ void abcFreq::getOptions(argStruct *arguments){
     //    fprintf(stderr,"ind:%f :%p: \t",SNP_pval,chisq3);
     if(SNP_pval <=1){
       if(abs(doMaf) ==2)
-	SNP_pval = chisq3->invcdf(1-SNP_pval);
+	SNP_pval = chisq1->invcdf(1-SNP_pval);
       if(abs(doMaf) ==1)
 	SNP_pval = chisq1->invcdf(1-SNP_pval);
+      if(rmTriallelic)
+	SNP_pval_tri = chisq2->invcdf(1-rmTriallelic);
     }
     doSNP =1 ;
     fprintf(stderr,"\t-> SNP-filter using a pvalue: %e correspond to %f likelihood units\n",pre,SNP_pval);
@@ -179,6 +184,10 @@ void abcFreq::getOptions(argStruct *arguments){
   }
   if(minMaf>0.0 &&(abs(doMaf)==0)){
     fprintf(stderr,"\nYou've selected minMaf but no MAF estimator, choose -doMaf\n\n");
+    exit(0);
+  }
+  if(rmTriallelic>0.0 &&(abs(doMaf)!=1)){
+    fprintf(stderr,"\n rmTriallelic only works with -doMaf 1 \n\n");
     exit(0);
   }
 
@@ -245,6 +254,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   outfileZ = Z_NULL;
   indFname = NULL;
   doMaf=0;
+  rmTriallelic=0;
   GL=0;
   doSNP=0;
   doPost=0;
@@ -336,6 +346,7 @@ abcFreq::~abcFreq(){
   free(ancName);
   delete [] indF;
   delete chisq1;
+  delete chisq2;
   delete chisq3;
 }
 
@@ -379,7 +390,7 @@ void abcFreq::print(funkyPars *pars) {
       if(doMaf &1)
 	ksprintf(&bufstr,"%e\t",to_pval(chisq1,freq->lrt_EM[s]));
       if(doMaf &2)
-	ksprintf(&bufstr,"%e\t",to_pval(chisq3,freq->lrt_EM_unknown[s]));
+	ksprintf(&bufstr,"%e\t",to_pval(chisq1,freq->lrt_EM_unknown[s]));
     }
 
     kputw(pars->keepSites[s],&bufstr);kputc('\n',&bufstr);
@@ -435,6 +446,7 @@ void abcFreq::clean(funkyPars *pars) {
   delete [] freq->lrt;//maybe in doSNP
   delete [] freq->freq_EM;
   delete [] freq->freq_EM_unknown;
+  delete [] freq->lrt_tri;
   delete [] freq->lrt_EM;
   delete [] freq->lrt_EM_unknown;
   delete [] freq->phat;
@@ -456,6 +468,7 @@ freqStruct *allocFreqStruct(){
   
  freq->freq_EM=NULL;
  freq->freq_EM_unknown= NULL;
+ freq->lrt_tri=NULL;
  freq->lrt_EM=NULL;
  freq->lrt_EM_unknown=NULL;
  freq->freq = NULL;
@@ -530,9 +543,10 @@ void abcFreq::run(funkyPars *pars) {
       else if(freq->freq[s] > 1 - minMaf)
 	pars->keepSites[s]=0;
      
-      if(doSNP&&(freq->lrt[s] < SNP_pval))
+      if(doSNP && (freq->lrt[s] < SNP_pval))
       	pars->keepSites[s]=0;
-
+      if(rmTriallelic && (freq->lrt_tri[s] > SNP_pval_tri))
+      	pars->keepSites[s]=0;
     }
   }
   if(doPost) {
@@ -563,8 +577,7 @@ void abcFreq::run(funkyPars *pars) {
       delete [] like[s];
     }
     pars->post = post; 
-    delete[] like;
-   
+    delete[] like;  
   }
   
 }
@@ -602,6 +615,8 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
   if(doSNP)
     freq->lrt = new double[pars->numSites];
 
+  if(rmTriallelic)
+    freq->lrt_tri = new double[pars->numSites];
   if(doMaf &1){ 
     freq->freq_EM = new double[pars->numSites]; 
     if(doSNP)
@@ -645,8 +660,7 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
 
       freq->freq_EM[s]=emFrequency(loglike[s],pars->nInd,emIter,mstart,keepList,keepInd[s]);
       if(doSNP){
-	//	fprintf(stderr,"en:%f to:%f\n",likeFixedMinor(0.0,loglike[s],pars->nInd),likeFixedMinor(freq->freq_EM[s],loglike[s],pars->nInd));
-      	freq->lrt_EM[s]= 2*likeFixedMinor(0.0,loglike[s],pars->nInd)-2*likeFixedMinor(freq->freq_EM[s],loglike[s],pars->nInd);
+	freq->lrt_EM[s]= 2*likeFixedMinor(0.0,loglike[s],pars->nInd)-2*likeFixedMinor(freq->freq_EM[s],loglike[s],pars->nInd);
 	if(freq->lrt_EM[s]<0)
 	  freq->lrt_EM[s]=0;
       }
@@ -664,6 +678,16 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
 	  freq->lrt_EM_unknown[s]=0;
       }
     }
+    if(rmTriallelic!=0){
+      double lrtTri=0;
+      if(freq->freq_EM[s]>0.0001)
+       lrtTri=isMultiAllelic(pars->likes[s],pars->nInd,emIter,freq->freq_EM[s],keepList,keepInd[s],pars->major[s],pars->minor[s]);
+      
+      freq->lrt_tri[s] = lrtTri;
+      
+    }
+
+
    
   }
 
@@ -883,7 +907,114 @@ double abcFreq::emFrequencyNoFixed(double *loglike,int numInds, int iter,double 
   
   return(p);
 }
+///////////////////////////////////////////////
+double abcFreq::isMultiAllelic(double *loglike,int numInds, int iter,double freqStandard,int *keep,int keepInd,int major,int minor){
 
+  double freq[4];
+  double temp_freq[4];
+  double W[10];
+  float sum[4];
+  for(int j=0;j<4;j++)
+    freq[j] = 0.25;
+
+  double accu=0.00001;
+ 
+  int it=0;
+  float norm;
+  /* for(int i=0;i<numInds;i++){
+    if(keep!=NULL && keep[i]==0)
+      continue;
+    for(int j=0;j<10;j++)
+      fprintf(stderr,"%f ", loglike[i*10+j]);
+    fprintf(stderr,"\n");
+  }
+  */
+
+  for(it=0;it<iter;it++){
+    for(int j=0;j<4;j++){
+      temp_freq[j] = freq[j] ;
+      sum[j]=0;
+    }
+    for(int i=0;i<numInds;i++){
+      if(keep!=NULL && keep[i]==0)
+        continue;
+
+      W[0] = exp(loglike[i*10+0]) * pow(freq[0],2);     //AA 0
+      W[1] = exp(loglike[i*10+1]) * 2*freq[0]*freq[1];  //AC 1
+      W[2] = exp(loglike[i*10+2]) * 2*freq[0]*freq[2];  //AG 2 
+      W[3] = exp(loglike[i*10+3]) * 2*freq[0]*freq[3];  //AT 3
+      W[4] = exp(loglike[i*10+4]) * pow(freq[1],2);  //CC 4
+      W[5] = exp(loglike[i*10+5]) * 2*freq[1]*freq[2];  //CG 5 
+      W[6] = exp(loglike[i*10+6]) * 2*freq[1]*freq[3];  //CT 6
+      W[7] = exp(loglike[i*10+7]) * pow(freq[2],2);       //GG 7
+      W[8] = exp(loglike[i*10+8]) * 2*freq[2]*freq[3];  //GT 8
+      W[9] = exp(loglike[i*10+9]) * pow(freq[3],2);        //TT 9
+      norm=0;
+      for(int s=0;s<10;s++){
+	norm+=W[s];  
+      }
+      sum[0]+=(2*W[0]+W[1]+W[2]+W[3])/(2*norm);
+      sum[1]+=(2*W[4]+W[1]+W[5]+W[6])/(2*norm);
+      sum[2]+=(2*W[7]+W[2]+W[5]+W[8])/(2*norm);
+      sum[3]+=(2*W[9]+W[3]+W[6]+W[8])/(2*norm);
+       
+     
+    }
+    //   fprintf(stderr,"%f %f %f %f\n",sum[0],sum[1],sum[2],sum[3]);
+
+    for(int j=0;j<4;j++)
+      freq[j] = sum[j] / keepInd ;
+    // fprintf(stderr,"it=%d\tp=%f\tsum=%f\tkeepInd=%d\n",it,p,log(sum),keepInd);
+    int doBreak=1;
+
+    for(int j=0;j<4;j++)
+      if((freq[j]-temp_freq[j]>accu || temp_freq[j]-freq[j]>accu))
+	doBreak=0;
+
+    if(doBreak)
+      break;
+   
+  }
+ 
+  double likeAlt = likeMultiAllelic(freq,loglike,numInds,keep);
+  
+  double freq2[4];
+  for(int j=0;j<4;j++)
+    freq2[j] = 0;
+  freq2[minor] = freqStandard;
+  freq2[major] = 1-freqStandard;
+  double likeNull = likeMultiAllelic(freq2,loglike,numInds,keep);
+  //exit(0);
+  // fprintf(stderr,"%f\t%f\t%f\t%f\tl=%f\t%f\tf=%f\t%d\t%d\t\n",freq[0],freq[1],freq[2],freq[3],likeAlt,likeNull,freqStandard,major,minor);
+  // fprintf(stderr,"%f\t%f\t%f\t%f\tl=%f\t%f\tf=%f\t%d\t%d\t\n",freq2[0],freq2[1],freq2[2],freq2[3],likeAlt,likeNull,freqStandard,major,minor);
+ 
+  return( 2*(likeNull - likeAlt));
+
+}
+
+/////////////////
+
+double abcFreq::likeMultiAllelic(double *freq,double *loglikes,int numInds,int *keep){
+  double totalLike=0;
+  double W[10]; 
+  for(int i=0;i<numInds;i++){
+    if(keep!=NULL && keep[i]==0)
+      continue;
+
+    W[0] = loglikes[i*10+0] + log(pow(freq[0],2));     //AA 0
+    W[1] = loglikes[i*10+1] + log(2*freq[0]*freq[1]);  //AC 1
+    W[2] = loglikes[i*10+2] + log(2*freq[0]*freq[2]);  //AG 2 
+    W[3] = loglikes[i*10+3] + log(2*freq[0]*freq[3]);  //AT 3
+    W[4] = loglikes[i*10+4] + log(pow(freq[1],2));  //CC 4
+    W[5] = loglikes[i*10+5] + log(2*freq[1]*freq[2]);  //CG 5 
+    W[6] = loglikes[i*10+6] + log(2*freq[1]*freq[3]);  //CT 6
+    W[7] = loglikes[i*10+7] + log(pow(freq[2],2));       //GG 7
+    W[8] = loglikes[i*10+8] + log(2*freq[2]*freq[3]);  //GT 8
+    W[9] = loglikes[i*10+9] + log(pow(freq[3],2));        //TT 9
+    totalLike+=angsd::addProtectN(W,10);
+  }
+    return -totalLike;
+}
 
 
 double abcFreq::likeNoFixedMinor(double p,double *logLikes,int numInds,int major){
@@ -892,6 +1023,7 @@ double abcFreq::likeNoFixedMinor(double p,double *logLikes,int numInds,int major
   float partialLike[3];
   for(int j=0;j<3;j++)
     partialLike[j]=0;
+
   float totalLike=0;
   int iMinor[3];
   int n=0;
@@ -925,6 +1057,12 @@ double abcFreq::likeFixedMinor(double p,double *logLikes,int numInds){
   }
     return -totalLike;
 }
+
+
+
+
+
+
 double abcFreq::emFrequency_ext(double *loglike,int numInds,int *keep,int keepInd){
 
   return (emFrequency(loglike,numInds,emIter,EM_start,keep,keepInd));

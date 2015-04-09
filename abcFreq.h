@@ -4,6 +4,7 @@
 typedef struct{
   double *freq_EM; 
   double *freq_EM_unknown; 
+  double *lrt_tri; 
   double *lrt_EM; 
   double *lrt_EM_unknown;
   double *freq;//can be copy of the two above, or the pp
@@ -17,6 +18,7 @@ class abcFreq:public abc{
 private:
   double to_pval(Chisqdist *str,double f);
   Chisqdist *chisq1;
+  Chisqdist *chisq2;
   Chisqdist *chisq3;
   int nInd;
   char *refName;
@@ -32,6 +34,7 @@ private:
   gzFile outfileZ2;
 
   int doMaf;
+  double rmTriallelic;
  
   int doPost;
   int doSNP;
@@ -40,6 +43,7 @@ private:
 
   double minMaf;
   double SNP_pval;
+  double SNP_pval_tri;
    int beagleProb;
 
   int inputIsBeagle;
@@ -47,6 +51,7 @@ public:
   static double *indF;
   void run(funkyPars  *pars);
   void likeFreq(funkyPars *pars,freqStruct *freq);
+
   void postFreq(funkyPars *pars,freqStruct *freq);
   void clean(funkyPars *pars);  
   void print(funkyPars *pars);  
@@ -63,6 +68,8 @@ public:
   static double emFrequency(double *loglike,int numInds, int iter,double start,int *keep,int keepInd);
   static double emFrequency_ext(double *loglike,int numInds,int *keep,int keepInd);
   static double likeFixedMinor(double p,double *logLikes,int numInds);
+  static double isMultiAllelic(double *loglike,int numInds, int iter,double start,int *keep,int keepInd,int major,int posi);
+  static double likeMultiAllelic(double *p,double *logLikes,int numInds,int *keep);
 };
 
 

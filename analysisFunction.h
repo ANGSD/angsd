@@ -43,6 +43,7 @@ namespace angsd {
   double getMax(double a,double b, double c);
   double addProtect2(double a,double b);
   double addProtect3(double a,double b, double c);
+  double addProtectN(double a[],int N);
   Matrix<double> getMatrix(const char *name,int doBinary,int lens);
   int fexists(const char* str);
   double sigm(double x);

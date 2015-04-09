@@ -150,6 +150,20 @@ double angsd::addProtect3(double a,double b, double c){
   return log(sumVal) + maxVal;
 }
 
+double angsd::addProtectN(double a[],int len){
+  //function does: log(sum(exp(a))) while protecting for underflow
+  double maxVal = a[0];
+
+  for(int i=1;i<10;i++)
+    if(maxVal<a[i])
+      maxVal=a[i];
+
+  double sumVal = 0;
+  for(int i=1;i<10;i++)
+    sumVal += exp(a[i]-maxVal);
+
+  return log(sumVal) + maxVal;
+}
 
 double angsd::getMax(double a,double b, double c){ 
     //get the maximum value of a, b and c
