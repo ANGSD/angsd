@@ -1,16 +1,16 @@
 
 typedef struct{
   char *oklist;//<- {0,1,2}, length=numSites, 0 don't keep 1 do keep 2 error
-  double **pLikes;
+  float **pLikes;
 }realRes;
 
 
 class abcSaf : public abc{
   int doSaf;
-  gzFile outfileGprobs;
-  FILE *outfileSFS;
-  gzFile outfileSFSPOS;
-  gzFile theta_fp;
+  BGZF *outfileGprobs;
+  BGZF *outfileSFS;
+  BGZF *outfileSFSPOS;
+  BGZF *theta_fp;
   int underFlowProtect;
   int fold;
   int isSim;
@@ -19,7 +19,7 @@ class abcSaf : public abc{
   char *pest;
   double *prior; //<- outputfile form pest;
   int doThetas;
-  void calcThetas(funkyPars *p,int index,double *prior,gzFile fpgz);
+  void calcThetas(funkyPars *p,int index,double *prior,BGZF* fpgz);
 
   double aConst;
   double aConst2;

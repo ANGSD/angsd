@@ -769,13 +769,11 @@ gzFile aio::openFileGz(const char* a,const char* b,const char *mode){
 }
 
 
-BGZF *aio::openFileBG(const char* a,const char* b,const char *mode){
-  if(0)
-    fprintf(stderr,"[%s] %s%s\n",__FUNCTION__,a,b);
+BGZF *aio::openFileBG(const char* a,const char* b){
+
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
   strncat(c,b,strlen(b));
-  //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   dumpedFiles.push_back(strdup(c));
   BGZF *fp = bgzf_open(c,GZOPT);
   delete [] c;

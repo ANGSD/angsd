@@ -100,7 +100,7 @@ namespace aio{
   gzFile openFileGz(const char* a,const char* b,const char *mode);
   FILE *getFILE(const char*fname,const char* mode);
   gzFile getGz(const char*fname,const char* mode);
-  BGZF *openFileBG(const char* a,const char* b,const char *mode);
+  BGZF *openFileBG(const char* a,const char* b);
 }
 
 int isNewer(const char *newer,const char *older);
