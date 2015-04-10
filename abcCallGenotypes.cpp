@@ -49,7 +49,7 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
   if(doGeno==0)
     return;
   if(doGeno==1)
-    fprintf(stderr,"\n-> Your choice of -doGeno will not printout called genotypes only chr pos major minor\n");
+    fprintf(stderr,"\n\t-> Your choice of -doGeno will not printout called genotypes only chr pos major minor\n");
     
   int doMaf,doPost;
   doMaf=doPost= 0;
