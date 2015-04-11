@@ -15,6 +15,7 @@ private:
   double geno_minMM;
   int geno_minDepth;
   int geno_maxDepth;
+  int minInd;
 public:
   abcCallGenotypes(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcCallGenotypes();

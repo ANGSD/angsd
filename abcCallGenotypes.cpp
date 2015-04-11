@@ -34,7 +34,8 @@ void abcCallGenotypes::printArg(FILE *argFile){
   fprintf(argFile,"\t-postCutoff=%f (Only genotype to missing if below this threshold)\n",postCutoff);
   fprintf(argFile,"\t-geno_minDepth=%d\t(-1 indicates no cutof)\n",geno_minDepth);
   fprintf(argFile,"\t-geno_maxDepth=%d\t(-1 indicates no cutof)\n",geno_maxDepth);
-  fprintf(argFile,"\t-geno_minMM=%f\t(-1 indicates no cutof)\n",geno_minMM);
+  fprintf(argFile,"\t-geno_minMM=%f\t(minimum fraction af major-minor bases)\n",geno_minMM);
+  fprintf(argFile,"\t-minInd=%d\t(only keep sites if you call genotypes from this number of individuals)\n",minInd);
   fprintf(argFile,"\n\tNB When writing the posterior the -postCutoff is not used\n");
   fprintf(argFile,"\tNB geno_minDepth requires -doCounts\n");
   fprintf(argFile,"\tNB geno_maxDepth requires -doCounts\n");
@@ -85,7 +86,7 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
     fprintf(stderr,"\n\t-> You need -doMaf inorder to get posterior probabilities when using freq as prior\n");
     exit(0);
   }
-
+  minInd=angsd::getArg("-minInd",minInd,arguments);
 
 }
 
@@ -96,6 +97,7 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
   geno_minMM = -1;
   geno_minDepth = -1;
   geno_maxDepth = -1;
+  minInd = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doGeno")){
       printArg(stdout);
@@ -132,6 +134,7 @@ void abcCallGenotypes::getGeno(funkyPars *pars){
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
       continue;
+    pars->keepSites[s] = 0;
     for( int i =0;i<pars->nInd;i++){
       double maxPP=pars->post[s][i*3+0];
       int maxGeno=0;
@@ -167,7 +170,11 @@ void abcCallGenotypes::getGeno(funkyPars *pars){
       }
 
       geno->dat[s][i]=maxGeno;
+      if(geno->dat[s][i]!=-1)
+	pars->keepSites[s]++;
     }
+    if(pars->keepSites[s]<minInd)
+      pars->keepSites[s] = 0;
   }
 }
 
