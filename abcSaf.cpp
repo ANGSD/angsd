@@ -154,7 +154,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   isHap =0;
   lbicoTab = NULL;
   myComb2Tab=NULL;
-  const char *SAF = ".saf";
+  const char *SAF = ".saf.gz";
   const char *SFSPOS =".saf.pos.gz";
   const char *THETAS =".thetas.gz";
   const char *GENO = ".saf.geno.gz";
@@ -210,6 +210,8 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     outfileGprobs = aio::openFileBG(outfiles,GENO);
   }else if(doSaf!=0&&doThetas==0){
     outfileSFS =  aio::openFileBG(outfiles,SAF);
+    char buf[8]="safv3";
+    bgzf_write(outfileSFS,buf,8);
     outfileSFSPOS =  aio::openFileBG(outfiles,SFSPOS);
   }else {
     theta_fp = aio::openFileBG(outfiles,THETAS);
