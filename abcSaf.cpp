@@ -214,6 +214,8 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     offs[0] = bgzf_tell(outfileSAFPOS);
     offs[1] = bgzf_tell(outfileSAF);
     nnnSites = 0;
+    size_t tt = newDim;
+    fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
   }else {
     theta_fp = aio::openFileBG(outfiles,THETAS);
     const char *hd= "#Chromo\tPos\tWatterson\tPairwise\tthetaSingleton\tthetaH\tthetaL\n";
@@ -1464,10 +1466,11 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
 
 void abcSaf::writeAll(){
   if(nnnSites!=0&&tmpChr!=NULL){
-    int clen = strlen(tmpChr);
-    fwrite(&clen,sizeof(int),1,outfileSAFIDX);
+    size_t clen = strlen(tmpChr);
+    fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);
     fwrite(tmpChr,1,clen,outfileSAFIDX);
-    fwrite(&nnnSites,sizeof(int),1,outfileSAFIDX);
+    size_t tt = nnnSites;
+    fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
     fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
   }
   //reset

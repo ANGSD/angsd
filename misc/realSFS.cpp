@@ -11,6 +11,8 @@
   
   Its july 13 2013, it is hot outside
 
+  april 13, safv3 added, safv2 removed for know. Will be reintroduced later.
+  
  */
 
 #include <cstdio>
@@ -52,11 +54,17 @@ typedef struct{
 
 typedef std::map<char*,datum,ltstr> myMap;
 
+typedef struct{
+  size_t nSites;
+  size_t nChr;
+  myMap mm;
+}perpop;
 
-void writemap(FILE *fp,const myMap &mm){
-  fprintf(fp,"\t\tInformation from index file:\n");
+void writePerPop(FILE *fp,perpop &pp){
+  fprintf(fp,"\t\tInformation from index file: nChr:%lu nSites:%lu\n",pp.nChr,pp.nSites);
+  
   int i=0;
-  for(myMap::const_iterator it=mm.begin();it!=mm.end();++it){
+  for(myMap::const_iterator it=pp.mm.begin();it!=pp.mm.end();++it){
     datum d = it->second;
     fprintf(fp,"\t\t%d\t%s\t%zu\t%ld\t%ld\n",i++,it->first,d.nSites,(long int)d.pos,(long int)d.saf);
   }
@@ -64,8 +72,9 @@ void writemap(FILE *fp,const myMap &mm){
 }
 
 
-myMap getMap(const char *fname){
-  myMap ret;
+perpop getMap(const char *fname){
+  perpop ret;
+    //  myMap ret;
   size_t clen;
   if(!fexists(fname)){
     fprintf(stderr,"Problem opening file: %s\n",fname);
@@ -74,8 +83,12 @@ myMap getMap(const char *fname){
   FILE *fp = fopen(fname,"r");
   char buf[8];
   fread(buf,1,8,fp);
-  fprintf(stderr,"magid:%s\n",buf);
-  
+  fprintf(stderr,"magic:%s\n",buf);
+  if(1!=fread(&ret.nChr,sizeof(size_t),1,fp)){
+    fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
+    exit(0);
+  }
+  ret.nSites =0;
   while(fread(&clen,sizeof(size_t),1,fp)){
     char *chr = new char[clen+1];
     assert(clen==fread(chr,1,clen,fp));
@@ -86,6 +99,7 @@ myMap getMap(const char *fname){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
       exit(0);
     }
+    ret.nSites += d.nSites;
     if(1!=fread(&d.pos,sizeof(int64_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
       exit(0);
@@ -95,9 +109,9 @@ myMap getMap(const char *fname){
       exit(0);
     }
   
-    myMap::iterator it = ret.find(chr);
-    if(it==ret.end())
-      ret[chr] =d ;
+    myMap::iterator it = ret.mm.find(chr);
+    if(it==ret.mm.end())
+      ret.mm[chr] =d ;
     else{
       fprintf(stderr,"Problem with chr: %s, key already exists\n",chr);
       exit(0);
@@ -157,7 +171,7 @@ int isNewFormat(const char *fname){
     return 1;
   else if(0==strcmp(buf,"safv3"))
     return 2;
-  if(0==strcmp(buf,"safv2"))
+  else 
     return 0;
 }
 
@@ -1249,11 +1263,8 @@ int print(int argc,char **argv){
   argv++;
   char *bname = *argv;
   fprintf(stderr,"bname:%s\n",bname);
-  char *ld = strchr(bname,'.');
-  if(ld==NULL){
-    fprintf(stderr,"you supplied: %s your file must end in saf.gz\n",bname);
-  }
-    
+  perpop pp = getMap(bname);
+  writePerPop(stderr,pp);
   return 0;
   fname1 = *(argv++);
   chr1 = atoi(*(argv++));
