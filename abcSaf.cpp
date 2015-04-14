@@ -14,10 +14,6 @@
 
 #define MINLIKE -1000.0 //this is for setting genotypelikelhoods to missing (EXPLAINED BELOW)
 
-/*
-  From 0.501 the realSFS method can take into account individual inbreeding coefficients
-  Filipe guera
-*/
 namespace filipe{
   void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim);
 }
@@ -43,17 +39,13 @@ double lbico(double n, double k){
 }
 
 double myComb2(int k,int r, int j){
-  //fprintf(stderr,"myComb\t%d\t%d\t%d\n",k,r,j);
-  //return 1.0;
-  //  return 1.0/bico(2*k,2);
   if(j>r)
     fprintf(stderr,"%s error in k=%d r=%d j=%d\n",__FUNCTION__,k,r,j);
-      //    return 0;
+
   double fac1= lbico(r,j)+lbico(2*k-r,2-j);
   double fac2=lbico(2*k,2);
-  //  fprintf(stderr,"[%s]=%f\t=%f\tres=%f\n",__FUNCTION__,fac1,fac2,fac1/fac2);
+  
   return exp(fac1-fac2);
-  //return fac1;
 }
 
 void abcSaf::getOptions(argStruct *arguments){
@@ -151,11 +143,13 @@ void abcSaf::getOptions(argStruct *arguments){
 }
 
 abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
+  tmpChr = NULL;
   isHap =0;
   lbicoTab = NULL;
   myComb2Tab=NULL;
   const char *SAF = ".saf.gz";
-  const char *SFSPOS =".saf.pos.gz";
+  const char *SAFPOS =".saf.pos.gz";
+  const char *SAFIDX =".saf.idx";
   const char *THETAS =".thetas.gz";
   const char *GENO = ".saf.geno.gz";
   //default
@@ -169,8 +163,9 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   prior = NULL;
   doSaf=0;
   doThetas = 0;
-  outfileSFS = NULL;
-  outfileSFSPOS = NULL;
+  outfileSAF = NULL;
+  outfileSAFPOS = NULL;
+  outfileSAFIDX = NULL;
   theta_fp = Z_NULL;
   outfileGprobs = NULL;
   scalings = NULL;
@@ -209,10 +204,16 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   if(doSaf==3){
     outfileGprobs = aio::openFileBG(outfiles,GENO);
   }else if(doSaf!=0&&doThetas==0){
-    outfileSFS =  aio::openFileBG(outfiles,SAF);
+    outfileSAF =  aio::openFileBG(outfiles,SAF);
+    outfileSAFPOS =  aio::openFileBG(outfiles,SAFPOS);
+    outfileSAFIDX = aio::openFile(outfiles,SAFIDX);
     char buf[8]="safv3";
-    bgzf_write(outfileSFS,buf,8);
-    outfileSFSPOS =  aio::openFileBG(outfiles,SFSPOS);
+    bgzf_write(outfileSAF,buf,8);
+    bgzf_write(outfileSAFPOS,buf,8);
+    fwrite(buf,1,8,outfileSAFIDX);
+    offs[0] = bgzf_tell(outfileSAFPOS);
+    offs[1] = bgzf_tell(outfileSAF);
+    nnnSites = 0;
   }else {
     theta_fp = aio::openFileBG(outfiles,THETAS);
     const char *hd= "#Chromo\tPos\tWatterson\tPairwise\tthetaSingleton\tthetaH\tthetaL\n";
@@ -252,10 +253,11 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
 
 
 abcSaf::~abcSaf(){
+  writeAll();
   if(pest) free(pest);
   if(prior) delete [] prior;
-  if(outfileSFS) bgzf_close(outfileSFS);;
-  if(outfileSFSPOS) bgzf_close(outfileSFSPOS);
+  if(outfileSAF) bgzf_close(outfileSAF);;
+  if(outfileSAFPOS) bgzf_close(outfileSAFPOS);
   if(theta_fp) bgzf_close(theta_fp);
   if(outfileGprobs)  bgzf_close(outfileGprobs);
   if(lbicoTab) delete [] lbicoTab;
@@ -918,7 +920,7 @@ void print_array(FILE *fp,double *ary,int len,int doLogTransform){
 void abcSaf::run(funkyPars  *p){
   if(p->numSites==0||(doSaf==0 ))
     return;
-  //  fprintf(stderr,"-doSaf:%d -p->nind:%d\n",doSaf,p->nInd);exit(0);
+  //  fprintf(stderr,"-doSaf:%d -p->nind:%d\n",doSaf,p->nInd);
   if(doSaf>0&&doSaf!=3){
     realRes *r = new realRes;
     r->oklist=new char[p->numSites];
@@ -968,25 +970,25 @@ void abcSaf::clean(funkyPars *p){
 
 
 
-void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char *chr,int newDim){
+void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char *chr,int newDim,int &nnnSites){
 
   realRes *r=(realRes *) p->extras[index];
   int id=0;
   
   for(int s=0; s<p->numSites;s++){
-    if(r->oklist[s]==1)
+    if(r->oklist[s]==1){
+      nnnSites++;
       bgzf_write(outfileSFS,r->pLikes[id++],sizeof(double)*newDim);
+    }
   }
   
-  kstring_t kbuf;kbuf.s=NULL;kbuf.l=kbuf.m=0;
-  for(int i=0;i<p->numSites;i++)
+  for(int i=0;i<p->numSites;i++){
+    int mypos = p->posi[i]+1;
     if(r->oklist[i]==1)
-      ksprintf(&kbuf,"%s\t%d\n",chr,p->posi[i]+1);
+      bgzf_write(outfileSFSPOS,&mypos,sizeof(int));
     else if (r->oklist[i]==2)
       fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
-  
-  bgzf_write(outfileSFSPOS,kbuf.s,kbuf.l);
-  free(kbuf.s);
+  }
   
 }
 
@@ -1050,6 +1052,7 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,BGZF *fpgz){
 void abcSaf::print(funkyPars *p){
   if(p->numSites==0||(doSaf==0))
     return;
+  
   //  fprintf(stderr,"newDim:%d doSaf:%d\n",newDim,doSaf);
   if(doSaf==3){
     kstring_t *buf =(kstring_t *) p->extras[index];
@@ -1082,9 +1085,9 @@ void abcSaf::print(funkyPars *p){
  
     if(doThetas==0){
       if(isHap==0)
-	printFull(p,index,outfileSFS,outfileSFSPOS,header->target_name[p->refId],newDim);
+	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
       else
-	printFull(p,index,outfileSFS,outfileSFSPOS,header->target_name[p->refId],(newDim-1)/2+1);
+	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],(newDim-1)/2+1,nnnSites);
       }
     else 
       calcThetas(p,index,prior,theta_fp);
@@ -1459,3 +1462,23 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
   
 }
 
+void abcSaf::writeAll(){
+  if(nnnSites!=0&&tmpChr!=NULL){
+    int clen = strlen(tmpChr);
+    fwrite(&clen,sizeof(int),1,outfileSAFIDX);
+    fwrite(tmpChr,1,clen,outfileSAFIDX);
+    fwrite(&nnnSites,sizeof(int),1,outfileSAFIDX);
+    fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
+  }
+  //reset
+  offs[0] = bgzf_tell(outfileSAFPOS);
+  offs[1] = bgzf_tell(outfileSAF);
+  nnnSites=0;
+}
+
+void abcSaf::changeChr(int refId) {
+  //  fprintf(stderr,"changing chr:%d \n",refId);
+  writeAll();
+  free(tmpChr);
+  tmpChr = strdup(header->target_name[refId]);
+}

@@ -27,6 +27,7 @@
 #include "abcFilter.h"
 #include "abcSmartCounts.h"
 #include "abcWriteFasta.h"
+#include "abcSaf.h"
 //class to keep track of chunk order when dumping results
 #include "printRes.h"
 #include "mUpPile.h"
@@ -263,6 +264,7 @@ void changeChr(int refId){
   ((abcFilter *)allMethods[0])->readSites(refId);
   ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
+  ((abcSaf *)allMethods[11])->changeChr(refId);//used when changing chr;
 #ifdef __WITH_POOL__
   void flush_queue();
   flush_queue();
@@ -271,7 +273,7 @@ void changeChr(int refId){
 
 
 void waiter(int refId){
-  //  fprintf(stderr,"_%s_\n",__FUNCTION__);fflush(stderr);
+  //fprintf(stderr,"_%s_\n",__FUNCTION__);fflush(stderr);
 
   //change of chr detected wait untill all threads are done
   if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT)
