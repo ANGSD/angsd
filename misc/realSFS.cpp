@@ -14,7 +14,6 @@
  */
 
 #include <cstdio>
-#include <zlib.h>
 #include <vector>
 #include <cstdlib>
 #include <cstring>
@@ -24,7 +23,8 @@
 #include <signal.h>
 #include <cassert>
 #include <pthread.h>
-
+#include <htslib/bgzf.h>
+#include <map>
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -32,15 +32,89 @@
 
 #include "bfgs.h"
 #include "realSFS.h"
-#include "realSFS_saf2.cpp"
+
 #define LENS 4096
+
+
+struct ltstr
+{
+  bool operator()(const char* s1, const char* s2) const
+  {
+    return strcmp(s1, s2) < 0;
+  }
+};
+
+typedef struct{
+  size_t nSites;
+  int64_t pos;
+  int64_t saf;
+}datum;
+
+typedef std::map<char*,datum,ltstr> myMap;
+
+
+void writemap(FILE *fp,const myMap &mm){
+  fprintf(fp,"\t\tInformation from index file:\n");
+  int i=0;
+  for(myMap::const_iterator it=mm.begin();it!=mm.end();++it){
+    datum d = it->second;
+    fprintf(fp,"\t\t%d\t%s\t%zu\t%ld\t%ld\n",i++,it->first,d.nSites,(long int)d.pos,(long int)d.saf);
+  }
+
+}
+
+
+myMap getMap(const char *fname){
+  myMap ret;
+  size_t clen;
+  if(!fexists(fname)){
+    fprintf(stderr,"Problem opening file: %s\n",fname);
+    exit(0);
+  }
+  FILE *fp = fopen(fname,"r");
+  char buf[8];
+  fread(buf,1,8,fp);
+  fprintf(stderr,"magid:%s\n",buf);
+  
+  while(fread(&clen,sizeof(size_t),1,fp)){
+    char *chr = new char[clen+1];
+    assert(clen==fread(chr,1,clen,fp));
+    chr[clen] = '\0';
+    
+    datum d;
+    if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){
+      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
+      exit(0);
+    }
+    if(1!=fread(&d.pos,sizeof(int64_t),1,fp)){
+      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
+      exit(0);
+    }
+    if(1!=fread(&d.saf,sizeof(int64_t),1,fp)){
+      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
+      exit(0);
+    }
+  
+    myMap::iterator it = ret.find(chr);
+    if(it==ret.end())
+      ret[chr] =d ;
+    else{
+      fprintf(stderr,"Problem with chr: %s, key already exists\n",chr);
+      exit(0);
+    }
+  }
+
+  return ret;
+}
+
+
 
 const char*fname1 = NULL;
 const char*fname2 = NULL;//only used for 2dsfs
-const char*fname3 = NULL;//only used for 3dsfs
+
 int chr1=0;
 int chr2=0; //only used for 2dsfs
-int chr3=0; //only used for 2dsfs
+
 
 int dim =0; //will be (chr1+1)*(chr2+1); for the 2dsfs nChr1+1 for the 1dsfs
 
@@ -56,6 +130,37 @@ int calcLike =0;//if a sfs input file has been supplied, should we just print th
 int noGrad = 0;//should we use gradients for the bfgs.
 int isList = 0;
 pthread_t *thd=NULL;
+char *chooseChr = NULL;
+
+/*
+  loads first 8bytes and checks magic value
+
+  //return 0 if it is old format
+  //returns 1 if safv2
+  //returns 2 if safv3
+
+ */
+
+int isNewFormat(const char *fname){
+  gzFile gz=Z_NULL;
+  gz = gzopen(fname,"r");
+  if(gz==Z_NULL){
+    fprintf(stderr,"Problem opening file: \'%s\'",fname);
+    exit(0);
+  }
+  char buf[8];
+  gzread(gz,buf,8*sizeof(char));
+  //if(0==strcmp(buf,"safv2"))
+  //  fprintf(stderr,"File is new format... Opening string is: %s\n",buf);
+  gzclose(gz);
+  if(0==strcmp(buf,"safv2"))
+    return 1;
+  else if(0==strcmp(buf,"safv3"))
+    return 2;
+  if(0==strcmp(buf,"safv2"))
+    return 0;
+}
+
 
 
 
@@ -344,6 +449,8 @@ void getArgs(int argc,char **argv){
       noGrad = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-isList"))
       isList = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-r"))
+      chooseChr = strdup(*(++argv));
     
     
     else  if(!strcasecmp(*argv,"-start")){
@@ -1041,117 +1148,6 @@ int main_2dsfs(int argc,char **argv){
 }
 
 
-int main_3dsfs(int argc,char **argv){
-  if(argc==1){
-    fprintf(stderr,"./emOptim2 2dsfs pop1 pop2 nChr1 nChr2 [-start FNAME -P nThreds -tole tole -maxIter ] (only works if the two saf files covers the same region)\n");
-    return 0;
-  }
-  argv++;
-  argc--;
-  fname1 = *(argv++);
-  fname2 = *(argv++);
-  fname3 = *(argv++);
-  argc -=3;
-  chr1 = atoi(*(argv++));
-  chr2 = atoi(*(argv++));
-  chr3 = atoi(*(argv++));
-  argc -=3;
-  getArgs(argc,argv);
-  if(nSites==0){
-    if(fsize(fname1)+fsize(fname2)+fsize(fname3)>getTotalSystemMemory())
-      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
-    //this doesnt make sense if ppl supply a filelist containing safs
-     nSites=calcNsites(fname1,chr1);
-  }
-  fprintf(stderr,"fname1:%sfname2:%sfname3:%s chr1:%d chr2:%d chr3:%d startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",fname1,fname2,fname3,chr1,chr2,chr3,sfsfname,nThreads,tole,maxIter,nSites);
-  float bytes_req_megs = nSites*(sizeof(double)*(chr1+1) + sizeof(double)*(chr2+1)+sizeof(double)*(chr3+1)+2*sizeof(double*))/1024/1024;
-  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
-  //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-  fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
-  
-#if 0
-  //read in positions, not used, YET...
-  std::vector<int> p1 = getPosi(fname1);
-  std::vector<int> p2 = getPosi(fname2);
-  fprintf(stderr,"nSites in pop1: %zu nSites in pop2: %zu\n",p1.size(),p2.size());
-#endif
-
-  if(nSites==0){
-    if((calcNsites(fname1,chr1)!=calcNsites(fname2,chr2))||((calcNsites(fname1,chr1)!=calcNsites(fname3,chr2)))){
-      fprintf(stderr,"Problem with number of sites in file: %s and %s and %s\n",fname1,fname2,fname3);
-      exit(0);
-    }
-    nSites=calcNsites(fname1,chr1);
-  }
-  gzFile gz1=getGz(fname1);
-  gzFile gz2=getGz(fname2);
-  gzFile gz3=getGz(fname3);
-  
-  dim=(chr1+1)*(chr2+1)*(chr3+1);
-  
-  Matrix<double> GL1=alloc(nSites,chr1+1);
-  Matrix<double> GL2=alloc(nSites,chr2+1);
-  Matrix<double> GL3=alloc(nSites,chr3+1);
-  dim=GL1.y*GL2.y*GL3.y;
-  
-  double *sfs = new double[dim];
-  while(1){
-    if(isList ==0){
-      readGL(gz1,nSites,chr1,GL1);
-      readGL(gz2,nSites,chr2,GL2);
-      readGL(gz3,nSites,chr3,GL3);
-    }else{
-      readGL2(gz1,nSites,chr1,GL1);
-      readGL2(gz2,nSites,chr2,GL2);
-      readGL2(gz3,nSites,chr3,GL3);
-    }
-      
-    assert(GL1.x==GL2.x);
-    assert(GL1.x==GL3.x);
-    if(GL1.x==0)
-      break;
-    
-    if(sfsfname!=NULL){
-      readSFS(sfsfname,dim,sfs);
-    }else{
-      for(int i=0;i<dim;i++)
-	sfs[i] = (i+1)/((double)dim);
-      normalize(sfs,dim);
-    }
-    
-    setThreadPars(&GL1,&GL2,&GL3,sfs,nThreads);
-    if(calcLike==0){
-      if(SIG_COND) 
-	em3(sfs,&GL1,&GL2,&GL3,tole,maxIter);
-    }
-    double lik;
-    if(nThreads>1)
-      lik = lik1_master();
-    else
-      lik = lik1(sfs,&GL1,0,GL1.x);
-      
-    fprintf(stderr,"likelihood: %f\n",lik);
-#if 1
-    int inc=0;
-    for(int x=0;x<chr1+1;x++){
-      for(int y=0;y<chr2+1;y++)
-	fprintf(stdout,"%f ",log(sfs[inc++]));
-      fprintf(stdout,"\n");
-    }
-#endif
-    if(isList==1)
-      break;
-  }
-  dalloc(GL1,nSites);
-  dalloc(GL2,nSites);
-  dalloc(GL3,nSites);
-  gzclose(gz1);
-  gzclose(gz2);
-  gzclose(gz3);
-  return 0;
-}
-
-
 
 
 int main_1dsfs(int argc,char **argv){
@@ -1165,9 +1161,105 @@ int main_1dsfs(int argc,char **argv){
  
   getArgs(argc,argv);
   dim=chr1+1;
-  //hook for new EJ banded version
-  if(isNewFormat(fname1))
-    return main_1dsfs_v2(fname1,chr1,nSites,nThreads,sfsfname,tole,maxIter);
+
+  if(nSites==0){//if no -nSites is specified
+    if(fsize(fname1)>getTotalSystemMemory())
+      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
+    //this doesnt make sense if ppl supply a filelist containing safs
+    nSites=calcNsites(fname1,chr1);
+  }
+  fprintf(stderr,"fname1:%s nChr:%d startsfs:%s nThreads:%d tole=%f maxIter=%d nSites=%lu\n",fname1,chr1,sfsfname,nThreads,tole,maxIter,nSites);
+  float bytes_req_megs = nSites*(sizeof(double)*(chr1+1)+sizeof(double*))/1024/1024;
+  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
+  //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
+  fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+
+  
+
+  Matrix<double> GL1=alloc(nSites,dim);
+  gzFile gz1=getGz(fname1);  
+  double *sfs=new double[dim];
+  
+  while(1) {
+    if(isList==0)
+      readGL(gz1,nSites,chr1,GL1);
+    else
+      readGL2(gz1,nSites,chr1,GL1);
+    if(GL1.x==0)
+      break;
+    fprintf(stderr,"dim(GL1)=%zu,%zu\n",GL1.x,GL1.y);
+   
+    
+  
+    if(sfsfname!=NULL){
+      readSFS(sfsfname,dim,sfs);
+    }else{
+      
+      for(int i=0;i<dim;i++)
+	sfs[i] = (i+1)/((double)dim);
+      if(doBFGS){
+	double ts=1;
+	for(int i=0;i<dim-1;i++)
+	  ts += 0.01/(1.0+i);
+	sfs[0]=1.0/ts;
+	for(int i=0;i<dim-1;i++)
+	  sfs[i+1]  = (0.01/(1.0+i))/ts;
+      }
+      normalize(sfs,dim);
+    }
+    //  em2_smart(sfs2,pops,1e-6,1e3);
+    setThreadPars(&GL1,NULL,sfs,nThreads);
+    if(calcLike==0){
+      if(doBFGS==0) 
+	em1(sfs,&GL1,tole,maxIter);
+      else
+	bfgs(sfs,&GL1);
+    }
+    double lik;
+    if(nThreads>1)
+      lik = lik1_master();
+    else
+      lik = lik1(sfs,&GL1,0,GL1.x);
+      
+    fprintf(stderr,"likelihood: %f\n",lik);
+#if 1
+    for(int x=0;x<dim;x++)
+      fprintf(stdout,"%f ",log(sfs[x]));
+    fprintf(stdout,"\n");
+    fflush(stdout);
+#endif
+    if(isList==1)
+      break;
+  }
+  dalloc(GL1,nSites);
+  gzclose(gz1);
+  delete [] sfs;
+  return 0;
+}
+
+
+
+
+int print(int argc,char **argv){
+
+  if(argc<2){
+    fprintf(stderr,"Must supply afile.saf.gz and number of chromosomes\n");
+    return 0;
+  }
+  argv++;
+  char *bname = *argv;
+  fprintf(stderr,"bname:%s\n",bname);
+  char *ld = strchr(bname,'.');
+  if(ld==NULL){
+    fprintf(stderr,"you supplied: %s your file must end in saf.gz\n",bname);
+  }
+    
+  return 0;
+  fname1 = *(argv++);
+  chr1 = atoi(*(argv++));
+  argc-=2;
+ 
+  dim=chr1+1;
 
   if(nSites==0){//if no -nSites is specified
     if(fsize(fname1)>getTotalSystemMemory())
@@ -1259,8 +1351,9 @@ int main(int argc,char **argv){
   sigaction(SIGINT, &sa, 0);  
 
   if(argc==1){
-    fprintf(stderr,"./emOptim2 afile.sfs nChr [-start FNAME -P nThreads -tole tole -maxIter  -nSites ]\n");
-    fprintf(stderr,"nChr is the number of chromosomes. (twice the number of diploid invididuals)\n");
+    fprintf(stderr,"\n./realSFS afile.saf nChr [-start FNAME -P nThreads -tole tole -maxIter  -nSites ]\n");
+    fprintf(stderr,"OR\n ./realSFS 2dsfs pop1.saf pop2.saf nchrPop1 nChrPop2 [-start FNAME -P nThreads -tole tole -maxIter  -nSites ]\n");
+    fprintf(stderr,"\nnChr is the number of chromosomes. (twice the number of diploid invididuals)\n");    
     return 0;
   }
   ++argv;
@@ -1268,7 +1361,7 @@ int main(int argc,char **argv){
 
   if(isatty(fileno(stdout))){
     fprintf(stderr,"\t-> You are printing the optimized SFS to the terminal consider dumping into a file\n");
-    fprintf(stderr,"\t-> E.g.: \'./emOptim2");
+    fprintf(stderr,"\t-> E.g.: \'./realSFS");
     for(int i=0;i<argc;i++)
       fprintf(stderr," %s",argv[i]);
     fprintf(stderr," >sfs.ml.txt\'\n");   
@@ -1277,8 +1370,8 @@ int main(int argc,char **argv){
 
   if(!strcasecmp(*argv,"2dsfs"))
     main_2dsfs(argc,argv);
-  else if(!strcasecmp(*argv,"3dsfs"))
-    main_3dsfs(argc,argv);
+  if(!strcasecmp(*argv,"print"))
+    print(argc,argv);
   else
     main_1dsfs(argc,argv);
   
