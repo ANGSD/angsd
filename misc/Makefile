@@ -31,14 +31,14 @@ contamination: contamination.cpp kmath.o
 splitgl: splitgl.c
 	$(CC) $(FLAGS) splitgl.c -lz -o splitgl
 
-realSFS: realSFS.cpp realSFS_saf2.cpp
-	$(CXX) $(FLAGS) realSFS.cpp bfgs.cpp -o realSFS -lz -lpthread -Wno-write-strings
+realSFS: realSFS.cpp 
+	$(CXX) $(FLAGS) realSFS.cpp bfgs.cpp -o realSFS -lz -lpthread -Wno-write-strings -I $(HTSDIR)
 	cp realSFS emOptim2
 smartCount:	smartCount.c  
 	$(CC) $(FLAGS) smartCount.c -I$(HTSDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTSLIB)
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTSDIR)/htslib  -lz -o thetaStat -lpthread $(HTSLIB)
+	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTSDIR)  -lz -o thetaStat -lpthread $(HTSLIB)
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm
 

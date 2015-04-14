@@ -4,8 +4,8 @@
 #include <map>
 #include <zlib.h>
 #include <sys/stat.h>
-#include "../htslib/bgzf.h"
-#include "kstring.h"
+#include <htslib/bgzf.h>
+#include <htslib/kstring.h>
 #include "stats.cpp"
 #include <cassert>
 
