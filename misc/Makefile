@@ -38,7 +38,7 @@ smartCount:	smartCount.c
 	$(CC) $(FLAGS) smartCount.c -I$(HTSDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTSLIB)
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTSDIR)/htslib  -lz -o thetaStat -lpthread $(HTSLIB)
+	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTSDIR)  -lz -o thetaStat -lpthread $(HTSLIB)
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm
 
