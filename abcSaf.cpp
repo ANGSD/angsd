@@ -7,7 +7,7 @@
 #include "abcFreq.h"
 #include "shared.h"
 #include "analysisFunction.h"
-
+#include <pthread.h>
 #include "abc.h"
 
 #include "abcSaf.h"
@@ -969,21 +969,17 @@ void abcSaf::clean(funkyPars *p){
 }
 
 
-
-
-
 void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char *chr,int newDim,int &nnnSites){
-
   realRes *r=(realRes *) p->extras[index];
   int id=0;
   
   for(int s=0; s<p->numSites;s++){
     if(r->oklist[s]==1){
       nnnSites++;
-      bgzf_write(outfileSFS,r->pLikes[id++],sizeof(double)*newDim);
+      bgzf_write(outfileSFS,r->pLikes[id++],sizeof(float)*newDim);
     }
   }
-  
+
   for(int i=0;i<p->numSites;i++){
     int mypos = p->posi[i]+1;
     if(r->oklist[i]==1)
@@ -991,7 +987,7 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
     else if (r->oklist[i]==2)
       fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
   }
-  
+
 }
 
 
