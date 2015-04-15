@@ -32,7 +32,7 @@ splitgl: splitgl.c
 	$(CC) $(FLAGS) splitgl.c -lz -o splitgl
 
 realSFS: realSFS.cpp 
-	$(CXX) $(FLAGS) realSFS.cpp bfgs.cpp -o realSFS -lz -lpthread -Wno-write-strings -I $(HTSDIR)
+	$(CXX) $(FLAGS) realSFS.cpp bfgs.cpp -o realSFS -lz -lpthread -Wno-write-strings -I $(HTSDIR) $(HTSLIB)
 	cp realSFS emOptim2
 smartCount:	smartCount.c  
 	$(CC) $(FLAGS) smartCount.c -I$(HTSDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTSLIB)
