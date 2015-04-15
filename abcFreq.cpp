@@ -243,7 +243,7 @@ void abcFreq::getOptions(argStruct *arguments){
 
 //constructor
 abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
-  chisq1=chisq3=NULL;
+  chisq1=chisq2=chisq3=NULL;
   inputIsBeagle =0;
   beagleProb = 0; //<-output for beagleprobs
   minMaf =-1.0;
