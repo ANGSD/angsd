@@ -169,6 +169,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   theta_fp = Z_NULL;
   outfileGprobs = NULL;
   scalings = NULL;
+  nnnSites = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSaf")){
       printArg(stdout);
@@ -213,7 +214,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     fwrite(buf,1,8,outfileSAFIDX);
     offs[0] = bgzf_tell(outfileSAFPOS);
     offs[1] = bgzf_tell(outfileSAF);
-    nnnSites = 0;
+
     size_t tt = newDim-1;
     fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
   }else {
@@ -255,7 +256,8 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
 
 
 abcSaf::~abcSaf(){
-  writeAll();
+  if(doSaf)
+    writeAll();
   if(pest) free(pest);
   if(prior) delete [] prior;
   if(outfileSAF) bgzf_close(outfileSAF);;
@@ -704,7 +706,7 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
 
 
 void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans) {
-  // fprintf(stderr,"[%s]\n",__FUNCTION__);
+  fprintf(stderr,"[%s]\n",__FUNCTION__);
   int myCounter =0;
   if(anc==NULL||liks==NULL){
     fprintf(stderr,"problems receiving data in [%s] will exit (likes=%p||ancestral=%p)\n",__FUNCTION__,liks,anc);
@@ -714,11 +716,13 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
 
   for(int it=0; it<nsites; it++) {//loop over sites
     int major_offset = anc[it];
+    fprintf(stderr,"anc[it]:%d\n",anc[it]);
     if(major_offset==4||(keepSites[it]==0)){//skip of no ancestral information
       keepSites[it] =0; //
       //      r->oklist is zero no need to update
       continue;
     }
+    fprintf(stderr,"hello im here\n");
     //set the resultarray to zeros
     for(int sm=0 ; sm<(2*numInds+1) ; sm++ )
       sumMinors[sm] = 0;
@@ -881,6 +885,7 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
       for(int i=0;i<2*numInds+1;i++)
 	sumMinors[i] = log(sumMinors[i]);
       angsd::logrescale(sumMinors,2*numInds+1);
+      //      fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
       if(std::isnan(sumMinors[0]))
 	r->oklist[it] = 2;
       else{
@@ -972,8 +977,9 @@ void abcSaf::clean(funkyPars *p){
 void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char *chr,int newDim,int &nnnSites){
   realRes *r=(realRes *) p->extras[index];
   int id=0;
-  
+  fprintf(stderr,"hejsa'n numsites:%d\n",p->numSites);
   for(int s=0; s<p->numSites;s++){
+    fprintf(stderr,"keep[%d]= %d\n",s,r->oklist[s]);
     if(r->oklist[s]==1){
       nnnSites++;
       bgzf_write(outfileSFS,r->pLikes[id++],sizeof(float)*newDim);
@@ -1469,8 +1475,8 @@ void abcSaf::writeAll(){
     size_t tt = nnnSites;
     fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
     fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
-  }else
-    fprintf(stderr,"enpty chr\n");
+  }//else
+   // fprintf(stderr,"enpty chr\n");
   //reset
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
@@ -1478,8 +1484,9 @@ void abcSaf::writeAll(){
 }
 
 void abcSaf::changeChr(int refId) {
-  //  fprintf(stderr,"changing chr:%d \n",refId);
-  writeAll();
-  free(tmpChr);
-  tmpChr = strdup(header->target_name[refId]);
+  if(doSaf){
+    writeAll();
+    free(tmpChr);
+    tmpChr = strdup(header->target_name[refId]);
+  }
 }
