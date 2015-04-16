@@ -943,17 +943,6 @@ Matrix<double>  merge(Matrix<double> &pop1,Matrix<double> &pop2){
   return ret;
 }
 
-void print(Matrix<double> &mat,FILE *fp){
-  for(int x=0;x<mat.x;x++){
-    //    fprintf(stderr,"x=%d\n",x);
-    for(int y=0;y<mat.y;y++)
-      fprintf(fp,"%f ",mat.mat[x][y]);
-    fprintf(fp,"\n");
-  }
-  
-
-}
-
 
 int main_2dsfs(int argc,char **argv){
   if(argc==1){
@@ -1127,62 +1116,24 @@ int print(int argc,char **argv){
   fprintf(stderr,"bname:%s\n",bname);
   perpop pp = getMap(bname);
   writePerPop(stderr,pp);
-  return 0;
   
-
-  Matrix<float> GL1=alloc(nSites,dim);
-  double *sfs=new double[dim];
-  
-  while(1) {
-    readGL(pp.saf,nSites,chr1,GL1);
-    
-    if(GL1.x==0)
-      break;
-    fprintf(stderr,"dim(GL1)=%zu,%zu\n",GL1.x,GL1.y);
-   
-    
-  
-    if(sfsfname!=NULL){
-      readSFS(sfsfname,dim,sfs);
-    }else{
-      
-      for(int i=0;i<dim;i++)
-	sfs[i] = (i+1)/((double)dim);
-      if(doBFGS){
-	double ts=1;
-	for(int i=0;i<dim-1;i++)
-	  ts += 0.01/(1.0+i);
-	sfs[0]=1.0/ts;
-	for(int i=0;i<dim-1;i++)
-	  sfs[i+1]  = (0.01/(1.0+i))/ts;
-      }
-      normalize(sfs,dim);
+  float *flt = new float[pp.nChr+1];
+  for(myMap::iterator it=pp.mm.begin();it!=pp.mm.end();++it){
+    bgzf_seek(pp.pos,it->second.pos,SEEK_SET);
+    bgzf_seek(pp.saf,it->second.saf,SEEK_SET);
+    int *ppos = new int[it->second.nSites];
+    bgzf_read(pp.pos,ppos,sizeof(int)*it->second.nSites);
+    for(int s=0;s<it->second.nSites;s++){
+      bgzf_read(pp.saf,flt,sizeof(float)*pp.nChr+1);
+      fprintf(stdout,"%s\t%d",it->first,ppos[s]);
+      for(int is=0;is<pp.nChr+1;is++)
+	fprintf(stdout,"\t%f",flt[is]);
+      fprintf(stdout,"\n");
     }
-    //  em2_smart(sfs2,pops,1e-6,1e3);
-    setThreadPars(&GL1,NULL,sfs,nThreads);
-    if(calcLike==0){
-      if(doBFGS==0) 
-	em1(sfs,&GL1,tole,maxIter);
-      else
-	bfgs(sfs,&GL1);
-    }
-    double lik;
-    if(nThreads>1)
-      lik = lik1_master();
-    else
-      lik = lik1(sfs,&GL1,0,GL1.x);
-      
-    fprintf(stderr,"likelihood: %f\n",lik);
-#if 1
-    for(int x=0;x<dim;x++)
-      fprintf(stdout,"%f ",log(sfs[x]));
-    fprintf(stdout,"\n");
-    fflush(stdout);
-#endif
-   
+    delete [] ppos;
   }
-  dalloc(GL1,nSites);
-  delete [] sfs;
+  
+  delete [] flt;
   dalloc(pp);
   return 0;
 }

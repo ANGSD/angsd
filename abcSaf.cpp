@@ -214,7 +214,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     offs[0] = bgzf_tell(outfileSAFPOS);
     offs[1] = bgzf_tell(outfileSAF);
     nnnSites = 0;
-    size_t tt = newDim;
+    size_t tt = newDim-1;
     fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
   }else {
     theta_fp = aio::openFileBG(outfiles,THETAS);
@@ -987,7 +987,7 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
     else if (r->oklist[i]==2)
       fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
   }
-
+  //fprintf(stderr,"asdf: nnnSites:%d\n",nnnSites);
 }
 
 
@@ -1461,6 +1461,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
 }
 
 void abcSaf::writeAll(){
+  fprintf(stderr,"nnnSites:%d\n",nnnSites);
   if(nnnSites!=0&&tmpChr!=NULL){
     size_t clen = strlen(tmpChr);
     fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);
@@ -1468,7 +1469,8 @@ void abcSaf::writeAll(){
     size_t tt = nnnSites;
     fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
     fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
-  }
+  }else
+    fprintf(stderr,"enpty chr\n");
   //reset
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
