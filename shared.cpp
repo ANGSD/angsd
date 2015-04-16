@@ -155,7 +155,11 @@ void collapse(funkyPars *p){
   p->chk = chk;
   p->posi = new int[chk->nSites];
   for(int i=0;i<chk->nSites;i++)
-    p->posi[i] = chk->nd[i][0]->refPos;
+    for(int j=0;j<chk->nSamples;j++)
+      if(chk->nd[i][j]!=NULL){
+	p->posi[i] = chk->nd[i][j]->refPos;
+	break;
+      }
     
   //chk->refPos=NULL;
   p->refId = chk->refId;//thiss will be new approach
