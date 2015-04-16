@@ -148,14 +148,16 @@ void collapse(funkyPars *p){
 	chk->nd[at++] = chk->nd[i];
       else
 	cleanUptNodeArray(chk->nd[i],chk->nSamples);
-	
     }
     chk->nSites = at;
   }
   //now chk contains the merged data
   p->chk = chk;
-  p->posi = chk->refPos;//<-will be new approach
-  chk->refPos=NULL;
+  p->posi = new int[chk->nSites];
+  for(int i=0;i<chk->nSites;i++)
+    p->posi[i] = chk->nd[i][0]->refPos;
+    
+  //chk->refPos=NULL;
   p->refId = chk->refId;//thiss will be new approach
   p->numSites=chk->nSites;
   
