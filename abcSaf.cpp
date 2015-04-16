@@ -706,7 +706,7 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
 
 
 void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans) {
-  fprintf(stderr,"[%s]\n",__FUNCTION__);
+  //  fprintf(stderr,"[%s]\n",__FUNCTION__);
   int myCounter =0;
   if(anc==NULL||liks==NULL){
     fprintf(stderr,"problems receiving data in [%s] will exit (likes=%p||ancestral=%p)\n",__FUNCTION__,liks,anc);
@@ -716,13 +716,13 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
 
   for(int it=0; it<nsites; it++) {//loop over sites
     int major_offset = anc[it];
-    fprintf(stderr,"anc[it]:%d\n",anc[it]);
+    //fprintf(stderr,"anc[it]:%d\n",anc[it]);
     if(major_offset==4||(keepSites[it]==0)){//skip of no ancestral information
       keepSites[it] =0; //
       //      r->oklist is zero no need to update
       continue;
     }
-    fprintf(stderr,"hello im here\n");
+    //    fprintf(stderr,"hello im here\n");
     //set the resultarray to zeros
     for(int sm=0 ; sm<(2*numInds+1) ; sm++ )
       sumMinors[sm] = 0;
@@ -885,14 +885,14 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
       for(int i=0;i<2*numInds+1;i++)
 	sumMinors[i] = log(sumMinors[i]);
       angsd::logrescale(sumMinors,2*numInds+1);
-      fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
+      //  fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
       if(std::isnan(sumMinors[0]))
 	r->oklist[it] = 2;
       else{
 	r->oklist[it] = 1;
 	r->pLikes[myCounter] =new float[2*numInds+1];
 	for(int iii=0;iii<2*numInds+1;iii++){
-	  fprintf(stderr,"iii:%f\n",sumMinors[iii]);
+	  //	  fprintf(stderr,"iii:%f\n",sumMinors[iii]);
 	  r->pLikes[myCounter][iii] = sumMinors[iii];
 	}
 	//	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
@@ -976,7 +976,7 @@ void abcSaf::clean(funkyPars *p){
 
 
 void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char *chr,int newDim,int &nnnSites){
-  fprintf(stderr,"newDim:%d\n",newDim);
+  //  fprintf(stderr,"newDim:%d\n",newDim);
   realRes *r=(realRes *) p->extras[index];
   int id=0;
   for(int s=0; s<p->numSites;s++){
@@ -1467,7 +1467,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
 }
 
 void abcSaf::writeAll(){
-  fprintf(stderr,"nnnSites:%d\n",nnnSites);
+  //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
   if(nnnSites!=0&&tmpChr!=NULL){
     size_t clen = strlen(tmpChr);
     fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);

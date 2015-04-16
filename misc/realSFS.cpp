@@ -63,10 +63,16 @@ typedef struct{
   size_t fsize;//contains an estimate of the uncompressed fsize
 }perpop;
 
+void dalloc(myMap &mm){
+  for(myMap::iterator it=mm.begin();it!=mm.end();++it)
+    free(it->first);
+  mm.clear();
+}
 
 void dalloc(perpop &pp){
   bgzf_close(pp.pos);
   bgzf_close(pp.saf);
+  dalloc(pp.mm);
 }
 
 
@@ -101,7 +107,7 @@ perpop getMap(const char *fname){
   }
   ret.nSites =0;
   while(fread(&clen,sizeof(size_t),1,fp)){
-    char *chr = new char[clen+1];
+    char *chr = (char*)malloc(clen+1);
     assert(clen==fread(chr,1,clen,fp));
     chr[clen] = '\0';
     
@@ -135,10 +141,10 @@ perpop getMap(const char *fname){
   
   char *tmp2 = (char*)calloc(strlen(fname)+100,1);//that should do it
   snprintf(tmp2,strlen(fname)+100,"%sgz",tmp);
-  fprintf(stderr,"tmp2:%s\n",tmp2);
+  fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
   ret.saf = bgzf_open(tmp2,"r");
   snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
-  fprintf(stderr,"tmp2:%s\n",tmp2);
+  fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
   ret.pos = bgzf_open(tmp2,"r");
   assert(ret.pos!=NULL&&ret.saf!=NULL);
   free(tmp);free(tmp2);
@@ -403,6 +409,7 @@ void readSFS(const char*fname,int hint,double *ret){
 
 
 void getArgs(int argc,char **argv){
+
   if(argc==0)
     return;
   if(argc%2){
@@ -410,7 +417,7 @@ void getArgs(int argc,char **argv){
     exit(0);
   }
   while(*argv){
-    //  fprintf(stderr,"%s\n",*argv);
+    fprintf(stderr,"%s\n",*argv);
     if(!strcasecmp(*argv,"-tole"))
       tole = atof(*(++argv));
     else  if(!strcasecmp(*argv,"-P"))
@@ -425,9 +432,9 @@ void getArgs(int argc,char **argv){
       calcLike = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-noGrad"))
       noGrad = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-r"))
+    else  if(!strcasecmp(*argv,"-r")){
       chooseChr = strdup(*(++argv));
-    
+    }
     
     else  if(!strcasecmp(*argv,"-start")){
       sfsfname = *(++argv);
@@ -1106,19 +1113,27 @@ int main_1dsfs(int argc,char **argv){
 
 
 int print(int argc,char **argv){
-
-  if(argc<2){
-    fprintf(stderr,"Must supply afile.saf.gz and number of chromosomes\n");
+  //  fprintf(stderr,"chooseChr:%s argc:%d argv:%s\n",chooseChr,argc,*argv);
+  if(argc<1){
+    fprintf(stderr,"Must supply afile.saf.gz [-r chr]\n");
     return 0;
   }
-  argv++;
+
   char *bname = *argv;
-  fprintf(stderr,"bname:%s\n",bname);
+  fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
+  getArgs(--argc,++argv);
   perpop pp = getMap(bname);
   writePerPop(stderr,pp);
   
   float *flt = new float[pp.nChr+1];
   for(myMap::iterator it=pp.mm.begin();it!=pp.mm.end();++it){
+    if(chooseChr!=NULL){
+      it = pp.mm.find(chooseChr);
+      if(it==pp.mm.end()){
+	fprintf(stderr,"Problem finding chr: %s\n",chooseChr);
+	break;
+      }
+    }
     bgzf_seek(pp.pos,it->second.pos,SEEK_SET);
     bgzf_seek(pp.saf,it->second.saf,SEEK_SET);
     int *ppos = new int[it->second.nSites];
@@ -1131,6 +1146,8 @@ int print(int argc,char **argv){
       fprintf(stdout,"\n");
     }
     delete [] ppos;
+    if(chooseChr!=NULL)
+      break;
   }
   
   delete [] flt;
@@ -1159,7 +1176,7 @@ int main(int argc,char **argv){
     return 0;
   }
   ++argv;
-  argc--;
+  --argc;
 
   if(isatty(fileno(stdout))){
     fprintf(stderr,"\t-> You are printing the optimized SFS to the terminal consider dumping into a file\n");
@@ -1173,12 +1190,12 @@ int main(int argc,char **argv){
   if(!strcasecmp(*argv,"2dsfs"))
     main_2dsfs(argc,argv);
   if(!strcasecmp(*argv,"print"))
-    print(argc,argv);
+    print(--argc,++argv);
   else
     main_1dsfs(argc,argv);
   
 
 
-
+  free(chooseChr);
   return 0;
 }
