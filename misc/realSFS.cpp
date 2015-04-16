@@ -1124,7 +1124,7 @@ int print(int argc,char **argv){
     int *ppos = new int[it->second.nSites];
     bgzf_read(pp.pos,ppos,sizeof(int)*it->second.nSites);
     for(int s=0;s<it->second.nSites;s++){
-      bgzf_read(pp.saf,flt,sizeof(float)*pp.nChr+1);
+      bgzf_read(pp.saf,flt,sizeof(float)*(pp.nChr+1));
       fprintf(stdout,"%s\t%d",it->first,ppos[s]);
       for(int is=0;is<pp.nChr+1;is++)
 	fprintf(stdout,"\t%f",flt[is]);

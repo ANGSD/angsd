@@ -885,15 +885,16 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
       for(int i=0;i<2*numInds+1;i++)
 	sumMinors[i] = log(sumMinors[i]);
       angsd::logrescale(sumMinors,2*numInds+1);
-      //      fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
+      fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
       if(std::isnan(sumMinors[0]))
 	r->oklist[it] = 2;
       else{
 	r->oklist[it] = 1;
 	r->pLikes[myCounter] =new float[2*numInds+1];
-	for(int iii=0;iii<2*numInds+1;iii++)
+	for(int iii=0;iii<2*numInds+1;iii++){
+	  fprintf(stderr,"iii:%f\n",sumMinors[iii]);
 	  r->pLikes[myCounter][iii] = sumMinors[iii];
-	
+	}
 	//	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
 	myCounter++;
       }
@@ -975,11 +976,10 @@ void abcSaf::clean(funkyPars *p){
 
 
 void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char *chr,int newDim,int &nnnSites){
+  fprintf(stderr,"newDim:%d\n",newDim);
   realRes *r=(realRes *) p->extras[index];
   int id=0;
-  fprintf(stderr,"hejsa'n numsites:%d\n",p->numSites);
   for(int s=0; s<p->numSites;s++){
-    fprintf(stderr,"keep[%d]= %d\n",s,r->oklist[s]);
     if(r->oklist[s]==1){
       nnnSites++;
       bgzf_write(outfileSFS,r->pLikes[id++],sizeof(float)*newDim);
