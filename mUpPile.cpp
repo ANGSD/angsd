@@ -229,6 +229,7 @@ void cleanUpChunkyT(chunkyT *chk){
     }
     free(chk->nd[s]);
   }
+  delete [] chk->refPos;
   delete [] chk->nd;
   delete chk;
 #ifdef __WITH_POOL__
