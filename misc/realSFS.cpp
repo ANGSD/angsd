@@ -32,11 +32,22 @@
 #include <sys/sysctl.h>
 #endif
 
-#include "bfgs.h"
-#include "realSFS.h"
-
 #define LENS 4096
 
+template <typename T>
+struct Matrix{
+  size_t x;
+  size_t y;
+  T** mat;
+};
+
+int fexists(const char* str){
+  struct stat buffer ;
+  return (stat(str, &buffer )==0 ); /// @return Function returns 1 if file exists.                             
+}
+
+int SIG_COND =1;
+pthread_t *thd=NULL;
 
 struct ltstr
 {
@@ -74,6 +85,7 @@ void dalloc(perpop &pp){
   bgzf_close(pp.saf);
   dalloc(pp.mm);
 }
+
 
 
 void writePerPop(FILE *fp,perpop &pp){
@@ -142,10 +154,10 @@ perpop getMap(const char *fname){
   char *tmp2 = (char*)calloc(strlen(fname)+100,1);//that should do it
   snprintf(tmp2,strlen(fname)+100,"%sgz",tmp);
   fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
-  ret.saf = bgzf_open(tmp2,"r");
+  ret.saf = bgzf_open(tmp2,"r");bgzf_seek(ret.saf,8,SEEK_SET);
   snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
   fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
-  ret.pos = bgzf_open(tmp2,"r");
+  ret.pos = bgzf_open(tmp2,"r");bgzf_seek(ret.pos,8,SEEK_SET);
   assert(ret.pos!=NULL&&ret.saf!=NULL);
   free(tmp);free(tmp2);
   
@@ -157,27 +169,6 @@ perpop getMap(const char *fname){
 
 
 
-//const char*fname1 = NULL;
-const char*fname2 = NULL;//only used for 2dsfs
-
-int chr1=0;
-int chr2=0; //only used for 2dsfs
-
-
-int dim =0; //will be (chr1+1)*(chr2+1); for the 2dsfs nChr1+1 for the 1dsfs
-
-char *sfsfname=NULL;
-
-int nThreads =4;
-double tole = 1e-6;
-int maxIter = 1e2;
-int SIG_COND =1;
-size_t nSites = 0;
-int doBFGS = 0;//defaults is to use EM-optimization
-int calcLike =0;//if a sfs input file has been supplied, should we just print the likelihood
-int noGrad = 0;//should we use gradients for the bfgs.
-pthread_t *thd=NULL;
-char *chooseChr = NULL;
 
 /*
   loads first 8bytes and checks magic value
@@ -211,13 +202,8 @@ int isNewFormat(const char *fname){
 
 
 
-int fexists(const char* str){
-  struct stat buffer ;
-  return (stat(str, &buffer )==0 ); /// @return Function returns 1 if file exists.                             
-}
 
-
-
+template <typename T>
 Matrix<float> alloc(size_t x,size_t y){
   //fprintf(stderr,"def=%f\n",def);
   Matrix<float> ret;
@@ -227,7 +213,8 @@ Matrix<float> alloc(size_t x,size_t y){
   for(size_t i=0;i<x;i++)
     ret.mat[i]=new float[y];
   return ret;
-}
+};
+
 void dalloc(Matrix<float> &ret,size_t x){
   for(size_t i=0;i<x;i++)
     delete [] ret.mat[i];
@@ -247,7 +234,7 @@ typedef struct emPars_t{
   double lik;
   double *sfs;//shared for all threads
   double *post;//allocated for every thread
-  double *grad;//used for bfgs, length is dim-1; 
+  int dim;
 } emPars;
 
 emPars *emp = NULL;
@@ -290,37 +277,25 @@ char *append(const char* a,const char *b){
   return c;
 }
 
-gzFile getGz(const char *pname){
-  if(fexists(pname)==0){
-    fprintf(stderr,"Problem opening file: %s\n",pname);
-    exit(0);
-  }
-  gzFile fp = Z_NULL;
-  if(((fp=gzopen(pname,"r")))==Z_NULL){
-    fprintf(stderr,"Problem opening file: \'%s\'\n",pname);
-  }
-  return fp;
-} 
-
-
-
-void readGL(BGZF *fp,size_t nSites,int nChr,Matrix<float> &ret){
-  //  fprintf(stderr,"[%s] fname:%s nSites:%d nChr:%d\n",__FUNCTION__,fname,nSites,nChr);
+template<typename T>
+void readGL(BGZF *fp,size_t nSites,int dim,Matrix<T> &ret){
   ret.x=nSites;
-  ret.y=nChr+1;
+  ret.y=dim;
   size_t i;
   for(i=0;SIG_COND&&i<nSites;i++){
-    int bytes_read = bgzf_read(fp,ret.mat[i],sizeof(float)*(nChr+1));
+    //    fprintf(stderr,"i:%lu\n",i);
+    int bytes_read = bgzf_read(fp,ret.mat[i],sizeof(float)*dim);
 
-    if(bytes_read!=0 && bytes_read<sizeof(float)*(nChr+1)){
+    if(bytes_read!=0 && bytes_read<sizeof(float)*dim){
       fprintf(stderr,"Problem reading chunk from file, please check nChr is correct, will exit \n");
       exit(0);
     }
     if(bytes_read==0)
       break;
     
-    for(size_t j=0;j<nChr+1;j++)
+    for(size_t j=0;j<dim;j++)
       ret.mat[i][j] = exp(ret.mat[i][j]);
+    
   }
   
   ret.x=i;
@@ -329,39 +304,6 @@ void readGL(BGZF *fp,size_t nSites,int nChr,Matrix<float> &ret){
   
 }
 
-std::vector<int> getPosi(const char*fname){
-  char *pname = append(fname,".sfs.pos");
-  if(fexists(pname)==0){
-    fprintf(stderr,"Problem opening file: %s\n",pname);
-    exit(0);
-  }
-  std::vector<int> ret;
-  
-  gzFile fp = gzopen(pname,"r");
-  char buf[1024];
-  while(gzgets(fp,buf,1024)){
-    strtok(buf,"\n\t ");
-    ret.push_back(atoi(strtok(NULL,"\t\n ")));
-  }
-  gzclose(fp);
-  return ret;
-}
-
-
-
-
-FILE *getFILE(const char*fname,const char* mode){
-  int writeFile = 0;
-  for(size_t i=0;i<strlen(mode);i++)
-    if(mode[i]=='w')
-      writeFile = 1;
-  FILE *fp;
-  if(NULL==(fp=fopen(fname,mode))){
-    fprintf(stderr,"\t->Error opening FILE handle for file:%s exiting\n",fname);
-    exit(0);
-  }
-  return fp;
-}
 
 size_t fsize(const char* fname){
   struct stat st ;
@@ -371,7 +313,11 @@ size_t fsize(const char* fname){
 
 void readSFS(const char*fname,int hint,double *ret){
   fprintf(stderr,"reading: %s\n",fname);
-  FILE *fp = getFILE(fname,"r");
+  FILE *fp = NULL;
+  if(((fp=fopen(fname,"r")))){
+    fprintf(stderr,"problems opening file:%s\n",fname);
+    exit(0);
+  }
   char buf[fsize(fname)+1];
   if(fsize(fname)!=fread(buf,sizeof(char),fsize(fname),fp)){
     fprintf(stderr,"Problems reading file: %s\n will exit\n",fname);
@@ -407,46 +353,62 @@ void readSFS(const char*fname,int hint,double *ret){
   fclose(fp);
 }
 
+typedef struct {
+  char *chooseChr;
+  int calcLike;
+  int nSites;
+  int maxIter;
+  double tole;
+  int nThreads;
+  char *sfsfname;
+}args;
 
-void getArgs(int argc,char **argv){
+void dalloc(args *p){
+  free(p->chooseChr);
+}
 
+args * getArgs(int argc,char **argv){
+  args *p =(args*) calloc(1,sizeof(args));
+  p->sfsfname=p->chooseChr=NULL;
+  p->maxIter=1e2;
+  p->tole=1e-6;
+  p->nThreads=4;
+  p->nSites =0;
   if(argc==0)
-    return;
+    return p;
   if(argc%2){
     fprintf(stderr,"Extra args must be given as -par VALUE\n");
     exit(0);
   }
   while(*argv){
-    fprintf(stderr,"%s\n",*argv);
+    //    fprintf(stderr,"%s\n",*argv);
     if(!strcasecmp(*argv,"-tole"))
-      tole = atof(*(++argv));
+      p->tole = atof(*(++argv));
     else  if(!strcasecmp(*argv,"-P"))
-      nThreads = atoi(*(++argv));
+      p->nThreads = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-maxIter"))
-      maxIter = atoi(*(++argv));
+      p->maxIter = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-nSites"))
-      nSites = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-use-BFGS"))
-      doBFGS = atoi(*(++argv));
+      p->nSites = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-calcLike"))
-      calcLike = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-noGrad"))
-      noGrad = atoi(*(++argv));
+      p->calcLike = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-r")){
-      chooseChr = strdup(*(++argv));
+      p->chooseChr = strdup(*(++argv));
     }
-    
     else  if(!strcasecmp(*argv,"-start")){
-      sfsfname = *(++argv);
+      p->sfsfname = *(++argv);
     }else{
       fprintf(stderr,"Unknown arg: %s\n",*argv);
       exit(0);
     }
     argv++;
   }
+  fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%lu calcLike:%d chooseChr:%s start:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->calcLike,p->chooseChr,p->sfsfname);
+  return p;
 }
 
-double lik1(double *sfs,Matrix<float> *ret,int from,int to){
+template <typename T>
+double lik1(double *sfs,Matrix<T> *ret,int from,int to){
   double r =0;
   for(int s=from;s<to;s++){
     double tmp =0;
@@ -455,7 +417,6 @@ double lik1(double *sfs,Matrix<float> *ret,int from,int to){
     r += log(tmp);
   }
   return r;
-
 }
 
 
@@ -470,7 +431,7 @@ void *lik1_slave(void *p){
 
 
 
-double lik1_master(){
+double lik1_master(int nThreads){
   for(size_t i=0;i<nThreads;i++){
     int rc = pthread_create(&thd[i],NULL,lik1_slave,(void*) i);
     if(rc)
@@ -490,154 +451,7 @@ double lik1_master(){
 }
 
 
-//this sfs in this function is the transformed dim-1
-double lik1_bfgs(const double *sfs_1,const void *dats){
-  if(SIG_COND==0)
-    exit(0);
-  double p[dim];
-  double ts=1;
-  for(int i=0;i<dim-1;i++)
-    ts +=sfs_1[i];
-  emp[0].sfs[0]=1.0/ts;
-  for(int i=0;i<dim-1;i++)
-    emp[0].sfs[i+1]=sfs_1[i]/ts;
-  return -lik1_master();
-}
-
-
-void lik1_grad_bfgs(double *sfs,double *grad,double fac,Matrix<float> *GL1,int from,int to){
-  for(int i=0;i<dim-1;i++){
-    //  fprintf(stderr,"%d:%f\n",i,sfs[i]);
-    grad[i] =0.0;
-  }
-
-
-  for(int s=from;s<to;s++){
-    double ret =GL1->mat[s][0];
-    for(int i=0;i<dim-1;i++)
-      ret  += sfs[i]*GL1->mat[s][i+1];
-    for(int i=0;i<dim-1;i++)
-      grad[i] += fac -GL1->mat[s][i+1]/ret ;
-  }
-  
-}
-
-
-void *lik1_grad_bfgs_slave(void *p){
-  emPars &pars = emp[(size_t) p];
-  lik1_grad_bfgs(pars.sfs,pars.grad,pars.lik,pars.GL1,pars.from,pars.to);
-
-  return NULL;
-}
-
-
-//this is not the sfs but the transfomred dim-1 sfs
-void lik1_grad_bfgs_master(const double *sfs,double *grad){
-  if(SIG_COND==0)
-    exit(0);
-  double fac = 1;
-  for(int i=0;i<dim-1;i++){
-    
-    fac += sfs[i] ;
-    // fprintf(stderr,"sfs=%f\tfac:%f\n",sfs[i],fac);
-  }
-  fac = 1.0/fac;
-  // fprintf(stderr,"fac=%f\n",fac);
-  
-
-  for(size_t i=0;i<nThreads;i++){
-    memcpy(emp[i].sfs,sfs,(dim-1)*sizeof(double));
-    emp[i].lik=fac;
-    int rc = pthread_create(&thd[i],NULL,lik1_grad_bfgs_slave,(void*) i);
-    if(rc)
-      fprintf(stderr,"error creating thread\n");
-    
-  }
-  for(int i=0;i<nThreads;i++)
-    pthread_join(thd[i], NULL);
-
-    
-  memcpy(grad,emp[0].grad,(dim-1)*sizeof(double));
-  for(int i=1;i<nThreads;i++){
-    for(int j=0;j<dim-1;j++)
-      grad[j] +=  emp[i].grad[j];
-  }
-
-#if 0
-  double myVar = 1;
-  for(int i=0;i<dim-1;i++)
-    myVar += sfs[i];
-  
-
-  for(int j=0;j<dim-1;j++)
-    grad[j] +=(1.0*emp[0].GL1->x)/myVar;
-#endif 
-
-#if 0
-  for(int i=0;i<nThreads;i++){
-    for(int j=0;j<dim-1;j++)
-      fprintf(stdout,"%g ",emp[i].grad[j]);
-    fprintf(stdout,"\n");
-  }
-  exit(0);
-#endif
-
-
-#if 0
-  for(int j=0;j<dim-1;j++)
-    fprintf(stdout,"%g ",grad[j]);
-  fprintf(stdout,"\n");
-  exit(0);
-#endif
-
-}
-
-
-
-
-
-
-
-
-//sfs input is here the untransformed, e.g length=dim
-void bfgs(double *sfs,Matrix<float> *GL1){
-  double p[dim-1];
-  for(int i=1;i<dim;i++)
-    p[i-1] = sfs[i]/sfs[0];
-  
-  //initialize the stuff needed for the bfgs
-  
-  double para[dim-1];  /* parameters */
-  double min[dim-1]; /* lower bound */
-  double max[dim-1]; /* upper bound */
-  int nbd[dim-1]; /* boundary constraint option; nbd[i] = 0 or 1 or 2 or 3; see bfgs.h for details */
-  int noisy=-1; /* bigger value produces more detailed output */ 
-  
-  for (int i=0; i<dim-1; i++){
-    min[i] = 0.0000001;
-    max[i] = 10.0;
-    nbd[i] = 2;
-  }
-  double fnmax ;
-  if(noGrad==0)
-    fnmax= findmax_bfgs( dim-1, p,NULL, lik1_bfgs, lik1_grad_bfgs_master, min, max, nbd, noisy );  
-  else
-    fnmax= findmax_bfgs( dim-1, p,NULL, lik1_bfgs,NULL, min, max, nbd, noisy );  
-  
-  //tranform back
-  double ts=1;
-  for(int i=0;i<dim-1;i++)
-    ts  += p[i];
-  sfs[0]=1.0/ts;
-  for(int i=0;i<dim-1;i++)
-    sfs[i+1]=p[i]/ts;
-
-
-}
-
-
-
-void emStep1(double *pre,Matrix<float> *GL1,double *post,int start,int stop){
+void emStep1(double *pre,Matrix<float> *GL1,double *post,int start,int stop,int dim){
   double inner[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
@@ -659,13 +473,13 @@ void emStep1(double *pre,Matrix<float> *GL1,double *post,int start,int stop){
 void *emStep1_slave(void *p){
   emPars &pars = emp[(size_t) p];
 
-  emStep1(pars.sfs,pars.GL1,pars.post,pars.from,pars.to);
+  emStep1(pars.sfs,pars.GL1,pars.post,pars.from,pars.to,pars.dim);
 
   return NULL;
 }
 
 
-void emStep1_master(double *post){
+void emStep1_master(double *post,int nThreads){
   for(size_t i=0;i<nThreads;i++){
     int rc = pthread_create(&thd[i],NULL,emStep1_slave,(void*) i);
     if(rc)
@@ -675,13 +489,13 @@ void emStep1_master(double *post){
   for(int i=0;i<nThreads;i++)
     pthread_join(thd[i], NULL);
     
-  memcpy(post,emp[0].post,dim*sizeof(double));
+  memcpy(post,emp[0].post,emp[0].dim*sizeof(double));
   for(int i=1;i<nThreads;i++){
-    for(int j=0;j<dim;j++)
+    for(int j=0;j<emp[0].dim;j++)
       post[j] += emp[i].post[j];
   }
   
-  normalize(post,dim);
+  normalize(post,emp[0].dim);
 
 #if 0
   for(int i=0;i<nThreads;i++){
@@ -698,28 +512,28 @@ void emStep1_master(double *post){
 
 
 
-void em1(double *sfs,Matrix<float> *GL1,double tole=0.01,int maxIter=10){
+void em1(double *sfs,Matrix<float> *GL1,double tole,int maxIter,int nThreads,int dim){
   double oldLik,lik;
   if(nThreads>1)
-    oldLik = lik1_master();
+    oldLik = lik1_master(nThreads);
   else
     oldLik = lik1(sfs,GL1,0,GL1->x);
   fprintf(stderr,"startlik=%f\n",oldLik);
   fflush(stderr);
 
-  double *tmp=new double[dim];
+  double tmp[dim];
   
   for(int it=0;SIG_COND&&it<maxIter;it++) {
     if(nThreads>1)
-      emStep1_master(tmp);
+      emStep1_master(tmp,nThreads);
     else
-      emStep1(sfs,GL1,tmp,0,GL1->x);
+      emStep1(sfs,GL1,tmp,0,GL1->x,dim);
     
     for(int i=0;i<dim;i++)
       sfs[i]= tmp[i];
 
     if(nThreads>1)
-      lik = lik1_master();
+      lik = lik1_master(nThreads);
     else
       lik = lik1(sfs,GL1,0,GL1->x);
 
@@ -732,7 +546,6 @@ void em1(double *sfs,Matrix<float> *GL1,double tole=0.01,int maxIter=10){
     oldLik=lik;
   }
   
-  delete [] tmp;
 }
 
 
@@ -751,7 +564,7 @@ double lik2(double *sfs,Matrix<float> *GL1,Matrix<float> *GL2,size_t start,size_
 }
 
 
-void setThreadPars(Matrix<float> *GL1,Matrix<float> *GL2,double *sfs,int nThreads){
+void setThreadPars(Matrix<float> *GL1,Matrix<float> *GL2,double *sfs,int nThreads,int dim){
   emp = new emPars[nThreads];
   int blockSize = GL1->x/nThreads;
   for(int i=0;i<nThreads;i++){
@@ -762,7 +575,6 @@ void setThreadPars(Matrix<float> *GL1,Matrix<float> *GL2,double *sfs,int nThread
     emp[i].to=blockSize;
     emp[i].sfs = sfs;
     emp[i].post=new double[dim];
-    emp[i].grad=new double[dim-1];
   }
   //redo the from,to
   for(int i=1;i<nThreads;i++){
@@ -792,7 +604,7 @@ void *lik2_slave(void *p){
 
 
 
-double lik2_master(){
+double lik2_master(int nThreads){
   
   for(size_t i=0;i<nThreads;i++){
     int rc = pthread_create(&thd[i],NULL,lik2_slave,(void*) i);
@@ -815,7 +627,7 @@ double lik2_master(){
 
 
 
-void emStep2(double *pre,Matrix<float> *GL1,Matrix<float> *GL2,double *post,int start,int stop){
+void emStep2(double *pre,Matrix<float> *GL1,Matrix<float> *GL2,double *post,int start,int stop,int dim){
   double inner[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
@@ -838,13 +650,13 @@ void emStep2(double *pre,Matrix<float> *GL1,Matrix<float> *GL2,double *post,int 
 void *emStep2_slave(void *p){
   emPars &pars = emp[(size_t) p];
 
-  emStep2(pars.sfs,pars.GL1,pars.GL2,pars.post,pars.from,pars.to);
+  emStep2(pars.sfs,pars.GL1,pars.GL2,pars.post,pars.from,pars.to,pars.dim);
 
   return NULL;
 }
 
 
-void emStep2_master(double *post){
+void emStep2_master(double *post,int nThreads){
   for(size_t i=0;i<nThreads;i++){
     int rc = pthread_create(&thd[i],NULL,emStep2_slave,(void*) i);
     if(rc)
@@ -854,13 +666,13 @@ void emStep2_master(double *post){
   for(int i=0;i<nThreads;i++)
     pthread_join(thd[i], NULL);
     
-  memcpy(post,emp[0].post,dim*sizeof(double));
+  memcpy(post,emp[0].post,emp[0].dim*sizeof(double));
   for(int i=1;i<nThreads;i++){
-    for(int j=0;j<dim;j++)
+    for(int j=0;j<emp[0].dim;j++)
       post[j] += emp[i].post[j];
   }
   
-  normalize(post,dim);
+  normalize(post,emp[0].dim);
 
 #if 0
   for(int i=0;i<nThreads;i++){
@@ -894,26 +706,26 @@ void handler(int s) {
 
 
 
-void em2(double *sfs,Matrix<float> *GL1,Matrix<float> *GL2,double tole=0.01,int maxIter=10){
+void em2(double *sfs,Matrix<float> *GL1,Matrix<float> *GL2,double tole,int maxIter,int nThreads,int dim){
   double oldLik,lik;
   if(nThreads>1)
-    oldLik = lik2_master();
+    oldLik = lik2_master(nThreads); 
   else
     oldLik = lik2(sfs,GL1,GL2,0,GL1->x);
   fprintf(stderr,"startlik=%f\n",oldLik);
 
-  double *tmp = new double[dim];//<- wont be cleaned up, but is only allocated once
+  double tmp[dim];//<- wont be cleaned up, but is only allocated once
   for(int it=0;SIG_COND&&it<maxIter;it++) {
     if(nThreads>1)
-      emStep2_master(tmp);
+      emStep2_master(tmp,nThreads);
     else
-      emStep2(sfs,GL1,GL2,tmp,0,GL1->x);
+      emStep2(sfs,GL1,GL2,tmp,0,GL1->x,dim);
 
     for(int i=0;i<dim;i++)
       sfs[i]= tmp[i];
     
     if(nThreads>1)
-      lik = lik2_master();
+      lik = lik2_master(nThreads);
     else
       lik = lik2(sfs,GL1,GL2,0,GL1->x);
     
@@ -929,28 +741,7 @@ void em2(double *sfs,Matrix<float> *GL1,Matrix<float> *GL2,double tole=0.01,int 
   
 }
 
-Matrix<double>  merge(Matrix<double> &pop1,Matrix<double> &pop2){
-  fprintf(stderr,"[%s]\n",__FUNCTION__);
-  Matrix<double> ret;
-  ret.x = pop1.x;
-  ret.y = pop1.y*pop2.y;
-  ret.mat=new double*[pop1.x];
-  for(int s=0;SIG_COND&&s<pop1.x;s++){
-    ret.mat[s] = new double[pop1.y*pop2.y];
-    //    fprintf(stderr,"tmpdim=%zu %zu\n",pop1.y,pop2.y);
-    int inc=0;
-    for(int x=0;x<pop1.y;x++)
-      for(int y=0;y<pop2.y;y++)
-	ret.mat[s][inc++] = exp(pop1.mat[s][x]+pop2.mat[s][y]);
-    delete [] pop1.mat[s];
-    delete [] pop2.mat[s];
-  }
-  delete [] pop1.mat; delete [] pop2.mat;
-  pop1.x=pop1.y=pop2.x=pop2.y=0;
-  return ret;
-}
-
-
+template <typename T>
 int main_2dsfs(int argc,char **argv){
   if(argc==1){
     fprintf(stderr,"./emOptim2 2dsfs pop1.saf.idx pop2.saf.idx [-start FNAME -P nThreds -tole tole -maxIter -r chrnam ] (only works if the two saf files covers the same region)\n");
@@ -961,102 +752,108 @@ int main_2dsfs(int argc,char **argv){
   assert(p1.fsize==p2.fsize);
   argc -=2;
   argv += 2;
-  getArgs(argc,argv);
-  if(nSites==0){
+  args *p = getArgs(argc,argv);
+  if(p->nSites==0){
     if(p1.fsize+p2.fsize > getTotalSystemMemory())
       fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
     //this doesnt make sense if ppl supply a filelist containing safs
-    nSites=p1.fsize;
+    p->nSites=p1.fsize;
   }
-  fprintf(stderr,"chr1:%lu chr2:%lu startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",p1.nChr,p2.nChr,sfsfname,nThreads,tole,maxIter,nSites);
-  float bytes_req_megs = nSites*(sizeof(double)*(chr1+1) + sizeof(double)*(chr2+1)+2*sizeof(double*))/1024/1024;
+  fprintf(stderr,"chr1:%lu chr2:%lu startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",p1.nChr,p2.nChr,p->sfsfname,p->nThreads,p->tole,p->maxIter,p->nSites);
+  float bytes_req_megs = p->nSites*(sizeof(T)*(p1.nChr+1) + sizeof(double)*(p2.nChr+1)+2*sizeof(T*))/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
   fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
   
-  dim=(p1.nChr+1)*(p2.nChr+1);
+  int dim=(p1.nChr+1)*(p2.nChr+1);
   
-  Matrix<float> GL1=alloc(nSites,chr1+1);
-  Matrix<float> GL2=alloc(nSites,chr2+1);
+  Matrix<T> GL1=alloc<T>(p->nSites,p1.nChr+1);
+  Matrix<T> GL2=alloc<T>(p->nSites,p2.nChr+1);
   dim=GL1.y*GL2.y;
   
   double *sfs = new double[dim];
   while(1){
-    readGL(p1.saf,nSites,chr1,GL1);
-    readGL(p2.saf,nSites,chr2,GL2);
+    readGL(p1.saf,p->nSites,p1.nChr,GL1);
+    readGL(p2.saf,p->nSites,p2.nChr,GL2);
           
     assert(GL1.x==GL2.x);
     if(GL1.x==0)
       break;
     
-    if(sfsfname!=NULL){
-      readSFS(sfsfname,dim,sfs);
+    if(p->sfsfname!=NULL){
+      readSFS(p->sfsfname,dim,sfs);
     }else{
       for(int i=0;i<dim;i++)
 	sfs[i] = (i+1)/((double)dim);
       normalize(sfs,dim);
     }
     
-    setThreadPars(&GL1,&GL2,sfs,nThreads);
-    if(calcLike==0){
+    setThreadPars(&GL1,&GL2,sfs,p->nThreads,dim);
+    if(p->calcLike==0){
       if(SIG_COND) 
-	em2(sfs,&GL1,&GL2,tole,maxIter);
+	em2(sfs,&GL1,&GL2,p->tole,p->maxIter,p->nThreads,dim);
     }
     double lik;
-    if(nThreads>1)
-      lik = lik1_master();
+    if(p->nThreads>1)
+      lik = lik1_master(p->nThreads);
     else
       lik = lik1(sfs,&GL1,0,GL1.x);
       
     fprintf(stderr,"likelihood: %f\n",lik);
 #if 1
     int inc=0;
-    for(int x=0;x<chr1+1;x++){
-      for(int y=0;y<chr2+1;y++)
+    for(int x=0;x<=p1.nChr;x++){
+      for(int y=0;y<=p2.nChr+1;y++)
 	fprintf(stdout,"%f ",log(sfs[inc++]));
       fprintf(stdout,"\n");
     }
 #endif
    
   }
-  dalloc(GL1,nSites);
-  dalloc(GL2,nSites);
+  dalloc(GL1,p->nSites);
+  dalloc(GL2,p->nSites);
   return 0;
 }
 
 
 
-
+template <typename T>
 int main_1dsfs(int argc,char **argv){
-  if(argc<2){
+  if(argc<1){
     fprintf(stderr,"Must supply afile.saf.idx \n");
     return 0;
   }
-  argv++;
-  perpop p1 = getMap(*argv);
- 
-  getArgs(argc,argv);
 
 
-  if(nSites==0){//if no -nSites is specified
+  char *bname = *argv;
+  fprintf(stderr,"\t-> Assuming .saf.idx:%s\n",bname);
+
+  perpop p1 = getMap(bname);
+  writePerPop(stderr,p1);
+
+  args *ar = getArgs(--argc,++argv);
+  
+  int nSites = 0;
+  if(nSites == 0){//if no -nSites is specified
     if(p1.fsize>getTotalSystemMemory())
-      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
+      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
     //this doesnt make sense if ppl supply a filelist containing safs
-    nSites=p1.fsize;
+    nSites=p1.nSites;
   }
-  fprintf(stderr,"nChr:%lu startsfs:%s nThreads:%d tole=%f maxIter=%d nSites=%lu\n",p1.nChr,sfsfname,nThreads,tole,maxIter,nSites);
-  float bytes_req_megs = nSites*(sizeof(double)*(chr1+1)+sizeof(double*))/1024/1024;
+  fprintf(stderr,"nChr:%lu startsfs:%s nThreads:%d ",p1.nChr,ar->sfsfname,ar->nThreads);
+fprintf(stderr," tole=%f maxIter=%d nSites=%lu\n",ar->tole,ar->maxIter,nSites);
+  float bytes_req_megs = p1.fsize/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
   fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
 
   
 
-  Matrix<float> GL1=alloc(nSites,dim);
-  double *sfs=new double[dim];
+  Matrix<T> GL1=alloc<T>(nSites,p1.nChr+1);
+  double *sfs=new double[p1.nChr+1];
   
   while(1) {
-    readGL(p1.saf,nSites,chr1,GL1);
+    readGL(p1.saf,nSites,p1.nChr+1,GL1);
     
     if(GL1.x==0)
       break;
@@ -1064,46 +861,35 @@ int main_1dsfs(int argc,char **argv){
    
     
   
-    if(sfsfname!=NULL){
-      readSFS(sfsfname,dim,sfs);
+    if(ar->sfsfname!=NULL){
+      readSFS(ar->sfsfname,p1.nChr+1,sfs);
     }else{
       
-      for(int i=0;i<dim;i++)
-	sfs[i] = (i+1)/((double)dim);
-      if(doBFGS){
-	double ts=1;
-	for(int i=0;i<dim-1;i++)
-	  ts += 0.01/(1.0+i);
-	sfs[0]=1.0/ts;
-	for(int i=0;i<dim-1;i++)
-	  sfs[i+1]  = (0.01/(1.0+i))/ts;
-      }
-      normalize(sfs,dim);
+      for(int i=0;i<p1.nChr+1;i++)
+	sfs[i] = (i+1)/((double)(p1.nChr+1));
+      normalize(sfs,p1.nChr+1);
     }
     //  em2_smart(sfs2,pops,1e-6,1e3);
-    setThreadPars(&GL1,NULL,sfs,nThreads);
-    if(calcLike==0){
-      if(doBFGS==0) 
-	em1(sfs,&GL1,tole,maxIter);
-      else
-	bfgs(sfs,&GL1);
-    }
+    setThreadPars(&GL1,NULL,sfs,ar->nThreads,p1.nChr+1);
+    if(ar->calcLike==0)
+      em1(sfs,&GL1,ar->tole,ar->maxIter,ar->nThreads,p1.nChr+1);
+
     double lik;
-    if(nThreads>1)
-      lik = lik1_master();
+    if(ar->nThreads>1)
+      lik = lik1_master(ar->nThreads);
     else
       lik = lik1(sfs,&GL1,0,GL1.x);
       
     fprintf(stderr,"likelihood: %f\n",lik);
 #if 1
-    for(int x=0;x<dim;x++)
+    for(int x=0;x<=p1.nChr;x++)
       fprintf(stdout,"%f ",log(sfs[x]));
     fprintf(stdout,"\n");
     fflush(stdout);
 #endif
     
   }
-  dalloc(GL1,nSites);
+  dalloc(GL1,ar->nSites);
   dalloc(p1);
   delete [] sfs;
   return 0;
@@ -1115,22 +901,22 @@ int main_1dsfs(int argc,char **argv){
 int print(int argc,char **argv){
   //  fprintf(stderr,"chooseChr:%s argc:%d argv:%s\n",chooseChr,argc,*argv);
   if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.gz [-r chr]\n");
+    fprintf(stderr,"Must supply afile.saf.idx [-r chr]\n");
     return 0;
   }
 
   char *bname = *argv;
   fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
-  getArgs(--argc,++argv);
+  args *p = getArgs(--argc,++argv);
   perpop pp = getMap(bname);
   writePerPop(stderr,pp);
   
   float *flt = new float[pp.nChr+1];
   for(myMap::iterator it=pp.mm.begin();it!=pp.mm.end();++it){
-    if(chooseChr!=NULL){
-      it = pp.mm.find(chooseChr);
+    if(p->chooseChr!=NULL){
+      it = pp.mm.find(p->chooseChr);
       if(it==pp.mm.end()){
-	fprintf(stderr,"Problem finding chr: %s\n",chooseChr);
+	fprintf(stderr,"Problem finding chr: %s\n",p->chooseChr);
 	break;
       }
     }
@@ -1146,7 +932,7 @@ int print(int argc,char **argv){
       fprintf(stdout,"\n");
     }
     delete [] ppos;
-    if(chooseChr!=NULL)
+    if(p->chooseChr!=NULL)
       break;
   }
   
@@ -1188,14 +974,12 @@ int main(int argc,char **argv){
   }
 
   if(!strcasecmp(*argv,"2dsfs"))
-    main_2dsfs(argc,argv);
+    main_2dsfs<float>(argc,argv);
   if(!strcasecmp(*argv,"print"))
     print(--argc,++argv);
   else
-    main_1dsfs(argc,argv);
+    main_1dsfs<float>(argc,argv);
   
 
-
-  free(chooseChr);
   return 0;
 }
