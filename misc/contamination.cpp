@@ -317,7 +317,7 @@ void analysis(dat &d,int nThreads) {
 
   double mom,momJack,ML,mlJack;
 
-  ap.doMom =1;ap.newllh =0; ap.skip=-1;
+  ap.doMom =1;  ap.newllh =0; ap.skip=-1;
   mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
   momJack = jack(&ap);
 
@@ -326,7 +326,7 @@ void analysis(dat &d,int nThreads) {
   mlJack= jack(&ap);
   fprintf(stderr,"\nMethod1: old llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
  
-  ap.doMom =1;ap.newllh =1;skip=-1
+  ap.doMom =1;ap.newllh =1;ap.skip=-1;
 
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
   momJack= jack(&ap);
@@ -609,6 +609,7 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
 #if 0
   for(aMap::iterator it=newMap.begin();it!=newMap.end();++it)
     print(stdout,it->first,it->second);
+  exit(0);
 #endif
   delete [] buf;
   gzclose(gz);

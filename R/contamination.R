@@ -52,10 +52,10 @@ jackKnife3<-function(x,fun,mc.cores,...){
    
     ##for matrix per row
     call <- match.call()
-    n<-nrow(x)
+    n<-nrow(x) ##n is number of sites
     f<-floor(seq(1,n,n/mc.cores))
-    f[mc.cores]<-n+1
-    ffun<-function(z) unlist(lapply(f[z]:(f[z+1]-1),function(i) fun(x[-i,],...) ))
+    f[mc.cores]<-n+1 ##f contains the start and stop index for the different cores
+    ffun<-function(z) unlist(lapply(f[z]:(f[z+1]-1),function(i) fun(x[-i,],...) )) ##we remove index i from each fun call
     u<-unlist(parallel::mclapply(1:(mc.cores-1),ffun,mc.cores=mc.cores))
     thetahat <- fun(x, ...)
     jack.bias <- (n - 1) * (mean(u) - thetahat)
@@ -223,9 +223,14 @@ readDat<-function(fileName,maxDepth,minDepth,nSites=1e8){
   r_save
 }
 
-readHap<-function(MinDist=10,hapFile) {
+readHap<-function(MinDist=10,hapFile,minmaf,startPos,stopPos) {
     hapMap_save<-read.table(hapFile,as.is=T)
     cat("HapMap sites:",nrow(hapMap_save), "from file: ",hapFile,"\n")
+    hapMap_save <- hapMap_save[!(hapMap_save[,1]<startPos|hapMap_save[,1]>stopPos),]
+    cat("HapMap after removing sites outside startPos stopPos ",nrow(hapMap_save),"\n")
+
+
+
     hapMap_save <- hapMap_save[(hapMap_save[,2] %in% bases) &(hapMap_save[,5] %in% bases),]
     cat("HapMap after removing undefined(N/-/n) snps ",nrow(hapMap_save),"\n")
     
@@ -235,6 +240,10 @@ readHap<-function(MinDist=10,hapFile) {
     hapMap_save<-hapMap_save[-which(diff(hapMap_save[,1])<MinDist),]
     ##    write.table(hapMap_save,file="delme.txt",row.names=F,col.names=F,quote=F)
     cat("HapMap after removing close snpts ",nrow(hapMap_save),"\n")
+    hapMap_save<-hapMap_save[!(hapMap_save[,3]<minmaf|1-hapMap_save[,3]<minmaf),]
+    ##    write.table(hapMap_save,file="delme.txt",row.names=F,col.names=F,quote=F)
+    cat("HapMap after filtering out minmaf sites",nrow(hapMap_save),"\n")
+
     if(any(is.na(hapMap_save))){
         stop("NA in hapmap")
     }
@@ -274,8 +283,8 @@ if(FALSE){
     fileName <- "../angsdput.icnts.gz"
 }
 
-doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores,fixed,jack){
-    hapMap_save<-readHap(hapFile=hapFile)
+doAnal <- function(mapFile,hapFile,countFile,minDepth,maxDepth,mc.cores,fixed,jack,minmaf,startPos,stopPos){
+    hapMap_save<-readHap(hapFile=hapFile,minmaf=minmaf,startPos=startPos,stopPos=stopPos)
     r_save<-readDat(countFile,maxDepth,minDepth)
 
     if(!missing(mapFile)){
@@ -345,8 +354,11 @@ args<-list(
     maxDepth=20,
     mc.cores=10,
     fixed=TRUE,
-    jack=TRUE
-    )
+    jack=TRUE,
+    minmaf=0.05,
+    startPos = 1e6,
+    stopPos =  154900000
+        )
 ##if no argument are given prints the need arguments and the optional ones with default
 
 des<-list(
@@ -357,9 +369,11 @@ des<-list(
     maxDepth= "Maximium depth",
     mc.cores= "Number of cores",
     fixed = "Use fixed version of likelihood",
-    jack = "Jacknive to get confidence intervals"
-    
-    )
+    jack = "Jacknive to get confidence intervals",
+    minmaf = "minimum maf",
+    startPos = "start position",
+    stopPos = "stop position"
+       )
 
 ######################################
 #######get arguments and add to workspace
@@ -381,10 +395,12 @@ cat("maxDepth = ",maxDepth,"\n")
 cat("mc.cores = ",mc.cores,"\n")
 cat("fixed = ",fixed,"\n")
 cat("jack = ",jack,"\n")
-
+cat("minmaf = ",minmaf,"\n")
+cat("startPos = ",startPos,"\n")
+cat("stopPos = ",stopPos,"\n")
 {
     if(!is.na(mapFile))
-        doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack)
+        doAnal(mapFile=mapFile,hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack,minmaf=minmaf,startPos=startPos,stopPos=stopPos)
     else
-        doAnal(hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack)
+        doAnal(hapFile=hapFile,countFile=countFile,minDepth=as.numeric(minDepth),maxDepth=as.numeric(maxDepth),mc.cores=as.numeric(mc.cores),fixed=fixed,jack=jack,minmaf=minmaf,startPos=startPos,stopPos=stopPos)
 }
