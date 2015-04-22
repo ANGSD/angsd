@@ -1,8 +1,7 @@
 /*
   jackknifing could be speeded current implemention is O(nsites^2)
-  
+*/
 
- */
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -17,15 +16,6 @@
 #include "kmath.h"
 #include "../fet.c"
 #define LENS 4096
-
-typedef struct{
-  double p;
-  int n;
-  double *dens;
-  double *cum;
-}rbinom;
-
-
 
 typedef struct{
   char allele1;
@@ -55,74 +45,22 @@ double ldbinom(int k, int n,double p){
 }
 
 //    l<-  dbinom(error,d,(1-x)*eps+x*freq)
-double likeOld(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+double likeOld(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps,int skip){
   double t = 0;
   for(int i=0;i<len;i++)
-    t += ldbinom(nonMajor[i],seqDepth[i],(1-x)*eps+x*freq[i]);
+    if(i!=skip)
+      t += ldbinom(nonMajor[i],seqDepth[i],(1-x)*eps+x*freq[i]);
   return t;
 }
 
 //    l<-  dbinom(error,d,x*freq*(1-4*eps/3)+eps)
-double likeNew(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+double likeNew(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps,int skip){
   double t = 0;
   for(int i=0;i<len;i++)
-    t += ldbinom(nonMajor[i],seqDepth[i],x*freq[i]*(1-4*eps/3.0)+eps);
+    if(i!=skip)
+      t += ldbinom(nonMajor[i],seqDepth[i],x*freq[i]*(1-4*eps/3.0)+eps);
   return t;
   
-}
-
-double like_optim(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int isNew){
-  double a = 0+DBL_EPSILON;
-  double b = 0.5-DBL_EPSILON;
-  double k = (sqrt(5.) - 1.) / 2.;
-  double xL = b - k * (b - a);
-  double xR = a + k * (b - a);
-  while (b - a > DBL_EPSILON)
-  {
-    double left,right;
-    if(isNew){
-      left = likeOld(xL,len,seqDepth,nonMajor,freq,eps);
-      right = likeOld(xR,len,seqDepth,nonMajor,freq,eps);
-    }else{
-      left = likeNew(xL,len,seqDepth,nonMajor,freq,eps);
-      right = likeNew(xR,len,seqDepth,nonMajor,freq,eps);
-
-    }
-    if (left > right)
-    {
-      b = xR;
-      xR = xL;
-      xL = b - k*(b - a);
-    }
-    else
-    {
-      a = xL;
-      xL = xR;
-      xR = a + k * (b - a);
-    }
-  }
-  return (a + b) / 2.;
-}
-
-typedef struct{
-  int len;
-  int* seqDepth;
-  int *nonMajor;
-  double *freq;
-  double eps;
-  int isNew;
-  int doMom;
-  int *e1;
-  int *d1;
-}allPars;
-
-
-double myfun(double x,void *d){
-  allPars *ap = (allPars *)d;
-  if(ap->isNew)
-    return -likeNew(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps);
-  else
-    return -likeOld(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps);
 }
 
 
@@ -159,6 +97,30 @@ double likeNewMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps,in
   return top/bot; 
 }
 
+
+typedef struct{
+  int len;
+  int* seqDepth;
+  int *nonMajor;
+  double *freq;
+  double eps;
+  int newllh;
+  int doMom;
+  int *e1;
+  int *d1;
+  int skip;
+}allPars;
+
+
+double myfun(double x,void *d){
+  allPars *ap = (allPars *)d;
+  if(ap->newllh)
+    return -likeNew(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps,ap->skip);
+  else
+    return -likeOld(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps,ap->skip);
+}
+
+
 double calcEps(int *e1,int *d1,int len,int skip){
   double top=0;double bot=0;
   for(int i=0;i<len;i++){
@@ -173,28 +135,26 @@ double calcEps(int *e1,int *d1,int len,int skip){
   
 }
 
-
-//mehtod==0 => OLD;
-// method==1 => NEW
 double jack(allPars *ap){
   int len=ap->len;
   int *seqDepth=ap->seqDepth;
   int *nonMajor=ap->nonMajor;
   double *freq =ap->freq;
-  int isnew = ap->isNew;
+  int isnew = ap->newllh;
   int *e1 = ap->e1;
   int *d1 = ap->d1;
   int doMom= ap->doMom;
   double *thetas =new double[len];
   for(int i=0;i<len;i++){
     if((i % 100 )==0)
-      fprintf(stderr,"\r-> %d/%d",i,len);
+      fprintf(stderr,"\r-> %d/%d      ",i,len);
     if(doMom){
       if(isnew==0){
 	thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
       }else
 	thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
     }else{
+      ap->skip=i;
       double xmin,val;
       val = kmin_brent(myfun,1e-6,0.5-1e-6,ap,0.0001,&xmin);
       thetas[i] = xmin;
@@ -224,28 +184,6 @@ typedef struct{
 
 
 
-rbinom *init_rbinom(double p,int n){
-  //fprintf(stderr,"initializatin rbinom p:%f n:%d\n",p,n);
-  rbinom *rb=new rbinom;
-  rb->p=p;
-  rb->n=n;
-  rb->cum = new double[n+1];
-  rb->dens= new double[n+1];
-
-  double ts=0;
-  for(int k=0;k<=n;k++){
-    rb->dens[k] = lbinom(n,k)+k*log(p)+(n-k)*log(1-p);
-    //    fprintf(stderr,"%e\n",exp(rb->dens[k]));
-    ts += exp(rb->dens[k]);
-  }
-  rb->cum[0] = exp(rb->dens[0])/ts;
-  for(int k=1;k<=n;k++){
-    rb->cum[k] = exp(rb->dens[k])/ts+rb->cum[k-1];
-
-  }
-  return rb;
-}
-
 int simrbinom(double p){
   if(drand48()<(1-p))
     return 0;
@@ -253,21 +191,7 @@ int simrbinom(double p){
     return 1;
 }
 
-int sample(rbinom *rb){
-  //  fprintf(stderr,"rb n:%d p:%f\n",rb->n,rb->p);
-  double r = drand48();
-  int k=0;
-  if(r<rb->cum[0])
-    return k;
-
-  while(k++<=rb->n)
-    if(rb->cum[k-1]<r &&r<=rb->cum[k])
-      break;
-  return k;
- 
-}
-
-void analysis(dat &d) {
+void analysis(dat &d,int nThreads) {
   int *rowSum = new int[d.cn.size()];
   int *rowMax = new int[d.cn.size()];
   int *rowMaxW = new int[d.cn.size()];
@@ -387,27 +311,29 @@ void analysis(dat &d) {
   ap.nonMajor = err0;
   ap.freq = freq;
   ap.eps = c;
-  ap.isNew =0;
+  ap.newllh =0;
   ap.e1 = err1;
   ap.d1=d1;
-  ap.doMom = 1;
+
   double mom,momJack,ML,mlJack;
 
-  ap.doMom =1;ap.isNew =0;
+  ap.doMom =1;ap.newllh =0; ap.skip=-1;
   mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
   momJack = jack(&ap);
 
   kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
   ap.doMom = 0;
   mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
-  ap.doMom =1;ap.isNew =1;
+  fprintf(stderr,"\nMethod1: old llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+ 
+  ap.doMom =1;ap.newllh =1;skip=-1
+
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
   momJack= jack(&ap);
   kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
   ap.doMom =0;
   mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  fprintf(stderr,"\nMethod1: new llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
  
 
   for(int i=0;i<d.cn.size()/9;i++){
@@ -439,39 +365,24 @@ void analysis(dat &d) {
   ap.d1=d1;
 
 
-  ap.isNew =0; ap.doMom= 1;
+  ap.newllh =0; ap.doMom= 1;
   mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
   momJack = jack(&ap);
   kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
   ap.doMom = 0;
   mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  fprintf(stderr,"\nMethod2: old llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
 
-  ap.isNew =1;
+  ap.newllh =1;
   ap.doMom=1;
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
   momJack= jack(&ap);
   ap.doMom =0;
   kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
   mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  fprintf(stderr,"\nMethod2: new llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
  
 
-
-
-#if 0
-  mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack=jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
-  ML = like_optim(d.cn.size()/9,d0,err0,freq,c,0);
-  mlJack = jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
-  fprintf(stderr,"Method2: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%f\n",mom,momJack,ML,mlJack);
-
-  mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack=jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
-  ML = like_optim(d.cn.size()/9,d0,err0,freq,c,0);
-  mlJack = jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
-  fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%f\n",mom,momJack,ML,mlJack);
-#endif
   delete [] rowSum;
   delete [] rowMax;
   delete [] rowMaxW;
@@ -744,9 +655,9 @@ int main(int argc,char**argv){
   int minDepth=2;
   int maxDepth=200;
   int skipTrans = 0;
-
+  int nThreads = 1;
   int n;
-  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:")) >= 0) {
+  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:p:")) >= 0) {
     switch (n) {
     case 'h': hapfile = strdup(optarg); break;
     case 'a': icounts = strdup(optarg); break;
@@ -756,17 +667,18 @@ int main(int argc,char**argv){
     case 'd': minDepth = atoi(optarg); break;
     case 'e': maxDepth = atoi(optarg); break;
     case 'f': skipTrans = atoi(optarg); break;
+    case 'p': nThreads = atoi(optarg); break;
     default: {fprintf(stderr,"unknown arg:\n");return 0;}
     }
   }
   if(!hapfile||!icounts){
     fprintf(stderr,"\t-> Must supply -h hapmapfile -a angsd.icnts.gz file\n");
-    fprintf(stderr,"\t-> Other options: -m minaf -b startpos -c stoppos -d mindepth -e maxdepth -f skiptrans\n");
+    fprintf(stderr,"\t-> Other options: -m minaf -b startpos -c stoppos -d mindepth -e maxdepth -f skiptrans -p nthreads\n");
     return 0;
   }
   
   int minDist = 10;
-  fprintf(stderr,"hapmap:%s counts:%s minMaf:%f startPos:%d stopPos:%d minDepth:%d maxDepth:%d skiptrans:%d\n",hapfile,icounts,minMaf,startPos,stopPos,minDepth,maxDepth,skipTrans);
+  fprintf(stderr,"hapmap:%s counts:%s minMaf:%f startPos:%d stopPos:%d minDepth:%d maxDepth:%d skiptrans:%d nthreads:%d\n",hapfile,icounts,minMaf,startPos,stopPos,minDepth,maxDepth,skipTrans,nThreads);
 
   
   aMap myMap = readhap(hapfile,minDist,minMaf,startPos,stopPos,skipTrans);
@@ -774,7 +686,7 @@ int main(int argc,char**argv){
   std::vector<int*> cnt;
   readicnts(icounts,ipos,cnt,minDepth,maxDepth);
   dat d=count(myMap,ipos,cnt);
-  analysis(d);
+  analysis(d,nThreads);
 
   //cleanup
   for(int i=0;i<cnt.size();i++)
