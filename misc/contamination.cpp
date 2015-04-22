@@ -13,6 +13,7 @@
 #include <map>
 #include <cassert>
 #include <ctype.h>
+#include <pthread.h>
 #include "kmath.h"
 #include "../fet.c"
 #define LENS 4096
@@ -99,26 +100,17 @@ double likeNewMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps,in
 
 
 typedef struct{
+  int newllh;
   int len;
   int* seqDepth;
   int *nonMajor;
   double *freq;
   double eps;
-  int newllh;
-  int doMom;
   int *e1;
   int *d1;
   int skip;
 }allPars;
 
-
-double myfun(double x,void *d){
-  allPars *ap = (allPars *)d;
-  if(ap->newllh)
-    return -likeNew(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps,ap->skip);
-  else
-    return -likeOld(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps,ap->skip);
-}
 
 
 double calcEps(int *e1,int *d1,int len,int skip){
@@ -135,7 +127,16 @@ double calcEps(int *e1,int *d1,int len,int skip){
   
 }
 
-double jack(allPars *ap){
+
+double myfun(double x,void *d){
+  allPars *ap = (allPars *)d;
+  if(ap->newllh)
+    return -likeNew(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,calcEps(ap->e1,ap->d1,ap->len,ap->skip),ap->skip);
+  else
+    return -likeOld(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,calcEps(ap->e1,ap->d1,ap->len,ap->skip),ap->skip);
+}
+
+double jackMom(allPars *ap){
   int len=ap->len;
   int *seqDepth=ap->seqDepth;
   int *nonMajor=ap->nonMajor;
@@ -143,26 +144,74 @@ double jack(allPars *ap){
   int isnew = ap->newllh;
   int *e1 = ap->e1;
   int *d1 = ap->d1;
-  int doMom= ap->doMom;
   double *thetas =new double[len];
   for(int i=0;i<len;i++){
-    if((i % 100 )==0)
-      fprintf(stderr,"\r-> %d/%d      ",i,len);
-    if(doMom){
-      if(isnew==0){
-	thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
-      }else
-	thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
-    }else{
-      ap->skip=i;
-      double xmin,val;
-      val = kmin_brent(myfun,1e-6,0.5-1e-6,ap,0.0001,&xmin);
-      thetas[i] = xmin;
-    }
+    if(isnew==0)
+      thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
+    else
+      thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
+    
   }
   double esd = sd(thetas,len);
-  //  fprintf(stderr,"jackknife sd: %f\n\n",esd);
   delete [] thetas;
+  return esd;
+}
+
+typedef struct{
+  allPars *ap;
+  double *thetas;
+  double *val;
+  int from;
+  int to;
+}tpars;
+
+
+void *slave(void *ptr){
+  tpars *tp = (tpars *)ptr; 
+  //  fprintf(stderr,"from:%d to:%d \n",tp->from,tp->to);
+  for(int i=tp->from;i<tp->to;i++){
+    tp->ap->skip=i;
+    tp->val[i] = kmin_brent(myfun,1e-6,0.5-1e-6,tp->ap,0.0001,&tp->thetas[i]);
+  }
+}
+
+
+
+double jackML(allPars *ap,int nthreads){
+  double *thetas =new double[ap->len];
+  double *val = new double[ap->len];
+  if(nthreads>1){
+    pthread_t *thd = new pthread_t[nthreads];
+    tpars *tp = new tpars[nthreads];
+    int block = ap->len/nthreads;
+    
+    for(int i=0;i<nthreads;i++){
+      tp[i].thetas = thetas;
+      tp[i].val = val;
+      tp[i].ap = ap;
+      tp[i].from = i==0?0:tp[i-1].to;
+      tp[i].to = tp[i].from+block;
+    }
+    tp[nthreads-1].to = ap->len;
+    for(int i=0;i<nthreads;i++)
+      pthread_create(&thd[i],NULL,slave,&tp[i]);
+
+    for(int i=0;i<nthreads;i++)
+      pthread_join(thd[i],NULL);
+    
+  }else{      
+    for(int i=0;i<ap->len;i++){
+      if((i % 100 )==0)
+	fprintf(stderr,"\r-> %d/%d      ",i,ap->len);
+      ap->skip=i;
+      val[i] = kmin_brent(myfun,1e-6,0.5-1e-6,ap,0.0001,&thetas[i]);
+
+    }
+  }
+     
+  double esd = sd(thetas,ap->len);
+  delete [] thetas;
+  delete [] val;
   return esd;
 }
 
@@ -317,23 +366,21 @@ void analysis(dat &d,int nThreads) {
 
   double mom,momJack,ML,mlJack;
 
-  ap.doMom =1;  ap.newllh =0; ap.skip=-1;
+  ap.newllh =0; ap.skip=-1;
   mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack = jack(&ap);
+  momJack = jackMom(&ap);
 
   kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
-  ap.doMom = 0;
-  mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: old llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  mlJack= jackML(&ap,nThreads);
+  fprintf(stderr,"\nMethod1: old_llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
  
-  ap.doMom =1;ap.newllh =1;ap.skip=-1;
+  ap.newllh =1;ap.skip=-1;
 
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack= jack(&ap);
+  momJack= jackMom(&ap);
   kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
-  ap.doMom =0;
-  mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: new llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  mlJack= jackML(&ap,nThreads);
+  fprintf(stderr,"\nMethod1: new_llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
  
 
   for(int i=0;i<d.cn.size()/9;i++){
@@ -365,22 +412,19 @@ void analysis(dat &d,int nThreads) {
   ap.d1=d1;
 
 
-  ap.newllh =0; ap.doMom= 1;
+  ap.newllh =0;
   mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack = jack(&ap);
+  momJack = jackMom(&ap);
   kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
-  ap.doMom = 0;
-  mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod2: old llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  mlJack= jackML(&ap,nThreads);
+  fprintf(stderr,"\nMethod2: old_llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
 
   ap.newllh =1;
-  ap.doMom=1;
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack= jack(&ap);
-  ap.doMom =0;
+  momJack= jackMom(&ap);
   kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
-  mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod2: new llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  mlJack= jackML(&ap,nThreads);
+  fprintf(stderr,"\nMethod2: new_llh Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
  
 
   delete [] rowSum;
@@ -580,7 +624,7 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
       myMap[p]=hs;
     }
   }
-  //fprintf(stderr,"[%s] We have read: %zu sites from hapfile:%s\n",__FUNCTION__,myMap.size(),fname);
+  //  fprintf(stderr,"[%s] We have read: %zu sites from hapfile (after filtering for start/stop pos):%s\n",__FUNCTION__,myMap.size(),fname);
   //fprintf(stderr,"[%s] will remove snp sites to close:\n",__FUNCTION__);
 
   assert(myMap.size()>0);
@@ -620,7 +664,7 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
 
 
 void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,int minDepth,int maxDepth){
-  fprintf(stderr,"[%s] fname:%s minDepth:%d maxDepth:%d\n",__FUNCTION__,fname,minDepth,maxDepth);
+    fprintf(stderr,"[%s] fname:%s minDepth:%d maxDepth:%d\n",__FUNCTION__,fname,minDepth,maxDepth);
   gzFile gz=getgz(fname,"rb");
 
   int tmp[5];

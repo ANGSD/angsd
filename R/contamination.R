@@ -228,6 +228,9 @@ readHap<-function(MinDist=10,hapFile,minmaf,startPos,stopPos) {
     cat("HapMap sites:",nrow(hapMap_save), "from file: ",hapFile,"\n")
     hapMap_save <- hapMap_save[!(hapMap_save[,1]<startPos|hapMap_save[,1]>stopPos),]
     cat("HapMap after removing sites outside startPos stopPos ",nrow(hapMap_save),"\n")
+    hapMap_save<-hapMap_save[!(hapMap_save[,3]<minmaf|1-hapMap_save[,3]<minmaf),]
+    ##    write.table(hapMap_save,file="delme.txt",row.names=F,col.names=F,quote=F)
+    cat("HapMap after filtering out minmaf sites",nrow(hapMap_save),"\n")
 
 
 
@@ -240,9 +243,6 @@ readHap<-function(MinDist=10,hapFile,minmaf,startPos,stopPos) {
     hapMap_save<-hapMap_save[-which(diff(hapMap_save[,1])<MinDist),]
     ##    write.table(hapMap_save,file="delme.txt",row.names=F,col.names=F,quote=F)
     cat("HapMap after removing close snpts ",nrow(hapMap_save),"\n")
-    hapMap_save<-hapMap_save[!(hapMap_save[,3]<minmaf|1-hapMap_save[,3]<minmaf),]
-    ##    write.table(hapMap_save,file="delme.txt",row.names=F,col.names=F,quote=F)
-    cat("HapMap after filtering out minmaf sites",nrow(hapMap_save),"\n")
 
     if(any(is.na(hapMap_save))){
         stop("NA in hapmap")
@@ -356,7 +356,7 @@ args<-list(
     fixed=TRUE,
     jack=TRUE,
     minmaf=0.05,
-    startPos = 1e6,
+    startPos = 5e6,
     stopPos =  154900000
         )
 ##if no argument are given prints the need arguments and the optional ones with default
