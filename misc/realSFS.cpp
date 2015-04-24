@@ -12,27 +12,127 @@
   Its july 13 2013, it is hot outside
 
   april 13, safv3 added, safv2 removed for know. Will be reintroduced later.
-  
- */
+  april 20, removed 2dsfs as special scenario
+  april 20, split out the safreader into seperate cpp/h
+*/
 
 #include <cstdio>
 #include <vector>
 #include <cstdlib>
 #include <cstring>
-#include <sys/stat.h>
 #include <cmath>
 #include <cfloat>
 #include <signal.h>
 #include <cassert>
 #include <pthread.h>
-#include <htslib/bgzf.h>
-#include <map>
+#include <unistd.h>
+#include <sys/stat.h>
+
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
+#include "safreader.h"
 
-#define LENS 4096
+typedef struct {
+  char *chooseChr;
+  int nSites;
+  int maxIter;
+  double tole;
+  int nThreads;
+  char *sfsfname;
+  std::vector<persaf *> saf;
+}args;
+
+void destroy(args *p){
+  free(p->chooseChr);
+  delete p;
+}
+
+args * getArgs(int argc,char **argv){
+  args *p = new args;
+  p->sfsfname=p->chooseChr=NULL;
+  p->maxIter=1e2;
+  p->tole=1e-6;
+  p->nThreads=4;
+  p->nSites =0;
+  
+  if(argc==0)
+    return p;
+  if(argc%2){
+    fprintf(stderr,"Extra args must be given as -par VALUE\n");
+    exit(0);
+  }
+  while(*argv){
+    //    fprintf(stderr,"%s\n",*argv);
+    if(!strcasecmp(*argv,"-tole"))
+      p->tole = atof(*(++argv));
+    else  if(!strcasecmp(*argv,"-P"))
+      p->nThreads = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-maxIter"))
+      p->maxIter = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-nSites"))
+      p->nSites = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-r")){
+      p->chooseChr = strdup(*(++argv));
+    }
+    else  if(!strcasecmp(*argv,"-start")){
+      p->sfsfname = *(++argv);
+    }else{
+      p->saf.push_back(readsaf(*(++argv)));
+    }
+    argv++;
+  }
+  fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%lu chooseChr:%s start:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname);
+  for(int i =0;i<p->saf.size();i++)
+    fprintf(stderr,"input safs[%d]: %s\n",i,p->saf[i]);
+  return p;
+}
+
+void print(int argc,char **argv){
+
+  if(argc<1){
+    fprintf(stderr,"Must supply afile.saf.idx [chrname]\n");
+    return; 
+  }
+
+  char *bname = *argv;
+  fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
+  persaf *saf = readsaf(bname);
+  writesaf_header(stderr,saf);
+  
+  args *pars = getArgs(--argc,++argv);
+  if(argc>0)
+    pars->chooseChr = argv[1];
+  float *flt = new float[saf->nChr+1];
+  for(myMap::iterator it=saf->mm.begin();it!=saf->mm.end();++it){
+    if(pars->chooseChr!=NULL){
+      it = saf->mm.find(pars->chooseChr);
+      if(it==saf->mm.end()){
+	fprintf(stderr,"Problem finding chr: %s\n",pars->chooseChr);
+	break;
+      }
+    }
+    bgzf_seek(saf->pos,it->second.pos,SEEK_SET);
+    bgzf_seek(saf->saf,it->second.saf,SEEK_SET);
+    int *ppos = new int[it->second.nSites];
+    bgzf_read(saf->pos,ppos,sizeof(int)*it->second.nSites);
+    for(int s=0;s<it->second.nSites;s++){
+      bgzf_read(saf->saf,flt,sizeof(float)*(saf->nChr+1));
+      fprintf(stdout,"%s\t%d",it->first,ppos[s]);
+      for(int is=0;is<saf->nChr+1;is++)
+	fprintf(stdout,"\t%f",flt[is]);
+      fprintf(stdout,"\n");
+    }
+    delete [] ppos;
+    if(pars->chooseChr!=NULL)
+      break;
+  }
+  
+  delete [] flt;
+  destroy(pars);
+  destroy(saf);
+}
 
 template <typename T>
 struct Matrix{
@@ -41,203 +141,50 @@ struct Matrix{
   T** mat;
 };
 
-int fexists(const char* str){
-  struct stat buffer ;
-  return (stat(str, &buffer )==0 ); /// @return Function returns 1 if file exists.                             
-}
-
 int SIG_COND =1;
 pthread_t *thd=NULL;
 
-struct ltstr
-{
-  bool operator()(const char* s1, const char* s2) const
-  {
-    return strcmp(s1, s2) < 0;
-  }
-};
-
-typedef struct{
-  size_t nSites;
-  int64_t pos;
-  int64_t saf;
-}datum;
-
-typedef std::map<char*,datum,ltstr> myMap;
-
-typedef struct{
-  size_t nSites;
-  size_t nChr;
-  myMap mm;
-  BGZF *pos;
-  BGZF *saf;
-  size_t fsize;//contains an estimate of the uncompressed fsize
-}perpop;
-
-void dalloc(myMap &mm){
-  for(myMap::iterator it=mm.begin();it!=mm.end();++it)
-    free(it->first);
-  mm.clear();
+template <typename T>
+void destroy(Matrix<T> *ret,int x){
+  for(size_t i=0;i<x;i++)
+    delete [] ret->mat[i];
+  delete [] ret->mat;
+  delete ret;
 }
-
-void dalloc(perpop &pp){
-  bgzf_close(pp.pos);
-  bgzf_close(pp.saf);
-  dalloc(pp.mm);
-}
-
-
-
-void writePerPop(FILE *fp,perpop &pp){
-  fprintf(fp,"\t\tInformation from index file: nChr:%lu nSites:%lu\n",pp.nChr,pp.nSites);
-  
-  int i=0;
-  for(myMap::const_iterator it=pp.mm.begin();it!=pp.mm.end();++it){
-    datum d = it->second;
-    fprintf(fp,"\t\t%d\t%s\t%zu\t%ld\t%ld\n",i++,it->first,d.nSites,(long int)d.pos,(long int)d.saf);
-  }
-
-}
-
-
-perpop getMap(const char *fname){
-  perpop ret;
-  ret.pos=ret.saf=NULL;
-
-  size_t clen;
-  if(!fexists(fname)){
-    fprintf(stderr,"Problem opening file: %s\n",fname);
-    exit(0);
-  }
-  FILE *fp = fopen(fname,"r");
-  char buf[8];
-  assert(fread(buf,1,8,fp)==8);
- 
-  if(1!=fread(&ret.nChr,sizeof(size_t),1,fp)){
-    fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-    exit(0);
-  }
-  ret.nSites =0;
-  while(fread(&clen,sizeof(size_t),1,fp)){
-    char *chr = (char*)malloc(clen+1);
-    assert(clen==fread(chr,1,clen,fp));
-    chr[clen] = '\0';
-    
-    datum d;
-    if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){
-      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
-    }
-    ret.nSites += d.nSites;
-    if(1!=fread(&d.pos,sizeof(int64_t),1,fp)){
-      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
-    }
-    if(1!=fread(&d.saf,sizeof(int64_t),1,fp)){
-      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
-    }
-  
-    myMap::iterator it = ret.mm.find(chr);
-    if(it==ret.mm.end())
-      ret.mm[chr] =d ;
-    else{
-      fprintf(stderr,"Problem with chr: %s, key already exists\n",chr);
-      exit(0);
-    }
-  }
-  fclose(fp);
-  char *tmp =(char*)calloc(strlen(fname)+100,1);//that should do it
-  tmp=strncpy(tmp,fname,strlen(fname)-3);
-  //  fprintf(stderr,"tmp:%s\n",tmp);
-  
-  char *tmp2 = (char*)calloc(strlen(fname)+100,1);//that should do it
-  snprintf(tmp2,strlen(fname)+100,"%sgz",tmp);
-  fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
-  ret.saf = bgzf_open(tmp2,"r");bgzf_seek(ret.saf,8,SEEK_SET);
-  snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
-  fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
-  ret.pos = bgzf_open(tmp2,"r");bgzf_seek(ret.pos,8,SEEK_SET);
-  assert(ret.pos!=NULL&&ret.saf!=NULL);
-  free(tmp);free(tmp2);
-  
-  ret.fsize = sizeof(float)*ret.nSites*(ret.nChr+1)+sizeof(double *)*ret.nSites;
-  
-
-  return ret;
-}
-
-
-
-
-/*
-  loads first 8bytes and checks magic value
-
-  //return 0 if it is old format
-  //returns 1 if safv2
-  //returns 2 if safv3
-
- */
-
-int isNewFormat(const char *fname){
-  gzFile gz=Z_NULL;
-  gz = gzopen(fname,"r");
-  if(gz==Z_NULL){
-    fprintf(stderr,"Problem opening file: \'%s\'",fname);
-    exit(0);
-  }
-  char buf[8];
-  gzread(gz,buf,8*sizeof(char));
-  //if(0==strcmp(buf,"safv2"))
-  //  fprintf(stderr,"File is new format... Opening string is: %s\n",buf);
-  gzclose(gz);
-  if(0==strcmp(buf,"safv2"))
-    return 1;
-  else if(0==strcmp(buf,"safv3"))
-    return 2;
-  else 
-    return 0;
-}
-
 
 
 
 
 template <typename T>
-Matrix<float> alloc(size_t x,size_t y){
+Matrix<T> *alloc(size_t x,size_t y){
   //fprintf(stderr,"def=%f\n",def);
-  Matrix<float> ret;
-  ret.x=x;
-  ret.y=y;
-  ret.mat= new float*[x];
-  for(size_t i=0;i<x;i++)
-    ret.mat[i]=new float[y];
+  Matrix<T> *ret = new Matrix<T>;
+  ret->x=x;
+  ret->y=y;
+  ret->mat= new T*[x];
+  for(size_t i=0;i<ret->x;i++)
+    ret->mat[i]=new T[y];
   return ret;
 };
 
-void dalloc(Matrix<float> &ret,size_t x){
-  for(size_t i=0;i<x;i++)
-    delete [] ret.mat[i];
-  delete [] ret.mat;
-}
 
 
-
-typedef struct emPars_t{
+template<typename T>
+struct emPars{
   int threadId; //size_t is the largest primitive datatype.
-  double *inparameters;
-  double *outparameters;
-  Matrix<float> *GL1;
-  Matrix<float> *GL2;
+  Matrix<T> *GL;//<-this will be new approach
   int from;
   int to;
   double lik;
   double *sfs;//shared for all threads
   double *post;//allocated for every thread
   int dim;
-} emPars;
+};
 
-emPars *emp = NULL;
+
+
+emPars<float> *emp = NULL;
+
 
 
 
@@ -266,25 +213,14 @@ size_t getTotalSystemMemory(){
 }
 #endif
 
-
-
-
-
-char *append(const char* a,const char *b){
-  char *c =(char *) malloc((strlen(a)+strlen(b)+1)*sizeof(char));
-  strcpy(c,a);
-  strncat(c,b,strlen(b));
-  return c;
-}
-
 template<typename T>
-void readGL(BGZF *fp,size_t nSites,int dim,Matrix<T> &ret){
-  ret.x=nSites;
-  ret.y=dim;
+void readGL(BGZF *fp,size_t nSites,int dim,Matrix<T> *ret){
+  ret->x=nSites;
+  ret->y=dim;
   size_t i;
   for(i=0;SIG_COND&&i<nSites;i++){
     //    fprintf(stderr,"i:%lu\n",i);
-    int bytes_read = bgzf_read(fp,ret.mat[i],sizeof(float)*dim);
+    int bytes_read = bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
 
     if(bytes_read!=0 && bytes_read<sizeof(float)*dim){
       fprintf(stderr,"Problem reading chunk from file, please check nChr is correct, will exit \n");
@@ -294,11 +230,40 @@ void readGL(BGZF *fp,size_t nSites,int dim,Matrix<T> &ret){
       break;
     
     for(size_t j=0;j<dim;j++)
-      ret.mat[i][j] = exp(ret.mat[i][j]);
+      ret->mat[i][j] = exp(ret->mat[i][j]);
     
   }
   
-  ret.x=i;
+  ret->x=i;
+  if(SIG_COND==0)
+    exit(0);
+  
+}
+
+template<typename T>
+void readGL(std::vector<persaf> &adolf,size_t nSites,std::vector< Matrix<T> > &ret){
+
+  for(int f=0;f<adolf.size();f++){
+    ret[f].y=adolf[f].nChr+1;
+    size_t i;  
+    for(i=0;SIG_COND&&i<nSites;i++){
+      //    fprintf(stderr,"i:%lu\n",i);
+      int bytes_read = bgzf_read(adolf[f].saf,ret[f].mat[i],sizeof(T)*(adolf[f].nChr+1));
+      
+      if(bytes_read!=0 && bytes_read<sizeof(T)*(adolf[f].nChr+1)){
+	fprintf(stderr,"Problem reading chunk from file, please check nChr is correct, will exit \n");
+	exit(0);
+      }
+      if(bytes_read==0)
+	break;
+      
+      for(size_t j=0;j<adolf[f].nChr+1;j++)
+	ret[f].mat[i][j] = exp(ret[f].mat[i][j]);
+      
+    }
+    ret[f].x=i;
+  }
+ 
   if(SIG_COND==0)
     exit(0);
   
@@ -353,60 +318,6 @@ void readSFS(const char*fname,int hint,double *ret){
   fclose(fp);
 }
 
-typedef struct {
-  char *chooseChr;
-  int calcLike;
-  int nSites;
-  int maxIter;
-  double tole;
-  int nThreads;
-  char *sfsfname;
-}args;
-
-void dalloc(args *p){
-  free(p->chooseChr);
-}
-
-args * getArgs(int argc,char **argv){
-  args *p =(args*) calloc(1,sizeof(args));
-  p->sfsfname=p->chooseChr=NULL;
-  p->maxIter=1e2;
-  p->tole=1e-6;
-  p->nThreads=4;
-  p->nSites =0;
-  if(argc==0)
-    return p;
-  if(argc%2){
-    fprintf(stderr,"Extra args must be given as -par VALUE\n");
-    exit(0);
-  }
-  while(*argv){
-    //    fprintf(stderr,"%s\n",*argv);
-    if(!strcasecmp(*argv,"-tole"))
-      p->tole = atof(*(++argv));
-    else  if(!strcasecmp(*argv,"-P"))
-      p->nThreads = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-maxIter"))
-      p->maxIter = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-nSites"))
-      p->nSites = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-calcLike"))
-      p->calcLike = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-r")){
-      p->chooseChr = strdup(*(++argv));
-    }
-    else  if(!strcasecmp(*argv,"-start")){
-      p->sfsfname = *(++argv);
-    }else{
-      fprintf(stderr,"Unknown arg: %s\n",*argv);
-      exit(0);
-    }
-    argv++;
-  }
-  fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%lu calcLike:%d chooseChr:%s start:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->calcLike,p->chooseChr,p->sfsfname);
-  return p;
-}
-
 template <typename T>
 double lik1(double *sfs,Matrix<T> *ret,int from,int to){
   double r =0;
@@ -421,19 +332,20 @@ double lik1(double *sfs,Matrix<T> *ret,int from,int to){
 
 
 
+template <typename T>
 void *lik1_slave(void *p){
-  emPars &pars = emp[(size_t) p];
+  emPars<T> &pars = emp[(size_t) p];
 
-  pars.lik = lik1(pars.sfs,pars.GL1,pars.from,pars.to);
+  pars.lik = lik1(pars.sfs,pars.GL,pars.from,pars.to);
   //fprintf(stderr," thdid=%d lik=%f\n",pars.threadId,pars.lik);
   return NULL;
 }
 
 
-
+template <typename T>
 double lik1_master(int nThreads){
   for(size_t i=0;i<nThreads;i++){
-    int rc = pthread_create(&thd[i],NULL,lik1_slave,(void*) i);
+    int rc = pthread_create(&thd[i],NULL,lik1_slave<T>,(void*) i);
     if(rc)
       fprintf(stderr,"error creating thread\n");
     
@@ -451,7 +363,8 @@ double lik1_master(int nThreads){
 }
 
 
-void emStep1(double *pre,Matrix<float> *GL1,double *post,int start,int stop,int dim){
+template <typename T>
+void emStep1(double *pre,Matrix<T> *GL1,double *post,int start,int stop,int dim){
   double inner[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
@@ -469,19 +382,19 @@ void emStep1(double *pre,Matrix<float> *GL1,double *post,int start,int stop,int 
 }
 
 
-
+template <typename T>
 void *emStep1_slave(void *p){
-  emPars &pars = emp[(size_t) p];
+  emPars<T> &pars = emp[(size_t) p];
 
-  emStep1(pars.sfs,pars.GL1,pars.post,pars.from,pars.to,pars.dim);
+  emStep1(pars.sfs,pars.GL,pars.post,pars.from,pars.to,pars.dim);
 
   return NULL;
 }
 
-
+template <typename T>
 void emStep1_master(double *post,int nThreads){
   for(size_t i=0;i<nThreads;i++){
-    int rc = pthread_create(&thd[i],NULL,emStep1_slave,(void*) i);
+    int rc = pthread_create(&thd[i],NULL,emStep1_slave<T>,(void*) i);
     if(rc)
       fprintf(stderr,"error creating thread\n");
     
@@ -511,11 +424,11 @@ void emStep1_master(double *post,int nThreads){
 
 
 
-
+template <typename T>
 void em1(double *sfs,Matrix<float> *GL1,double tole,int maxIter,int nThreads,int dim){
   double oldLik,lik;
   if(nThreads>1)
-    oldLik = lik1_master(nThreads);
+    oldLik = lik1_master<T>(nThreads);
   else
     oldLik = lik1(sfs,GL1,0,GL1->x);
   fprintf(stderr,"startlik=%f\n",oldLik);
@@ -525,15 +438,15 @@ void em1(double *sfs,Matrix<float> *GL1,double tole,int maxIter,int nThreads,int
   
   for(int it=0;SIG_COND&&it<maxIter;it++) {
     if(nThreads>1)
-      emStep1_master(tmp,nThreads);
+      emStep1_master<T>(tmp,nThreads);
     else
-      emStep1(sfs,GL1,tmp,0,GL1->x,dim);
+      emStep1<T>(sfs,GL1,tmp,0,GL1->x,dim);
     
     for(int i=0;i<dim;i++)
       sfs[i]= tmp[i];
 
     if(nThreads>1)
-      lik = lik1_master(nThreads);
+      lik = lik1_master<T>(nThreads);
     else
       lik = lik1(sfs,GL1,0,GL1->x);
 
@@ -548,8 +461,74 @@ void em1(double *sfs,Matrix<float> *GL1,double tole,int maxIter,int nThreads,int
   
 }
 
+template<typename T>
+emPars<T> *setThreadPars(Matrix<T> *GL1,double *sfs,int nThreads,int dim){
+  emPars<T> *temp = new emPars<T>[nThreads];
+  int blockSize = GL1->x/nThreads;
+  for(int i=0;i<nThreads;i++){
+    temp[i].threadId = i;
+    temp[i].GL=GL1;
+    temp[i].from =0;
+    temp[i].to=blockSize;
+    temp[i].sfs = sfs;
+    temp[i].post=new double[dim];
+    temp[i].dim = dim;
+  }
+  //redo the from,to
+  for(int i=1;i<nThreads;i++){
+    temp[i].from = temp[i-1].to;
+    temp[i].to = temp[i].from+blockSize;
+  }
+  //fix last end point
+  temp[nThreads-1].to=GL1->x;
+#if 0
+  for(int i=0;i<nThreads;i++)
+    fprintf(stderr,"%d:(%d,%d)=%d ",temp[i].threadId,temp[i].from,temp[i].to,temp[i].to-temp[i].from);
+  fprintf(stderr,"\n");
+#endif 
+  
+  thd= new pthread_t[nThreads];
+  return temp;
+}
 
-double lik2(double *sfs,Matrix<float> *GL1,Matrix<float> *GL2,size_t start,size_t stop){
+template<typename T>
+void destroy(emPars<T> *a,int nThreads ){
+  for(int i=0;i<nThreads;i++)
+    delete [] a[i].post;
+  delete [] a;
+}
+
+
+template<typename T>
+void setThreadPars(std::vector<Matrix < T > >  &gls,double *sfs,int nThreads,int tdim){
+  emp = new emPars<T>[nThreads];
+  int blockSize = gls[0]->x/nThreads;
+  for(int i=0;i<nThreads;i++){
+    emp[i].threadId = i;
+    emp[i].GL=&gls[i];
+    emp[i].from =0;
+    emp[i].to=blockSize;
+    emp[i].sfs = sfs;
+    emp[i].post=new double[tdim];
+  }
+  //redo the from,to
+  for(int i=1;i<nThreads;i++){
+    emp[i].from = emp[i-1].to;
+    emp[i].to = emp[i].from+blockSize;
+  }
+  //fix last end point
+  emp[nThreads-1].to=gls[0].x;
+#if 0
+  for(int i=0;i<nThreads;i++)
+    fprintf(stderr,"%d:(%d,%d)=%d ",emp[i].threadId,emp[i].from,emp[i].to,emp[i].to-emp[i].from);
+  fprintf(stderr,"\n");
+#endif 
+  
+  thd= new pthread_t[nThreads];
+}
+
+template<typename T>
+double lik2(double *sfs,Matrix<T> *GL1,Matrix<T> *GL2,size_t start,size_t stop){
   double res =0;
   for(int s=start;SIG_COND &&s<stop;s++){
     //    fprintf(stderr,"s=%d\n",s);
@@ -564,38 +543,10 @@ double lik2(double *sfs,Matrix<float> *GL1,Matrix<float> *GL2,size_t start,size_
 }
 
 
-void setThreadPars(Matrix<float> *GL1,Matrix<float> *GL2,double *sfs,int nThreads,int dim){
-  emp = new emPars[nThreads];
-  int blockSize = GL1->x/nThreads;
-  for(int i=0;i<nThreads;i++){
-    emp[i].threadId = i;
-    emp[i].GL1=GL1;
-    emp[i].GL2=GL2;
-    emp[i].from =0;
-    emp[i].to=blockSize;
-    emp[i].sfs = sfs;
-    emp[i].post=new double[dim];
-  }
-  //redo the from,to
-  for(int i=1;i<nThreads;i++){
-    emp[i].from = emp[i-1].to;
-    emp[i].to = emp[i].from+blockSize;
-  }
-  //fix last end point
-  emp[nThreads-1].to=GL1->x;
-#if 0
-  for(int i=0;i<nThreads;i++)
-    fprintf(stderr,"%d:(%d,%d)=%d ",emp[i].threadId,emp[i].from,emp[i].to,emp[i].to-emp[i].from);
-  fprintf(stderr,"\n");
-#endif 
-  
-  thd= new pthread_t[nThreads];
-}
 
-
-
+template<typename T>
 void *lik2_slave(void *p){
-  emPars &pars = emp[(size_t) p];
+  emPars<T> &pars = emp[(size_t) p];
 
   pars.lik = lik2(pars.sfs,pars.GL1,pars.GL2,pars.from,pars.to);
   //fprintf(stderr," thdid=%d lik=%f\n",pars.threadId,pars.lik);
@@ -603,11 +554,11 @@ void *lik2_slave(void *p){
 }
 
 
-
+template<typename T>
 double lik2_master(int nThreads){
   
   for(size_t i=0;i<nThreads;i++){
-    int rc = pthread_create(&thd[i],NULL,lik2_slave,(void*) i);
+    int rc = pthread_create(&thd[i],NULL,lik2_slave<T>,(void*) i);
     if(rc)
       fprintf(stderr,"error creating thread\n");
     
@@ -626,8 +577,8 @@ double lik2_master(int nThreads){
 
 
 
-
-void emStep2(double *pre,Matrix<float> *GL1,Matrix<float> *GL2,double *post,int start,int stop,int dim){
+template <typename T>
+void emStep2(double *pre,Matrix<T> *GL1,Matrix<T> *GL2,double *post,int start,int stop,int dim){
   double inner[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
@@ -646,19 +597,19 @@ void emStep2(double *pre,Matrix<float> *GL1,Matrix<float> *GL2,double *post,int 
   normalize(post,dim);
  
 }
-
+template<typename T>
 void *emStep2_slave(void *p){
-  emPars &pars = emp[(size_t) p];
+  emPars<T> &pars = emp[(size_t) p];
 
   emStep2(pars.sfs,pars.GL1,pars.GL2,pars.post,pars.from,pars.to,pars.dim);
 
   return NULL;
 }
 
-
+template<typename T>
 void emStep2_master(double *post,int nThreads){
   for(size_t i=0;i<nThreads;i++){
-    int rc = pthread_create(&thd[i],NULL,emStep2_slave,(void*) i);
+    int rc = pthread_create(&thd[i],NULL,emStep2_slave<T>,(void*) i);
     if(rc)
       fprintf(stderr,"error creating thread\n");
     
@@ -704,119 +655,6 @@ void handler(int s) {
 
 
 
-
-
-void em2(double *sfs,Matrix<float> *GL1,Matrix<float> *GL2,double tole,int maxIter,int nThreads,int dim){
-  double oldLik,lik;
-  if(nThreads>1)
-    oldLik = lik2_master(nThreads); 
-  else
-    oldLik = lik2(sfs,GL1,GL2,0,GL1->x);
-  fprintf(stderr,"startlik=%f\n",oldLik);
-
-  double tmp[dim];//<- wont be cleaned up, but is only allocated once
-  for(int it=0;SIG_COND&&it<maxIter;it++) {
-    if(nThreads>1)
-      emStep2_master(tmp,nThreads);
-    else
-      emStep2(sfs,GL1,GL2,tmp,0,GL1->x,dim);
-
-    for(int i=0;i<dim;i++)
-      sfs[i]= tmp[i];
-    
-    if(nThreads>1)
-      lik = lik2_master(nThreads);
-    else
-      lik = lik2(sfs,GL1,GL2,0,GL1->x);
-    
-    fprintf(stderr,"[%d] lik=%f diff=%g\n",it,lik,fabs(lik-oldLik));
-
-    if(fabs(lik-oldLik)<tole){
-      oldLik=lik;
-      break;
-    }
-    oldLik=lik;
-  }
-  
-  
-}
-
-template <typename T>
-int main_2dsfs(int argc,char **argv){
-  if(argc==1){
-    fprintf(stderr,"./emOptim2 2dsfs pop1.saf.idx pop2.saf.idx [-start FNAME -P nThreds -tole tole -maxIter -r chrnam ] (only works if the two saf files covers the same region)\n");
-    return 0;
-  }
-  perpop p1 = getMap(argv[1]);
-  perpop p2 = getMap(argv[2]);
-  assert(p1.fsize==p2.fsize);
-  argc -=2;
-  argv += 2;
-  args *p = getArgs(argc,argv);
-  if(p->nSites==0){
-    if(p1.fsize+p2.fsize > getTotalSystemMemory())
-      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n");
-    //this doesnt make sense if ppl supply a filelist containing safs
-    p->nSites=p1.fsize;
-  }
-  fprintf(stderr,"chr1:%lu chr2:%lu startsfs:%s nThreads=%d tole=%f maxIter=%d nSites:%lu\n",p1.nChr,p2.nChr,p->sfsfname,p->nThreads,p->tole,p->maxIter,p->nSites);
-  float bytes_req_megs = p->nSites*(sizeof(T)*(p1.nChr+1) + sizeof(double)*(p2.nChr+1)+2*sizeof(T*))/1024/1024;
-  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
-  //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-  fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
-  
-  int dim=(p1.nChr+1)*(p2.nChr+1);
-  
-  Matrix<T> GL1=alloc<T>(p->nSites,p1.nChr+1);
-  Matrix<T> GL2=alloc<T>(p->nSites,p2.nChr+1);
-  dim=GL1.y*GL2.y;
-  
-  double *sfs = new double[dim];
-  while(1){
-    readGL(p1.saf,p->nSites,p1.nChr,GL1);
-    readGL(p2.saf,p->nSites,p2.nChr,GL2);
-          
-    assert(GL1.x==GL2.x);
-    if(GL1.x==0)
-      break;
-    
-    if(p->sfsfname!=NULL){
-      readSFS(p->sfsfname,dim,sfs);
-    }else{
-      for(int i=0;i<dim;i++)
-	sfs[i] = (i+1)/((double)dim);
-      normalize(sfs,dim);
-    }
-    
-    setThreadPars(&GL1,&GL2,sfs,p->nThreads,dim);
-    if(p->calcLike==0){
-      if(SIG_COND) 
-	em2(sfs,&GL1,&GL2,p->tole,p->maxIter,p->nThreads,dim);
-    }
-    double lik;
-    if(p->nThreads>1)
-      lik = lik1_master(p->nThreads);
-    else
-      lik = lik1(sfs,&GL1,0,GL1.x);
-      
-    fprintf(stderr,"likelihood: %f\n",lik);
-#if 1
-    int inc=0;
-    for(int x=0;x<=p1.nChr;x++){
-      for(int y=0;y<=p2.nChr+1;y++)
-	fprintf(stdout,"%f ",log(sfs[inc++]));
-      fprintf(stdout,"\n");
-    }
-#endif
-   
-  }
-  dalloc(GL1,p->nSites);
-  dalloc(GL2,p->nSites);
-  return 0;
-}
-
-
-
 template <typename T>
 int main_1dsfs(int argc,char **argv){
   if(argc<1){
@@ -828,126 +666,87 @@ int main_1dsfs(int argc,char **argv){
   char *bname = *argv;
   fprintf(stderr,"\t-> Assuming .saf.idx:%s\n",bname);
 
-  perpop p1 = getMap(bname);
-  writePerPop(stderr,p1);
+  persaf *saf = readsaf(bname);
+  //  writesaf_header(stderr,p1);
 
   args *ar = getArgs(--argc,++argv);
   
   int nSites = 0;
   if(nSites == 0){//if no -nSites is specified
-    if(p1.fsize>getTotalSystemMemory())
+    if(saf->fsize>getTotalSystemMemory())
       fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
     //this doesnt make sense if ppl supply a filelist containing safs
-    nSites=p1.nSites;
+    nSites=saf->nSites;
   }
-  fprintf(stderr,"nChr:%lu startsfs:%s nThreads:%d ",p1.nChr,ar->sfsfname,ar->nThreads);
+  fprintf(stderr,"nChr:%lu startsfs:%s nThreads:%d ",saf->nChr,ar->sfsfname,ar->nThreads);
 fprintf(stderr," tole=%f maxIter=%d nSites=%lu\n",ar->tole,ar->maxIter,nSites);
-  float bytes_req_megs = p1.fsize/1024/1024;
+  float bytes_req_megs = saf->fsize/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
   fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
 
   
 
-  Matrix<T> GL1=alloc<T>(nSites,p1.nChr+1);
-  double *sfs=new double[p1.nChr+1];
+  Matrix<T> *GL1=alloc<T>(nSites,saf->nChr+1);
+  double *sfs=new double[saf->nChr+1];
   
   while(1) {
-    readGL(p1.saf,nSites,p1.nChr+1,GL1);
+    readGL(saf->saf,nSites,saf->nChr+1,GL1);
     
-    if(GL1.x==0)
+    if(GL1->x==0)
       break;
-    fprintf(stderr,"dim(GL1)=%zu,%zu\n",GL1.x,GL1.y);
+    fprintf(stderr,"dim(GL1)=%zu,%zu\n",GL1->x,GL1->y);
    
     
   
     if(ar->sfsfname!=NULL){
-      readSFS(ar->sfsfname,p1.nChr+1,sfs);
+      readSFS(ar->sfsfname,saf->nChr+1,sfs);
     }else{
       
-      for(int i=0;i<p1.nChr+1;i++)
-	sfs[i] = (i+1)/((double)(p1.nChr+1));
-      normalize(sfs,p1.nChr+1);
+      for(int i=0;i<saf->nChr+1;i++)
+	sfs[i] = (i+1)/((double)(saf->nChr+1));
+      normalize(sfs,saf->nChr+1);
     }
-    //  em2_smart(sfs2,pops,1e-6,1e3);
-    setThreadPars(&GL1,NULL,sfs,ar->nThreads,p1.nChr+1);
-    if(ar->calcLike==0)
-      em1(sfs,&GL1,ar->tole,ar->maxIter,ar->nThreads,p1.nChr+1);
+    emp = setThreadPars<T>(GL1,sfs,ar->nThreads,saf->nChr+1);
+    em1<T>(sfs,GL1,ar->tole,ar->maxIter,ar->nThreads,saf->nChr+1);
 
     double lik;
     if(ar->nThreads>1)
-      lik = lik1_master(ar->nThreads);
+      lik = lik1_master<T>(ar->nThreads);
     else
-      lik = lik1(sfs,&GL1,0,GL1.x);
+      lik = lik1(sfs,GL1,0,GL1->x);
       
     fprintf(stderr,"likelihood: %f\n",lik);
 #if 1
-    for(int x=0;x<=p1.nChr;x++)
+    for(int x=0;x<=saf->nChr;x++)
       fprintf(stdout,"%f ",log(sfs[x]));
     fprintf(stdout,"\n");
     fflush(stdout);
 #endif
     
   }
-  dalloc(GL1,ar->nSites);
-  dalloc(p1);
+  destroy<T>(emp,ar->nThreads);
+  destroy(GL1,nSites);
+  destroy(saf);
+
+  destroy(ar);
   delete [] sfs;
+  delete [] thd;
+
   return 0;
 }
 
-
-
-
-int print(int argc,char **argv){
-  //  fprintf(stderr,"chooseChr:%s argc:%d argv:%s\n",chooseChr,argc,*argv);
-  if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx [-r chr]\n");
-    return 0;
-  }
-
-  char *bname = *argv;
-  fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
-  args *p = getArgs(--argc,++argv);
-  perpop pp = getMap(bname);
-  writePerPop(stderr,pp);
-  
-  float *flt = new float[pp.nChr+1];
-  for(myMap::iterator it=pp.mm.begin();it!=pp.mm.end();++it){
-    if(p->chooseChr!=NULL){
-      it = pp.mm.find(p->chooseChr);
-      if(it==pp.mm.end()){
-	fprintf(stderr,"Problem finding chr: %s\n",p->chooseChr);
-	break;
-      }
-    }
-    bgzf_seek(pp.pos,it->second.pos,SEEK_SET);
-    bgzf_seek(pp.saf,it->second.saf,SEEK_SET);
-    int *ppos = new int[it->second.nSites];
-    bgzf_read(pp.pos,ppos,sizeof(int)*it->second.nSites);
-    for(int s=0;s<it->second.nSites;s++){
-      bgzf_read(pp.saf,flt,sizeof(float)*(pp.nChr+1));
-      fprintf(stdout,"%s\t%d",it->first,ppos[s]);
-      for(int is=0;is<pp.nChr+1;is++)
-	fprintf(stdout,"\t%f",flt[is]);
-      fprintf(stdout,"\n");
-    }
-    delete [] ppos;
-    if(p->chooseChr!=NULL)
-      break;
-  }
-  
-  delete [] flt;
-  dalloc(pp);
-  return 0;
+size_t fsizes(std::vector<persaf> &pp){
+  size_t res = 0;
+  for(int i=0;i<pp.size();i++)
+    res += pp[i].fsize;
+  return res;
 }
-
-
 
 
 
 int main(int argc,char **argv){
-  //set of signal handling
-
+  //start of signal handling
   struct sigaction sa;
   sigemptyset (&sa.sa_mask);
   sa.sa_flags = 0;
@@ -956,6 +755,7 @@ int main(int argc,char **argv){
   sigaction(SIGINT, &sa, 0);  
 
   if(argc==1){
+    fprintf(stderr,"Make better output. All info below is potential wrong should be upated\n");
     fprintf(stderr,"\n./realSFS afile.saf nChr [-start FNAME -P nThreads -tole tole -maxIter  -nSites ]\n");
     fprintf(stderr,"OR\n ./realSFS 2dsfs pop1.saf pop2.saf nchrPop1 nChrPop2 [-start FNAME -P nThreads -tole tole -maxIter  -nSites ]\n");
     fprintf(stderr,"\nnChr is the number of chromosomes. (twice the number of diploid invididuals)\n");    
@@ -972,14 +772,17 @@ int main(int argc,char **argv){
     fprintf(stderr," >sfs.ml.txt\'\n");   
 
   }
-
-  if(!strcasecmp(*argv,"2dsfs"))
-    main_2dsfs<float>(argc,argv);
+  
+  
   if(!strcasecmp(*argv,"print"))
     print(--argc,++argv);
-  else
-    main_1dsfs<float>(argc,argv);
-  
+  else {
+    args *arg = getArgs(argc,argv);
+    if(arg->saf.size()==1)
+      main_1dsfs<float>(argc,argv);
+    //    else
+    //  main_2dsfs<float>(argc,argv);
+  }
 
   return 0;
 }

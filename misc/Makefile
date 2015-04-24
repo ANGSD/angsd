@@ -27,8 +27,13 @@ contamination: contamination.cpp kmath.o
 splitgl: splitgl.c
 	$(CC) $(FLAGS) splitgl.c -lz -o splitgl
 
-realSFS: realSFS.cpp 
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS -lz -lpthread -I $(HTSDIR) $(HTSLIB)
+
+safreader: safreader.cpp safreader.h
+	$(CXX) $(FLAGS) -c safreader.cpp -lz -lpthread -I $(HTSDIR)
+
+
+realSFS: realSFS.cpp safreader
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS -lz -lpthread -I $(HTSDIR) $(HTSLIB) safreader.o
 	cp realSFS emOptim2
 smartCount:	smartCount.c  
 	$(CC) $(FLAGS) smartCount.c -I$(HTSDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTSLIB)
