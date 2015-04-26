@@ -112,6 +112,8 @@ abcWriteVcf::abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype
 
 abcWriteVcf::~abcWriteVcf(){
   if(fp!=Z_NULL) gzclose(fp);
+  if(kstr.s)
+    free(kstr.s);
 }
 
 
