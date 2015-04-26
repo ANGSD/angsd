@@ -48,6 +48,25 @@ void destroy(args *p){
   free(p->chooseChr);
   delete p;
 }
+void destroy(std::vector<persaf *> saf){
+  for(int i=0;i<saf.size();i++)
+    destroy(saf[i]);
+}
+
+size_t fsizes(std::vector<persaf *> &pp){
+  size_t res = 0;
+  for(int i=0;i<pp.size();i++)
+    res += pp[i]->fsize;
+  return res;
+}
+
+size_t nsites(std::vector<persaf *> &pp){
+  size_t res = pp[0]->nSites;
+  for(int i=1;i<pp.size();i++)
+    if(pp[i]->nSites > res)
+      res = pp[i]->nSites;
+  return res;
+}
 
 args * getArgs(int argc,char **argv){
   args *p = new args;
@@ -59,12 +78,9 @@ args * getArgs(int argc,char **argv){
   
   if(argc==0)
     return p;
-  if(argc%2){
-    fprintf(stderr,"Extra args must be given as -par VALUE\n");
-    exit(0);
-  }
+
   while(*argv){
-    //    fprintf(stderr,"%s\n",*argv);
+    fprintf(stderr,"%s\n",*argv);
     if(!strcasecmp(*argv,"-tole"))
       p->tole = atof(*(++argv));
     else  if(!strcasecmp(*argv,"-P"))
@@ -79,13 +95,11 @@ args * getArgs(int argc,char **argv){
     else  if(!strcasecmp(*argv,"-start")){
       p->sfsfname = *(++argv);
     }else{
-      p->saf.push_back(readsaf(*(++argv)));
+      p->saf.push_back(readsaf(*argv));
     }
     argv++;
   }
   fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%lu chooseChr:%s start:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname);
-  for(int i =0;i<p->saf.size();i++)
-    fprintf(stderr,"input safs[%d]: %s\n",i,p->saf[i]);
   return p;
 }
 
@@ -144,6 +158,7 @@ struct Matrix{
 int SIG_COND =1;
 pthread_t *thd=NULL;
 
+
 template <typename T>
 void destroy(Matrix<T> *ret,int x){
   for(size_t i=0;i<x;i++)
@@ -152,12 +167,17 @@ void destroy(Matrix<T> *ret,int x){
   delete ret;
 }
 
+template <typename T>
+void destroy(std::vector< Matrix<T> * > &gls,int x){
+  for(size_t i=0;i<gls.size();i++)
+    destroy(gls[i],x);
+}
+
 
 
 
 template <typename T>
 Matrix<T> *alloc(size_t x,size_t y){
-  //fprintf(stderr,"def=%f\n",def);
   Matrix<T> *ret = new Matrix<T>;
   ret->x=x;
   ret->y=y;
@@ -171,8 +191,8 @@ Matrix<T> *alloc(size_t x,size_t y){
 
 template<typename T>
 struct emPars{
-  int threadId; //size_t is the largest primitive datatype.
-  Matrix<T> *GL;//<-this will be new approach
+  int threadId;
+  std::vector <Matrix<T> *> gls;
   int from;
   int to;
   double lik;
@@ -319,35 +339,81 @@ void readSFS(const char*fname,int hint,double *ret){
 }
 
 template <typename T>
-double lik1(double *sfs,Matrix<T> *ret,int from,int to){
+double lik1(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
   double r =0;
   for(int s=from;s<to;s++){
     double tmp =0;
-    for(int i=0;i<ret->y;i++)
-      tmp += sfs[i]* ret->mat[s][i];
+    for(int i=0;i<gls[0]->y;i++)
+      tmp += sfs[i]* gls[0]->mat[s][i];
+    r += log(tmp);
+  }
+  return r;
+}
+template <typename T>
+double lik2(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
+  double r =0;
+  for(int s=from;s<to;s++){
+    double tmp =0;
+    int inc =0;
+    for(int i=0;i<gls[0]->y;i++)
+      for(int j=0;j<gls[1]->y;j++)
+	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j];
+    r += log(tmp);
+  }
+  return r;
+}
+template <typename T>
+double lik3(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
+  double r =0;
+  for(int s=from;s<to;s++){
+    double tmp =0;
+    int inc =0;
+    for(int i=0;i<gls[0]->y;i++)
+      for(int j=0;j<gls[1]->y;j++)
+	for(int k=0;k<gls[2]->y;k++)
+	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*gls[2]->mat[s][k];
+    r += log(tmp);
+  }
+  return r;
+}
+template <typename T>
+double lik4(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
+  double r =0;
+  for(int s=from;s<to;s++){
+    double tmp =0;
+    int inc =0;
+    for(int i=0;i<gls[0]->y;i++)
+      for(int j=0;j<gls[1]->y;j++)
+	for(int k=0;k<gls[2]->y;k++)
+	  for(int m=0;m<gls[3]->y;m++)
+	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*gls[2]->mat[s][k]*gls[3]->mat[s][m];
     r += log(tmp);
   }
   return r;
 }
 
-
-
 template <typename T>
-void *lik1_slave(void *p){
+void *like_slave(void *p){
   emPars<T> &pars = emp[(size_t) p];
+  if(pars.gls.size()==1)
+    pars.lik = lik1(pars.sfs,pars.gls,pars.from,pars.to);
+  else if(pars.gls.size()==2)
+    pars.lik = lik2(pars.sfs,pars.gls,pars.from,pars.to);
+  else if(pars.gls.size()==3)
+    pars.lik = lik3(pars.sfs,pars.gls,pars.from,pars.to);
+  else if(pars.gls.size()==4)
+    pars.lik = lik4(pars.sfs,pars.gls,pars.from,pars.to);
+  
 
-  pars.lik = lik1(pars.sfs,pars.GL,pars.from,pars.to);
-  //fprintf(stderr," thdid=%d lik=%f\n",pars.threadId,pars.lik);
-  return NULL;
 }
 
 
 template <typename T>
-double lik1_master(int nThreads){
+double like_master(int nThreads){
   for(size_t i=0;i<nThreads;i++){
-    int rc = pthread_create(&thd[i],NULL,lik1_slave<T>,(void*) i);
+    int rc = pthread_create(&thd[i],NULL,like_slave<T>,(void*) i);
     if(rc)
-      fprintf(stderr,"error creating thread\n");
+      fprintf(stderr,"Error creating thread\n");
     
   }
   for(int i=0;i<nThreads;i++)
@@ -363,15 +429,16 @@ double lik1_master(int nThreads){
 }
 
 
+
 template <typename T>
-void emStep1(double *pre,Matrix<T> *GL1,double *post,int start,int stop,int dim){
+void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,int stop,int dim){
   double inner[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
   for(int s=start;SIG_COND&&s<stop;s++){
     for(int x=0;x<dim;x++)
-      inner[x] = pre[x]*GL1->mat[s][x];
+      inner[x] = pre[x]*gls[0]->mat[s][x];
   
    normalize(inner,dim);
    for(int x=0;x<dim;x++)
@@ -383,20 +450,91 @@ void emStep1(double *pre,Matrix<T> *GL1,double *post,int start,int stop,int dim)
 
 
 template <typename T>
-void *emStep1_slave(void *p){
-  emPars<T> &pars = emp[(size_t) p];
-
-  emStep1(pars.sfs,pars.GL,pars.post,pars.from,pars.to,pars.dim);
-
-  return NULL;
+void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
+  double inner[dim];
+  for(int x=0;x<dim;x++)
+    post[x] =0.0;
+    
+  for(int s=start;SIG_COND&&s<stop;s++){
+    int inc=0;
+    for(int x=0;x<gls[0]->y;x++)
+      for(int y=0;y<gls[1]->y;y++){
+	inner[inc] = pre[inc]*gls[0]->mat[s][x]*gls[1]->mat[s][y];
+	inc++;
+      }
+   normalize(inner,dim);
+   for(int x=0;x<dim;x++)
+     post[x] += inner[x];
+  }
+  normalize(post,dim);
+ 
 }
 
 template <typename T>
-void emStep1_master(double *post,int nThreads){
+void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
+  double inner[dim];
+  for(int x=0;x<dim;x++)
+    post[x] =0.0;
+    
+  for(int s=start;SIG_COND&&s<stop;s++){
+    int inc=0;
+    for(int x=0;x<gls[0]->y;x++)
+      for(int y=0;y<gls[1]->y;y++)
+	for(int i=0;i<gls[2]->y;i++)
+	  inner[inc++] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i];
+
+   normalize(inner,dim);
+   for(int x=0;x<dim;x++)
+     post[x] += inner[x];
+  }
+  normalize(post,dim);
+   
+}
+
+template <typename T>
+void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
+  double inner[dim];
+  for(int x=0;x<dim;x++)
+    post[x] =0.0;
+    
+  for(int s=start;SIG_COND&&s<stop;s++){
+    int inc=0;
+    for(int x=0;x<gls[0]->y;x++)
+      for(int y=0;y<gls[1]->y;y++)
+	for(int i=0;i<gls[2]->y;i++)
+	  for(int j=0;j<gls[3]->y;j++)
+	    inner[inc++] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i]* gls[3]->mat[s][j];
+
+  }
+  normalize(inner,dim);
+  for(int x=0;x<dim;x++)
+    post[x] += inner[x];
+  
+  normalize(post,dim);
+   
+}
+
+template <typename T>
+void *emStep_slave(void *p){
+  emPars<T> &pars = emp[(size_t) p];
+  if(pars.gls.size()==1)
+    emStep1<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+  else if(pars.gls.size()==2)
+    emStep2<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+  else if(pars.gls.size()==3)
+    emStep3<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+  else if(pars.gls.size()==4)
+    emStep4<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+ 
+}
+
+
+template<typename T>
+void emStep_master(double *post,int nThreads){
   for(size_t i=0;i<nThreads;i++){
-    int rc = pthread_create(&thd[i],NULL,emStep1_slave<T>,(void*) i);
+    int rc = pthread_create(&thd[i],NULL,emStep_slave<T>,(void*) i);
     if(rc)
-      fprintf(stderr,"error creating thread\n");
+      fprintf(stderr,"Error creating thread\n");
     
   }
   for(int i=0;i<nThreads;i++)
@@ -423,32 +561,23 @@ void emStep1_master(double *post,int nThreads){
 
 
 
-
 template <typename T>
-void em1(double *sfs,Matrix<float> *GL1,double tole,int maxIter,int nThreads,int dim){
+double em(double *sfs,double tole,int maxIter,int nThreads,int dim){
   double oldLik,lik;
-  if(nThreads>1)
-    oldLik = lik1_master<T>(nThreads);
-  else
-    oldLik = lik1(sfs,GL1,0,GL1->x);
+  oldLik = like_master<T>(nThreads);
+  
   fprintf(stderr,"startlik=%f\n",oldLik);
   fflush(stderr);
 
   double tmp[dim];
   
   for(int it=0;SIG_COND&&it<maxIter;it++) {
-    if(nThreads>1)
-      emStep1_master<T>(tmp,nThreads);
-    else
-      emStep1<T>(sfs,GL1,tmp,0,GL1->x,dim);
+    emStep_master<T>(tmp,nThreads);
     
     for(int i=0;i<dim;i++)
       sfs[i]= tmp[i];
 
-    if(nThreads>1)
-      lik = lik1_master<T>(nThreads);
-    else
-      lik = lik1(sfs,GL1,0,GL1->x);
+    lik = like_master<T>(nThreads);
 
     fprintf(stderr,"[%d] lik=%f diff=%g\n",it,lik,fabs(lik-oldLik));
 
@@ -458,16 +587,17 @@ void em1(double *sfs,Matrix<float> *GL1,double tole,int maxIter,int nThreads,int
     }
     oldLik=lik;
   }
-  
+  return oldLik;
 }
 
 template<typename T>
-emPars<T> *setThreadPars(Matrix<T> *GL1,double *sfs,int nThreads,int dim){
+emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads,int dim,int nSites){
+  fprintf(stderr,"nSites:%d\n",nSites);
   emPars<T> *temp = new emPars<T>[nThreads];
-  int blockSize = GL1->x/nThreads;
+  int blockSize = nSites/nThreads;
   for(int i=0;i<nThreads;i++){
     temp[i].threadId = i;
-    temp[i].GL=GL1;
+    temp[i].gls=gls;
     temp[i].from =0;
     temp[i].to=blockSize;
     temp[i].sfs = sfs;
@@ -480,8 +610,8 @@ emPars<T> *setThreadPars(Matrix<T> *GL1,double *sfs,int nThreads,int dim){
     temp[i].to = temp[i].from+blockSize;
   }
   //fix last end point
-  temp[nThreads-1].to=GL1->x;
-#if 0
+  temp[nThreads-1].to=nSites;
+#if 1
   for(int i=0;i<nThreads;i++)
     fprintf(stderr,"%d:(%d,%d)=%d ",temp[i].threadId,temp[i].from,temp[i].to,temp[i].to-temp[i].from);
   fprintf(stderr,"\n");
@@ -497,144 +627,6 @@ void destroy(emPars<T> *a,int nThreads ){
     delete [] a[i].post;
   delete [] a;
 }
-
-
-template<typename T>
-void setThreadPars(std::vector<Matrix < T > >  &gls,double *sfs,int nThreads,int tdim){
-  emp = new emPars<T>[nThreads];
-  int blockSize = gls[0]->x/nThreads;
-  for(int i=0;i<nThreads;i++){
-    emp[i].threadId = i;
-    emp[i].GL=&gls[i];
-    emp[i].from =0;
-    emp[i].to=blockSize;
-    emp[i].sfs = sfs;
-    emp[i].post=new double[tdim];
-  }
-  //redo the from,to
-  for(int i=1;i<nThreads;i++){
-    emp[i].from = emp[i-1].to;
-    emp[i].to = emp[i].from+blockSize;
-  }
-  //fix last end point
-  emp[nThreads-1].to=gls[0].x;
-#if 0
-  for(int i=0;i<nThreads;i++)
-    fprintf(stderr,"%d:(%d,%d)=%d ",emp[i].threadId,emp[i].from,emp[i].to,emp[i].to-emp[i].from);
-  fprintf(stderr,"\n");
-#endif 
-  
-  thd= new pthread_t[nThreads];
-}
-
-template<typename T>
-double lik2(double *sfs,Matrix<T> *GL1,Matrix<T> *GL2,size_t start,size_t stop){
-  double res =0;
-  for(int s=start;SIG_COND &&s<stop;s++){
-    //    fprintf(stderr,"s=%d\n",s);
-    double tmp =0;
-    int inc =0;
-    for(int x=0;x<GL1->y;x++)
-      for(int y=0;y<GL2->y;y++)
-	tmp += sfs[inc++]* GL1->mat[s][x]*GL2->mat[s][y];
-    res +=log(tmp);
-  }
-  return res;
-}
-
-
-
-template<typename T>
-void *lik2_slave(void *p){
-  emPars<T> &pars = emp[(size_t) p];
-
-  pars.lik = lik2(pars.sfs,pars.GL1,pars.GL2,pars.from,pars.to);
-  //fprintf(stderr," thdid=%d lik=%f\n",pars.threadId,pars.lik);
-  return NULL;
-}
-
-
-template<typename T>
-double lik2_master(int nThreads){
-  
-  for(size_t i=0;i<nThreads;i++){
-    int rc = pthread_create(&thd[i],NULL,lik2_slave<T>,(void*) i);
-    if(rc)
-      fprintf(stderr,"error creating thread\n");
-    
-  }
-  for(int i=0;i<nThreads;i++)
-    pthread_join(thd[i], NULL);
-    
-  double res=0;
-  for(int i=0;i<nThreads;i++){
-    //    fprintf(stderr,"lik=%f\n",emp[i].lik);
-    res += emp[i].lik;
-  
-  }
-  return res;
-}
-
-
-
-template <typename T>
-void emStep2(double *pre,Matrix<T> *GL1,Matrix<T> *GL2,double *post,int start,int stop,int dim){
-  double inner[dim];
-  for(int x=0;x<dim;x++)
-    post[x] =0.0;
-    
-  for(int s=start;SIG_COND&&s<stop;s++){
-    int inc=0;
-    for(int x=0;x<GL1->y;x++)
-      for(int y=0;y<GL2->y;y++){
-	inner[inc] = pre[inc]*GL1->mat[s][x]*GL2->mat[s][y];
-	inc++;
-      }
-   normalize(inner,dim);
-   for(int x=0;x<dim;x++)
-     post[x] += inner[x];
-  }
-  normalize(post,dim);
- 
-}
-template<typename T>
-void *emStep2_slave(void *p){
-  emPars<T> &pars = emp[(size_t) p];
-
-  emStep2(pars.sfs,pars.GL1,pars.GL2,pars.post,pars.from,pars.to,pars.dim);
-
-  return NULL;
-}
-
-template<typename T>
-void emStep2_master(double *post,int nThreads){
-  for(size_t i=0;i<nThreads;i++){
-    int rc = pthread_create(&thd[i],NULL,emStep2_slave<T>,(void*) i);
-    if(rc)
-      fprintf(stderr,"error creating thread\n");
-    
-  }
-  for(int i=0;i<nThreads;i++)
-    pthread_join(thd[i], NULL);
-    
-  memcpy(post,emp[0].post,emp[0].dim*sizeof(double));
-  for(int i=1;i<nThreads;i++){
-    for(int j=0;j<emp[0].dim;j++)
-      post[j] += emp[i].post[j];
-  }
-  
-  normalize(post,emp[0].dim);
-
-#if 0
-  for(int i=0;i<nThreads;i++){
-    for(int j=0;j<dim;j++)
-      fprintf(stdout,"%f ",emp[i].post[j]);
-    fprintf(stdout,"\n");
-  }
-#endif
-  
-}
-
 
 int really_kill =3;
 int VERBOSE = 1;
@@ -654,95 +646,80 @@ void handler(int s) {
 }
 
 
+size_t parspace(std::vector<persaf *> &saf){
+  size_t ndim = 1;
+  for(int i=0;i<saf.size();i++)
+    ndim *= saf[i]->nChr+1;
+  fprintf(stderr,"\t-> Dimension of parameter space: %lu\n",ndim);
+  return ndim;
+}
 
 template <typename T>
-int main_1dsfs(int argc,char **argv){
-  if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx \n");
-    return 0;
-  }
+void readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites){
+  assert(saf.size()==1);
+  readGL(saf[0]->saf,nSites,saf[0]->nChr+1,gls[0]);
+}
 
 
-  char *bname = *argv;
-  fprintf(stderr,"\t-> Assuming .saf.idx:%s\n",bname);
-
-  persaf *saf = readsaf(bname);
-  //  writesaf_header(stderr,p1);
-
-  args *ar = getArgs(--argc,++argv);
-  
+template <typename T>
+int main_opt(args *arg){
+  std::vector<persaf *> &saf =arg->saf;
   int nSites = 0;
   if(nSites == 0){//if no -nSites is specified
-    if(saf->fsize>getTotalSystemMemory())
+    if(fsizes(saf)>getTotalSystemMemory())
       fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
     //this doesnt make sense if ppl supply a filelist containing safs
-    nSites=saf->nSites;
+    nSites=nsites(saf);
   }
-  fprintf(stderr,"nChr:%lu startsfs:%s nThreads:%d ",saf->nChr,ar->sfsfname,ar->nThreads);
-fprintf(stderr," tole=%f maxIter=%d nSites=%lu\n",ar->tole,ar->maxIter,nSites);
-  float bytes_req_megs = saf->fsize/1024/1024;
-  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
-  //  fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-  fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+  //  float bytes_req_megs = saf->fsize/1024/1024;
+  //float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
+  //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
+  //fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
 
-  
+  std::vector<Matrix<T> *> gls;
+  for(int i=0;i<saf.size();i++)
+    gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
 
-  Matrix<T> *GL1=alloc<T>(nSites,saf->nChr+1);
-  double *sfs=new double[saf->nChr+1];
+  int ndim= parspace(saf);
+  double *sfs=new double[ndim];
+  emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,nSites);
   
   while(1) {
-    readGL(saf->saf,nSites,saf->nChr+1,GL1);
+    readdata<T>(saf,gls,nSites);//read nsites from data
     
-    if(GL1->x==0)
+    if(gls[0]->x==0)
       break;
-    fprintf(stderr,"dim(GL1)=%zu,%zu\n",GL1->x,GL1->y);
-   
-    
-  
-    if(ar->sfsfname!=NULL){
-      readSFS(ar->sfsfname,saf->nChr+1,sfs);
-    }else{
-      
-      for(int i=0;i<saf->nChr+1;i++)
-	sfs[i] = (i+1)/((double)(saf->nChr+1));
-      normalize(sfs,saf->nChr+1);
-    }
-    emp = setThreadPars<T>(GL1,sfs,ar->nThreads,saf->nChr+1);
-    em1<T>(sfs,GL1,ar->tole,ar->maxIter,ar->nThreads,saf->nChr+1);
-
-    double lik;
-    if(ar->nThreads>1)
-      lik = lik1_master<T>(ar->nThreads);
+    fprintf(stderr,"dim(GL1)=%zu,%zu\n",gls[0]->x,gls[0]->y);
+     
+    if(arg->sfsfname!=NULL)
+      readSFS(arg->sfsfname,ndim,sfs);
     else
-      lik = lik1(sfs,GL1,0,GL1->x);
+      for(int i=0;i<ndim;i++)
+	sfs[i] = (i+1)/((double)(ndim));
+
+    normalize(sfs,ndim);
+
+    double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim);
       
     fprintf(stderr,"likelihood: %f\n",lik);
 #if 1
-    for(int x=0;x<=saf->nChr;x++)
+    for(int x=0;x<ndim;x++)
       fprintf(stdout,"%f ",log(sfs[x]));
     fprintf(stdout,"\n");
     fflush(stdout);
 #endif
     
   }
-  destroy<T>(emp,ar->nThreads);
-  destroy(GL1,nSites);
+  destroy<T>(emp,arg->nThreads);
+  destroy(gls,nSites);
   destroy(saf);
 
-  destroy(ar);
+  destroy(arg);
   delete [] sfs;
   delete [] thd;
 
   return 0;
 }
-
-size_t fsizes(std::vector<persaf> &pp){
-  size_t res = 0;
-  for(int i=0;i<pp.size();i++)
-    res += pp[i].fsize;
-  return res;
-}
-
 
 
 int main(int argc,char **argv){
@@ -779,9 +756,8 @@ int main(int argc,char **argv){
   else {
     args *arg = getArgs(argc,argv);
     if(arg->saf.size()==1)
-      main_1dsfs<float>(argc,argv);
-    //    else
-    //  main_2dsfs<float>(argc,argv);
+      main_opt<float>(arg);
+    
   }
 
   return 0;
