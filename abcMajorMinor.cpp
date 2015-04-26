@@ -23,6 +23,7 @@
 */
 
 
+
 #include <cmath> //<- for log,exp
 #include <cassert>
 #include <cfloat>
@@ -30,6 +31,13 @@
 #include "analysisFunction.h"
 #include "abc.h"
 #include "abcMajorMinor.h"
+
+static int isnaninf(double *d,int l){
+  for(int i=0;i<l;i++)
+    if(std::isnan(d[i])||std::isinf(d[i]))
+      return 1;
+  return 0;
+}
 
 void abcMajorMinor::printArg(FILE *argFile){
   fprintf(argFile,"-------------------\n%s:\n",__FILE__);
@@ -94,14 +102,17 @@ void abcMajorMinor::getOptions(argStruct *arguments){
  doSaf = angsd::getArg("-doSaf",doSaf,arguments);
  pest = angsd::getArg("-pest",pest,arguments);
  skipTriallelic = angsd::getArg("-skipTriallelic",skipTriallelic,arguments);
+ doVcf = angsd::getArg("-doVcf",doVcf,arguments);
+ doGlf = angsd::getArg("-doGlf",doGlf,arguments);
 }
 
 abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int inputtype){
   skipTriallelic=0;
-    doMajorMinor = 0;
+  doMajorMinor = 0;
   doSaf = 0;
   pest = NULL;
-  
+  doVcf = 0;
+  doGlf = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doMajorMinor")){
       printArg(stdout);
@@ -118,6 +129,7 @@ abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int input
 }
 
 abcMajorMinor::~abcMajorMinor(){
+
 }
 
 void abcMajorMinor::clean(funkyPars *pars){
@@ -125,6 +137,18 @@ void abcMajorMinor::clean(funkyPars *pars){
     delete [] pars->major;
     delete [] pars->minor;
     pars->major=pars->minor=NULL;
+
+    if(doVcf>0||doGlf==2){
+      lh3struct *lh3 =(lh3struct*) pars->extras[index];
+      for(int i=0;i<pars->numSites;i++)
+	if(lh3->hasAlloced[i])
+	  delete [] lh3->lh3[i];
+      delete [] lh3->lh3;
+      delete [] lh3->hasAlloced;
+      
+      delete lh3;
+    }
+
   }
 }
 
@@ -355,4 +379,40 @@ void abcMajorMinor::run(funkyPars *pars){
   if(doMajorMinor==4||doMajorMinor==5)
     modMajorMinor(pars,doMajorMinor);
   */
+  if(doGlf==2||doVcf>0){
+    lh3struct *lh3 = new lh3struct;
+    pars->extras[index] = lh3;
+    lh3->hasAlloced = new char[pars->numSites];
+    memset(lh3->hasAlloced,0,pars->numSites);
+    lh3->lh3 = new double *[pars->numSites];
+
+    for(int s=0;s<pars->numSites;s++) {
+      if(pars->keepSites[s]==0)
+	continue;
+      int major = pars->major[s];
+      int minor = pars->minor[s];
+      assert(major!=4&&minor!=4);
+      
+      lh3->hasAlloced[s]=1;
+      lh3->lh3[s] = new double[3*pars->nInd];
+
+      for(int i=0;i<pars->nInd;i++) {
+	double norm=exp(pars->likes[s][i*10+angsd::majorminor[major][major]])+exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])+exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]]);
+	double val[3];
+	val[0] = exp(pars->likes[s][i*10+angsd::majorminor[major][major]])/norm;
+	val[1] = exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])/norm;
+	val[2] = exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]])/norm;
+	if(isnaninf(val,3)){
+	  pars->keepSites[s]=0;
+	  break;
+	}
+	lh3->lh3[s][i*3+0]=val[0];
+	lh3->lh3[s][i*3+1]=val[1];
+	lh3->lh3[s][i*3+2]=val[2];
+      }
+      
+
+    }
+  }
+
 }

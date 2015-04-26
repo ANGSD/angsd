@@ -33,6 +33,8 @@
 #include "abcGL.h"
 #include "abcError.h"
 #include "phys_likes.h"
+#include "abcMajorMinor.h"
+
 extern int refToInt[256];
 
 static float *logfactorial=NULL;
@@ -100,7 +102,7 @@ void abcGL::getOptions(argStruct *arguments){
   doGlf=angsd::getArg("-doGlf",doGlf,arguments);
   errorFname = angsd::getArg("-errors",errorFname,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
-
+  
 
   int doCounts=0;
   int doMajorMinor =0;
@@ -154,7 +156,6 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   postfix = ".glf.gz";
   beaglepostfix = ".beagle.gz";
   
-
   trim =0;
   GL=0;
   doGlf=0;
@@ -353,7 +354,6 @@ void abcGL::run(funkyPars *pars){
     }
   }
 
-
 }
 
 void abcGL::getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,double ****errorProbs,int *keepSites,double **loglikes) {
@@ -393,13 +393,6 @@ void abcGL::getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,do
 
 }
 
-static int isnaninf(double *d,int l){
-  for(int i=0;i<l;i++)
-    if(std::isnan(d[i])||std::isinf(d[i]))
-      return 1;
-  return 0;
-}
-
 void abcGL::printLike(funkyPars *pars) {
   assert(pars->likes!=NULL);
 
@@ -416,7 +409,8 @@ void abcGL::printLike(funkyPars *pars) {
     //beagle format
     bufstr.l = 0; //set tmpbuf beginning to zero
     for(int s=0;s<pars->numSites;s++) {
-      if(pars->keepSites[s]==0)
+      lh3struct *lh3 = (lh3struct*) pars->extras[index+1];
+      if(pars->keepSites[s]==0||lh3->hasAlloced[s]==0)
 	continue;
       
       kputs(header->target_name[pars->refId],&bufstr);
@@ -430,23 +424,13 @@ void abcGL::printLike(funkyPars *pars) {
       int major = pars->major[s];
       int minor = pars->minor[s];
       assert(major!=4&&minor!=4);
-	
+      
       for(int i=0;i<pars->nInd;i++) {
-	
-	double norm=exp(pars->likes[s][i*10+angsd::majorminor[major][major]])+exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])+exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]]);
-	double val[3];
-	val[0] = exp(pars->likes[s][i*10+angsd::majorminor[major][major]])/norm;
-	val[1] = exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])/norm;
-	val[2] = exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]])/norm;
-	if(isnaninf(val,3)){
-	  pars->keepSites[s]=0;
-	  bufstr.l=0;
-	  break;
-	}
-	ksprintf(&bufstr, "\t%f",val[0]);
-	ksprintf(&bufstr, "\t%f",val[1]);
-	ksprintf(&bufstr, "\t%f",val[2]);
+	ksprintf(&bufstr, "\t%f",lh3->lh3[s][i*3+0]);
+	ksprintf(&bufstr, "\t%f",lh3->lh3[s][i*3+1]);
+	ksprintf(&bufstr, "\t%f",lh3->lh3[s][i*3+2]);
       }
+
       if(bufstr.l!=0)
 	kputc('\n',&bufstr);
 
