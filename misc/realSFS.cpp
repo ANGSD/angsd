@@ -665,7 +665,7 @@ void readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSite
 template <typename T>
 int main_opt(args *arg){
   std::vector<persaf *> &saf =arg->saf;
-  int nSites = 0;
+  int nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     if(fsizes(saf)>getTotalSystemMemory())
       fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
