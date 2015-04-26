@@ -100,7 +100,7 @@ args * getArgs(int argc,char **argv){
     }
     argv++;
   }
-  fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%lu chooseChr:%s start:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname);
+  fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%d chooseChr:%s start:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname);
   return p;
 }
 
@@ -614,7 +614,7 @@ emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads
   temp[nThreads-1].to=nSites;
 #if 1
   for(int i=0;i<nThreads;i++)
-    fprintf(stderr,"%d:(%d,%d)=%d ",temp[i].threadId,temp[i].from,temp[i].to,temp[i].to-temp[i].from);
+    fprintf(stderr,"%d:(%d,%d)=%d ",temp[i].threadId,temp[i].from,temp[i].to,temp[i].to-temp[i].from); //
   fprintf(stderr,"\n");
 #endif 
   
@@ -656,8 +656,21 @@ size_t parspace(std::vector<persaf *> &saf){
 }
 
 template <typename T>
-void readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites){
+void readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr){
   assert(saf.size()==1);
+  
+  if(chooseChr!=NULL){
+    for(int f=0;f<saf.size();f++){
+      myMap::iterator it = saf[f]->mm.find(chooseChr);
+      if(it==saf[f]->mm.end()){
+	fprintf(stderr,"Problem finding chr: %s\n",chooseChr);
+	break;
+      }
+      bgzf_seek(saf[f]->pos,it->second.pos,SEEK_SET);
+      bgzf_seek(saf[f]->saf,it->second.saf,SEEK_SET);
+    }
+  }
+  
   readGL(saf[0]->saf,nSites,saf[0]->nChr+1,gls[0]);
 }
 
@@ -686,7 +699,7 @@ int main_opt(args *arg){
   emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,nSites);
   
   while(1) {
-    readdata<T>(saf,gls,nSites);//read nsites from data
+    readdata<T>(saf,gls,nSites,arg->chooseChr);//read nsites from data
     
     if(gls[0]->x==0)
       break;
@@ -720,6 +733,55 @@ int main_opt(args *arg){
   delete [] thd;
 
   return 0;
+}
+
+std::vector<char*> merge(std::vector<persaf *> &saf,char *chooseChr){
+  fprintf(stderr,"merge\n");
+  assert(chooseChr!=NULL);
+  int *dat = NULL;
+  char *hit = NULL;
+  int dat_size=0;
+  int hit_size=0;
+ 
+
+ 
+  for(int i=0;i<saf.size();i++){
+    myMap::iterator it = saf[i]->mm.find(chooseChr);
+    assert(it!=saf[i]->mm.end());
+    if(it->second.nSites*sizeof(int)>dat_size){
+      dat_size = it->second.nSites*sizeof(int);
+      dat = realloc(dat,dat_size);
+    }
+    bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
+    bgzf_read(saf[i]->pos,dat,it->second.nSites*sizeof(int));
+    if(dat[it->second.nSites-1]>hit_size){
+      hit = realloc(hit,hit_size);
+      for(int j=hit_size;j<it->dat[it->second.nSites-1];j++)
+	hit[j] = 0;
+      hit_size = it->dat[it->second.nSites-1];
+    }
+    for(int j=0;j<it->second.nSites;j++)
+      hit[dat[j]]++;
+  }
+
+  int ntrue=0;
+  for(int i=0;i<mmax;i++)
+    if(hit[i]==saf.size())
+      ntrue++;
+  fprintf(stderr,"ntrue:%d\n",ntrue);
+  std::vector<char*> ret;
+  for(int i=0;i<saf.size();i++){
+    myMap::iterator it = saf[i]->mm.find(chooseChr);
+    bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
+    bgzf_read(saf[i]->pos,dat,it->second.nSites*sizeof(int));
+    char *keep =(char*) calloc(it->second.nSites,1);
+    for(int j=0;j<it->second.nSites;j++)
+      if(hit[dat[j]]==saf.size())
+	keep[j]=1;
+    ret.push_back(keep);
+  }
+  
+  return ret;
 }
 
 
@@ -756,6 +818,8 @@ int main(int argc,char **argv){
     print(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
+    merge(arg->saf,"18");
+    return 0;
     if(arg->saf.size()==1)
       main_opt<float>(arg);
     
