@@ -27,7 +27,8 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/stat.h>
-
+#include <zlib.h>
+#include <htslib/bgzf.h>
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>

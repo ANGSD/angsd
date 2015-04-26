@@ -1,5 +1,8 @@
 #include <sys/stat.h>
+#include <htslib/bgzf.h>
+#include <zlib.h>
 #include "safreader.h"
+
 int fexists(const char* str){
   struct stat buffer ;
   return (stat(str, &buffer )==0 ); /// @return Function returns 1 if file exists.                             

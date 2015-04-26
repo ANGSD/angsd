@@ -33,7 +33,7 @@ safreader: safreader.cpp safreader.h
 
 
 realSFS: realSFS.cpp safreader
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS -lz -lpthread -I $(HTSDIR) $(HTSLIB) safreader.o
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS -lpthread safreader.o -I $(HTSDIR) $(HTSLIB) -lz
 	cp realSFS emOptim2
 smartCount:	smartCount.c  
 	$(CC) $(FLAGS) smartCount.c -I$(HTSDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTSLIB)
