@@ -395,7 +395,7 @@ void abcGL::getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,do
 
 static int isnaninf(double *d,int l){
   for(int i=0;i<l;i++)
-    if(std::isnan(d)||std::isinf(d))
+    if(std::isnan(d[i])||std::isinf(d[i]))
       return 1;
   return 0;
 }
@@ -435,17 +435,17 @@ void abcGL::printLike(funkyPars *pars) {
 	
 	double norm=exp(pars->likes[s][i*10+angsd::majorminor[major][major]])+exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])+exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]]);
 	double val[3];
-	double val[0] = exp(pars->likes[s][i*10+angsd::majorminor[major][major]])/norm;
-	double val[1] = exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])/norm;
-	double val[2] = exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]])/norm;
+	val[0] = exp(pars->likes[s][i*10+angsd::majorminor[major][major]])/norm;
+	val[1] = exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])/norm;
+	val[2] = exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]])/norm;
 	if(isnaninf(val,3)){
 	  pars->keepSites[s]=0;
 	  bufstr.l=0;
 	  break;
 	}
-	ksprintf(&bufstr, "\t%f",val1);
-	ksprintf(&bufstr, "\t%f",val2);
-	ksprintf(&bufstr, "\t%f",val3);
+	ksprintf(&bufstr, "\t%f",val[0]);
+	ksprintf(&bufstr, "\t%f",val[1]);
+	ksprintf(&bufstr, "\t%f",val[2]);
       }
       if(bufstr.l!=0)
 	kputc('\n',&bufstr);
