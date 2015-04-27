@@ -46,8 +46,8 @@ void abcWriteVcf::print(funkyPars *pars){
     kputc(intToRef[pars->minor[s]],&kstr);kputc('\t',&kstr);
     ksprintf(&kstr,".\tPASS\t.\tGL:GP\t");
     for(int i=0;i<pars->nInd;i++){
-      ksprintf(&kstr,"%f,%f%f:",pars->post[s][i*3+0],pars->post[s][i*3+1],pars->post[s][i*3+2]);
-      ksprintf(&kstr,"%f,%f%f",lh3->lh3[s][i*3+0],lh3->lh3[s][i*3+1],lh3->lh3[s][i*3+2]);
+      ksprintf(&kstr,"%f,%f,%f:",pars->post[s][i*3+0],pars->post[s][i*3+1],pars->post[s][i*3+2]);
+      ksprintf(&kstr,"%f,%f,%f",lh3->lh3[s][i*3+0],lh3->lh3[s][i*3+1],lh3->lh3[s][i*3+2]);
       if(i<pars->nInd-1)
 	ksprintf(&kstr,"\t");
     }
