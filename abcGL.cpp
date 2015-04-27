@@ -133,6 +133,14 @@ void abcGL::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> Must supply -doCounts for SYK model\n");
     exit(0);
   }
+  if(doGlf==2){
+    fprintf(stderr,"BEAGLE format 3.0 is deprecated\n please use -doVCF 1");
+    for(int j=3;j>=0;j--){
+      fprintf(stderr,"Program will continue in %d seconds    \n",j);fflush(stderr);
+      sleep(1);
+    }
+
+  }
   if((doGlf==2||doGlf==3) && doMajorMinor==0){
     fprintf(stderr,"\t-> For dumping beaglestyle output you need to estimate major/minor: -doMajorMinor\n");
     exit(0);
@@ -424,11 +432,17 @@ void abcGL::printLike(funkyPars *pars) {
       int major = pars->major[s];
       int minor = pars->minor[s];
       assert(major!=4&&minor!=4);
-      
+
+     
       for(int i=0;i<pars->nInd;i++) {
-	ksprintf(&bufstr, "\t%f",lh3->lh3[s][i*3+0]);
-	ksprintf(&bufstr, "\t%f",lh3->lh3[s][i*3+1]);
-	ksprintf(&bufstr, "\t%f",lh3->lh3[s][i*3+2]);
+	double val[3];
+	val[0]= exp(lh3->lh3[s][i*3+0]);
+	val[1]= exp(lh3->lh3[s][i*3+1]);
+	val[2]= exp(lh3->lh3[s][i*3+2]);
+	angsd::norm(val,3);
+	ksprintf(&bufstr, "\t%f",val[0]);
+	ksprintf(&bufstr, "\t%f",val[1]);
+	ksprintf(&bufstr, "\t%f",val[2]);
       }
 
       if(bufstr.l!=0)

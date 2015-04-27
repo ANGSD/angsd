@@ -39,6 +39,14 @@ static int isnaninf(double *d,int l){
   return 0;
 }
 
+
+static int isnan(double *d,int l){
+  for(int i=0;i<l;i++)
+    if(std::isnan(d[i]))
+      return 1;
+  return 0;
+}
+
 void abcMajorMinor::printArg(FILE *argFile){
   fprintf(argFile,"-------------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doMajorMinor\t%d\n",doMajorMinor);
@@ -397,15 +405,16 @@ void abcMajorMinor::run(funkyPars *pars){
       lh3->lh3[s] = new double[3*pars->nInd];
 
       for(int i=0;i<pars->nInd;i++) {
-	double norm=exp(pars->likes[s][i*10+angsd::majorminor[major][major]])+exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])+exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]]);
+
 	double val[3];
-	val[0] = exp(pars->likes[s][i*10+angsd::majorminor[major][major]])/norm;
-	val[1] = exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])/norm;
-	val[2] = exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]])/norm;
-	if(isnaninf(val,3)){
+	val[0] = pars->likes[s][i*10+angsd::majorminor[major][major]];
+	val[1] = pars->likes[s][i*10+angsd::majorminor[major][minor]];
+	val[2] = pars->likes[s][i*10+angsd::majorminor[minor][minor]];
+	if(isnan(val,3)){
 	  pars->keepSites[s]=0;
 	  break;
 	}
+	angsd::logrescale(val,3);
 	lh3->lh3[s][i*3+0]=val[0];
 	lh3->lh3[s][i*3+1]=val[1];
 	lh3->lh3[s][i*3+2]=val[2];
