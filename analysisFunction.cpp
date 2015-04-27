@@ -828,7 +828,7 @@ int isNewer(const char *newer,const char *older){
 }
 
 void angsd::norm(double *d,size_t len){
-  double ts;
+  double ts=0;
   for(int i=0;i<len;i++)
     ts += d[i];
 
