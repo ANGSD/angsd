@@ -827,3 +827,12 @@ int isNewer(const char *newer,const char *older){
   return one.st_mtime>=two.st_mtime;
 }
 
+void angsd::norm(double *d,size_t len){
+  double ts;
+  for(int i=0;i<len;i++)
+    ts += d[i];
+
+  for(int i=0;i<len;i++)
+    d[i] /= ts;
+
+}

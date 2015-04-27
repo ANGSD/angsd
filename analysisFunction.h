@@ -34,7 +34,7 @@ namespace angsd {
     int y;
     T **matrix;
   };
-
+  void norm(double *d,size_t len);
   int getArg(const char* argName,int type,argStruct *arguments);
   float getArg(const char* argName,float type,argStruct *arguments);
   char* getArg(const char* argName,char* type,argStruct *arguments);
