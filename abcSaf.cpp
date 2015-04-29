@@ -987,11 +987,11 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
   }
 
   for(int i=0;i<p->numSites;i++){
-    int mypos = p->posi[i]+1;
+    int mypos = p->posi[i];
     if(r->oklist[i]==1)
       bgzf_write(outfileSFSPOS,&mypos,sizeof(int));
     else if (r->oklist[i]==2)
-      fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]);
+      fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
   }
   //fprintf(stderr,"asdf: nnnSites:%d\n",nnnSites);
 }
