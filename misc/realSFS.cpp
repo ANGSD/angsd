@@ -34,25 +34,36 @@
 #include <sys/sysctl.h>
 #endif
 #include "safreader.h"
-
+#include "keep.hpp"
+ 
 typedef struct {
   char *chooseChr;
+  int start;
+  int stop;
   int nSites;
   int maxIter;
   double tole;
   int nThreads;
   char *sfsfname;
   std::vector<persaf *> saf;
+  int posOnly;
 }args;
 
-void destroy(args *p){
-  free(p->chooseChr);
-  delete p;
-}
-void destroy(std::vector<persaf *> saf){
+
+int SIG_COND =1;
+pthread_t *thd=NULL;
+
+void destroy(std::vector<persaf *> &saf){
   for(int i=0;i<saf.size();i++)
     destroy(saf[i]);
 }
+
+
+void destroy(args *p){
+  destroy(p->saf);
+  delete p;
+}
+
 
 size_t fsizes(std::vector<persaf *> &pp){
   size_t res = 0;
@@ -69,29 +80,95 @@ size_t nsites(std::vector<persaf *> &pp){
   return res;
 }
 
+
+char * get_region(char *extra,int &start,int &stop) {
+
+  if(strrchr(extra,':')==NULL){//only chromosomename
+    char *ref = extra;
+    start = stop = -1;;
+    return ref;
+  }
+  char *tok=NULL;
+  tok = strtok(extra,":");
+
+  char *ref = tok;
+
+  start =stop=-1;
+
+  tok = extra+strlen(tok)+1;//tok now contains the rest of the string
+ 
+  if(strlen(tok)==0)//not start and/or stop ex: chr21:
+    return ref;
+  
+
+  if(tok[0]=='-'){//only contains stop ex: chr21:-stop
+    tok =strtok(tok,"-");
+    stop = atoi(tok);
+  }else{
+    //catch single point
+    int isProper =0;
+    for(size_t i=0;i<strlen(tok);i++)
+      if(tok[i]=='-'){
+	isProper=1;
+	 break;
+      }
+    //fprintf(stderr,"isProper=%d\n",isProper);
+    if(isProper){
+      tok =strtok(tok,"-");
+      start = atoi(tok)-1;//this is important for the zero offset
+      tok = strtok(NULL,"-");
+      if(tok!=NULL)
+	stop = atoi(tok);
+    }else{
+      //single point
+      stop = atoi(tok);
+      start =stop -1;
+      
+    }
+    
+  }
+  if(stop!=-1&&stop<start){
+    fprintf(stderr,"endpoint:%d is larger than startpoint:%d\n",start,stop);
+    exit(0);
+    
+  }
+  if(0){
+    fprintf(stderr,"[%s] ref=%s,start=%d,stop=%d\n",__FUNCTION__,ref,start,stop);
+    exit(0);
+  }
+  return ref;
+}
+
+
+
+
 args * getArgs(int argc,char **argv){
   args *p = new args;
   p->sfsfname=p->chooseChr=NULL;
+  p->start=p->stop=-1;
   p->maxIter=1e2;
   p->tole=1e-6;
   p->nThreads=4;
   p->nSites =0;
-  
+  p->posOnly = 0;
+
   if(argc==0)
     return p;
 
   while(*argv){
-    fprintf(stderr,"%s\n",*argv);
+    //    fprintf(stderr,"%s\n",*argv);
     if(!strcasecmp(*argv,"-tole"))
       p->tole = atof(*(++argv));
     else  if(!strcasecmp(*argv,"-P"))
       p->nThreads = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-maxIter"))
       p->maxIter = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-posOnly"))
+      p->posOnly = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-nSites"))
       p->nSites = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-r")){
-      p->chooseChr = strdup(*(++argv));
+      p->chooseChr = get_region(*(++argv),p->start,p->stop);
     }
     else  if(!strcasecmp(*argv,"-start")){
       p->sfsfname = *(++argv);
@@ -100,7 +177,7 @@ args * getArgs(int argc,char **argv){
     }
     argv++;
   }
-  fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%d chooseChr:%s start:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname);
+  fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%d chooseChr:%s start:%s chr:%s start:%d stop:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname,p->chooseChr,p->start,p->stop);
   return p;
 }
 
@@ -110,34 +187,51 @@ void print(int argc,char **argv){
     fprintf(stderr,"Must supply afile.saf.idx [chrname]\n");
     return; 
   }
-
-  char *bname = *argv;
-  fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
-  persaf *saf = readsaf(bname);
-  writesaf_header(stderr,saf);
   
-  args *pars = getArgs(--argc,++argv);
-  if(argc>0)
-    pars->chooseChr = argv[1];
-  float *flt = new float[saf->nChr+1];
-  for(myMap::iterator it=saf->mm.begin();it!=saf->mm.end();++it){
+  args *pars = getArgs(argc,argv);
+  assert(pars->saf.size()==1);
+  writesaf_header(stderr,pars->saf[0]);
+  
+  float *flt = new float[pars->saf[0]->nChr+1];
+  for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
     if(pars->chooseChr!=NULL){
-      it = saf->mm.find(pars->chooseChr);
-      if(it==saf->mm.end()){
+      it = pars->saf[0]->mm.find(pars->chooseChr);
+      if(it==pars->saf[0]->mm.end()){
 	fprintf(stderr,"Problem finding chr: %s\n",pars->chooseChr);
 	break;
       }
     }
-    bgzf_seek(saf->pos,it->second.pos,SEEK_SET);
-    bgzf_seek(saf->saf,it->second.saf,SEEK_SET);
+    bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
+    bgzf_seek(pars->saf[0]->saf,it->second.saf,SEEK_SET);
     int *ppos = new int[it->second.nSites];
-    bgzf_read(saf->pos,ppos,sizeof(int)*it->second.nSites);
-    for(int s=0;s<it->second.nSites;s++){
-      bgzf_read(saf->saf,flt,sizeof(float)*(saf->nChr+1));
-      fprintf(stdout,"%s\t%d",it->first,ppos[s]);
-      for(int is=0;is<saf->nChr+1;is++)
-	fprintf(stdout,"\t%f",flt[is]);
-      fprintf(stdout,"\n");
+    bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
+    
+    int first=0;
+    if(pars->start!=-1)
+      while(ppos[first]<pars->start) 
+	first++;
+    
+    int last=it->second.nSites;
+    //    fprintf(stderr,"pars-.stop:%d ppos:%d\n",pars->stop,ppos[last-1]);
+    if(pars->stop!=-1&&pars->stop<=ppos[last-1]){
+      last=first;
+      while(ppos[last]<pars->stop) 
+	last++;
+    }
+    //fprintf(stderr,"first:%d last:%d\n",first,last);
+    int at=0;
+    for(int s=0;SIG_COND&&s<it->second.nSites;s++){
+      bgzf_read(pars->saf[0]->saf,flt,sizeof(float)*(pars->saf[0]->nChr+1));
+      if(at>=first&&at<last){
+	if(pars->posOnly==0){
+	  fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
+	  for(int is=0;is<pars->saf[0]->nChr+1;is++)
+	    fprintf(stdout,"\t%f",flt[is]);
+	}else
+	  fprintf(stdout,"%d",ppos[s]+1);
+	  fprintf(stdout,"\n");
+      }
+      at++;
     }
     delete [] ppos;
     if(pars->chooseChr!=NULL)
@@ -146,7 +240,6 @@ void print(int argc,char **argv){
   
   delete [] flt;
   destroy(pars);
-  destroy(saf);
 }
 
 template <typename T>
@@ -155,9 +248,6 @@ struct Matrix{
   size_t y;
   T** mat;
 };
-
-int SIG_COND =1;
-pthread_t *thd=NULL;
 
 
 template <typename T>
@@ -677,6 +767,9 @@ void readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSite
 
 template <typename T>
 int main_opt(args *arg){
+
+
+
   std::vector<persaf *> &saf =arg->saf;
   int nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
@@ -738,37 +831,38 @@ int main_opt(args *arg){
 std::vector<char*> merge(std::vector<persaf *> &saf,char *chooseChr){
   fprintf(stderr,"merge\n");
   assert(chooseChr!=NULL);
-  int *dat = NULL;
-  char *hit = NULL;
-  int dat_size=0;
-  int hit_size=0;
- 
-
- 
+  keep<int> *dat = alloc_keep<int>();//positions 
+  keep<char> *hit =alloc_keep<char>();//
+   
   for(int i=0;i<saf.size();i++){
+    fprintf(stderr,"doing double bypass i:%d/%lu\n",i,saf.size());
     myMap::iterator it = saf[i]->mm.find(chooseChr);
     assert(it!=saf[i]->mm.end());
-    if(it->second.nSites*sizeof(int)>dat_size){
-      dat_size = it->second.nSites*sizeof(int);
-      dat = realloc(dat,dat_size);
-    }
+
     bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
-    bgzf_read(saf[i]->pos,dat,it->second.nSites*sizeof(int));
-    if(dat[it->second.nSites-1]>hit_size){
-      hit = realloc(hit,hit_size);
-      for(int j=hit_size;j<it->dat[it->second.nSites-1];j++)
-	hit[j] = 0;
-      hit_size = it->dat[it->second.nSites-1];
+    realloc(dat,it->second.nSites);
+    bgzf_read(saf[i]->pos,dat->d,it->second.nSites*sizeof(int));
+    if(dat->d[it->second.nSites-1] > hit->m){
+      fprintf(stderr,"im reallonig hit");
+      realloc(hit,dat->d[it->second.nSites-1]+1);
     }
+    assert(hit->m>0);
+    fprintf(stderr,"nsite:%lu\n",it->second.nSites);
     for(int j=0;j<it->second.nSites;j++)
-      hit[dat[j]]++;
+      hit->d[dat->d[j]]++;
+    
+    int ntrue=0;
+    
+    if(i!=0){
+      for(int s=0;s<hit->m;s++)
+	if(hit->d[s]==saf.size())
+	  ntrue++;
+	else if(hit->d[s]==1)
+	  fprintf(stderr,"s:%d\n",s);
+      fprintf(stderr,"ntrue:%d\n",ntrue);    
+    }
   }
 
-  int ntrue=0;
-  for(int i=0;i<mmax;i++)
-    if(hit[i]==saf.size())
-      ntrue++;
-  fprintf(stderr,"ntrue:%d\n",ntrue);
   std::vector<char*> ret;
   for(int i=0;i<saf.size();i++){
     myMap::iterator it = saf[i]->mm.find(chooseChr);
@@ -776,7 +870,7 @@ std::vector<char*> merge(std::vector<persaf *> &saf,char *chooseChr){
     bgzf_read(saf[i]->pos,dat,it->second.nSites*sizeof(int));
     char *keep =(char*) calloc(it->second.nSites,1);
     for(int j=0;j<it->second.nSites;j++)
-      if(hit[dat[j]]==saf.size())
+      if(hit->d[dat->d[j]]==saf.size())
 	keep[j]=1;
     ret.push_back(keep);
   }
@@ -786,6 +880,27 @@ std::vector<char*> merge(std::vector<persaf *> &saf,char *chooseChr){
 
 
 int main(int argc,char **argv){
+#if 0
+  char **reg = new char*[6];
+  reg[0] = strdup("avsdf:");
+  reg[1] = strdup("avsdf");
+  reg[2] = strdup("avsdf:200");
+  reg[3] = strdup("avsdf:200-300");
+  reg[4] = strdup("avsdf:-300");
+  reg[5] = strdup("avsdf:300-");
+
+  int a,b;
+  char *ref;
+  for(int i=0;i<6;i++){
+  fprintf(stderr,"%d) string=%s ",i,reg[i]);
+  get_region(reg[i],&ref,a,b);
+  fprintf(stderr," parsed as: ref:\'%s\' a:\'%d\' b:\'%d\'\n",ref,a,b);
+}
+  return 0;
+#endif
+
+
+  
   //start of signal handling
   struct sigaction sa;
   sigemptyset (&sa.sa_mask);
