@@ -5,6 +5,8 @@
 #include <map>
 #include <htslib/bgzf.h>
 
+#include "keep.hpp"
+
 struct ltstr
 {
   bool operator()(const char* s1, const char* s2) const
@@ -12,7 +14,6 @@ struct ltstr
     return strcmp(s1, s2) < 0;
   }
 };
-
 
 typedef struct{
   size_t nSites;
@@ -30,9 +31,16 @@ typedef struct{
   BGZF *saf;
   size_t fsize;//contains an estimate of the uncompressed fsize
   int version;
+  keep<char> *toKeep;
+  int at;
+  int *ppos;
+  int with_iter;
 }persaf;
 
-
-persaf* readsaf(const char *fname);
+size_t iter_read(persaf *saf, void *data, size_t length);
+template <typename T>
+persaf* readsaf(char *fname);
 void writesaf_header(FILE *fp,persaf *pp);
 void destroy(persaf *pp);
+void iter_init(persaf *,char *,int,int);
+size_t iter_read(persaf *saf, void *data, size_t length);

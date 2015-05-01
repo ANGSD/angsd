@@ -1,4 +1,5 @@
 /*
+
   The functionality of this file, has replaced the old emOptim and testfolded.c programs.
 
   part of ANGSD
@@ -14,6 +15,7 @@
   april 13, safv3 added, safv2 removed for know. Will be reintroduced later.
   april 20, removed 2dsfs as special scenario
   april 20, split out the safreader into seperate cpp/h
+
 */
 
 #include <cstdio>
@@ -29,10 +31,12 @@
 #include <sys/stat.h>
 #include <zlib.h>
 #include <htslib/bgzf.h>
+
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
+
 #include "safreader.h"
 #include "keep.hpp"
  
@@ -173,7 +177,7 @@ args * getArgs(int argc,char **argv){
     else  if(!strcasecmp(*argv,"-start")){
       p->sfsfname = *(++argv);
     }else{
-      p->saf.push_back(readsaf(*argv));
+      p->saf.push_back(readsaf<float>(*argv));
     }
     argv++;
   }
@@ -189,7 +193,11 @@ void print(int argc,char **argv){
   }
   
   args *pars = getArgs(argc,argv);
-  assert(pars->saf.size()==1);
+  
+  if(pars->saf.size()!=1){
+    fprintf(stderr,"Print only implemeted for single safs\n");
+    exit(0);
+  }
   writesaf_header(stderr,pars->saf[0]);
   
   float *flt = new float[pars->saf[0]->nChr+1];
@@ -220,7 +228,7 @@ void print(int argc,char **argv){
     }
     //fprintf(stderr,"first:%d last:%d\n",first,last);
     int at=0;
-    for(int s=0;SIG_COND&&s<it->second.nSites;s++){
+    for(int s=0;SIG_COND&&s<it->second.nSites;s++) {
       bgzf_read(pars->saf[0]->saf,flt,sizeof(float)*(pars->saf[0]->nChr+1));
       if(at>=first&&at<last){
 	if(pars->posOnly==0){
@@ -241,6 +249,53 @@ void print(int argc,char **argv){
   delete [] flt;
   destroy(pars);
 }
+
+#if 1
+void print2(int argc,char **argv){
+  if(argc<1){
+    fprintf(stderr,"Must supply afile.saf.idx \n");
+    return; 
+  }
+  
+  args *pars = getArgs(argc,argv);
+  
+  if(pars->saf.size()!=1){
+    fprintf(stderr,"Print only implemeted for single safs\n");
+    exit(0);
+  }
+
+  writesaf_header(stderr,pars->saf[0]);
+  
+  float *flt = new float[pars->saf[0]->nChr+1];
+  for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
+    
+    if(pars->chooseChr!=NULL){
+      iter_init(pars->saf[0],pars->chooseChr,pars->start,pars->stop);
+      it = pars->saf[0]->mm.find(pars->chooseChr);
+    }
+    int *ppos = new int [it->second.nSites];
+    bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
+    bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
+    int ret;
+    fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
+    while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1)))){
+   
+      //      fprintf(stderr,"[%s] pars->saf[0]->at:%d nSites: %lu ret:%d\n",__FUNCTION__,pars->saf[0]->at,it->second.nSites,ret);
+      fprintf(stdout,"%s\t%d",it->first,ppos[pars->saf[0]->at]+1);
+      for(int is=0;is<pars->saf[0]->nChr+1;is++)
+	fprintf(stdout,"\t%f",flt[is]);
+      fprintf(stdout,"\n");
+    }
+    delete [] ppos;
+    //fprintf(stderr,"[%s] after while:%d\n",__FUNCTION__,ret);
+    if(pars->chooseChr!=NULL)
+      break;
+  }
+  
+  delete [] flt;
+  destroy(pars);
+}
+#endif
 
 template <typename T>
 struct Matrix{
@@ -722,7 +777,8 @@ void destroy(emPars<T> *a,int nThreads ){
 int really_kill =3;
 int VERBOSE = 1;
 void handler(int s) {
-
+  if(s==13)//this is sigpipe
+    exit(0);
   if(VERBOSE)
     fprintf(stderr,"\n\t-> Caught SIGNAL: Will try to exit nicely (no more threads are created.\n\t\t\t  We will wait for the current threads to finish)\n");
   
@@ -746,7 +802,7 @@ size_t parspace(std::vector<persaf *> &saf){
 }
 
 template <typename T>
-void readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr){
+void readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop){
   assert(saf.size()==1);
   
   if(chooseChr!=NULL){
@@ -792,7 +848,7 @@ int main_opt(args *arg){
   emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,nSites);
   
   while(1) {
-    readdata<T>(saf,gls,nSites,arg->chooseChr);//read nsites from data
+    readdata<T>(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop);//read nsites from data
     
     if(gls[0]->x==0)
       break;
@@ -828,54 +884,32 @@ int main_opt(args *arg){
   return 0;
 }
 
-std::vector<char*> merge(std::vector<persaf *> &saf,char *chooseChr){
-  fprintf(stderr,"merge\n");
+//unthreaded
+keep<char> *merge(std::vector<persaf *> &saf,char *chooseChr){
+  fprintf(stderr,"hello Im the master merge part of realSFS. and I'll now do a tripple bypass\n");
   assert(chooseChr!=NULL);
-  keep<int> *dat = alloc_keep<int>();//positions 
-  keep<char> *hit =alloc_keep<char>();//
+  
+  //  static keep<int> *dat = alloc_keep<int>();//positions 
+  static keep<char> *hit =alloc_keep<char>();//
    
   for(int i=0;i<saf.size();i++){
-    fprintf(stderr,"doing double bypass i:%d/%lu\n",i,saf.size());
     myMap::iterator it = saf[i]->mm.find(chooseChr);
     assert(it!=saf[i]->mm.end());
 
     bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
-    realloc(dat,it->second.nSites);
-    bgzf_read(saf[i]->pos,dat->d,it->second.nSites*sizeof(int));
-    if(dat->d[it->second.nSites-1] > hit->m){
-      fprintf(stderr,"im reallonig hit");
-      realloc(hit,dat->d[it->second.nSites-1]+1);
-    }
+    saf[i]->ppos = new int[it->second.nSites];
+    bgzf_read(saf[i]->pos,saf[i]->ppos,it->second.nSites*sizeof(int));
+    if(saf[i]->ppos[it->second.nSites-1] > hit->m)
+      realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
+   
     assert(hit->m>0);
-    fprintf(stderr,"nsite:%lu\n",it->second.nSites);
-    for(int j=0;j<it->second.nSites;j++)
-      hit->d[dat->d[j]]++;
-    
-    int ntrue=0;
-    
-    if(i!=0){
-      for(int s=0;s<hit->m;s++)
-	if(hit->d[s]==saf.size())
-	  ntrue++;
-	else if(hit->d[s]==1)
-	  fprintf(stderr,"s:%d\n",s);
-      fprintf(stderr,"ntrue:%d\n",ntrue);    
-    }
-  }
 
-  std::vector<char*> ret;
-  for(int i=0;i<saf.size();i++){
-    myMap::iterator it = saf[i]->mm.find(chooseChr);
-    bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
-    bgzf_read(saf[i]->pos,dat,it->second.nSites*sizeof(int));
-    char *keep =(char*) calloc(it->second.nSites,1);
     for(int j=0;j<it->second.nSites;j++)
-      if(hit->d[dat->d[j]]==saf.size())
-	keep[j]=1;
-    ret.push_back(keep);
+      hit->d[saf[i]->ppos[j]]++;
   }
   
-  return ret;
+  
+  return hit;
 }
 
 
@@ -931,6 +965,8 @@ int main(int argc,char **argv){
   
   if(!strcasecmp(*argv,"print"))
     print(--argc,++argv);
+  else if(!strcasecmp(*argv,"print2"))
+    print2(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
     merge(arg->saf,"18");
