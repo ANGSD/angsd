@@ -889,29 +889,42 @@ int main_opt(args *arg){
 }
 
 //unthreaded
-keep<char> *merge(std::vector<persaf *> &saf,char *chooseChr){
+//this will populate the keep vector by
+// 1) set the chooseChr and populate toKeep
+// 2) find over lap between different positions
+// this is run once for each chromsome
+keep<char> *merge(std::vector<persaf *> &saf,char *chooseChr,int start,int stop){
   fprintf(stderr,"hello Im the master merge part of realSFS. and I'll now do a tripple bypass\n");
+  fprintf(stderr,"1) Will set iter according to chooseChr and start and stop\n");
   assert(chooseChr!=NULL);
-  
-  //  static keep<int> *dat = alloc_keep<int>();//positions 
-  static keep<char> *hit =alloc_keep<char>();//
-   
-  for(int i=0;i<saf.size();i++){
-    myMap::iterator it = saf[i]->mm.find(chooseChr);
-    assert(it!=saf[i]->mm.end());
 
+ //hit will contain the depth for the different populations
+  static keep<char> *hit =alloc_keep<char>();//
+
+  for(int i=0;i<saf.size();i++){
+    myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
+    assert(it!=saf[i]->mm.end());  
     bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
     saf[i]->ppos = new int[it->second.nSites];
     bgzf_read(saf[i]->pos,saf[i]->ppos,it->second.nSites*sizeof(int));
     if(saf[i]->ppos[it->second.nSites-1] > hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
-   
     assert(hit->m>0);
-
-    for(int j=0;j<it->second.nSites;j++)
-      hit->d[saf[i]->ppos[j]]++;
+    for(int j=saf[i]->toKeep->first;j<saf[i]->toKeep->last;j++)
+      if(saf[i]->toKeep->d[j])
+	hit->d[saf[i]->ppos[j]]++;
+    
   }
+  print_alloc(hit,stderr,0);
+  //hit now contains the genomic position (that is the index of).
   
+  //let us now modify the the persaf toKeep char vector
+  for(int i=0;i<saf.size();i++){
+    for(int j=saf[i]->toKeep->first;j<saf[i]->toKeep->last;j++){
+      if(hit->d[saf[i]->ppos[j]]!=saf.size())
+	saf[i]->toKeep->d[j] =0;
+    }
+  }
   
   return hit;
 }
@@ -973,10 +986,7 @@ int main(int argc,char **argv){
     print2(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
-    merge(arg->saf,"18");
-    return 0;
-    if(arg->saf.size()==1)
-      main_opt<float>(arg);
+    main_opt<float>(arg);
     
   }
 

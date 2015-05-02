@@ -196,7 +196,7 @@ void safprint(int argc,char **argv){
 }
 
 //chr start stop is given from commandine
-void iter_init(persaf *pp,char *chr,int start,int stop){
+myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
   assert(chr!=NULL);
   myMap::iterator it;
   if(chr!=NULL){
@@ -241,6 +241,7 @@ void iter_init(persaf *pp,char *chr,int start,int stop){
   pp->at =-1;
   fprintf(stderr,"[%s] first:%lu last:%lu\n",__FUNCTION__,pp->toKeep->first,pp->toKeep->last);
   delete [] ppos;
+  return it;
 
 }
 

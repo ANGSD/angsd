@@ -19,10 +19,14 @@ struct keep{
 #endif
 
 template<typename T>
-void print_alloc(keep<T> *k,FILE *fp){
+void print_alloc(keep<T> *k,FILE *fp,int full){
   fprintf(fp,"\t k->m:%lu\n",k->m);
-  for(int i=0;i<k->m;i++)
+  for(int i=0;full&&i<k->m;i++)
     fprintf(stderr,"&k->d[%d]:%p ; k->d+%d:%p ; &k->d[%d+1]:%p k->d+%d+1:%p val:%d\n",i,&k->d[i],i,k->d+i,i,&k->d[i]+1,i,k->d+i+1,k->d[i]);
+  int tt =0;
+  for(int i=0;i<k->m;i++)
+    tt += k->d[i];
+  fprintf(stderr,"tt:%d first:%lu last:%lu\n",tt,k->first,k->last);
 }
 
 
