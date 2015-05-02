@@ -45,7 +45,7 @@ void realloc(keep<T> *k,size_t newlen){
 
 template<typename T>
 void set(keep<T> *k,size_t pos,T val){
-  fprintf(stderr,"[%s] first:%lu last:%lu pos:%lu\n",__FUNCTION__,k->first,k->last,pos);
+  //  fprintf(stderr,"[%s] first:%lu last:%lu pos:%lu\n",__FUNCTION__,k->first,k->last,pos);
     if(pos+1>k->m)
       realloc<T>(k,pos+1);
     k->d[pos]=val;
@@ -59,12 +59,13 @@ void set(keep<T> *k,size_t pos,T val){
 	k->last=pos;
     }
     k->l++;
-    fprintf(stderr,"[%s] first:%lu last:%lu pos:%lu\n",__FUNCTION__,k->first,k->last,pos);
+    //fprintf(stderr,"[%s] first:%lu last:%lu pos:%lu\n",__FUNCTION__,k->first,k->last,pos);
 }
 
 template<typename T>
-void destroy(keep<T> *k){
-  free(k->d);
+void keep_destroy(keep<T> *k){
+  if(k&&k->d)
+    free(k->d);
   free(k);
 }
 

@@ -41,6 +41,6 @@ size_t iter_read(persaf *saf, void *data, size_t length);
 template <typename T>
 persaf* readsaf(char *fname);
 void writesaf_header(FILE *fp,persaf *pp);
-void destroy(persaf *pp);
+void persaf_destroy(persaf *pp);
 void iter_init(persaf *,char *,int,int);
 size_t iter_read(persaf *saf, void *data, size_t length);

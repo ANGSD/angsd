@@ -59,7 +59,7 @@ pthread_t *thd=NULL;
 
 void destroy(std::vector<persaf *> &saf){
   for(int i=0;i<saf.size();i++)
-    destroy(saf[i]);
+    persaf_destroy(saf[i]);
 }
 
 
@@ -178,6 +178,7 @@ args * getArgs(int argc,char **argv){
       p->sfsfname = *(++argv);
     }else{
       p->saf.push_back(readsaf<float>(*argv));
+      //   fprintf(stderr,"toKeep:%p\n",p->saf[p->saf.size()-1]->toKeep);
     }
     argv++;
   }
@@ -550,7 +551,7 @@ void *like_slave(void *p){
   else if(pars.gls.size()==4)
     pars.lik = lik4(pars.sfs,pars.gls,pars.from,pars.to);
   
-
+  pthread_exit(NULL);
 }
 
 
@@ -626,9 +627,10 @@ void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
     int inc=0;
     for(int x=0;x<gls[0]->y;x++)
       for(int y=0;y<gls[1]->y;y++)
-	for(int i=0;i<gls[2]->y;i++)
-	  inner[inc++] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i];
-
+	for(int i=0;i<gls[2]->y;i++){
+	  inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i];
+	  inc++;
+	}
    normalize(inner,dim);
    for(int x=0;x<dim;x++)
      post[x] += inner[x];
@@ -648,8 +650,10 @@ void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
     for(int x=0;x<gls[0]->y;x++)
       for(int y=0;y<gls[1]->y;y++)
 	for(int i=0;i<gls[2]->y;i++)
-	  for(int j=0;j<gls[3]->y;j++)
-	    inner[inc++] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i]* gls[3]->mat[s][j];
+	  for(int j=0;j<gls[3]->y;j++){
+	    inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i]* gls[3]->mat[s][j];
+	    inc++;
+	  }
 
   }
   normalize(inner,dim);
@@ -671,7 +675,7 @@ void *emStep_slave(void *p){
     emStep3<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
   else if(pars.gls.size()==4)
     emStep4<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
- 
+  pthread_exit(NULL);
 }
 
 
