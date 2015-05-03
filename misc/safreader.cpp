@@ -213,7 +213,7 @@ myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
   bgzf_read(pp->pos,ppos,sizeof(int)*it->second.nSites);
 
   if(pp->toKeep==NULL)
-    pp->toKeep = alloc_keep<char>();
+    pp->toKeep = keep_alloc<char>();
   //  fprintf(stderr,"[%s]after alloc first:%lu last:%lu\n",__FUNCTION__,pp->toKeep->first,pp->toKeep->last);
   set<char>(pp->toKeep,it->second.nSites,0);
   //fprintf(stderr,"[%s]after set first:%lu last:%lu\n",__FUNCTION__,pp->toKeep->first,pp->toKeep->last);
