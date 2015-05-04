@@ -35,6 +35,8 @@ typedef struct{
   int at;
   int *ppos;
   int with_iter;
+  int start;
+  int stop;
 }persaf;
 
 size_t iter_read(persaf *saf, void *data, size_t length);

@@ -57,14 +57,16 @@ typedef struct {
 int SIG_COND =1;
 pthread_t *thd=NULL;
 
-void destroy(std::vector<persaf *> &saf){
+void destroy_safvec(std::vector<persaf *> &saf){
+  fprintf(stderr,"destroy &saf\n");
   for(int i=0;i<saf.size();i++)
     persaf_destroy(saf[i]);
 }
 
 
-void destroy(args *p){
-  destroy(p->saf);
+void destroy_args(args *p){
+  fprintf(stderr,"destroy args\n");
+  destroy_safvec(p->saf);
   delete p;
 }
 
@@ -187,7 +189,7 @@ args * getArgs(int argc,char **argv){
     }
     argv++;
   }
-  fprintf(stderr,"args: tole:%f nthreads:%d maxiter:%d nsites:%d chooseChr:%s start:%s chr:%s start:%d stop:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname,p->chooseChr,p->start,p->stop);
+  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d chooseChr:%s start:%s chr:%s start:%d stop:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname,p->chooseChr,p->start,p->stop);
   return p;
 }
 
@@ -254,7 +256,7 @@ int print(int argc,char **argv){
   }
   
   delete [] flt;
-  destroy(pars);
+  destroy_args(pars);
   return 0;
 }
 
@@ -301,7 +303,7 @@ void print2(int argc,char **argv){
   }
   
   delete [] flt;
-  destroy(pars);
+  destroy_args(pars);
 }
 #endif
 
@@ -395,7 +397,8 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
   size_t i;
   for(i=0;SIG_COND&&i<nSites;i++){
     //
-    int bytes_read = iter_read(fp,ret->mat[i],sizeof(T)*dim);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
+    
+    int bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
 
     if(bytes_read!=0 && bytes_read<sizeof(T)*dim){
       fprintf(stderr,"Problem reading chunk from file, please check nChr is correct, will exit \n");
@@ -795,18 +798,23 @@ size_t parspace(std::vector<persaf *> &saf){
 // 2) find over lap between different positions
 // this is run once for each chromsome
 void set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop){
-  fprintf(stderr,"hello Im the master merge part of realSFS. and I'll now do a tripple bypass\n");
-  fprintf(stderr,"1) Will set iter according to chooseChr and start and stop\n");
+  fprintf(stderr,"\t-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass\n");
+  fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop\n");
   assert(chooseChr!=NULL);
 
  //hit will contain the depth for the different populations
   static keep<char> *hit =keep_alloc<char>();//
-
+  keep_clear(hit);
+  
+  //this loop will populate a 'hit' array containing the effective (differnt pops) depth
+  //if we only have one population, then just return after iter_init
   for(int i=0;i<saf.size();i++){
     myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
-
     assert(it!=saf[i]->mm.end());  
+    if(saf.size()==1)
+      return;
     bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
+    
     saf[i]->ppos = new int[it->second.nSites];
     bgzf_read(saf[i]->pos,saf[i]->ppos,it->second.nSites*sizeof(int));
     if(saf[i]->ppos[it->second.nSites-1] > hit->m)
@@ -817,23 +825,21 @@ void set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int 
 	hit->d[saf[i]->ppos[j]]++;
     
   }
-  fprintf(stderr,"hit stat\n");
-  keep_info(hit,stderr,0);
-  fprintf(stderr,"hit stat stop\n");
+  //fprintf(stderr,"hit stat\n");
+  //keep_info(hit,stderr,0);
+  //fprintf(stderr,"hit stat stop\n");
   //hit now contains the genomic position (that is the index of).
   
   //let us now modify the the persaf toKeep char vector
   for(int i=0;i<saf.size();i++){
-    for(int j=saf[i]->toKeep->first;j<saf[i]->toKeep->last;j++){
+    
+    for(int j=saf[i]->toKeep->first;j<saf[i]->toKeep->last;j++)
       if(hit->d[saf[i]->ppos[j]]!=saf.size())
 	saf[i]->toKeep->d[j] =0;
-    }
 #if 0
     fprintf(stderr,"saf[%d] -> keep\n",i);
     keep_info(saf[i]->toKeep,stderr,0);
     fprintf(stderr,"saf[%d] -> keep stop\n",i);
-#endif
-#if 0
     //print out overlapping posiitons for all pops
     //    fprintf(stderr,"saf:%d\thit->m:%lu\td->m:%luppo")
     for(int j=0;j<saf[i]->toKeep->m;j++){
@@ -849,13 +855,18 @@ void set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int 
 
 
 template <typename T>
-void readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop){
+int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop){
+  fprintf(stderr,"[%s] \n",__FUNCTION__);
   static int lastread=0;
   if(lastread==0)
     set_intersect_pos(saf,chooseChr,start,stop);
   readGLS<float>(saf,nSites,gls);
   lastread=gls[0]->x;
   fprintf(stderr,"readdataL lastread:%d\n\n",lastread);
+  if(start==-1&&stop==-1&&lastread==0)
+    return -2;
+  else
+    return 1;
 }
 
 
@@ -886,8 +897,9 @@ int main_opt(args *arg){
   emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,nSites);
   
   while(1) {
-    readdata<T>(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop);//read nsites from data
-    
+    int ret=readdata<T>(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop);//read nsites from data
+    if(ret==-2)//no more data in files or in chr, eith way we break;
+      break;
     if(gls[0]->x==0)
       break;
     fprintf(stderr,"dim(GL1)=%zu,%zu\n",gls[0]->x,gls[0]->y);
@@ -913,9 +925,7 @@ int main_opt(args *arg){
   }
   destroy<T>(emp,arg->nThreads);
   destroy(gls,nSites);
-  destroy(saf);
-
-  destroy(arg);
+  destroy_args(arg);
   delete [] sfs;
   delete [] thd;
 

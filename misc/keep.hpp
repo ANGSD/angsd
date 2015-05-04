@@ -74,7 +74,7 @@ void keep_destroy(keep<T> *k){
 }
 
 template<typename T>
-void clear_keep(keep<T> *k){
+void keep_clear(keep<T> *k){
   memset(k->d,0,k->m*sizeof(T));
   k->m = k->first = k->last = k->l = 0;
 }

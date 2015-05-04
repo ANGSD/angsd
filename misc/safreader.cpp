@@ -17,9 +17,12 @@ void destroy(myMap &mm){
 
 
 void persaf_destroy(persaf *pp){
-  bgzf_close(pp->pos);
+  fprintf(stderr,"pp:%p pp->pos:%p\n",pp,pp->pos);
+  if(pp->pos)
+    bgzf_close(pp->pos);
   bgzf_close(pp->saf);
   destroy(pp->mm);
+  if(pp->ppos)
   delete [] pp->ppos;
   keep_destroy(pp->toKeep);
 
@@ -197,6 +200,7 @@ void safprint(int argc,char **argv){
 
 //chr start stop is given from commandine
 myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
+  fprintf(stderr,"[%s] chr:%s start:%d stop:%d\n",__FUNCTION__,chr,start,stop);
   assert(chr!=NULL);
   myMap::iterator it;
   if(chr!=NULL){
@@ -206,43 +210,47 @@ myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
       exit(0);
     }
   }
-
-  bgzf_seek(pp->pos,it->second.pos,SEEK_SET);
   bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
-  int *ppos = new int[it->second.nSites];
-  bgzf_read(pp->pos,ppos,sizeof(int)*it->second.nSites);
 
   if(pp->toKeep==NULL)
-    pp->toKeep = keep_alloc<char>();
-  //  fprintf(stderr,"[%s]after alloc first:%lu last:%lu\n",__FUNCTION__,pp->toKeep->first,pp->toKeep->last);
-  set<char>(pp->toKeep,it->second.nSites,0);
-  //fprintf(stderr,"[%s]after set first:%lu last:%lu\n",__FUNCTION__,pp->toKeep->first,pp->toKeep->last);
-  clear_keep(pp->toKeep);
-  //fprintf(stderr,"[%s]after clear first:%lu last:%lu\n",__FUNCTION__,pp->toKeep->first,pp->toKeep->last); 
-  
-  int first=0;
-  if(start!=-1)
-    while(first<it->second.nSites&&ppos[first]<start)
-      first++;
-
-  fprintf(stderr,"first:%d\n",first);
-  int last = it->second.nSites;
-  if(stop!=-1&&stop<=ppos[last-1]){
-    last=first;
-    while(ppos[last]<stop) 
-      last++;
-  }
-  fprintf(stderr,"last:%d\n",last);
-
-  for(int s=first;s<last;s++){
-    set<char>(pp->toKeep,s,1);
-    //  fprintf(stderr,"[%s]s:%d first:%lu last:%lu\n",__FUNCTION__,s,pp->toKeep->first,pp->toKeep->last);
-  }
+      pp->toKeep = keep_alloc<char>();
   pp->at =-1;
-  fprintf(stderr,"[%s] first:%lu last:%lu\n",__FUNCTION__,pp->toKeep->first,pp->toKeep->last);
-  delete [] ppos;
-  return it;
+  
+  if(start==-1&&stop==-1){
+    fprintf(stderr,"pp->toKeep->d:%p\n",pp->toKeep->d);
+    pp->toKeep->first = 0;
+    pp->toKeep->last = it->second.nSites;
+    return it;
+  }else{
+    bgzf_seek(pp->pos,it->second.pos,SEEK_SET);
+    int *ppos = new int[it->second.nSites];
+    bgzf_read(pp->pos,ppos,sizeof(int)*it->second.nSites);
+    
+    
+    set<char>(pp->toKeep,it->second.nSites,0);
+    keep_clear(pp->toKeep);
+    
+    int first=0;
+    if(start!=-1)
+      while(first<it->second.nSites&&ppos[first]<start)
+	first++;
+    
+    fprintf(stderr,"first:%d\n",first);
+    int last = it->second.nSites;
+    if(stop!=-1&&stop<=ppos[last-1]){
+      last=first;
+      while(ppos[last]<stop) 
+	last++;
+    }
+    fprintf(stderr,"last:%d\n",last);
+    
+    for(int s=first;s<last;s++)
+      set<char>(pp->toKeep,s,1);
+    
 
+    delete [] ppos;
+    return it;
+  }
 }
 
 size_t iter_read(persaf *saf, void *data, size_t length){
@@ -258,10 +266,14 @@ size_t iter_read(persaf *saf, void *data, size_t length){
     assert(ret==length);
     if(ret==0)
       return ret;
-    if(saf->toKeep!=NULL && saf->toKeep->d[saf->at]){
+    if(saf->toKeep!=NULL && saf->toKeep->d==NULL)//read all 
+      return ret;
+    
+    if(saf->toKeep!=NULL && saf->toKeep->d && saf->toKeep->d[saf->at]){
       // fprintf(stderr,"[%s] in while saf->at:%d says keep\n",__FUNCTION__,saf->at);
       return ret;
     }
+
   }
   //fprintf(stderr,"after while\n");
   return 0;
