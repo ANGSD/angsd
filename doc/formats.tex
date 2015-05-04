@@ -37,9 +37,9 @@ Second iteration of the saf files now contains two raw files and an index file. 
   \hline
   {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
   \hline
-  1 & {\sf CLEN} & size_t &  Length of CHR (not including terminating null)\\
+  1 & {\sf CLEN} & size\_t &  Length of CHR (not including terminating null)\\
   2 & {\sf CHR} & char* & Reference sequence name. Length is CLEN\\
-  3 & {\sf NSITES} & size_t & Number of sites with coverage from reference CHR\\
+  3 & {\sf NSITES} & size\_t & Number of sites with coverage from reference CHR\\
   4 & {\sf OFF1} & long int & CHR offset into the PREFIX.saf.pos.gz \\
   5 & {\sf OFF2} & long int & CHR offset into the PREFIX.saf.gz \\
   \hline
@@ -47,6 +47,6 @@ Second iteration of the saf files now contains two raw files and an index file. 
 \caption{Content of entry for a single reference name in the PREFIX.saf.idx file.}
 \end{table}
 First 8 bytes in all three files is 8byte magic numer \emph{char[8]
-  ``safv3''}. The next size_t value is the number of categories of the sample allelefrequency.
+  ``safv3''}. The next size\_t value is the number of categories of the sample allelefrequency.
 
 \end{document}
