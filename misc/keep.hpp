@@ -19,14 +19,15 @@ struct keep{
 #endif
 
 template<typename T>
-void keep_info(keep<T> *k,FILE *fp,int full){
-  fprintf(fp,"\t k->m:%lu\n",k->m);
+void keep_info(keep<T> *k,FILE *fp,int full,int hit){
+  fprintf(fp,"[%s] \t k->m:%lu hit:%d\n",__FUNCTION__,k->m,hit);
   for(int i=0;full&&i<k->m;i++)
-    fprintf(stderr,"&k->d[%d]:%p ; k->d+%d:%p ; &k->d[%d+1]:%p k->d+%d+1:%p val:%d\n",i,&k->d[i],i,k->d+i,i,&k->d[i]+1,i,k->d+i+1,k->d[i]);
+    fprintf(stderr,"[%s]&k->d[%d]:%p ; k->d+%d:%p ; &k->d[%d+1]:%p k->d+%d+1:%p val:%d\n",__FUNCTION__,i,&k->d[i],i,k->d+i,i,&k->d[i]+1,i,k->d+i+1,k->d[i]);
   int tt =0;
-  for(int i=0;i<k->m;i++)
-    tt += k->d[i];
-  fprintf(stderr,"tt:%d first:%lu last:%lu\n",tt,k->first,k->last);
+  for(int i=0;i<k->last;i++)
+    if(k->d[i]==hit)
+      tt++;
+  fprintf(stderr,"[%s]tt:%d first:%lu last:%lu\n",__FUNCTION__,tt,k->first,k->last);
 }
 
 
@@ -48,7 +49,7 @@ void realloc(keep<T> *k,size_t newlen){
 }
 
 template<typename T>
-void set(keep<T> *k,size_t pos,T val){
+void keep_set(keep<T> *k,size_t pos,T val){
   //  fprintf(stderr,"[%s] first:%lu last:%lu pos:%lu\n",__FUNCTION__,k->first,k->last,pos);
     if(pos+1>k->m)
       realloc<T>(k,pos+1);

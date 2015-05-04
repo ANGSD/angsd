@@ -17,7 +17,7 @@ void destroy(myMap &mm){
 
 
 void persaf_destroy(persaf *pp){
-  fprintf(stderr,"pp:%p pp->pos:%p\n",pp,pp->pos);
+  //  fprintf(stderr,"pp:%p pp->pos:%p\n",pp,pp->pos);
   if(pp->pos)
     bgzf_close(pp->pos);
   bgzf_close(pp->saf);
@@ -199,17 +199,18 @@ void safprint(int argc,char **argv){
 }
 
 //chr start stop is given from commandine
+//if chr==NULL, then this function is only called once
 myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
   fprintf(stderr,"[%s] chr:%s start:%d stop:%d\n",__FUNCTION__,chr,start,stop);
   assert(chr!=NULL);
   myMap::iterator it;
-  if(chr!=NULL){
+  //  if(chr!=NULL){
     it = pp->mm.find(chr);
     if(it==pp->mm.end()){
       fprintf(stderr,"Problem finding chr: %s\n",chr);
       exit(0);
     }
-  }
+    // }
   bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
 
   if(pp->toKeep==NULL)
@@ -217,7 +218,8 @@ myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
   pp->at =-1;
   
   if(start==-1&&stop==-1){
-    fprintf(stderr,"pp->toKeep->d:%p\n",pp->toKeep->d);
+    keep_set<char>(pp->toKeep,it->second.nSites,0);
+    memset(pp->toKeep->d,1,it->second.nSites);
     pp->toKeep->first = 0;
     pp->toKeep->last = it->second.nSites;
     return it;
@@ -227,7 +229,7 @@ myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
     bgzf_read(pp->pos,ppos,sizeof(int)*it->second.nSites);
     
     
-    set<char>(pp->toKeep,it->second.nSites,0);
+    keep_set<char>(pp->toKeep,it->second.nSites,0);
     keep_clear(pp->toKeep);
     
     int first=0;
@@ -245,7 +247,7 @@ myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
     fprintf(stderr,"last:%d\n",last);
     
     for(int s=first;s<last;s++)
-      set<char>(pp->toKeep,s,1);
+      keep_set<char>(pp->toKeep,s,1);
     
 
     delete [] ppos;
@@ -254,29 +256,46 @@ myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
 }
 
 size_t iter_read(persaf *saf, void *data, size_t length){
-  //  fprintf(stderr,"[%s] data:%p len:%lu first:%lu last:%lu\n",__FUNCTION__,data,length,saf->toKeep->first,saf->toKeep->last);
-  while(1){
-    //    fprintf(stderr,"in while\n");
-    saf->at++;
-    if(saf->at>saf->toKeep->last){
-      //  fprintf(stderr,"after lst:%d\n",saf->at);
+  //  fprintf(stderr,"[%s] data:%p len:%lu first:%lu last:%lu at:%d\n",__FUNCTION__,data,length,saf->toKeep->first,saf->toKeep->last,saf->at);
+
+  //this is when we read an entire genome. 
+  if(saf->toKeep==NULL){
+    //    fprintf(stderr,"to keep is zero\n");
+    int ret=bgzf_read(saf->saf,data,length);
+    if(ret==0)
+      return 0;
+    assert(ret==length);
+    return ret;
+  }else{
+    // two cases, either we read everything, or we use the keeplist (toKeep->d)
+    if(saf->at>(int)saf->toKeep->last){
+      //fprintf(stderr,"after lst:%d\n",saf->at);
       return 0;
     }
-    int ret=bgzf_read(saf->saf,data,length);
-    assert(ret==length);
-    if(ret==0)
-      return ret;
-    if(saf->toKeep!=NULL && saf->toKeep->d==NULL)//read all 
-      return ret;
     
-    if(saf->toKeep!=NULL && saf->toKeep->d && saf->toKeep->d[saf->at]){
-      // fprintf(stderr,"[%s] in while saf->at:%d says keep\n",__FUNCTION__,saf->at);
-      return ret;
-    }
+    while(1){
+      int ret=bgzf_read(saf->saf,data,length);
+      saf->at++;
+      if(saf->at>(int)saf->toKeep->last){
+	//	fprintf(stderr,"after lst:%d\n",saf->at);
+	return 0;
+      }
+      if(ret==0)
+	return 0;
 
+      assert(ret==length);
+      
+      if(saf->toKeep->d==NULL)//read all 
+	return ret;
+      else if(saf->toKeep->d[saf->at]){
+	//fprintf(stderr,"[%s] in while saf->at:%d says keep\n",__FUNCTION__,saf->at);
+	return ret;
+      }
+      
+    }
+    //fprintf(stderr,"after while\n");
+    return 0;
   }
-  //fprintf(stderr,"after while\n");
-  return 0;
 }
 
 
