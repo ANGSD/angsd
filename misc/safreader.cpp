@@ -201,7 +201,7 @@ void safprint(int argc,char **argv){
 //chr start stop is given from commandine
 //if chr==NULL, then this function is only called once
 myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
-  fprintf(stderr,"[%s] chr:%s start:%d stop:%d\n",__FUNCTION__,chr,start,stop);
+  //  fprintf(stderr,"[%s] chr:%s start:%d stop:%d\n",__FUNCTION__,chr,start,stop);
   assert(chr!=NULL);
   myMap::iterator it;
   //  if(chr!=NULL){

@@ -350,6 +350,7 @@ Matrix<T> *alloc(size_t x,size_t y){
   ret->mat= new T*[x];
   for(size_t i=0;i<ret->x;i++)
     ret->mat[i]=new T[y];
+  ret->x=0;
   return ret;
 };
 
@@ -402,10 +403,10 @@ size_t getTotalSystemMemory(){
 template<typename T>
 void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
 
-  ret->x=nSites;
+  // ret->x=nSites;
   ret->y=dim;
   size_t i;
-  for(i=0;SIG_COND&&i<nSites;i++){
+  for(i=ret->x;SIG_COND&&i<nSites;i++){
     //
     
     int bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
@@ -428,12 +429,17 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
   //  exit(0);
 }
 
+
+//returns the number of sites read
 template<typename T>
-void readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *> &ret){
+int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *> &ret){
+  int pre=ret[0]->x;
   for(int i=0;i<adolf.size();i++){
     readGL(adolf[i],nSites,adolf[i]->nChr+1,ret[i]);
-    fprintf(stderr,"adolf:%d\t%lu\n",i,ret[i]->x);
+    //    fprintf(stderr,"adolf:%d\t%lu\n",i,ret[i]->x);
   }
+  
+  return ret[0]->x-pre;
 }
 
 
@@ -760,7 +766,7 @@ emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads
   }
   //fix last end point
   temp[nThreads-1].to=nSites;
-#if 1
+#if 0
   fprintf(stderr,"--------------\n");
   for(int i=0;i<nThreads;i++)
     fprintf(stderr,"threadinfo %d)=(%d,%d)=%d \n",temp[i].threadId,temp[i].from,temp[i].to,temp[i].to-temp[i].from); //
@@ -811,12 +817,13 @@ size_t parspace(std::vector<persaf *> &saf){
 // 1) set the chooseChr and populate toKeep
 // 2) find over lap between different positions
 // this is run once for each chromsome
-void set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop){
-  fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
+int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop){
+  //  fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
 
-  if(saf.size()==1&&chooseChr==NULL)//use entire genome, then don't do any strange filtering
-    return ;
-  
+  if(saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
+    //fprintf(stderr,"herer\n");
+    return 0 ;
+  }
   /*
     What happens here? very good question
 
@@ -825,15 +832,19 @@ void set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int 
   static myMap::iterator it_outer=saf[0]->mm.begin();
   if(chooseChr==NULL){
     if(it_outer==saf[0]->mm.end())//if we are done
-      return;
+      return -2;
     else if(firstTime==0){
       it_outer++;
+      if(it_outer==saf[0]->mm.end()){
+	//	fprintf(stderr,"done reading will exit \n");
+	return -3;
+      }
     }else
       firstTime =0;
     chooseChr = it_outer->first;
-  
+    fprintf(stderr,"\t-> Is in multi sfs, will now read data from chr:%s\n",chooseChr);
   }
-
+  
   fprintf(stderr,"\t-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect \n");
   fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop\n");
   assert(chooseChr!=NULL);
@@ -852,7 +863,7 @@ void set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int 
     myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
     assert(it!=saf[i]->mm.end());  
     if(saf.size()==1)
-      return;
+      return 0;
     
     bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
     saf[i]->ppos = new int[it->second.nSites];
@@ -870,11 +881,17 @@ void set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int 
   //hit now contains the genomic position (that is the index).
   
   //let us now modify the the persaf toKeep char vector
+  int tsk[saf.size()];
   for(int i=0;i<saf.size();i++){
+    tsk[i] =0;
     for(int j=0;j<saf[i]->toKeep->last;j++)
       if(hit->d[j]!=saf.size())
 	saf[i]->toKeep->d[j] =0;
-    
+      else
+	tsk[i]++;
+    fprintf(stderr,"\t-> Sites to keep from pop%d:\t%d\n",i,tsk[i]);
+    if(i>0)
+      assert(tsk[i]==tsk[i-1]);
 #if 0
     keep_info(saf[i]->toKeep,stderr,0,1);
     //print out overlapping posiitons for all pops
@@ -887,7 +904,11 @@ void set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int 
   }
   keep_destroy(hit);
 }
+/*
+  return value 
+  -3 indicates that we are doing multi sfs and that we are totally and should flush
 
+ */
 
 
 
@@ -895,17 +916,26 @@ template <typename T>
 int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop){
 
   static int lastread=0;
-  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
+  //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
+  if(lastread==0 ){
+    //    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
+    int ret = set_intersect_pos(saf,chooseChr,start,stop); 
+    //fprintf(stderr,"ret:%d\n",ret);
+    if(ret==-3)
+      return -3;
+  }
+  lastread=readGLS(saf,nSites,gls);
   if(lastread==0)
-    set_intersect_pos(saf,chooseChr,start,stop);
-  readGLS(saf,nSites,gls);
-  lastread=gls[0]->x;
-  fprintf(stderr,"readdata lastread:%d\n\n",lastread);
+    fprintf(stderr,"\t-> Only read nSites: %lu will therefore prepare next chromosome (or exit)\n",gls[0]->x);
+  //fprintf(stderr,"readdata lastread:%d\n\n",lastread);
   // exit(0);
   if(chooseChr!=NULL&&lastread==0){
-    fprintf(stderr,"return -2\n");
+    //fprintf(stderr,"return -2\n");
     return -2;
-  }else
+  }
+  else if(chooseChr==NULL &&lastread==0 )
+    return -2;
+  else
     return 1;
 }
 
@@ -938,12 +968,28 @@ int main_opt(args *arg){
   
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop);//read nsites from data
-    if(ret==-2)//no more data in files or in chr, eith way we break;
+    //    fprintf(stderr,"\t\tRET:%d\n",ret);
+    if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
-    if(gls[0]->x==0)
-      continue;
-    //    fprintf(stderr,"dim(GL1)=%zu,%zu\n",gls[0]->x,gls[0]->y);
-     
+    
+    if(saf.size()==1){
+      if(ret!=-2){
+	if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+	  //	  fprintf(stderr,"continue continue\n");
+	  continue;
+	}
+      }
+    }else{
+      if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+	//fprintf(stderr,"continue continue\n");
+	continue;
+      }
+
+    }
+  
+      
+    fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
+    
     if(arg->sfsfname!=NULL)
       readSFS(arg->sfsfname,ndim,sfs);
     else
@@ -952,9 +998,10 @@ int main_opt(args *arg){
 
     normalize(sfs,ndim);
     emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,gls[0]->x);
+    fprintf(stderr,"------------\n");
     double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim);
-      
     fprintf(stderr,"likelihood: %f\n",lik);
+    fprintf(stderr,"------------\n");
 #if 1
     for(int x=0;x<ndim;x++)
       fprintf(stdout,"%f ",log(sfs[x]));
@@ -964,6 +1011,9 @@ int main_opt(args *arg){
     destroy<T>(emp,arg->nThreads);
     for(int i=0;i<gls.size();i++)
       gls[i]->x =0;
+    
+    if(ret==-2&&arg->chooseChr!=NULL)
+      break;
   }
 
   destroy(gls,nSites);
