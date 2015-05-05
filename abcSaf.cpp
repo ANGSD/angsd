@@ -256,7 +256,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
 
 
 abcSaf::~abcSaf(){
-  if(doSaf&&doThetas==0)
+  if(doSaf&&doThetas==0&&doSaf!=3)
     writeAll();
   if(pest) free(pest);
   if(prior) delete [] prior;
@@ -1484,7 +1484,7 @@ void abcSaf::writeAll(){
 }
 
 void abcSaf::changeChr(int refId) {
-  if(doSaf&&doThetas==0){
+  if(doSaf&&doThetas==0&&doSaf!=3){
     writeAll();
     free(tmpChr);
     tmpChr = strdup(header->target_name[refId]);
