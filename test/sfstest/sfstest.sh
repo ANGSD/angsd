@@ -33,8 +33,8 @@ cd output/
 md5sum  -c results.md5sum &>>${LOG}||exit 4
 
 cd ..
-$WDIR/misc/realSFS output/sfstest.saf 20 -P 4 -nSites 10000000 >output/em.log 2>>${LOG} ||exit 5
-$WDIR/misc/realSFS output/sfstest.saf 20 -P 4 -nSites 10000000 -use-BFGS 1 >output/bfgs.log 2>>${LOG} ||exit 6
+$WDIR/misc/realSFS output/sfstest.saf.idx -P 4 -nSites 10000000 >output/em.log 2>>${LOG} ||exit 5
+
 cd output
 md5sum  -c mlRes.md5sum &>>${LOG} ||exit 7
 
