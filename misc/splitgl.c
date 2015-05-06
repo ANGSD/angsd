@@ -18,7 +18,8 @@ int main(int argc,char**argv){
   if(argc!=5){
     fprintf(stderr,"\nProgram extract ranges from output of msToGlf\n./splitgl file.glf.gz nindTotal firstInd lastInd\n");
     fprintf(stderr,"\nTo extract first the GLS for the first 10 samples in an glf.gz that contains 25 samples\n");
-    fprintf(stderr,"./splitgl file.glf.gz 25 10\n");
+    fprintf(stderr,"Examples\n\n\t1) Extract sample 1 to 12 from a glf.gz file containing 20samples:\n\t\t\t./splitgl raw.glf.gz 20 1 12\n");
+    fprintf(stderr,"\t2) Extract sample 1 to 12 from a glf.gz file containing 20samples:\n\t\t\t./splitgl raw.glf.gz 20 13 20\n");
     return 0;
   }
   
