@@ -15,7 +15,7 @@
   april 13, safv3 added, safv2 removed for know. Will be reintroduced later.
   april 20, removed 2dsfs as special scenario
   april 20, split out the safreader into seperate cpp/h
-
+  may 5, seems to work well now
 */
 
 #include <cstdio>
@@ -56,7 +56,7 @@ typedef struct {
 
 int SIG_COND =1;
 pthread_t *thd=NULL;
-
+int howOften =5e6;//how often should we print out (just to make sure something is happening)
 void destroy_safvec(std::vector<persaf *> &saf){
   //fprintf(stderr,"destroy &saf\n");
   for(int i=0;i<saf.size();i++)
@@ -70,19 +70,32 @@ void destroy_args(args *p){
   delete p;
 }
 
-
-size_t fsizes(std::vector<persaf *> &pp){
+//just approximate
+template <typename T>
+size_t fsizes(std::vector<persaf *> &pp, int nSites){
   size_t res = 0;
-  for(int i=0;i<pp.size();i++)
-    res += pp[i]->fsize;
+  for(int i=0;i<pp.size();i++){
+    res += nSites*(pp[i]->nChr+1)*sizeof(T)+nSites*sizeof( T*);
+  }
   return res;
 }
 
-size_t nsites(std::vector<persaf *> &pp){
-  size_t res = pp[0]->nSites;
+size_t helper(persaf * pp,char *chr){
+  if(chr==NULL)
+    return pp->nSites;
+  myMap::iterator it=pp->mm.find(chr);
+  if(it==pp->mm.end()){
+    fprintf(stderr,"\t-> Problem finding chromosome: %s\n",chr);
+    exit(0);
+  }
+  return it->second.nSites;
+}
+
+size_t nsites(std::vector<persaf *> &pp,args *ar){
+  size_t res = helper(pp[0],ar->chooseChr);
   for(int i=1;i<pp.size();i++)
-    if(pp[i]->nSites > res)
-      res = pp[i]->nSites;
+    if(helper(pp[i],ar->chooseChr) > res)
+      res = helper(pp[i],ar->chooseChr);
   return res;
 }
 
@@ -407,6 +420,8 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
   ret->y=dim;
   size_t i;
   for(i=ret->x;SIG_COND&&i<nSites;i++){
+    if(i>0 &&(i% howOften)==0  )
+      fprintf(stderr,"\r\t-> Has read 5mio sites now at: %lu      ",i);
     //
     
     int bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
@@ -427,6 +442,7 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
     exit(0);
   //  matrix_print<T>(ret);
   //  exit(0);
+  fprintf(stderr,"\r");
 }
 
 
@@ -948,15 +964,16 @@ int main_opt(args *arg){
   std::vector<persaf *> &saf =arg->saf;
   int nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
-    if(fsizes(saf)>getTotalSystemMemory())
-      fprintf(stderr,"Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
-    //this doesnt make sense if ppl supply a filelist containing safs
-    nSites=nsites(saf);
+    nSites=nsites(saf,arg);
   }
-  //  float bytes_req_megs = saf->fsize/1024/1024;
-  //float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
+  if(fsizes<T>(saf,nSites)>getTotalSystemMemory())
+    fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
+    
+  fprintf(stderr,"\t-> nSites: %d\n",nSites);
+  float bytes_req_megs = fsizes<T>(saf,nSites)/1024/1024;
+  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-  //fprintf(stderr,"The choice of -nSites will require atleast: %f megabyte memory, that is approx: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+  fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is atleast: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
 
   std::vector<Matrix<T> *> gls;
   for(int i=0;i<saf.size();i++)
