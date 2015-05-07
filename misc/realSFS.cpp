@@ -31,7 +31,7 @@
 #include <sys/stat.h>
 #include <zlib.h>
 #include <htslib/bgzf.h>
-
+#include <htslib/tbx.h>
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -51,6 +51,7 @@ typedef struct {
   char *sfsfname;
   std::vector<persaf *> saf;
   int posOnly;
+  char *fname;
 }args;
 
 
@@ -173,7 +174,7 @@ args * getArgs(int argc,char **argv){
   p->nThreads=4;
   p->nSites =0;
   p->posOnly = 0;
-
+  p->fname = NULL;
   if(argc==0)
     return p;
 
@@ -198,15 +199,16 @@ args * getArgs(int argc,char **argv){
       p->sfsfname = *(++argv);
     }else{
       p->saf.push_back(readsaf<float>(*argv));
+      p->fname = *argv;
       //   fprintf(stderr,"toKeep:%p\n",p->saf[p->saf.size()-1]->toKeep);
     }
     argv++;
   }
-  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d chooseChr:%s start:%s chr:%s start:%d stop:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->chooseChr,p->sfsfname,p->chooseChr,p->start,p->stop);
+  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname,p->chooseChr,p->start,p->stop,p->fname);
   return p;
 }
 
-int print(int argc,char **argv){
+int printOld(int argc,char **argv){
 
   if(argc<1){
     fprintf(stderr,"Must supply afile.saf.idx [chrname]\n");
@@ -316,6 +318,70 @@ void print2(int argc,char **argv){
   
   delete [] flt;
   destroy_args(pars);
+}
+#endif
+
+#if 1
+int index(int argc,char **argv){
+  fprintf(stderr,"tabix not implemented yet\n");
+  if(argc<1){
+    fprintf(stderr,"Must supply afile.saf.idx \n");
+    return -1; 
+  }
+  
+  args *pars = getArgs(argc,argv);
+  
+  if(pars->saf.size()!=1){
+    fprintf(stderr,"Print only implemeted for single safs\n");
+    exit(0);
+  }
+
+  //  writesaf_header(stderr,pars->saf[0]);
+
+  BGZF *fp=pars->saf[0]->saf;
+  if ( !fp->is_compressed ) {
+    bgzf_close(fp);
+    fprintf(stderr,"not compressed\n") ;
+    return -1; 
+  }
+
+  tbx_t *tbx = (tbx_t*)calloc(1, sizeof(tbx_t));
+  int min_shift = 14;
+  int n_lvls = 5;
+  int fmt = HTS_FMT_TBI;
+
+
+  float *flt = new float[pars->saf[0]->nChr+1];
+  for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
+    int *ppos = new int [it->second.nSites];
+    bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
+    bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
+
+    int ret;
+    fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
+    while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1)))){
+   
+      //      fprintf(stderr,"[%s] pars->saf[0]->at:%d nSites: %lu ret:%d\n",__FUNCTION__,pars->saf[0]->at,it->second.nSites,ret);
+      fprintf(stdout,"%s\t%d",it->first,ppos[pars->saf[0]->at]+1);
+      for(int is=0;is<pars->saf[0]->nChr+1;is++)
+	fprintf(stdout,"\t%f",flt[is]);
+      fprintf(stdout,"\n");
+    }
+    delete [] ppos;
+    //fprintf(stderr,"[%s] after while:%d\n",__FUNCTION__,ret);
+    if(pars->chooseChr!=NULL)
+      break;
+  }
+  
+  delete [] flt;
+  destroy_args(pars);
+
+  const char *suffix = ".tbi";
+  char *idx_fname =(char*) calloc(strlen(pars->fname) + 5, 1);
+  strcat(strcpy(idx_fname, pars->fname), suffix);
+  fprintf(stderr,"idx_fname:%s\n",idx_fname);
+
+
 }
 #endif
 
@@ -466,7 +532,7 @@ size_t fsize(const char* fname){
 }
 
 void readSFS(const char*fname,int hint,double *ret){
-  fprintf(stderr,"reading: %s\n",fname);
+  fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
   FILE *fp = NULL;
   if(((fp=fopen(fname,"r")))){
     fprintf(stderr,"problems opening file:%s\n",fname);
@@ -500,10 +566,10 @@ void readSFS(const char*fname,int hint,double *ret){
     exit(0);
   }
   for(size_t i=0;i<res.size();i++){
-    
-    ret[i] = exp(res[i]);
+      ret[i] = res[i];
     // fprintf(stderr,"i=%d %f\n",i,ret[i]);
   }
+  normalize(ret,res.size());
   fclose(fp);
 }
 
@@ -1021,7 +1087,7 @@ int main_opt(args *arg){
     fprintf(stderr,"------------\n");
 #if 1
     for(int x=0;x<ndim;x++)
-      fprintf(stdout,"%f ",log(sfs[x]));
+      fprintf(stdout,"%f ",gls[0]->x*sfs[x]);
     fprintf(stdout,"\n");
     fflush(stdout);
 #endif
@@ -1037,7 +1103,9 @@ int main_opt(args *arg){
   destroy_args(arg);
   delete [] sfs;
   
-
+  fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
+  fprintf(stderr,"\n\t-> Output is now simply the expected number of sites! \n");
+  fprintf(stderr,"\n\t-> You can convert to the old format simply with log(norm(x))\n");
   return 0;
 }
 
@@ -1072,10 +1140,27 @@ int main(int argc,char **argv){
   sigaction(SIGINT, &sa, 0);  
 \
   if(argc==1){
-    fprintf(stderr,"Make better output. All info below is potential wrong should be upated\n");
-    fprintf(stderr,"\n./realSFS afile.saf nChr [-start FNAME -P nThreads -tole tole -maxIter  -nSites ]\n");
-    fprintf(stderr,"OR\n ./realSFS 2dsfs pop1.saf pop2.saf nchrPop1 nChrPop2 [-start FNAME -P nThreads -tole tole -maxIter  -nSites ]\n");
-    fprintf(stderr,"\nnChr is the number of chromosomes. (twice the number of diploid invididuals)\n");    
+    //    fprintf(stderr, "\t->------------------\n\t-> ./realSFS\n\t->------------------\n");
+    // fprintf(stderr,"\t-> This is the new realSFS program which works on the newer binary files from ANGSD!!\n");
+    fprintf(stderr, "\t-> ---./realSFS------\n\t-> EXAMPLES FOR ESTIMATING THE (MULTI) SFS:\n\n\t-> Estimate the SFS for entire genome??\n");
+    fprintf(stderr,"\t-> ./realSFS afile.saf.idx \n");
+    fprintf(stderr, "\n\t-> 1) Estimate the SFS for entire chromosome 22 ??\n");
+    fprintf(stderr,"\t-> ./realSFS afile.saf.idx -r chr22 \n");
+    fprintf(stderr, "\n\t-> 2) Estimate the 2d-SFS for entire chromosome 22 ??\n");
+    fprintf(stderr,"\t-> ./realSFS afile1.saf.idx  afile2.saf.idx -r chr22 \n");
+
+    fprintf(stderr, "\n\t-> 3) Estimate the SFS for the first 500megabases (this will span multiple chromosomes) ??\n");
+    fprintf(stderr,"\t-> ./realSFS afile.saf.idx -nSites 500000000 \n");
+
+    fprintf(stderr, "\n\t-> 4) Estimate the SFS around a gene ??\n");
+    fprintf(stderr,"\t-> ./realSFS afile.saf.idx -r chr2:135000000-140000000 \n");
+    fprintf(stderr, "\n\t-> Other options [-P nthreads -tole tolerence_for_breaking_EM -maxIter max_nr_iterations ]\n");
+    
+
+    fprintf(stderr,"\n\t->------------------\n\t-> NB: Output is now counts of sites instead of log probs!!\n");
+    fprintf(stderr,"\t-> NB: You can print data with ./realSFS print afile.saf.idx !!\n");
+    fprintf(stderr,"\t-> NB: Higher order SFS's can be estimated by simply supplying multiple .saf.idx files!!\n");
+    
     return 0;
   }
   ++argv;
@@ -1091,10 +1176,13 @@ int main(int argc,char **argv){
   }
   
   
-  if(!strcasecmp(*argv,"print"))
-    print(--argc,++argv);
-  else if(!strcasecmp(*argv,"print2"))
+  if(!strcasecmp(*argv,"printOld"))
+    printOld(--argc,++argv);
+  else if(!strcasecmp(*argv,"print"))
     print2(--argc,++argv);
+  else if(!strcasecmp(*argv,"index"))
+    index(--argc,++argv);
+  
   else {
     args *arg = getArgs(argc,argv);
     if(!arg)
