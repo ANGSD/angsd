@@ -88,6 +88,10 @@ persaf * readsaf(char *fname){
   char buf[8];
   assert(fread(buf,1,8,fp)==8);
   ret->version = version(fname);
+  if(ret->version!=2){
+    fprintf(stderr,"\t-> Looks like you are trying to use a version of realSFS that is incompatible with the old binary output from ANGSD\n\t-> Please use realSFS.old instead (or consider redoing the saf files )\n\t-> Will exit\n");
+    exit(0);
+  }
   if(1!=fread(&ret->nChr,sizeof(size_t),1,fp)){
     fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
     exit(0);
