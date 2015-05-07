@@ -276,7 +276,7 @@ int printOld(int argc,char **argv){
 }
 
 #if 1
-void print2(int argc,char **argv){
+void print(int argc,char **argv){
   if(argc<1){
     fprintf(stderr,"Must supply afile.saf.idx \n");
     return; 
@@ -293,15 +293,16 @@ void print2(int argc,char **argv){
   
   float *flt = new float[pars->saf[0]->nChr+1];
   for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
-    
+
     if(pars->chooseChr!=NULL)
       it = iter_init(pars->saf[0],pars->chooseChr,pars->start,pars->stop);
-
+    fprintf(stderr,"changing chr:%s\n",it->first);fflush(stderr);
     int *ppos = new int [it->second.nSites];
     bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
     bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
     int ret;
     //fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
+    
     while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1)))){
    
       //      fprintf(stderr,"[%s] pars->saf[0]->at:%d nSites: %lu ret:%d\n",__FUNCTION__,pars->saf[0]->at,it->second.nSites,ret);
@@ -953,13 +954,18 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     if(saf[i]->ppos[it->second.nSites-1] > hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
+    fprintf(stderr,"keep[%d].first:%lu last:%lu\n",i,saf[i]->toKeep->first,saf[i]->toKeep->last);
     for(int j=saf[i]->toKeep->first;j<saf[i]->toKeep->last;j++)
       if(saf[i]->toKeep->d[j])
-	hit->d[j]++;
+	hit->d[saf[i]->ppos[j]]++;
   }
-  
-  // keep_info(hit,stderr,0,saf.size());
-  
+#if 0
+  keep_info(hit,stderr,0,saf.size());
+  for(int i=0;0&i<hit->m;i++)
+    if(hit->d[i]==saf.size())
+      fprintf(stdout,"%d\n",i);
+  exit(0);
+#endif
   //hit now contains the genomic position (that is the index).
   
   //let us now modify the the persaf toKeep char vector
@@ -967,7 +973,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   for(int i=0;i<saf.size();i++){
     tsk[i] =0;
     for(int j=0;j<saf[i]->toKeep->last;j++)
-      if(hit->d[j]!=saf.size())
+      if(hit->d[saf[i]->ppos[j]]!=saf.size())
 	saf[i]->toKeep->d[j] =0;
       else
 	tsk[i]++;
@@ -977,13 +983,14 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
 #if 0
     keep_info(saf[i]->toKeep,stderr,0,1);
     //print out overlapping posiitons for all pops
-    //    fprintf(stderr,"saf:%d\thit->m:%lu\td->m:%luppo")
-    for(int j=0;0&&j<saf[i]->toKeep->m;j++){
+    
+    for(int j=0;j<saf[i]->toKeep->last;j++){
       if(hit->d[saf[i]->ppos[j]]==saf.size())
-	fprintf(stdout,"saf%d\t%d\n",i,saf[i]->ppos[j]);
+	fprintf(stdout,"saf%d\t%d\n",i,j);
     }
 #endif
   }
+  //  exit(0);
   keep_destroy(hit);
 }
 /*
@@ -1179,7 +1186,7 @@ int main(int argc,char **argv){
   if(!strcasecmp(*argv,"printOld"))
     printOld(--argc,++argv);
   else if(!strcasecmp(*argv,"print"))
-    print2(--argc,++argv);
+    print(--argc,++argv);
   else if(!strcasecmp(*argv,"index"))
     index(--argc,++argv);
   

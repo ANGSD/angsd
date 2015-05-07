@@ -24,7 +24,7 @@ void keep_info(keep<T> *k,FILE *fp,int full,int hit){
   for(int i=0;full&&i<k->m;i++)
     fprintf(stderr,"[%s]&k->d[%d]:%p ; k->d+%d:%p ; &k->d[%d+1]:%p k->d+%d+1:%p val:%d\n",__FUNCTION__,i,&k->d[i],i,k->d+i,i,&k->d[i]+1,i,k->d+i+1,k->d[i]);
   int tt =0;
-  for(int i=0;i<k->last;i++)
+  for(int i=0;i<k->m;i++)
     if(k->d[i]==hit)
       tt++;
   fprintf(stderr,"[%s]tt:%d first:%lu last:%lu\n",__FUNCTION__,tt,k->first,k->last);

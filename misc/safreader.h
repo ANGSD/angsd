@@ -34,7 +34,6 @@ typedef struct{
   keep<char> *toKeep;
   int at;
   int *ppos;
-  int with_iter;
   int start;
   int stop;
 }persaf;
@@ -45,4 +44,3 @@ persaf* readsaf(char *fname);
 void writesaf_header(FILE *fp,persaf *pp);
 void persaf_destroy(persaf *pp);
 myMap::iterator iter_init(persaf *,char *,int,int);
-size_t iter_read(persaf *saf, void *data, size_t length);
