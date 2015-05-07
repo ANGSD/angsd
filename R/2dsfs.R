@@ -1,3 +1,6 @@
+##angsd new: 	->-> angsd version: 0.801-51-g156039a (htslib: 1.2.1-69-gb79f40a) build(May  7 2015 15:31:53)
+##angsd old: 	-> angsd version: 0.801-27-ga699b44 (htslib: 1.2.1-69-gb79f40a) build(May  7 2015 15:30:06)
+
 norm <- function(x) x/sum(x)
 if(FALSE){
   ##generate data DONT RUN
@@ -69,15 +72,41 @@ if(FALSE){
        pop2 <- norm(exp(scan("pop2.saf.idx.ml"))[-1])
        pop1.pop2 <- matrix(exp(scan("pop1.pop2.saf.idx.ml")),nPop1+1,byrow=T)
        par(mfrow=c(1,2))
-       barplot(rbind(norm(table(p1.d)[-1]),pop1),be=T,main="only varsites pop1")
-       barplot(rbind(norm(table(p2.d)[-1]),pop2),be=T,main="only varsites pop2")
+       barplot(rbind(norm(table(p1.d)[-1]),pop1),be=T,main="varsites pop1")
+       barplot(rbind(norm(table(p2.d)[-1]),pop2),be=T,main="varsites pop2")
+       pop1.pop2[1,1] <- 0
+       pop1.pop2[nrow(pop1.pop2),ncol(pop1.pop2)] <- 0
+       pop1.pop2 <- norm(pop1.pop2)
        range(norm(sfs.2d)-t(pop1.pop2))
-## [1] -0.0005047007  0.0007018686
-       
+#[1] -0.0005047007  0.0007018686
+ 
        barplot(rbind(rowSums(norm(t(sfs.2d))),rowSums(pop1.pop2)),be=T)
        barplot(rbind(colSums(norm(t(sfs.2d))),colSums(pop1.pop2)),be=T)
 
    }
+   if(FALSE){
+       ##just redo the angsd and optimization
+       ##git checkout master ;make clean;make
+       system("../angsd -glf pop1.glf.gz -nind 12 -doSaf 1 -out pop1 -fai fai.fai -issim 1 -P 10")
+       system("../angsd -glf pop2.glf.gz -nind 8 -doSaf 1 -out pop2 -fai fai.fai -issim 1 -P 10")
+       system("../misc/realSFS pop1.saf 24 -P 60 >pop1.saf.idx.ml")
+       system("../misc/realSFS pop2.saf 16 -P 60 >pop2.saf.idx.ml")
+       system("../misc/realSFS 2dsfs pop1.saf pop2.saf 24 16 -P 60 >pop1.pop2.saf.idx.ml")
+   }
+   if(FALSE){
+       pop1 <- norm(exp(scan("pop1.saf.idx.ml"))[-1])
+       pop2 <- norm(exp(scan("pop2.saf.idx.ml"))[-1])
+       pop1.pop2 <- matrix(exp(scan("pop1.pop2.saf.idx.ml")),nPop1+1,byrow=T)
+       par(mfrow=c(1,2))
+       barplot(rbind(norm(table(p1.d)[-1]),pop1),be=T,main="varsites pop1")
+       barplot(rbind(norm(table(p2.d)[-1]),pop2),be=T,main="varsites pop2")
+       pop1.pop2[1,1] <- 0
+       pop1.pop2[nrow(pop1.pop2),ncol(pop1.pop2)] <- 0
+       pop1.pop2 <- norm(pop1.pop2)
+       range(norm(sfs.2d)-t(pop1.pop2))
+       ##       [1] -0.0005046856  0.0007019217
 
+   }
+   
 }
 
