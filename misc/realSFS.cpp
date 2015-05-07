@@ -301,7 +301,7 @@ void print2(int argc,char **argv){
     bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
     bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
     int ret;
-    fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
+    //fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
     while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1)))){
    
       //      fprintf(stderr,"[%s] pars->saf[0]->at:%d nSites: %lu ret:%d\n",__FUNCTION__,pars->saf[0]->at,it->second.nSites,ret);
@@ -1104,8 +1104,8 @@ int main_opt(args *arg){
   delete [] sfs;
   
   fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
-  fprintf(stderr,"\n\t-> Output is now simply the expected number of sites! \n");
-  fprintf(stderr,"\n\t-> You can convert to the old format simply with log(norm(x))\n");
+  fprintf(stderr,"\t-> Output is now simply the expected number of sites! \n");
+  fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
   return 0;
 }
 
