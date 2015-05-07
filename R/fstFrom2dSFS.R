@@ -1,21 +1,21 @@
 
 reynolds<-function(pl1,pl2,n1,n2) { ##from matteo
- somma=sommaden=0;
- alfa1=1-((pl1^2)+((1-pl1)^2))
- alfa2=1-((pl2^2)+((1-pl2)^2))
- Al = (0.5*(((pl1-pl2)^2)+(((1-pl1)-(1-pl2))^2))) - (((n1+n2)*(n1*alfa1+n2*alfa2)) / ((4*n1*n2)*(n1+n2-1)))
- AlBl= (0.5*(((pl1-pl2)^2)+(((1-pl1)-(1-pl2))^2))) + (((4*n1*n2 - n1 - n2)*(n1*alfa1 + n2*alfa2)) / ((4*n1*n2)*(n1+n2-1)))
- if (!is.na(Al) & !is.na(AlBl)) {
-  somma=somma+Al
-  sommaden=sommaden+AlBl
- }
- if (somma==0 & sommaden==0) {
+    somma=sommaden=0;
+    alfa1=1-((pl1^2)+((1-pl1)^2))
+    alfa2=1-((pl2^2)+((1-pl2)^2))
+    Al = (0.5*(((pl1-pl2)^2)+(((1-pl1)-(1-pl2))^2))) - (((n1+n2)*(n1*alfa1+n2*alfa2)) / ((4*n1*n2)*(n1+n2-1)))
+    AlBl= (0.5*(((pl1-pl2)^2)+(((1-pl1)-(1-pl2))^2))) + (((4*n1*n2 - n1 - n2)*(n1*alfa1 + n2*alfa2)) / ((4*n1*n2)*(n1+n2-1)))
+    if (!is.na(Al) & !is.na(AlBl)) {
+        somma=somma+Al
+        sommaden=sommaden+AlBl
+    }
+    if (somma==0 & sommaden==0) {
 	reyn=NA
- } else {
+    } else {
 	reyn=somma/sommaden
  	if(reyn<0) reyn=0
- }
- reyn
+    }
+    reyn
 }
 
 getFst<-function(est){
@@ -91,9 +91,9 @@ for (i in 1:nrow(sfs)) {
 #cat("\nsum sfs:",sum(sfs))
 
 if (RELATIVE) {
-	fst=sum(sfs*fsts,na.rm=T)
+    fst=sum(sfs*fsts,na.rm=T)
 } else {
-	fst=sum(sfs*fsts,na.rm=T)/sum(sfs)
+    fst=sum(sfs*fsts,na.rm=T)/sum(sfs)
 }
 
 cat("FST:",fst,"\n")
