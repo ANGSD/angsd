@@ -296,22 +296,24 @@ void print(int argc,char **argv){
 
     if(pars->chooseChr!=NULL)
       it = iter_init(pars->saf[0],pars->chooseChr,pars->start,pars->stop);
+    else
+      it = iter_init(pars->saf[0],it->first,pars->start,pars->stop);
     fprintf(stderr,"changing chr:%s\n",it->first);fflush(stderr);
-    int *ppos = new int [it->second.nSites];
+    pars->saf[0]->ppos = new int [it->second.nSites];
     bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
-    bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
+    bgzf_read(pars->saf[0]->pos,pars->saf[0]->ppos,sizeof(int)*it->second.nSites);
     int ret;
     //fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
-    
-    while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1)))){
+    int pos;
+    while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1),&pos))){
    
       //      fprintf(stderr,"[%s] pars->saf[0]->at:%d nSites: %lu ret:%d\n",__FUNCTION__,pars->saf[0]->at,it->second.nSites,ret);
-      fprintf(stdout,"%s\t%d",it->first,ppos[pars->saf[0]->at]+1);
+      fprintf(stdout,"%s\t%d",it->first,pos+1);
       for(int is=0;is<pars->saf[0]->nChr+1;is++)
 	fprintf(stdout,"\t%f",flt[is]);
       fprintf(stdout,"\n");
     }
-    delete [] ppos;
+    //    delete [] ppos;
     //fprintf(stderr,"[%s] after while:%d\n",__FUNCTION__,ret);
     if(pars->chooseChr!=NULL)
       break;
@@ -360,7 +362,8 @@ int index(int argc,char **argv){
 
     int ret;
     fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
-    while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1)))){
+    int pos;
+    while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1),&pos))){
    
       //      fprintf(stderr,"[%s] pars->saf[0]->at:%d nSites: %lu ret:%d\n",__FUNCTION__,pars->saf[0]->at,it->second.nSites,ret);
       fprintf(stdout,"%s\t%d",it->first,ppos[pars->saf[0]->at]+1);
@@ -490,8 +493,8 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
     if(i>0 &&(i% howOften)==0  )
       fprintf(stderr,"\r\t-> Has read 5mio sites now at: %lu      ",i);
     //
-    
-    int bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
+    int pos;
+    int bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim,&pos);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
     if(bytes_read!=0 && bytes_read<sizeof(T)*dim){
       fprintf(stderr,"Problem reading chunk from file, please check nChr is correct, will exit \n");
       exit(0);
@@ -511,7 +514,6 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
   //  exit(0);
   fprintf(stderr,"\r");
 }
-
 
 //returns the number of sites read
 template<typename T>
@@ -1031,7 +1033,7 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites
 
 template <typename T>
 int main_opt(args *arg){
-
+  fprintf(stderr,"This is still under development for multi populations\n");
 
 
   std::vector<persaf *> &saf =arg->saf;

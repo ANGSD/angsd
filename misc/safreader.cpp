@@ -157,7 +157,7 @@ persaf * readsaf(char *fname){
 
 
 
-
+#if 1
 void safprint(int argc,char **argv){
 
   if(argc<1){
@@ -201,7 +201,7 @@ void safprint(int argc,char **argv){
   delete [] flt;
   persaf_destroy(saf);
 }
-
+#endif
 //chr start stop is given from commandine
 //if chr==NULL, then this function is only called once
 myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
@@ -259,13 +259,17 @@ myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
   }
 }
 
-size_t iter_read(persaf *saf, void *data, size_t length){
+size_t iter_read(persaf *saf, void *data, size_t length,int *pos){
   //  fprintf(stderr,"[%s] data:%p len:%lu first:%lu last:%lu at:%d\n",__FUNCTION__,data,length,saf->toKeep->first,saf->toKeep->last,saf->at);
 
   //this is when we read an entire genome. 
   if(saf->toKeep==NULL){
     //    fprintf(stderr,"to keep is zero\n");
     int ret=bgzf_read(saf->saf,data,length);
+    saf->at++;
+    if(saf->ppos)
+      *pos = saf->ppos[saf->at];
+
     if(ret==0)
       return 0;
     assert(ret==length);
@@ -280,6 +284,8 @@ size_t iter_read(persaf *saf, void *data, size_t length){
     while(1){
       int ret=bgzf_read(saf->saf,data,length);
       saf->at++;
+      if(saf->ppos)
+	*pos = saf->ppos[saf->at];
       if(saf->at>(int)saf->toKeep->last){
 	//	fprintf(stderr,"after lst:%d\n",saf->at);
 	return 0;

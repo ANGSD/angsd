@@ -38,7 +38,7 @@ typedef struct{
   int stop;
 }persaf;
 
-size_t iter_read(persaf *saf, void *data, size_t length);
+size_t iter_read(persaf *saf, void *data, size_t length,int *pos);
 template <typename T>
 persaf* readsaf(char *fname);
 void writesaf_header(FILE *fp,persaf *pp);
