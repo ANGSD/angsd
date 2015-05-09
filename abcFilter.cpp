@@ -81,6 +81,10 @@ void abcFilter::getOptions(argStruct *arguments){
   }
   
   minInd = angsd::getArg("-minInd",minInd,arguments);
+  if(minInd >arguments->nInd){
+    fprintf(stderr,"\t-> Potential problem you  filter -minInd %d but you only have %d samples?\n",minInd,arguments->nInd);
+    exit(0);
+  }
 }
 
 

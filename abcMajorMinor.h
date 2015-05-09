@@ -1,4 +1,11 @@
 
+typedef struct{
+  char *hasAlloced; 
+  double **lh3; 
+}lh3struct;
+
+
+
 
 class abcMajorMinor:public abc{
   int doMajorMinor;
@@ -6,6 +13,8 @@ class abcMajorMinor:public abc{
   char *pest;
   int skipTriallelic;
   void majorMinorGL(funkyPars *pars,int doMajorMinor);
+  int doVcf;
+  int doGlf;
 public:
   void printArg(FILE *argFile);
   void run(funkyPars *pars);

@@ -32,7 +32,6 @@ private:
   void printLike(funkyPars *pars);
 
 public:
-
   void run(funkyPars  *pars);
   void print(funkyPars *pars);  
   void clean(funkyPars *pars);  

@@ -1,8 +1,7 @@
 /*
   jackknifing could be speeded current implemention is O(nsites^2)
-  
+*/
 
- */
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -14,18 +13,11 @@
 #include <map>
 #include <cassert>
 #include <ctype.h>
+#include <pthread.h>
 #include "kmath.h"
+
 #include "../fet.c"
 #define LENS 4096
-
-typedef struct{
-  double p;
-  int n;
-  double *dens;
-  double *cum;
-}rbinom;
-
-
 
 typedef struct{
   char allele1;
@@ -47,7 +39,10 @@ double sd(double *a,int l){
   ts =0;
   for(int i=0;i<l;i++)
     ts += (a[i]-u)*(a[i]-u);
-  return ts/(1.0*(l-1.0));
+
+  double N = l;
+  double scal=(N-1.0)/N;
+  return sqrt(scal*ts);
 }
 
 double ldbinom(int k, int n,double p){
@@ -55,74 +50,22 @@ double ldbinom(int k, int n,double p){
 }
 
 //    l<-  dbinom(error,d,(1-x)*eps+x*freq)
-double likeOld(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+double likeOld(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps,int skip){
   double t = 0;
   for(int i=0;i<len;i++)
-    t += ldbinom(nonMajor[i],seqDepth[i],(1-x)*eps+x*freq[i]);
+    if(i!=skip)
+      t += ldbinom(nonMajor[i],seqDepth[i],(1-x)*eps+x*freq[i]);
   return t;
 }
 
 //    l<-  dbinom(error,d,x*freq*(1-4*eps/3)+eps)
-double likeNew(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps){
+double likeNew(double x,int len,int *seqDepth,int *nonMajor,double *freq,double eps,int skip){
   double t = 0;
   for(int i=0;i<len;i++)
-    t += ldbinom(nonMajor[i],seqDepth[i],x*freq[i]*(1-4*eps/3.0)+eps);
+    if(i!=skip)
+      t += ldbinom(nonMajor[i],seqDepth[i],x*freq[i]*(1-4*eps/3.0)+eps);
   return t;
   
-}
-
-double like_optim(int len,int *seqDepth,int *nonMajor,double *freq,double eps,int isNew){
-  double a = 0+DBL_EPSILON;
-  double b = 0.5-DBL_EPSILON;
-  double k = (sqrt(5.) - 1.) / 2.;
-  double xL = b - k * (b - a);
-  double xR = a + k * (b - a);
-  while (b - a > DBL_EPSILON)
-  {
-    double left,right;
-    if(isNew){
-      left = likeOld(xL,len,seqDepth,nonMajor,freq,eps);
-      right = likeOld(xR,len,seqDepth,nonMajor,freq,eps);
-    }else{
-      left = likeNew(xL,len,seqDepth,nonMajor,freq,eps);
-      right = likeNew(xR,len,seqDepth,nonMajor,freq,eps);
-
-    }
-    if (left > right)
-    {
-      b = xR;
-      xR = xL;
-      xL = b - k*(b - a);
-    }
-    else
-    {
-      a = xL;
-      xL = xR;
-      xR = a + k * (b - a);
-    }
-  }
-  return (a + b) / 2.;
-}
-
-typedef struct{
-  int len;
-  int* seqDepth;
-  int *nonMajor;
-  double *freq;
-  double eps;
-  int isNew;
-  int doMom;
-  int *e1;
-  int *d1;
-}allPars;
-
-
-double myfun(double x,void *d){
-  allPars *ap = (allPars *)d;
-  if(ap->isNew)
-    return -likeNew(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps);
-  else
-    return -likeOld(x,ap->len,ap->seqDepth,ap->nonMajor,ap->freq,ap->eps);
 }
 
 
@@ -159,7 +102,64 @@ double likeNewMom(int len,int *seqDepth,int *nonMajor,double *freq,double eps,in
   return top/bot; 
 }
 
+
+typedef struct{
+  int newllh;//<- bool, should we use new likelihood function.
+  double eps;//<- error rate
+  int len;
+  //  int skip;
+  int* seqDepth;
+  int *nonMajor;
+  double *freq;
+  int *e1;
+  int *d1;
+}allPars;
+
+
+typedef struct{
+  allPars *ap;
+  double *thetas;
+  double *val;
+  int from;
+  int to;
+  int skip;
+}tpars;
+
+void print(allPars *ap,char *fname){
+  if(fname){
+    FILE *fp = fopen(fname,"w");
+    for(int i=0;i<ap->len;i++)
+      fprintf(fp,"%d %d %d %d %f\n",ap->nonMajor[i],ap->e1[i],ap->seqDepth[i],ap->d1[i],ap->freq[i]);
+    fclose(fp);
+  }
+}
+void marshall(allPars *ap,char *fname){
+  if(fname){
+    FILE *fp = fopen(fname,"w");
+    fprintf(fp,"%d\n",ap->newllh);
+    fprintf(fp,"%f\n",ap->eps);
+    fprintf(fp,"%d\n",ap->len);
+    // fprintf(fp,"%d\n",ap->skip);
+    for(int i=0;i<ap->len;i++)
+      fprintf(fp,"sd[%d]\t%d\n",i,ap->seqDepth[i]);
+    for(int i=0;i<ap->len;i++)
+      fprintf(fp,"sd[%d]\t%d\n",i,ap->nonMajor[i]);
+    for(int i=0;i<ap->len;i++)
+      fprintf(fp,"sd[%d]\t%f\n",i,ap->freq[i]);
+    for(int i=0;i<ap->len;i++)
+      fprintf(fp,"sd[%d]\t%d\n",i,ap->d1[i]);
+    for(int i=0;i<ap->len;i++)
+      fprintf(fp,"sd[%d]\t%d\n",i,ap->e1[i]);
+    fclose(fp);
+  }
+
+}
+
+
+//calculate error rate
 double calcEps(int *e1,int *d1,int len,int skip){
+  //  fprintf(stderr,"eps len:%d\n",len);
+  //fprintf(stderr,"eps skip:%d\n",skip);
   double top=0;double bot=0;
   for(int i=0;i<len;i++){
     if(i!=skip){
@@ -174,35 +174,95 @@ double calcEps(int *e1,int *d1,int len,int skip){
 }
 
 
-//mehtod==0 => OLD;
-// method==1 => NEW
-double jack(allPars *ap){
+
+//wrapper function used for threading the ML opt
+double myfun(double x,void *d){
+  tpars *tp = (tpars *)d;
+  //  fprintf(stderr,"tp->ap->newllh:%d\n",tp->ap->newllh);
+  if(tp->ap->newllh)
+    return -likeNew(x,tp->ap->len,tp->ap->seqDepth,tp->ap->nonMajor,tp->ap->freq,calcEps(tp->ap->e1,tp->ap->d1,tp->ap->len,tp->skip),tp->skip);
+  else
+    return -likeOld(x,tp->ap->len,tp->ap->seqDepth,tp->ap->nonMajor,tp->ap->freq,calcEps(tp->ap->e1,tp->ap->d1,tp->ap->len,tp->skip),tp->skip);
+}
+
+double jackMom(allPars *ap){
   int len=ap->len;
   int *seqDepth=ap->seqDepth;
   int *nonMajor=ap->nonMajor;
   double *freq =ap->freq;
-  int isnew = ap->isNew;
+  int isnew = ap->newllh;
   int *e1 = ap->e1;
   int *d1 = ap->d1;
-  int doMom= ap->doMom;
   double *thetas =new double[len];
+
   for(int i=0;i<len;i++){
-    if((i % 100 )==0)
-      fprintf(stderr,"\r-> %d/%d",i,len);
-    if(doMom){
-      if(isnew==0){
-	thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
-      }else
-	thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
-    }else{
-      double xmin,val;
-      val = kmin_brent(myfun,1e-6,0.5-1e-6,ap,0.0001,&xmin);
-      thetas[i] = xmin;
-    }
+    if(isnew==0)
+      thetas[i] = likeNewMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
+    else
+      thetas[i] = likeOldMom(len,seqDepth,nonMajor,freq,calcEps(e1,d1,len,i),i) ;
+    
   }
   double esd = sd(thetas,len);
-  //  fprintf(stderr,"jackknife sd: %f\n\n",esd);
   delete [] thetas;
+  return esd;
+}
+
+
+
+//each thread will run this.
+void *slave(void *ptr){
+  tpars *tp = (tpars *)ptr; 
+  //  fprintf(stderr,"from:%d to:%d \n",tp->from,tp->to);
+  for(int i=tp->from;i<tp->to;i++){
+    tp->skip=i;
+    tp->val[i] = kmin_brent(myfun,1e-6,0.5,tp,1e-6,&tp->thetas[i]);
+    assert(tp->thetas[i]!=1e-6);
+  }
+}
+
+
+
+double jackML(allPars *ap,int nthreads,char *fname) {
+
+  double *thetas =new double[ap->len];
+  double *val = new double[ap->len];
+  if(nthreads>1){
+    pthread_t *thd = new pthread_t[nthreads];
+    tpars *tp = new tpars[nthreads];
+    int block = ap->len/nthreads;
+    
+    for(int i=0;i<nthreads;i++){
+      tp[i].thetas = thetas;
+      tp[i].val = val;
+      tp[i].ap = ap;
+      tp[i].from = i==0?0:tp[i-1].to;
+      tp[i].to = tp[i].from+block;
+    }
+    tp[nthreads-1].to = ap->len;
+    for(int i=0;i<nthreads;i++)
+      pthread_create(&thd[i],NULL,slave,&tp[i]);
+
+    for(int i=0;i<nthreads;i++)
+      pthread_join(thd[i],NULL);
+    
+  }else{    //if we do not threads  
+    tpars tp;
+    tp.ap=ap;
+    for(int i=0;i<ap->len;i++){
+      tp.skip=i;
+      val[i]=kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,thetas+i);
+    }
+  }
+  double esd = sd(thetas,ap->len);
+  if(fname){
+    FILE *fp =fopen(fname,"w");
+    for(int i=0;i<ap->len;i++){
+      fprintf(fp,"%e\t%f\t%e\n",thetas[i],val[i],thetas[i]-1e6);
+    }
+    fclose(fp);
+  }
+  delete [] thetas;
+  delete [] val;
   return esd;
 }
 
@@ -216,35 +276,13 @@ typedef std::vector<int> iv;
 typedef std::vector<int*> iv2;
 
 typedef struct{
-  iv pos;
+  iv pos;//contains position
   iv dist;//0=snpsite;-1=one pos left of snp,+1=one pos right of snp
   std::vector<int *> cn;//four long , counts of C,C,G,T
-  aMap myMap;
+  aMap myMap;//allele1, allele2, freq
 }dat;
 
 
-
-rbinom *init_rbinom(double p,int n){
-  //fprintf(stderr,"initializatin rbinom p:%f n:%d\n",p,n);
-  rbinom *rb=new rbinom;
-  rb->p=p;
-  rb->n=n;
-  rb->cum = new double[n+1];
-  rb->dens= new double[n+1];
-
-  double ts=0;
-  for(int k=0;k<=n;k++){
-    rb->dens[k] = lbinom(n,k)+k*log(p)+(n-k)*log(1-p);
-    //    fprintf(stderr,"%e\n",exp(rb->dens[k]));
-    ts += exp(rb->dens[k]);
-  }
-  rb->cum[0] = exp(rb->dens[0])/ts;
-  for(int k=1;k<=n;k++){
-    rb->cum[k] = exp(rb->dens[k])/ts+rb->cum[k-1];
-
-  }
-  return rb;
-}
 
 int simrbinom(double p){
   if(drand48()<(1-p))
@@ -253,31 +291,17 @@ int simrbinom(double p){
     return 1;
 }
 
-int sample(rbinom *rb){
-  //  fprintf(stderr,"rb n:%d p:%f\n",rb->n,rb->p);
-  double r = drand48();
-  int k=0;
-  if(r<rb->cum[0])
-    return k;
-
-  while(k++<=rb->n)
-    if(rb->cum[k-1]<r &&r<=rb->cum[k])
-      break;
-  return k;
- 
-}
-
-void analysis(dat &d) {
+void analysis(dat &d,int nThreads) {
   int *rowSum = new int[d.cn.size()];
   int *rowMax = new int[d.cn.size()];
   int *rowMaxW = new int[d.cn.size()];
-  int *error1 = new int[d.cn.size()];
-  int *error2 = new int[d.cn.size()];
-  size_t mat1[4]={0,0,0,0};
-  size_t mat2[4]={0,0,0,0};
-  size_t tab[2] = {0,0};
-  int increr=0;
-  for(int i=0;i<d.cn.size();i++){
+  int *error1 = new int[d.cn.size()];//number of non most frequent observed bases 
+  int *error2 = new int[d.cn.size()];//sampled 
+  size_t mat1[4]={0,0,0,0};//matrix used for fisher for method 1
+  size_t mat2[4]={0,0,0,0};//matrix used for fisher for method 2
+  size_t tab[2] = {0,0};//used for debug
+
+  for(int i=0;i<d.cn.size();i++) {
     int s =d.cn[i][0];
     int max=s;
     int which=0;
@@ -292,11 +316,13 @@ void analysis(dat &d) {
     rowMax[i]=max;
     rowMaxW[i]=which;
     aMap::iterator it= d.myMap.find(d.pos[i]);
-    if(it!=d.myMap.end()){
+    if(it!=d.myMap.end()){//if site is hapmap site
       // fprintf(stderr,"posi:%d wmax:%d all1:%d freq:%f\n",it->first,rowMaxW[i],it->second.allele1,it->second.freq);
-      
+      //if maximum occuring bases is the same as allele1 from hapmap, then set freq to 1-freq
       if(rowMaxW[i]==it->second.allele1)
-	it->second.freq=1-it->second.freq;
+	//it->first C++ syntax for getting key of iterator
+	//it->second C++ syntax for getting value of key of iterator, key->value: key=pos,value=hapSite
+ 	it->second.freq=1-it->second.freq;
       else
 	it->second.freq=it->second.freq;
       // fprintf(stderr,"posi:%d wmax:%d all1:%d freq:%f\n",it->first,rowMaxW[i],it->second.allele1,it->second.freq);
@@ -305,12 +331,12 @@ void analysis(dat &d) {
 
     error1[i] = rowSum[i]-rowMax[i];
     error2[i] = simrbinom((1.0*error1[i])/(1.0*rowSum[i]));
-    //   fprintf(stdout,"rs\t%d %d %d %d %d %d\n",rowSum[i],rowMax[i],rowMaxW[i],error1[i],error2[i],d.dist[i]);
+    //  fprintf(stdout,"simrbinom\t%d %d %d %d %d %d\n",rowSum[i],rowMax[i],rowMaxW[i],error1[i],error2[i],d.dist[i]);
     if(error1[i]>0)
       tab[1]++;
     else
       tab[0]++;
-    if(d.dist[i]==0){
+    if(d.dist[i]==0){//this is a snpsite
       mat1[0] +=error1[i];
       mat1[1] +=rowSum[i]-error1[i];
       mat2[0] +=error2[i];
@@ -344,28 +370,30 @@ void analysis(dat &d) {
 				prob, left, right, twotail);
 
   //estimate how much contamination
-  double c= mat1[2]/(1.0*(mat1[2]+mat1[3]));
-  double err= mat1[0]/(1.0*(mat1[0]+mat1[1]));
-  fprintf(stderr,"c:%f err:%f len:%lu lenpos:%lu \n",c,err,d.cn.size()/9,d.pos.size());
+  double c= mat1[2]/(1.0*(mat1[2]+mat1[3]));//this is error for flanking site
+  double err= mat1[0]/(1.0*(mat1[0]+mat1[1]));//this is error for snpsite
+  fprintf(stderr,"Mismatch_rate_for_flanking:%f MisMatch_rate_for_snpsite:%f \n",c,err);
 
-  int *err0 =new int[d.cn.size()/9];
-  int *err1 =new int[d.cn.size()/9];
-  int *d0 =new int[d.cn.size()/9];
-  int *d1 =new int[d.cn.size()/9];
-  double *freq =new double[d.cn.size()/9];
+  int *err0 =new int[d.cn.size()/9];//<-nbases of non frequent most occuring at snpsite
+  int *err1 =new int[d.cn.size()/9];//<-nbases of non frequent most occuring at flanking
+  int *d0 =new int[d.cn.size()/9];//<-seqdepth for snpsite
+  int *d1 =new int[d.cn.size()/9];//<-seqdepth for flanking
+  double *freq =new double[d.cn.size()/9];//<- freq for snpsite
 
   for(int i=0;i<d.cn.size()/9;i++){
     int adj=0;
     int dep=0;
     for(int j=0;j<9;j++){
       
-      if(d.dist[i*9+j]!=0){
+      if(d.dist[i*9+j]!=0){//<- flanking
 	adj += error1[i*9+j];
 	dep += rowSum[i*9+j];
-      }else{
+      }else{ //snpsite
 	err0[i] = error1[i*9+j];
 	d0[i] = rowSum[i*9+j];
+	
 	freq[i] =d.myMap.find(d.pos[i*9+j])->second.freq;
+	
       }
     }
     err1[i] =adj;
@@ -387,29 +415,33 @@ void analysis(dat &d) {
   ap.nonMajor = err0;
   ap.freq = freq;
   ap.eps = c;
-  ap.isNew =0;
+  ap.newllh =0;
   ap.e1 = err1;
   ap.d1=d1;
-  ap.doMom = 1;
-  double mom,momJack,ML,mlJack;
 
-  ap.doMom =1;ap.isNew =0;
+  double mom,momJack,ML,mlJack,val;
+
+  ap.newllh =0;
   mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack = jack(&ap);
-
-  kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
-  ap.doMom = 0;
-  mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
-  ap.doMom =1;ap.isNew =1;
+  momJack = jackMom(&ap);
+  tpars tp;tp.ap=&ap;tp.skip=-1;
+  //  print(tp.ap,"asdff1");
+  kmin_brent(myfun,1e-6,0.5-1e-6,&tp,0.0001,&ML);
+  mlJack= jackML(&ap,nThreads,NULL);
+  fprintf(stderr,"\nMethod1: old_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e",mom,momJack,ML,mlJack);
+  
+  ap.newllh =1;
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack= jack(&ap);
-  kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
-  ap.doMom =0;
-  mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
- 
-
+  momJack= jackMom(&ap);
+  //marshall(&ap,"prem1");
+  val=kmin_brent(myfun,1e-6,0.5-1e-6,&tp,0.0001,&ML);
+  //  fprintf(stderr,"\nM1: ML:%f VAL:%f\n",ML,val);
+  mlJack= jackML(&ap,nThreads,NULL);
+  fprintf(stderr,"\nMethod1: new_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e",mom,momJack,ML,mlJack);
+  // fread(error2,sizeof(int),d.cn.size(),fopen("error2.bin","rb"));
+  //for(int i=0;0&&i<d.cn.size();i++)
+  //  fprintf(stdout,"pik\t%d\n",error2[i]);
+  //exit(0);
   for(int i=0;i<d.cn.size()/9;i++){
     int adj=0;
     for(int j=0;j<9;j++){
@@ -418,6 +450,7 @@ void analysis(dat &d) {
       }else{
 	err0[i] = error2[i*9+j];
 	freq[i] =d.myMap.find(d.pos[i*9+j])->second.freq;
+	//	fprintf(stderr,"freq:%f\n",freq[i]);
       }
     }
     err1[i] =adj;
@@ -437,41 +470,29 @@ void analysis(dat &d) {
   ap.nonMajor = err0;
   ap.e1=err1;
   ap.d1=d1;
+  ap.freq = freq;
 
-
-  ap.isNew =0; ap.doMom= 1;
+  ap.newllh =0;
   mom= likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack = jack(&ap);
-  kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
-  ap.doMom = 0;
-  mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  momJack = jackMom(&ap);
+  //print(tp.ap,"asdff2");
+  //  exit(0);
+  val = kmin_brent(myfun,1e-6,0.5-1e-6,&tp,0.0001,&ML);
+  //fprintf(stderr,"\nML2:%f VAL:%f\n",ML,val);
+  // exit(0);
+  //FILE *fp = fopen("heyaa","w");  print(&ap,fp);fclose(fp);
+  //return;
+  mlJack= jackML(&ap,nThreads,NULL);
+  fprintf(stderr,"\nMethod2: old_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e",mom,momJack,ML,mlJack);
 
-  ap.isNew =1;
-  ap.doMom=1;
+  ap.newllh =1;
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack= jack(&ap);
-  ap.doMom =0;
-  kmin_brent(myfun,1e-6,0.5-1e-6,&ap,0.0001,&ML);
-  mlJack= jack(&ap);
-  fprintf(stderr,"\nMethod1: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%e\n",mom,momJack,ML,mlJack);
+  momJack= jackMom(&ap);
+  kmin_brent(myfun,1e-6,0.5-1e-6,&tp,0.0001,&ML);
+  mlJack= jackML(&ap,nThreads,NULL);
+  fprintf(stderr,"\nMethod2: new_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e\n",mom,momJack,ML,mlJack);
  
 
-
-
-#if 0
-  mom=likeOldMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack=jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
-  ML = like_optim(d.cn.size()/9,d0,err0,freq,c,0);
-  mlJack = jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
-  fprintf(stderr,"Method2: old Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%f\n",mom,momJack,ML,mlJack);
-
-  mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
-  momJack=jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,0);
-  ML = like_optim(d.cn.size()/9,d0,err0,freq,c,0);
-  mlJack = jack(d.cn.size()/9,d0,err0,freq,0,err1,d1,1);
-  fprintf(stderr,"Method2: new Version: MoM:%f sd(MoM):%e ML:%f sd(ML):%f\n",mom,momJack,ML,mlJack);
-#endif
   delete [] rowSum;
   delete [] rowMax;
   delete [] rowMaxW;
@@ -625,28 +646,33 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
   
   char *buf = new char[LENS];
   int viggo=3;
-  aMap myMap;
+  aMap myMap;//<- this will be our return object
 
   gzgets(gz,buf,LENS);
-  while(gzgets(gz,buf,LENS)){
+  while(gzgets(gz,buf,LENS)){//loop over sites
     hapSite hs;
-    int p = atoi(strtok(buf,"\t\n "));
+    int p = atoi(strtok(buf,"\t\n "));// pos
     if(p<startPos)
       continue;
     if(p>stopPos)
-      break;
+      continue;
+
     hs.allele1 = charToNum(strtok(NULL,"\t\n ")[0]);
     hs.freq = atof(strtok(NULL,"\t\n "));
     if(hs.freq<minMaf||(1-hs.freq)<minMaf)
       continue;
     char strand= strtok(NULL,"\t\n ")[0];
     hs.allele2 = charToNum(strtok(NULL,"\t\n ")[0]);
+    
     if(hs.allele1==-1||hs.allele2==-1)
       continue;
     if(strand=='-'){
       hs.allele1 = flip(hs.allele1);
       hs.allele2 = flip(hs.allele2);
     }
+    if(hs.allele1==hs.allele2)
+      continue;
+
     if(skiptrans){
       if(hs.allele1 == 0 && hs.allele1 == 2)
 	continue;
@@ -669,7 +695,7 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
       myMap[p]=hs;
     }
   }
-  //fprintf(stderr,"[%s] We have read: %zu sites from hapfile:%s\n",__FUNCTION__,myMap.size(),fname);
+  //  fprintf(stderr,"[%s] We have read: %zu sites from hapfile (after filtering for start/stop pos):%s\n",__FUNCTION__,myMap.size(),fname);
   //fprintf(stderr,"[%s] will remove snp sites to close:\n",__FUNCTION__);
 
   assert(myMap.size()>0);
@@ -698,6 +724,7 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
 #if 0
   for(aMap::iterator it=newMap.begin();it!=newMap.end();++it)
     print(stdout,it->first,it->second);
+  exit(0);
 #endif
   delete [] buf;
   gzclose(gz);
@@ -708,7 +735,7 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
 
 
 void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,int minDepth,int maxDepth){
-  fprintf(stderr,"[%s] fname:%s minDepth:%d maxDepth:%d\n",__FUNCTION__,fname,minDepth,maxDepth);
+    fprintf(stderr,"[%s] fname:%s minDepth:%d maxDepth:%d\n",__FUNCTION__,fname,minDepth,maxDepth);
   gzFile gz=getgz(fname,"rb");
 
   int tmp[5];
@@ -722,11 +749,9 @@ void readicnts(const char *fname,std::vector<int> &ipos,std::vector<int*> &cnt,i
       d += tmp1[i];
     }
    
-    if(d>=minDepth&&d<=maxDepth){
-      cnt.push_back(tmp1);
-      // print(cnt[cnt.size()-1],stdout,4,"pre");
-      //exit(0);
-      ipos.push_back(tmp[0]-1);
+    if(d>=minDepth&&d<=maxDepth){//if we should use site?
+      cnt.push_back(tmp1); //push back [#A,#C,#G,#T]
+      ipos.push_back(tmp[0]-1);//push back position
     }else
       delete [] tmp1;
   }
@@ -744,9 +769,10 @@ int main(int argc,char**argv){
   int minDepth=2;
   int maxDepth=200;
   int skipTrans = 0;
-
+  int nThreads = 1;
+  long int seed = 0;
   int n;
-  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:")) >= 0) {
+  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:p:s:")) >= 0) {
     switch (n) {
     case 'h': hapfile = strdup(optarg); break;
     case 'a': icounts = strdup(optarg); break;
@@ -756,25 +782,32 @@ int main(int argc,char**argv){
     case 'd': minDepth = atoi(optarg); break;
     case 'e': maxDepth = atoi(optarg); break;
     case 'f': skipTrans = atoi(optarg); break;
+    case 'p': nThreads = atoi(optarg); break;
+    case 's': seed = atol(optarg); break;
     default: {fprintf(stderr,"unknown arg:\n");return 0;}
     }
   }
   if(!hapfile||!icounts){
     fprintf(stderr,"\t-> Must supply -h hapmapfile -a angsd.icnts.gz file\n");
-    fprintf(stderr,"\t-> Other options: -m minaf -b startpos -c stoppos -d mindepth -e maxdepth -f skiptrans\n");
+    fprintf(stderr,"\t-> Other options: -m minaf -b startpos -c stoppos -d mindepth -e maxdepth -f skiptrans -p nthreads -s seed\n");
     return 0;
   }
   
   int minDist = 10;
-  fprintf(stderr,"hapmap:%s counts:%s minMaf:%f startPos:%d stopPos:%d minDepth:%d maxDepth:%d skiptrans:%d\n",hapfile,icounts,minMaf,startPos,stopPos,minDepth,maxDepth,skipTrans);
-
+  fprintf(stderr,"-----------------\nhapmap:%s counts:%s minMaf:%f startPos:%d stopPos:%d minDepth:%d maxDepth:%d skiptrans:%d nthreads:%d seed:%d\n",hapfile,icounts,minMaf,startPos,stopPos,minDepth,maxDepth,skipTrans,nThreads,seed);
+  fprintf(stderr,"Method2 is subject to fluctuations due to random sampling\n");
+  fprintf(stderr,"Seed value of 0 (zero) will use time as seed\n-----------------\n");
+  if(seed==0)
+    srand48(time(NULL));
+  else
+    srand48(seed);
   
   aMap myMap = readhap(hapfile,minDist,minMaf,startPos,stopPos,skipTrans);
   std::vector<int> ipos;
   std::vector<int*> cnt;
   readicnts(icounts,ipos,cnt,minDepth,maxDepth);
   dat d=count(myMap,ipos,cnt);
-  analysis(d);
+  analysis(d,nThreads);
 
   //cleanup
   for(int i=0;i<cnt.size();i++)

@@ -33,6 +33,8 @@
 #include "abcGL.h"
 #include "abcError.h"
 #include "phys_likes.h"
+#include "abcMajorMinor.h"
+
 extern int refToInt[256];
 
 static float *logfactorial=NULL;
@@ -100,7 +102,7 @@ void abcGL::getOptions(argStruct *arguments){
   doGlf=angsd::getArg("-doGlf",doGlf,arguments);
   errorFname = angsd::getArg("-errors",errorFname,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
-
+  
 
   int doCounts=0;
   int doMajorMinor =0;
@@ -131,6 +133,14 @@ void abcGL::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> Must supply -doCounts for SYK model\n");
     exit(0);
   }
+  if(doGlf==2){
+    fprintf(stderr,"BEAGLE format 3.0 is deprecated\n please use -doVCF 1\n");
+    for(int j=3;j>=0;j--){
+      fprintf(stderr,"Program will continue in %d seconds    \n",j);fflush(stderr);
+      sleep(1);
+    }
+
+  }
   if((doGlf==2||doGlf==3) && doMajorMinor==0){
     fprintf(stderr,"\t-> For dumping beaglestyle output you need to estimate major/minor: -doMajorMinor\n");
     exit(0);
@@ -154,7 +164,6 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   postfix = ".glf.gz";
   beaglepostfix = ".beagle.gz";
   
-
   trim =0;
   GL=0;
   doGlf=0;
@@ -353,7 +362,6 @@ void abcGL::run(funkyPars *pars){
     }
   }
 
-
 }
 
 void abcGL::getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,double ****errorProbs,int *keepSites,double **loglikes) {
@@ -393,8 +401,6 @@ void abcGL::getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,do
 
 }
 
-
-
 void abcGL::printLike(funkyPars *pars) {
   assert(pars->likes!=NULL);
 
@@ -411,7 +417,8 @@ void abcGL::printLike(funkyPars *pars) {
     //beagle format
     bufstr.l = 0; //set tmpbuf beginning to zero
     for(int s=0;s<pars->numSites;s++) {
-      if(pars->keepSites[s]==0)
+      lh3struct *lh3 = (lh3struct*) pars->extras[index+1];
+      if(pars->keepSites[s]==0||lh3->hasAlloced[s]==0)
 	continue;
       
       kputs(header->target_name[pars->refId],&bufstr);
@@ -425,19 +432,21 @@ void abcGL::printLike(funkyPars *pars) {
       int major = pars->major[s];
       int minor = pars->minor[s];
       assert(major!=4&&minor!=4);
-	
+
+     
       for(int i=0;i<pars->nInd;i++) {
-	
-	double norm=exp(pars->likes[s][i*10+angsd::majorminor[major][major]])+exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])+exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]]);
-	double val1 = exp(pars->likes[s][i*10+angsd::majorminor[major][major]])/norm;
-	double val2 = exp(pars->likes[s][i*10+angsd::majorminor[major][minor]])/norm;
-	double val3 = exp(pars->likes[s][i*10+angsd::majorminor[minor][minor]])/norm;
-	ksprintf(&bufstr, "\t%f",val1);
-	ksprintf(&bufstr, "\t%f",val2);
-	ksprintf(&bufstr, "\t%f",val3);
+	double val[3];
+	val[0]= exp(lh3->lh3[s][i*3+0]);
+	val[1]= exp(lh3->lh3[s][i*3+1]);
+	val[2]= exp(lh3->lh3[s][i*3+2]);
+	angsd::norm(val,3);
+	ksprintf(&bufstr, "\t%f",val[0]);
+	ksprintf(&bufstr, "\t%f",val[1]);
+	ksprintf(&bufstr, "\t%f",val[2]);
       }
-      
-      kputc('\n',&bufstr);
+
+      if(bufstr.l!=0)
+	kputc('\n',&bufstr);
 
     }
     gzwrite(gzoutfile,bufstr.s,bufstr.l);

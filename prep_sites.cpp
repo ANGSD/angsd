@@ -56,6 +56,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     free(fl->minor);
     free(fl->major);
     fl->keeps=fl->minor=fl->major=NULL;
+    fl->curLen =0;
     return;
   }
 

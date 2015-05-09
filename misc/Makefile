@@ -23,7 +23,7 @@ supersim: supersim.cpp rbeta.cpp
 	$(CXX) $(FLAGS) supersim.cpp -lz -o supersim
 
 contamination: contamination.cpp kmath.o
-	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination kmath.o
+	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination kmath.o -lpthread
 splitgl: splitgl.c
 	$(CC) $(FLAGS) splitgl.c -lz -o splitgl
 
