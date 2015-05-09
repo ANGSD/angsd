@@ -97,7 +97,7 @@ void set(tary<T> *ta,size_t pos,T val){
     ta->d=tmp;
     ta->m = ndim;
   }
-  if((int)pos>ta->l){
+  if((int)pos>=ta->l){
     ta->l=pos+1;
   }
   ta->d[pos] =val;
