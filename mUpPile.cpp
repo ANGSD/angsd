@@ -1400,8 +1400,8 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	break;
       }else {
 	itrPos++;
-	//fprintf(stderr,"region lookup %d/%lu\n",itrPos+1,regions.size());
-	//fflush(stderr);
+	fprintf(stderr,"\t-> Region lookup %d/%lu\n",itrPos+1,regions.size());
+	fflush(stderr);
 	setIterators(rd,regions[itrPos],nFiles,nThreads);
 	//fprintf(stderr,"done region lookup %d/%lu\n",itrPos+1,regions.size());
 	//fflush(stderr);///BAME

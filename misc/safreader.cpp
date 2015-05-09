@@ -62,6 +62,7 @@ int version(const char *fname){
   }
   char buf[8];
   gzread(gz,buf,8*sizeof(char));
+  fprintf(stderr,"\t-> Magic nr is: \'%s\'\n",buf);
   gzclose(gz);
 
   if(0==strcmp(buf,"safv2"))
@@ -75,19 +76,26 @@ int version(const char *fname){
 
 
 template <typename T>
-persaf * readsaf(char *fname){
+persaf * persaf_init(char *fname){
   persaf *ret = new persaf ;
   ret->pos=ret->saf=NULL;ret->toKeep=NULL;
   ret->ppos = NULL;
+  ret->kind =0;
   size_t clen;
   if(!fexists(fname)){
     fprintf(stderr,"Problem opening file: %s\n",fname);
     exit(0);
   }
-  FILE *fp = fopen(fname,"r");
+  FILE *fp = NULL;
+  fp=fopen(fname,"r");
+  if(fp==NULL){
+    fprintf(stderr,"\t-> Problem opening file:%s\n",fname);
+    exit(0);
+  }
   char buf[8];
   assert(fread(buf,1,8,fp)==8);
   ret->version = version(fname);
+  fprintf(stderr,"\t-> Version of fname:%s is:%d\n",fname,ret->version);
   if(ret->version!=2){
     fprintf(stderr,"\t-> Looks like you are trying to use a version of realSFS that is incompatible with the old binary output from ANGSD\n\t-> Please use realSFS.old instead (or consider redoing the saf files )\n\t-> Will exit\n");
     exit(0);
@@ -135,7 +143,7 @@ persaf * readsaf(char *fname){
   fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
   ret->saf = bgzf_open(tmp2,"r");bgzf_seek(ret->saf,8,SEEK_SET);
   if(ret->version!=version(tmp2)){
-    fprintf(stderr,"Problem with mismatch of version of %s vs %s\n",fname,tmp2);
+    fprintf(stderr,"\t-> Problem with mismatch of version of %s vs %s %d vs %d\n",fname,tmp2,ret->version,version(tmp2));
     exit(0);
   }
 
@@ -149,175 +157,138 @@ persaf * readsaf(char *fname){
   assert(ret->pos!=NULL&&ret->saf!=NULL);
   free(tmp);free(tmp2);
   
-  ret->fsize = sizeof(T)*ret->nSites*(ret->nChr+1)+sizeof(T *)*ret->nSites;
-  
+ return ret;
+ }
 
-  return ret;
+
+
+ #if 1
+ void safprint(int argc,char **argv){
+
+   if(argc<1){
+     fprintf(stderr,"Must supply afile.saf.idx [chrname]\n");
+     return; 
+   }
+
+   char *bname = *argv;
+   fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
+   persaf *saf = persaf_init<float>(bname);
+   writesaf_header(stderr,saf);
+
+   char *chooseChr = NULL;
+   if(argc>0)
+     chooseChr = argv[1];
+   float *flt = new float[saf->nChr+1];
+   for(myMap::iterator it=saf->mm.begin();it!=saf->mm.end();++it){
+     if(chooseChr!=NULL){
+       it = saf->mm.find(chooseChr);
+       if(it==saf->mm.end()){
+	 fprintf(stderr,"Problem finding chr: %s\n",chooseChr);
+	 break;
+       }
+     }
+     bgzf_seek(saf->pos,it->second.pos,SEEK_SET);
+     bgzf_seek(saf->saf,it->second.saf,SEEK_SET);
+     int *ppos = new int[it->second.nSites];
+     bgzf_read(saf->pos,ppos,sizeof(int)*it->second.nSites);
+     for(int s=0;s<it->second.nSites;s++){
+       bgzf_read(saf->saf,flt,sizeof(float)*(saf->nChr+1));
+       fprintf(stdout,"%s\t%d",it->first,ppos[s]);
+       for(int is=0;is<saf->nChr+1;is++)
+	 fprintf(stdout,"\t%f",flt[is]);
+       fprintf(stdout,"\n");
+     }
+     delete [] ppos;
+     if(chooseChr!=NULL)
+       break;
+   }
+
+   delete [] flt;
+   persaf_destroy(saf);
+ }
+ #endif
+ //chr start stop is given from commandine
+ //if chr==NULL, then this function is only called once
+ myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
+   //   fprintf(stderr,"kind:%d start:%d stop:%d\n\n",pp->kind,start,stop);
+   assert(chr!=NULL);
+
+   myMap::iterator it = pp->mm.find(chr);
+
+   if(it==pp->mm.end()){
+     fprintf(stderr,"Problem finding chr: %s\n",chr);
+     exit(0);
+   }
+   
+   bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
+
+   if(pp->toKeep==NULL)
+     pp->toKeep = keep_alloc<char>();
+   
+   pp->at =-1;
+
+   if(start==-1&&stop==-1&&pp->kind==0){
+     keep_set<char>(pp->toKeep,it->second.nSites,0);
+     memset(pp->toKeep->d,1,it->second.nSites);
+     pp->toKeep->first = 0;
+     pp->toKeep->last = it->second.nSites;
+     return it;
+   }
+   //   fprintf(stderr,"doing pos: kind:%d nsites:%lu\n\n",pp->kind,it->second.nSites);
+   bgzf_seek(pp->pos,it->second.pos,SEEK_SET);
+   pp->ppos = new int[it->second.nSites];
+   bgzf_read(pp->pos,pp->ppos,sizeof(int)*it->second.nSites);
+   keep_set<char>(pp->toKeep,it->second.nSites,0);
+   keep_clear(pp->toKeep);
+     
+   int first=0;
+   if(start!=-1){
+     //fprintf(stderr,"ppos[%d]:%d start:%d pp<start:%d\n",first,pp->ppos[first],start,pp->ppos[first]<start);
+     while(first<it->second.nSites&&pp->ppos[first]<start){
+       // fprintf(stderr,"ppos[%d]:%d\n",first,pp->ppos[first]);
+       first++;
+     }
+   }
+   //   fprintf(stderr,"first:%d\n",first);
+   int last = it->second.nSites;
+   if(stop!=-1&&stop<=pp->ppos[last-1]){
+     last=first;
+     while(pp->ppos[last]<stop) 
+       last++;
+   }
+   // fprintf(stderr,"last:%d\n",last);
+   
+   for(int s=first;s<last;s++)
+     keep_set<char>(pp->toKeep,s,1);
+   
+   if(pp->kind==0)
+     delete [] pp->ppos;
+   return it;
+   
+ }
+
+ size_t iter_read(persaf *saf, void *data, size_t length,int *pos){
+   //   fprintf(stderr,"[%s] kind:%d saf->ppos:%p\n",__FUNCTION__,saf->kind,saf->ppos);//exit(0);
+  reread: 
+   //no more to read
+   if(saf->toKeep && saf->at>(int)saf->toKeep->last)
+     return 0;
+   
+   int ret= saf->kind!=1 ? bgzf_read(saf->saf,data,length):length;
+   
+   saf->at++;
+   if(ret==0)
+     return ret;
+   assert(ret==length);
+   
+   if(saf->ppos&&saf->kind>0)
+     *pos = saf->ppos[saf->at];
+
+   if(saf->toKeep==NULL)
+     return ret;
+   
+   else if(saf->toKeep->d[saf->at])
+     return ret;
+   
+  goto reread;
 }
-
-
-
-#if 1
-void safprint(int argc,char **argv){
-
-  if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx [chrname]\n");
-    return; 
-  }
-
-  char *bname = *argv;
-  fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
-  persaf *saf = readsaf<float>(bname);
-  writesaf_header(stderr,saf);
-  
-  char *chooseChr = NULL;
-  if(argc>0)
-    chooseChr = argv[1];
-  float *flt = new float[saf->nChr+1];
-  for(myMap::iterator it=saf->mm.begin();it!=saf->mm.end();++it){
-    if(chooseChr!=NULL){
-      it = saf->mm.find(chooseChr);
-      if(it==saf->mm.end()){
-	fprintf(stderr,"Problem finding chr: %s\n",chooseChr);
-	break;
-      }
-    }
-    bgzf_seek(saf->pos,it->second.pos,SEEK_SET);
-    bgzf_seek(saf->saf,it->second.saf,SEEK_SET);
-    int *ppos = new int[it->second.nSites];
-    bgzf_read(saf->pos,ppos,sizeof(int)*it->second.nSites);
-    for(int s=0;s<it->second.nSites;s++){
-      bgzf_read(saf->saf,flt,sizeof(float)*(saf->nChr+1));
-      fprintf(stdout,"%s\t%d",it->first,ppos[s]);
-      for(int is=0;is<saf->nChr+1;is++)
-	fprintf(stdout,"\t%f",flt[is]);
-      fprintf(stdout,"\n");
-    }
-    delete [] ppos;
-    if(chooseChr!=NULL)
-      break;
-  }
-  
-  delete [] flt;
-  persaf_destroy(saf);
-}
-#endif
-//chr start stop is given from commandine
-//if chr==NULL, then this function is only called once
-myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
-  //  fprintf(stderr,"[%s] chr:%s start:%d stop:%d\n",__FUNCTION__,chr,start,stop);
-  assert(chr!=NULL);
-  myMap::iterator it;
-  //  if(chr!=NULL){
-    it = pp->mm.find(chr);
-    if(it==pp->mm.end()){
-      fprintf(stderr,"Problem finding chr: %s\n",chr);
-      exit(0);
-    }
-    // }
-  bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
-
-  if(pp->toKeep==NULL)
-      pp->toKeep = keep_alloc<char>();
-  pp->at =-1;
-  
-  if(start==-1&&stop==-1){
-    keep_set<char>(pp->toKeep,it->second.nSites,0);
-    memset(pp->toKeep->d,1,it->second.nSites);
-    pp->toKeep->first = 0;
-    pp->toKeep->last = it->second.nSites;
-    return it;
-  }else{
-    bgzf_seek(pp->pos,it->second.pos,SEEK_SET);
-    int *ppos = new int[it->second.nSites];
-    bgzf_read(pp->pos,ppos,sizeof(int)*it->second.nSites);
-    
-    
-    keep_set<char>(pp->toKeep,it->second.nSites,0);
-    keep_clear(pp->toKeep);
-    
-    int first=0;
-    if(start!=-1)
-      while(first<it->second.nSites&&ppos[first]<start)
-	first++;
-    
-    fprintf(stderr,"first:%d\n",first);
-    int last = it->second.nSites;
-    if(stop!=-1&&stop<=ppos[last-1]){
-      last=first;
-      while(ppos[last]<stop) 
-	last++;
-    }
-    fprintf(stderr,"last:%d\n",last);
-    
-    for(int s=first;s<last;s++)
-      keep_set<char>(pp->toKeep,s,1);
-    
-
-    delete [] ppos;
-    return it;
-  }
-}
-
-size_t iter_read(persaf *saf, void *data, size_t length,int *pos){
-  //  fprintf(stderr,"[%s] data:%p len:%lu first:%lu last:%lu at:%d\n",__FUNCTION__,data,length,saf->toKeep->first,saf->toKeep->last,saf->at);
-
-  //this is when we read an entire genome. 
-  if(saf->toKeep==NULL){
-    //    fprintf(stderr,"to keep is zero\n");
-    int ret=bgzf_read(saf->saf,data,length);
-    saf->at++;
-    if(saf->ppos)
-      *pos = saf->ppos[saf->at];
-
-    if(ret==0)
-      return 0;
-    assert(ret==length);
-    return ret;
-  }else{
-    // two cases, either we read everything, or we use the keeplist (toKeep->d)
-    if(saf->at>(int)saf->toKeep->last){
-      //fprintf(stderr,"after lst:%d\n",saf->at);
-      return 0;
-    }
-    
-    while(1){
-      int ret=bgzf_read(saf->saf,data,length);
-      saf->at++;
-      if(saf->ppos)
-	*pos = saf->ppos[saf->at];
-      if(saf->at>(int)saf->toKeep->last){
-	//	fprintf(stderr,"after lst:%d\n",saf->at);
-	return 0;
-      }
-      if(ret==0)
-	return 0;
-
-      assert(ret==length);
-      
-      if(saf->toKeep->d==NULL)//read all 
-	return ret;
-      else if(saf->toKeep->d[saf->at]){
-	//fprintf(stderr,"[%s] in while saf->at:%d says keep\n",__FUNCTION__,saf->at);
-	return ret;
-      }
-      
-    }
-    //fprintf(stderr,"after while\n");
-    return 0;
-  }
-}
-
-
-#ifdef __WITH_MAIN__
-int main(int argc, char **argv){
-  if(argc==1){
-    fprintf(stderr,"Supply .saf.idx [chrname]\n");
-    return 0;
-  }
-  print2(--argc,++argv);
-
-}
-
-
-#endif

@@ -175,7 +175,9 @@ void setArgsBam(argStruct *arguments){
   MAX_SEQ_LEN = angsd::getArg("-setMinChunkSize",MAX_SEQ_LEN,arguments);
   checkBamHeaders = angsd::getArg("-checkBamHeaders",checkBamHeaders,arguments);
   arguments->show = angsd::getArg("-show",arguments->show,arguments);
-
+  if(regfile && regfiles)
+    fprintf(stderr,"\t-> WARNING both -r and -rf has been set \n");
+    
   char *tmp = NULL;
   tmp = angsd::getArg("-ref",tmp,arguments);
   if(tmp==NULL && adjustMapQ!=0){
@@ -195,7 +197,7 @@ void setArgsBam(argStruct *arguments){
   
   if(regfile)
     regionsRaw.push_back(strdup(regfile));
-   
+  fprintf(stderr,"\t-> RegionsRaw.size():%lu\n",regionsRaw.size());
   for(size_t i=0;i<regionsRaw.size();i++){
     regs tmpRegs;
     if(parse_region(regionsRaw[i],arguments->hd,tmpRegs.refID,tmpRegs.start,tmpRegs.stop,arguments->revMap)<0||tmpRegs.stop<tmpRegs.start){

@@ -198,12 +198,13 @@ args * getArgs(int argc,char **argv){
     else  if(!strcasecmp(*argv,"-start")){
       p->sfsfname = *(++argv);
     }else{
-      p->saf.push_back(readsaf<float>(*argv));
+      p->saf.push_back(persaf_init<float>(*argv));
       p->fname = *argv;
       //   fprintf(stderr,"toKeep:%p\n",p->saf[p->saf.size()-1]->toKeep);
     }
     argv++;
   }
+
   fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname,p->chooseChr,p->start,p->stop,p->fname);
   return p;
 }
@@ -275,7 +276,6 @@ int printOld(int argc,char **argv){
   return 0;
 }
 
-#if 1
 void print(int argc,char **argv){
   if(argc<1){
     fprintf(stderr,"Must supply afile.saf.idx \n");
@@ -283,7 +283,9 @@ void print(int argc,char **argv){
   }
   
   args *pars = getArgs(argc,argv);
-  
+  pars->saf[0]->kind = 2;
+  if(pars->posOnly==1)
+    pars->saf[0]->kind = 1;
   if(pars->saf.size()!=1){
     fprintf(stderr,"Print only implemeted for single safs\n");
     exit(0);
@@ -298,23 +300,17 @@ void print(int argc,char **argv){
       it = iter_init(pars->saf[0],pars->chooseChr,pars->start,pars->stop);
     else
       it = iter_init(pars->saf[0],it->first,pars->start,pars->stop);
-    fprintf(stderr,"changing chr:%s\n",it->first);fflush(stderr);
-    pars->saf[0]->ppos = new int [it->second.nSites];
-    bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
-    bgzf_read(pars->saf[0]->pos,pars->saf[0]->ppos,sizeof(int)*it->second.nSites);
+ 
     int ret;
-    //fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
     int pos;
+
     while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1),&pos))){
-   
-      //      fprintf(stderr,"[%s] pars->saf[0]->at:%d nSites: %lu ret:%d\n",__FUNCTION__,pars->saf[0]->at,it->second.nSites,ret);
       fprintf(stdout,"%s\t%d",it->first,pos+1);
-      for(int is=0;is<pars->saf[0]->nChr+1;is++)
+      for(int is=0;pars->posOnly!=1&&is<pars->saf[0]->nChr+1;is++)
 	fprintf(stdout,"\t%f",flt[is]);
       fprintf(stdout,"\n");
     }
-    //    delete [] ppos;
-    //fprintf(stderr,"[%s] after while:%d\n",__FUNCTION__,ret);
+ 
     if(pars->chooseChr!=NULL)
       break;
   }
@@ -322,7 +318,7 @@ void print(int argc,char **argv){
   delete [] flt;
   destroy_args(pars);
 }
-#endif
+
 
 #if 1
 int index(int argc,char **argv){
