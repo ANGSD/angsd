@@ -1,0 +1,52 @@
+\documentclass[10pt]{article}
+\usepackage{color}
+\definecolor{gray}{rgb}{0.7,0.7,0.7}
+\usepackage{framed}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage[pdfborder={0 0 0},hyperfootnotes=false]{hyperref}
+
+\addtolength{\textwidth}{3.4cm}
+\addtolength{\hoffset}{-1.7cm}
+\addtolength{\textheight}{4cm}
+\addtolength{\voffset}{-2cm}
+
+
+\begin{document}
+
+\title{ANGSD formats}
+\author{tsk}
+\maketitle
+\vspace*{1em}
+
+
+\section{SAF formats}
+SAF files are files that contain sample allele frequency. These are generated with -doSaf in main ANGSD. These contains either the loglikelihood ratio to the most likely category or the pp. This is determined if the -prior has been supplied.
+The first 8 bytes magic number determines which SAF version. If no magic number is present then version0 is assumed.
+\subsection{version 0}
+First version of the SAF files were simply flat binary double files \texttt{PREFIX.saf} along with an associated \texttt{PREFIX.saf.pos.gz} which contains the gzip compressed 'chromosome position'. Assuming \emph{nChr} number of chromosomes, then we have \emph{nChr+1} categories for each site. The number of sites can therefore be deduced either directly from the number of lines in the uncompressed output of the \texttt{PREFIX.saf.pos.gz}, or by using the filesize (\emph{fsize}) of the \texttt{PREFIX.saf} $$\frac{fsize}{sizeof(double)*(nChr+1)}.$$
+\subsection{version 1}
+Second iteration of the saf files now contains two raw files and an index file. Still under development.
+\begin{itemize}
+\item[PREFIX.saf.gz] bgzf compressed flat floats. With similar interpretation as version0.
+\item[PREFIX.saf.pos.gz] bgzf compressed flat integer. Representing the position.
+\item[PREFIX.saf.idx] uncompressed binary file containing blocks of data described in \ref{tab1}.
+\end{itemize}
+\begin{table}
+\begin{tabular}{rllll}
+  \hline
+  {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
+  \hline
+  1 & {\sf CLEN} & size\_t &  Length of CHR (not including terminating null)\\
+  2 & {\sf CHR} & char* & Reference sequence name. Length is CLEN\\
+  3 & {\sf NSITES} & size\_t & Number of sites with coverage from reference CHR\\
+  4 & {\sf OFF1} & long int & CHR offset into the PREFIX.saf.pos.gz \\
+  5 & {\sf OFF2} & long int & CHR offset into the PREFIX.saf.gz \\
+  \hline
+\end{tabular}\label{tab1}
+\caption{Content of entry for a single reference name in the PREFIX.saf.idx file.}
+\end{table}
+First 8 bytes in all three files is 8byte magic numer \emph{char[8]
+  ``safv3''}. The next size\_t value is the number of categories of the sample allelefrequency.
+
+\end{document}

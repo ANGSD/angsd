@@ -89,7 +89,7 @@ abcSmartCounts::abcSmartCounts(const char *outfiles,argStruct *arguments,int inp
   const char * IDX= ".counts.idx";
 
   fidx=aio::openFile(outfiles,IDX);
-  fbin=aio::openFileBG(outfiles,BIN,GZOPT);
+  fbin=aio::openFileBG(outfiles,BIN);
 
 }
 

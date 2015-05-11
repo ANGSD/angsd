@@ -1,16 +1,17 @@
 
 typedef struct{
   char *oklist;//<- {0,1,2}, length=numSites, 0 don't keep 1 do keep 2 error
-  double **pLikes;
+  float **pLikes;
 }realRes;
 
 
 class abcSaf : public abc{
   int doSaf;
-  gzFile outfileGprobs;
-  FILE *outfileSFS;
-  gzFile outfileSFSPOS;
-  gzFile theta_fp;
+  BGZF *outfileGprobs;
+  BGZF *outfileSAF;
+  FILE *outfileSAFIDX;
+  BGZF *outfileSAFPOS;
+  BGZF *theta_fp;
   int underFlowProtect;
   int fold;
   int isSim;
@@ -19,7 +20,7 @@ class abcSaf : public abc{
   char *pest;
   double *prior; //<- outputfile form pest;
   int doThetas;
-  void calcThetas(funkyPars *p,int index,double *prior,gzFile fpgz);
+  void calcThetas(funkyPars *p,int index,double *prior,BGZF* fpgz);
 
   double aConst;
   double aConst2;
@@ -30,12 +31,16 @@ class abcSaf : public abc{
   double *filipeIndF;
   int ishap;
   int newDim;
+  int64_t offs[2];
+  int nnnSites;
+  char *tmpChr;
   void algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r,int doFold);
   void algoGeno(int refId,double **liks,char *major,char *minor,int nsites,int numInds,kstring_t *sfsfile,int underFlowProtect, int *posi,int *keepSites,double *pest);
   void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans);
   void algoJointHap(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans);
   double *lbicoTab; //dim = [2*numInds+1]
   double **myComb2Tab;
+  void writeAll();
 public:
   //none optional stuff
   FILE *outfile;
@@ -46,6 +51,6 @@ public:
   void clean(funkyPars *pars);
   void print(funkyPars *pars);
   void printArg(FILE *argFile);
-
+  void changeChr(int refId);
   
 };

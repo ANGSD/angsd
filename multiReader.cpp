@@ -35,11 +35,11 @@ bam_hdr_t *getHeadFromFai(const char *fname){
   }
   bam_hdr_t *ret = bam_hdr_init();
   ret->l_text = strlen(fname);
-  ret->text = new char[strlen(fname)+1];
+  ret->text =(char*)  malloc(strlen(fname)+1);
   ret->text = strcpy(ret->text,fname);
   ret->n_targets = chrs.size();
-  ret->target_len = new uint32_t [chrs.size()];
-  ret->target_name = new char*[chrs.size()];
+  ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*chrs.size());
+  ret->target_name = (char**) malloc(sizeof(char*)*chrs.size());
   for(size_t i=0;i<chrs.size();i++){
     ret->target_len[i] = lengths[i];
     ret->target_name[i] =strdup(chrs[i]);

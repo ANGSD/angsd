@@ -7,7 +7,6 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <assert.h>
-#include <zlib.h>
 int static z_rndu=137;
 
 int simpleRand = 0;
@@ -402,7 +401,7 @@ int main(int argc,char **argv){
   const char *prefix=NULL;
   int regLen = 0;
   int singleOut = 0;
-  gzFile in = Z_NULL;
+  FILE *in = NULL;
   argv++;
   char *depthFile = NULL;
   double *depths = NULL;
@@ -448,14 +447,11 @@ int main(int argc,char **argv){
       fprintf(stderr,"%d %f\n",i,depths[i]);
   }
 
-  if(((in=gzopen(inS,"r")))==Z_NULL){
-    fprintf(stderr,"Problem openingfile: %s\n",inS);
-    return 0;
-  }
+  in=getFILE(inS,"r");
   
   int nsam, j ,nsites, i,  howmany  ;
   char **list, **cmatrix(), allele,na, line[1001], slashline[1001]  ;
-  //  FILE *pf, *fopen(), *pfin ;
+  FILE *pf, *fopen(), *pfin ;
   double *posit   ;
   int *positInt ;
   int   segsites, count  , nadv, probflag  ;
@@ -468,8 +464,8 @@ int main(int argc,char **argv){
 
   /* read in first two lines of output  (parameters and seed) */
   //  pfin = stdin ;
-  
-  if(NULL==gzgets(in, line, 1000))
+  pfin = in;
+  if(NULL==fgets( line, 1000, pfin))
     fprintf(stderr,"Problem reading from file:\n");
   sscanf(line," %s  %d %d", dum,  &nsam, &howmany);
   double ttt=0;
@@ -478,7 +474,7 @@ int main(int argc,char **argv){
     ttt += 1.0*1/i;
     //    fprintf(stderr,"nsam=%d\tttt=%f,i=%d\n",nsam,ttt,i); 
   }
-  if(NULL==gzgets(in, line, 1000))
+  if(NULL==fgets( line, 1000, pfin))
     fprintf(stderr,"Problem reading from file:\n");
   if( argc > 1 ) { 
     nadv = atoi( argv[1] ) ; 
@@ -501,47 +497,42 @@ int main(int argc,char **argv){
   FILE *pgEst = openFile(prefix,".pgEstH");
 
   double res[3]={0,0,0};//phi_t,phi_w,D',Dt
-
   while( howmany-count++ ) {
 
 /* read in a sample */
   do {
-    if( gzgets(in, line, 1000) == NULL ){
+    if( fgets( line, 1000, pfin) == NULL ){
       exit(0);
     }
     if( line[0] == '/' )  strcpy(slashline,line+2);
   }while ( (line[0] != 's') && (line[0] != 'p' ) ) ;
-
+  
   if( line[0] == 'p'){
     sscanf( line, "  prob: %lf", &prob );
     probflag = 1 ;
-    if( gzgets(in, line, 1000) == NULL ){
+    if( fgets( line, 1000, pfin) == NULL ){
       exit(0);
     }
   }
   sscanf( line, "  segsites: %d", &segsites );
-  fprintf(stderr,"seqsites:%d\n",segsites);
   if( segsites >= maxsites){
     maxsites = segsites + 10 ;
     posit = (double *)realloc( posit, maxsites*sizeof( double) ) ;
     positInt = (int *)realloc( positInt, maxsites*sizeof( int) ) ;
     biggerlist(nsam,maxsites, list) ;
   }
-  char *mybuf = malloc(32768);
-
   if( segsites > 0) {
-    gzgets(in,mybuf,32768);
-    strtok(mybuf," \n\r\t");//skip positions: 
-    
-    for( i=0; i<segsites ; i++) 
-      positInt[i] = atof(strtok(NULL," \t\n\r"))*regLen;
-
+    if(0==fscanf(pfin," %s", astr))
+      fprintf(stderr,"Problem reading stuff:\n");
+    for( i=0; i<segsites ; i++){ 
+      if(0==fscanf(pfin," %lf",posit+i))
+	fprintf(stderr,"Problem reading stuff:\n");
+      positInt[i] = posit[i]*regLen;
+    }
     for( i=0; i<nsam;i++) 
-      if(gzgets(in,list[i],32768 ))
+      if(0==fscanf(pfin," %s", list[i] ))
 	 fprintf(stderr,"Problem reading stuff:\n");
-
   }
-
   /* analyse sample ( do stuff with segsites and list) */
   if( argc > 1 ) 
     nsegsub = segsub( nadv, segsites, list) ;

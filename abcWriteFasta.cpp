@@ -96,7 +96,7 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   const char* postfix;
   postfix=".fa.gz";
   outfileZ = Z_NULL;
-  outfileZ = aio::openFileBG(outfiles,postfix,GZOPT);
+  outfileZ = aio::openFileBG(outfiles,postfix);
   bufstr.s=NULL;
   bufstr.m=0;
   bufstr.l=0;
