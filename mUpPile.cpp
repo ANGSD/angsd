@@ -1353,7 +1353,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   fflush(stderr);
   if(show!=1)
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
-  extern abcGetFasta *gf;
+  //extern abcGetFasta *gf;
 
   //  sglPool *sglp= new sglPool[nFiles];
   readPool *sglp= new readPool[nFiles];
