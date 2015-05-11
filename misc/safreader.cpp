@@ -57,12 +57,12 @@ int version(const char *fname){
   gzFile gz=Z_NULL;
   gz = gzopen(fname,"r");
   if(gz==Z_NULL){
-    fprintf(stderr,"Problem opening file: \'%s\'",fname);
+    fprintf(stderr,"\t-> Problem opening file: \'%s\'",fname);
     exit(0);
   }
   char buf[8];
   gzread(gz,buf,8*sizeof(char));
-  fprintf(stderr,"\t-> Magic nr is: \'%s\'\n",buf);
+  //  fprintf(stderr,"\t-> Magic nr is: \'%s\'\n",buf);
   gzclose(gz);
 
   if(0==strcmp(buf,"safv2"))
@@ -83,7 +83,7 @@ persaf * persaf_init(char *fname){
   ret->kind =0;
   size_t clen;
   if(!fexists(fname)){
-    fprintf(stderr,"Problem opening file: %s\n",fname);
+    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);
     exit(0);
   }
   FILE *fp = NULL;
@@ -261,8 +261,10 @@ persaf * persaf_init(char *fname){
    for(int s=first;s<last;s++)
      keep_set<char>(pp->toKeep,s,1);
    
-   if(pp->kind==0)
+   if(pp->kind==0){
      delete [] pp->ppos;
+     pp->ppos=NULL;
+   }
    return it;
    
  }

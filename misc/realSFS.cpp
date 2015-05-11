@@ -32,6 +32,7 @@
 #include <zlib.h>
 #include <htslib/bgzf.h>
 #include <htslib/tbx.h>
+
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -52,6 +53,7 @@ typedef struct {
   std::vector<persaf *> saf;
   int posOnly;
   char *fname;
+  int onlyOnce;
 }args;
 
 
@@ -93,6 +95,8 @@ size_t helper(persaf * pp,char *chr){
 }
 
 size_t nsites(std::vector<persaf *> &pp,args *ar){
+  if(ar->start!=-1 &&ar->stop!=-1)
+    return ar->stop-ar->start;
   size_t res = helper(pp[0],ar->chooseChr);
   for(int i=1;i<pp.size();i++)
     if(helper(pp[i],ar->chooseChr) > res)
@@ -167,6 +171,7 @@ char * get_region(char *extra,int &start,int &stop) {
 
 args * getArgs(int argc,char **argv){
   args *p = new args;
+
   p->sfsfname=p->chooseChr=NULL;
   p->start=p->stop=-1;
   p->maxIter=1e2;
@@ -175,6 +180,7 @@ args * getArgs(int argc,char **argv){
   p->nSites =0;
   p->posOnly = 0;
   p->fname = NULL;
+  p->onlyOnce = 0;
   if(argc==0)
     return p;
 
@@ -190,6 +196,8 @@ args * getArgs(int argc,char **argv){
       p->posOnly = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-nSites"))
       p->nSites = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-onlyOnce"))
+      p->onlyOnce = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-r")){
       p->chooseChr = get_region(*(++argv),p->start,p->stop);
       if(!p->chooseChr)
@@ -320,7 +328,7 @@ void print(int argc,char **argv){
 }
 
 
-#if 1
+#if 0
 int index(int argc,char **argv){
   fprintf(stderr,"tabix not implemented yet\n");
   if(argc<1){
@@ -952,7 +960,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     if(saf[i]->ppos[it->second.nSites-1] > hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
-    fprintf(stderr,"keep[%d].first:%lu last:%lu\n",i,saf[i]->toKeep->first,saf[i]->toKeep->last);
+    //    fprintf(stderr,"keep[%d].first:%lu last:%lu\n",i,saf[i]->toKeep->first,saf[i]->toKeep->last);
     for(int j=saf[i]->toKeep->first;j<saf[i]->toKeep->last;j++)
       if(saf[i]->toKeep->d[j])
 	hit->d[saf[i]->ppos[j]]++;
@@ -1029,7 +1037,7 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites
 
 template <typename T>
 int main_opt(args *arg){
-  fprintf(stderr,"This is still under development for multi populations\n");
+  //  fprintf(stderr,"\t-> Seems\n");
 
 
   std::vector<persaf *> &saf =arg->saf;
@@ -1091,6 +1099,7 @@ int main_opt(args *arg){
     fprintf(stderr,"likelihood: %f\n",lik);
     fprintf(stderr,"------------\n");
 #if 1
+    fprintf(stdout,"#### Estimate of the sfs ####\n");
     for(int x=0;x<ndim;x++)
       fprintf(stdout,"%f ",gls[0]->x*sfs[x]);
     fprintf(stdout,"\n");
@@ -1102,6 +1111,8 @@ int main_opt(args *arg){
     
     if(ret==-2&&arg->chooseChr!=NULL)
       break;
+    if(arg->onlyOnce)
+      break;
   }
 
   destroy(gls,nSites);
@@ -1109,7 +1120,7 @@ int main_opt(args *arg){
   delete [] sfs;
   
   fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
-  fprintf(stderr,"\t-> Output is now simply the expected number of sites! \n");
+  fprintf(stderr,"\t-> Output is now simply the expected values! \n");
   fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
   return 0;
 }
@@ -1185,9 +1196,10 @@ int main(int argc,char **argv){
     printOld(--argc,++argv);
   else if(!strcasecmp(*argv,"print"))
     print(--argc,++argv);
+#if 0
   else if(!strcasecmp(*argv,"index"))
     index(--argc,++argv);
-  
+#endif
   else {
     args *arg = getArgs(argc,argv);
     if(!arg)
