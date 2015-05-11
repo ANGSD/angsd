@@ -1099,7 +1099,7 @@ int main_opt(args *arg){
     fprintf(stderr,"likelihood: %f\n",lik);
     fprintf(stderr,"------------\n");
 #if 1
-    fprintf(stdout,"#### Estimate of the sfs ####\n");
+    //    fprintf(stdout,"#### Estimate of the sfs ####\n");
     for(int x=0;x<ndim;x++)
       fprintf(stdout,"%f ",gls[0]->x*sfs[x]);
     fprintf(stdout,"\n");
