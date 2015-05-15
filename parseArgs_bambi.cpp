@@ -197,7 +197,7 @@ void setArgsBam(argStruct *arguments){
   
   if(regfile)
     regionsRaw.push_back(strdup(regfile));
-  fprintf(stderr,"\t-> RegionsRaw.size():%lu\n",regionsRaw.size());
+  //fprintf(stderr,"\t-> RegionsRaw.size():%lu\n",regionsRaw.size());
   for(size_t i=0;i<regionsRaw.size();i++){
     regs tmpRegs;
     if(parse_region(regionsRaw[i],arguments->hd,tmpRegs.refID,tmpRegs.start,tmpRegs.stop,arguments->revMap)<0||tmpRegs.stop<tmpRegs.start){
