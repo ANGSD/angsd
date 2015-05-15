@@ -53,50 +53,77 @@ getFst<-function(est){
 c(fstW=fstW,fstU=fstU)
 }
 ##
+##matteo
+getFst2 <- function(sfs){
+    sfs[1,1]=NA
+    sfs[nrow(sfs),ncol(sfs)]=NA
+    
+    RELATIVE=1
+    if (max(sfs, na.rm=T)<=1)
+        RELATIVE=0
+    if (RELATIVE)
+        sfs=sfs/sum(sfs,na.rm=T)
+    
+    nind1=(nrow(sfs)-1)/2
+    nind2=(ncol(sfs)-1)/2
+    
+    nind1=(nrow(sfs)-1)/2
+    nind2=(ncol(sfs)-1)/2
+    ##cat("Pop1 (rows) has",nind1,"individuals")
+    ##cat("\nPop2 (cols) has",nind2,"individuals")
+    
+    fsts=matrix(NA, ncol=ncol(sfs), nrow=nrow(sfs))
+    for (i in 1:nrow(sfs)) {
+        for (j in 1:ncol(sfs)) {
+            f1=(i-1)/(nind1*2); f2=(j-1)/(nind2*2)
+                                        #cat("\n",f1," ",f2)
+            fsts[i,j]=reynolds(f1,f2,nind1*2,nind2*2)  
+        }
+    }
+    
+                                        #cat("\nsum sfs:",sum(sfs))
+        
+    if (RELATIVE) {
+        fst=sum(sfs*fsts,na.rm=T)
+    } else {
+        fst=sum(sfs*fsts,na.rm=T)/sum(sfs)
+    }
+    
+    c(fstM=fst)
+}
+
+
 
 if(FALSE){
-est<-as.matrix(exp(read.table("/ricco/home/home/thorfinn/sfs_greenland/chb.gr.2dsfs.ml")))
-getFst(est)
-##################################################
-#matteo
-sfs<-est
-
-sfs[1,1]=NA
-sfs[nrow(sfs),ncol(sfs)]=NA
-
-RELATIVE=1
-if (max(sfs, na.rm=T)<=1)
-    RELATIVE=0
-if (RELATIVE)
-    sfs=sfs/sum(sfs,na.rm=T)
-
-nind1=(nrow(sfs)-1)/2
-nind2=(ncol(sfs)-1)/2
-
-nind1=(nrow(sfs)-1)/2
-nind2=(ncol(sfs)-1)/2
-
-#cat("Pop1 (rows) has",nind1,"individuals")
-#cat("\nPop2 (cols) has",nind2,"individuals")
-
-fsts=matrix(NA, ncol=ncol(sfs), nrow=nrow(sfs))
-for (i in 1:nrow(sfs)) {
-	for (j in 1:ncol(sfs)) {
-		f1=(i-1)/(nind1*2); f2=(j-1)/(nind2*2)
-		#cat("\n",f1," ",f2)
-		fsts[i,j]=reynolds(f1,f2,nind1*2,nind2*2)  
-	}
-}
-
-#cat("\nsum sfs:",sum(sfs))
-
-if (RELATIVE) {
-    fst=sum(sfs*fsts,na.rm=T)
-} else {
-    fst=sum(sfs*fsts,na.rm=T)/sum(sfs)
-}
-
-cat("FST:",fst,"\n")
-
-
+    if(FALSE){
+        ##simulate data with msms
+       nRep <- 10
+       nPop1 <- 24
+       nPop2 <- 16
+       cmd <- paste("msms -ms",nPop1+nPop2,nRep,"-t 930 -r 400 -I 2",nPop1,nPop2,"0 -g 1 9.70406 -n 1 2 -n 2 1 -ma x 0.0 0.0 x -ej 0.07142857 2 1  >msoutput.txt ",sep=" ")
+       system(cmd)
+       ##system("msms -ms 40 1 -t 930 -r 400 -I 2 20 20 0 -g 1 9.70406 -n 1 2 -n 2 1 -ma x 0.0 0.0 x -ej 0.07142857 2 1  >msoutput.txt  ")
+       
+       source("../R/readms.output.R")
+   }
+    if(FALSE){
+        ##use R to calculate SFS for each pop and 2dsfs
+        source("../R/readms.output.R")
+        a<- read.ms.output(file="msoutput.txt")
+        
+        p1.d <- unlist((sapply(a$gam,function(x) colSums(x[1:nPop1,]))))
+        p2.d <- unlist((sapply(a$gam,function(x) colSums(x[-c(1:nPop1),]))))
+        par(mfrow=c(1,2))
+        barplot(table(p1.d))
+        barplot(table(p2.d))
+        
+        sfs.2d <- sapply(0:nPop1,function(x) table(factor(p2.d[p1.d==x],levels=0:nPop2)))
+    }
+    if(FALSE){
+        source("fstFrom2dSFS.R")
+        ##type1
+        getFst(sfs.2d)
+        ##type2
+        getFst2(sfs.2d)
+    }
 }
