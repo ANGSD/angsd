@@ -115,7 +115,7 @@ void abcSaf::getOptions(argStruct *arguments){
     exit(0);
   }
   if(doSaf==2){
-    fprintf(stderr,"\t->(Using Filipe G Vieira modification of: %s)\n",__FILE__);
+    fprintf(stderr,"\t-> (Using Filipe G Vieira modification of: %s)\n",__FILE__);
     int doMajorMinor =0;
     doMajorMinor = angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
     int doMaf =0;
@@ -271,6 +271,7 @@ abcSaf::~abcSaf(){
   if(prior) delete [] prior;
   if(outfileSAF) bgzf_close(outfileSAF);;
   if(outfileSAFPOS) bgzf_close(outfileSAFPOS);
+  if(outfileSAFIDX) fclose(outfileSAFIDX);
   if(theta_fp) bgzf_close(theta_fp);
   if(outfileGprobs)  bgzf_close(outfileGprobs);
   if(lbicoTab) delete [] lbicoTab;
@@ -1476,6 +1477,9 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
 }
 
 void abcSaf::writeAll(){
+  assert(outfileSAF!=NULL);
+  assert(outfileSAFIDX!=NULL);
+  assert(outfileSAFPOS!=NULL);
   //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
   if(nnnSites!=0&&tmpChr!=NULL){
     size_t clen = strlen(tmpChr);
