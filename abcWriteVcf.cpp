@@ -41,20 +41,20 @@ void abcWriteVcf::print(funkyPars *pars){
     if(pars->keepSites[s]==0)
       continue;
     //chr pos id
-    ksprintf(&kstr,"%s\t%d\t.\t",header->target_name[pars->refId],pars->posi[s]+1);
-    kputc(intToRef[pars->major[s]],&kstr);kputc('\t',&kstr);
-    kputc(intToRef[pars->minor[s]],&kstr);kputc('\t',&kstr);
-    ksprintf(&kstr,".\tPASS\t.\tGP:GL\t");
+    ksprintf(kstr,"%s\t%d\t.\t",header->target_name[pars->refId],pars->posi[s]+1);
+    kputc(intToRef[pars->major[s]],kstr);kputc('\t',kstr);
+    kputc(intToRef[pars->minor[s]],kstr);kputc('\t',kstr);
+    ksprintf(kstr,".\tPASS\t.\tGP:GL\t");
     for(int i=0;i<pars->nInd;i++){
-      ksprintf(&kstr,"%f,%f,%f:",pars->post[s][i*3+0],pars->post[s][i*3+1],pars->post[s][i*3+2]);
-      ksprintf(&kstr,"%f,%f,%f",lh3->lh3[s][i*3+0]/M_LN10,lh3->lh3[s][i*3+1]/M_LN10,lh3->lh3[s][i*3+2]/M_LN10);
+      ksprintf(kstr,"%f,%f,%f:",pars->post[s][i*3+0],pars->post[s][i*3+1],pars->post[s][i*3+2]);
+      ksprintf(kstr,"%f,%f,%f",lh3->lh3[s][i*3+0]/M_LN10,lh3->lh3[s][i*3+1]/M_LN10,lh3->lh3[s][i*3+2]/M_LN10);
       if(i<pars->nInd-1)
-	ksprintf(&kstr,"\t");
+	ksprintf(kstr,"\t");
     }
-    ksprintf(&kstr,"\n");
+    ksprintf(kstr,"\n");
   }
   
-  gzwrite(fp,kstr.s,kstr.l);kstr.l=0;
+  gzwrite(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
 void abcWriteVcf::getOptions(argStruct *arguments){
@@ -80,7 +80,7 @@ void abcWriteVcf::getOptions(argStruct *arguments){
 abcWriteVcf::abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype){
   fp=Z_NULL;
   doVcf =0;
-  
+  kstr=NULL;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doVcf")){
       printArg(stdout);
@@ -97,23 +97,23 @@ abcWriteVcf::abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype
     shouldRun[index] =0;
     return;
   }
-  kstr.l=kstr.m=0;kstr.s=NULL;
+  kstr =(kstring_t*) calloc(1,sizeof(kstring_t));
   //format is taken from: http://faculty.washington.edu/browning/beagle/intro-to-vcf.html
   const char *hdstring= "##fileformat=VCFv4.2(angsd version)\n##FORMAT=<ID=GT,Number=1,Type=Integer,Description=\"Genotype\">\n##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">\n##FORMAT=<ID=PL,Number=G,Type=Float,Description=\"Phred-scaled Genotype Likelihoods\">\n##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (these are really llh eventhough they sum to one)\">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
-  ksprintf(&kstr,"%s",hdstring);
+  ksprintf(kstr,"%s",hdstring);
   for(int i=0;i<arguments->nInd;i++)
-    ksprintf(&kstr,"\tind%d",i);
-  ksprintf(&kstr,"\n");
+    ksprintf(kstr,"\tind%d",i);
+  ksprintf(kstr,"\n");
 
   fp=aio::openFileGz(outfiles,".vcf.gz",GZOPT);
-  gzwrite(fp,kstr.s,kstr.l);kstr.l=0;
+  gzwrite(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
 
 abcWriteVcf::~abcWriteVcf(){
   if(fp!=Z_NULL) gzclose(fp);
-  if(kstr.s)
-    free(kstr.s);
+  if(kstr && kstr->s)
+    free(kstr->s);
 }
 
 

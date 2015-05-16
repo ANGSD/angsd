@@ -1,7 +1,7 @@
 class abcWriteVcf:public abc{
 private:
   gzFile fp;//tfam/fam/bim
-  kstring_t kstr;
+  kstring_t *kstr;
 public:
   int doVcf;
   abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype);
