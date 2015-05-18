@@ -39,17 +39,27 @@ getFst<-function(est){
             
             al <-  1/2 * ( (p1-p2)^2 + (q1-q2)^2) - (N1+N2) *  (N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
             bal <- 1/2 * ( (p1-p2)^2 + (q1-q2)^2) + (4*N1*N2-N1-N2)*(N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
-            
+            if(al<0&FALSE){
+                print(al)
+                print(bal)
+                print(a1)
+                print(a2)
+                stop("something is neg ")
+            }
             aMat[a1+1,a2+1]<-al
             baMat[a1+1,a2+1]<-bal
             ##  print(signif(c(a1=a1,a2=a2,p1=p1,p2=p2,al1=alpha1,al2=alpha2,al),2))
         }
-    # unweighted average of single-locus ratio estimators
- fstU <-   sum(est0*(aMat/baMat),na.rm=T)
-    # weighted average of single-locus ratio estimators
- fstW <-   sum(est0*aMat,na.rm=T)/sum(est0*baMat,na.rm=T)
+    ## unweighted average of single-locus ratio estimators
+    fstU <-   sum(est0*(aMat/baMat),na.rm=T)
+    ## weighted average of single-locus ratio estimators
+    fstW <-   sum(est0*aMat,na.rm=T)/sum(est0*baMat,na.rm=T)
 c(fstW=fstW,fstU=fstU)
 }
+getFst(sfs.2d)
+
+
+
 ##
 ##matteo
 getFst2 <- function(sfs){
@@ -104,6 +114,10 @@ if(FALSE){
        
        source("../R/readms.output.R")
    }
+    to2dSFS <- function(p1.d,p2.d,nPop1,nPop2)
+        sapply(0:nPop1,function(x) table(factor(p2.d[p1.d==x],levels=0:nPop2)))
+   
+
     if(FALSE){
         ##use R to calculate SFS for each pop and 2dsfs
         source("../R/readms.output.R")
@@ -114,8 +128,9 @@ if(FALSE){
         par(mfrow=c(1,2))
         barplot(table(p1.d))
         barplot(table(p2.d))
-        
         sfs.2d <- sapply(0:nPop1,function(x) table(factor(p2.d[p1.d==x],levels=0:nPop2)))
+        sfs.2d.sub1 <- to2dSFS(p1.d[c(1:40e3)],p2.d[1:40e3],nPop1,nPop2)
+        sfs.2d.sub2 <- to2dSFS(p1.d[-c(1:40e3)],p2.d[-c(1:40e3)],nPop1,nPop2)
     }
     if(FALSE){
         source("fstFrom2dSFS.R")

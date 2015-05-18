@@ -40,6 +40,8 @@
 
 #include "safreader.h"
 #include "keep.hpp"
+
+#include "safstat.h"
  
 typedef struct {
   char *chooseChr;
@@ -541,7 +543,7 @@ size_t fsize(const char* fname){
 void readSFS(const char*fname,int hint,double *ret){
   fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
   FILE *fp = NULL;
-  if(((fp=fopen(fname,"r")))){
+  if(((fp=fopen(fname,"r")))==NULL){
     fprintf(stderr,"problems opening file:%s\n",fname);
     exit(0);
   }
@@ -1125,6 +1127,100 @@ int main_opt(args *arg){
   return 0;
 }
 
+template <typename T>
+int stats(int argc,char **argv){
+  if(argc<1){
+    fprintf(stderr,"Must supply afile.saf.idx [chrname, write more info]\n");
+    return 0; 
+  }
+  args *arg = getArgs(argc,argv);
+  
+
+  std::vector<persaf *> &saf =arg->saf;
+  int nSites = arg->nSites;
+  if(nSites == 0){//if no -nSites is specified
+    nSites=nsites(saf,arg);
+  }
+  if(fsizes<T>(saf,nSites)>getTotalSystemMemory())
+    fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
+    
+  fprintf(stderr,"\t-> nSites: %d\n",nSites);
+  float bytes_req_megs = fsizes<T>(saf,nSites)/1024/1024;
+  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
+  //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
+  fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is atleast: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+
+  std::vector<Matrix<T> *> gls;
+  for(int i=0;i<saf.size();i++)
+    gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
+
+  int ndim= parspace(saf);
+  double *sfs=new double[ndim];
+  
+  
+  while(1) {
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop);//read nsites from data
+    //    fprintf(stderr,"\t\tRET:%d\n",ret);
+    if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
+      break;
+    
+    if(saf.size()==1){
+      if(ret!=-2){
+	if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+	  //	  fprintf(stderr,"continue continue\n");
+	  continue;
+	}
+      }
+    }else{
+      if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+	//fprintf(stderr,"continue continue\n");
+	continue;
+      }
+
+    }
+  
+      
+    fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
+    
+    if(arg->sfsfname!=NULL)
+      readSFS(arg->sfsfname,ndim,sfs);
+    else
+      for(int i=0;i<ndim;i++)
+	sfs[i] = (i+1)/((double)(ndim));
+
+    normalize(sfs,ndim);
+    emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,gls[0]->x);
+    fprintf(stderr,"------------\n");
+    double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim);
+    fprintf(stderr,"likelihood: %f\n",lik);
+    fprintf(stderr,"------------\n");
+#if 1
+    //    fprintf(stdout,"#### Estimate of the sfs ####\n");
+    for(int x=0;x<ndim;x++)
+      fprintf(stdout,"%f ",gls[0]->x*sfs[x]);
+    fprintf(stdout,"\n");
+    fflush(stdout);
+#endif
+    destroy<T>(emp,arg->nThreads);
+    for(int i=0;i<gls.size();i++)
+      gls[i]->x =0;
+    
+    if(ret==-2&&arg->chooseChr!=NULL)
+      break;
+    if(arg->onlyOnce)
+      break;
+  }
+
+  destroy(gls,nSites);
+  destroy_args(arg);
+  delete [] sfs;
+  
+  fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
+  fprintf(stderr,"\t-> Output is now simply the expected values! \n");
+  fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
+  return 0;
+}
+
 int main(int argc,char **argv){
 #if 0
   char **reg = new char*[6];
@@ -1200,6 +1296,8 @@ int main(int argc,char **argv){
   else if(!strcasecmp(*argv,"index"))
     index(--argc,++argv);
 #endif
+  else if(!strcasecmp(*argv,"stats"))
+    stats<float>(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
     if(!arg)
