@@ -37,10 +37,8 @@ getFst<-function(est){
             alpha1 <- 1 - (p1^2 + q1^2)
             alpha2 <- 1 - (p2^2 + q2^2)
             
-            al <-  1/2 * ( (p1-p2)^2 + (q1-q2)^2) -
-                (N1+N2)*        (N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
-            bal <- 1/2 * ( (p1-p2)^2 + (q1-q2)^2) +
-                (4*N1*N2-N1-N2)*(N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
+            al <-  1/2 * ( (p1-p2)^2 + (q1-q2)^2) - (N1+N2) *  (N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
+            bal <- 1/2 * ( (p1-p2)^2 + (q1-q2)^2) + (4*N1*N2-N1-N2)*(N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
             
             aMat[a1+1,a2+1]<-al
             baMat[a1+1,a2+1]<-bal
@@ -125,5 +123,21 @@ if(FALSE){
         getFst(sfs.2d)
         ##type2
         getFst2(sfs.2d)
+        
     }
+    if(FALSE){
+        norm <- function(x) x/sum(x)
+        prior <- norm(sfs.2d)
+        fs <- matrix(NA,nrow=length(p1.d),ncol=2)
+        for(r in 1:length(p1.d)){
+            if((r %% 100 )==0 )
+                cat( "\r  ",r,"/ ", length(p1.d))
+            mat <- matrix(0,ncol=nPop1+1,nrow=nPop2+1)
+            mat[p2.d[r],p1.d[r]] <- 1
+            fs[r,] <- getFst(prior*mat)
+        }
+        
+    }
+    
+    
 }
