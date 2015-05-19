@@ -807,35 +807,6 @@ void emStep_master(double *post,int nThreads){
 }
 
 
-
-
-template <typename T>
-double em(double *sfs,double tole,int maxIter,int nThreads,int dim){
-  double oldLik,lik;
-  oldLik = like_master<T>(nThreads);
-  
-  fprintf(stderr,"startlik=%f\n",oldLik);fflush(stderr);
-  double tmp[dim];
-  
-  for(int it=0;SIG_COND&&it<maxIter;it++) {
-    emStep_master<T>(tmp,nThreads);
-    
-    for(int i=0;i<dim;i++)
-      sfs[i]= tmp[i];
-
-    lik = like_master<T>(nThreads);
-
-    fprintf(stderr,"[%d] lik=%f diff=%g\n",it,lik,fabs(lik-oldLik));
-
-    if(fabs(lik-oldLik)<tole){
-      oldLik=lik;
-      break;
-    }
-    oldLik=lik;
-  }
-  return oldLik;
-}
-
 template<typename T>
 emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads,int dim,int nSites){
   //  fprintf(stderr,"nSites:%d\n",nSites);
@@ -874,6 +845,38 @@ void destroy(emPars<T> *a,int nThreads ){
     delete [] a[i].post;
   delete [] a;
   delete [] thd;
+}
+
+
+
+template <typename T>
+double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls){
+  emp = setThreadPars<T>(gls,sfs,nThreads,dim,gls[0]->x);
+  fprintf(stderr,"------------\n");
+  double oldLik,lik;
+  oldLik = like_master<T>(nThreads);
+  
+  fprintf(stderr,"startlik=%f\n",oldLik);fflush(stderr);
+  double tmp[dim];
+  
+  for(int it=0;SIG_COND&&it<maxIter;it++) {
+    emStep_master<T>(tmp,nThreads);
+    
+    for(int i=0;i<dim;i++)
+      sfs[i]= tmp[i];
+
+    lik = like_master<T>(nThreads);
+
+    fprintf(stderr,"[%d] lik=%f diff=%g\n",it,lik,fabs(lik-oldLik));
+
+    if(fabs(lik-oldLik)<tole){
+      oldLik=lik;
+      break;
+    }
+    oldLik=lik;
+  }
+destroy<T>(emp,nThreads);
+  return oldLik;
 }
 
 int really_kill =3;
@@ -1039,9 +1042,6 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites
 
 template <typename T>
 int main_opt(args *arg){
-  //  fprintf(stderr,"\t-> Seems\n");
-
-
   std::vector<persaf *> &saf =arg->saf;
   int nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
@@ -1095,9 +1095,8 @@ int main_opt(args *arg){
 	sfs[i] = (i+1)/((double)(ndim));
 
     normalize(sfs,ndim);
-    emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,gls[0]->x);
-    fprintf(stderr,"------------\n");
-    double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim);
+    
+    double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
     fprintf(stderr,"likelihood: %f\n",lik);
     fprintf(stderr,"------------\n");
 #if 1
@@ -1107,7 +1106,7 @@ int main_opt(args *arg){
     fprintf(stdout,"\n");
     fflush(stdout);
 #endif
-    destroy<T>(emp,arg->nThreads);
+    
     for(int i=0;i<gls.size();i++)
       gls[i]->x =0;
     
@@ -1191,7 +1190,7 @@ int stats(int argc,char **argv){
     normalize(sfs,ndim);
     emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,gls[0]->x);
     fprintf(stderr,"------------\n");
-    double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim);
+    double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
     fprintf(stderr,"likelihood: %f\n",lik);
     fprintf(stderr,"------------\n");
 #if 1
