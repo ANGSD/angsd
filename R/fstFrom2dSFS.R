@@ -1,31 +1,38 @@
-
-reynolds<-function(pl1,pl2,n1,n2) { ##from matteo
-    somma=sommaden=0;
-    alfa1=1-((pl1^2)+((1-pl1)^2))
-    alfa2=1-((pl2^2)+((1-pl2)^2))
-    Al = (0.5*(((pl1-pl2)^2)+(((1-pl1)-(1-pl2))^2))) - (((n1+n2)*(n1*alfa1+n2*alfa2)) / ((4*n1*n2)*(n1+n2-1)))
-    AlBl= (0.5*(((pl1-pl2)^2)+(((1-pl1)-(1-pl2))^2))) + (((4*n1*n2 - n1 - n2)*(n1*alfa1 + n2*alfa2)) / ((4*n1*n2)*(n1+n2-1)))
-    if (!is.na(Al) & !is.na(AlBl)) {
-        somma=somma+Al
-        sommaden=sommaden+AlBl
-    }
-    if (somma==0 & sommaden==0) {
-	reyn=NA
-    } else {
-	reyn=somma/sommaden
- 	if(reyn<0) reyn=0
-    }
-    reyn
-}
-
 getFst<-function(est){
     N1<-nrow(est)-1
     N2<-ncol(est)-1
+    cat("N1: ",N1 ," N2: ",N2,"\n")
     est0<-est
     est0[1,1]<-0
     est0[N1+1,N2+1]<-0
     est0<-est0/sum(est0)
     
+    aMat<<-matrix(NA,nrow=N1+1,ncol=N2+1)
+    baMat<<-matrix(NA,nrow=N1+1,ncol=N2+1)
+    for(a1 in 0:(N1))
+        for(a2 in 0:(N2)){
+            p1 <- a1/N1
+            p2 <- a2/N2
+            q1 <- 1 - p1
+            q2 <- 1 - p2
+            alpha1 <- 1 - (p1^2 + q1^2)
+            alpha2 <- 1 - (p2^2 + q2^2)
+            
+            al <-  1/2 * ( (p1-p2)^2 + (q1-q2)^2) - (N1+N2) *  (N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
+            bal <- 1/2 * ( (p1-p2)^2 + (q1-q2)^2) + (4*N1*N2-N1-N2)*(N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
+            aMat[a1+1,a2+1]<<-al
+            baMat[a1+1,a2+1]<<-bal
+            ##  print(signif(c(a1=a1,a2=a2,p1=p1,p2=p2,al1=alpha1,al2=alpha2,al),2))
+        }
+    ## unweighted average of single-locus ratio estimators
+    fstU <-   sum(est0*(aMat/baMat),na.rm=T)
+    ## weighted average of single-locus ratio estimators
+    fstW <-   sum(est0*aMat,na.rm=T)/sum(est0*baMat,na.rm=T)
+    c(fstW=fstW,fstU=fstU)
+}
+
+getCoefs <- function(N1,N2){
+    cat("N1: ",N1 ," N2: ",N2,"\n")
     aMat<-matrix(NA,nrow=N1+1,ncol=N2+1)
     baMat<-matrix(NA,nrow=N1+1,ncol=N2+1)
     for(a1 in 0:(N1))
@@ -39,73 +46,21 @@ getFst<-function(est){
             
             al <-  1/2 * ( (p1-p2)^2 + (q1-q2)^2) - (N1+N2) *  (N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
             bal <- 1/2 * ( (p1-p2)^2 + (q1-q2)^2) + (4*N1*N2-N1-N2)*(N1*alpha1 + N2*alpha2) / (4*N1*N2*(N1+N2-1))
-            if(al<0&FALSE){
-                print(al)
-                print(bal)
-                print(a1)
-                print(a2)
-                stop("something is neg ")
-            }
             aMat[a1+1,a2+1]<-al
             baMat[a1+1,a2+1]<-bal
-            ##  print(signif(c(a1=a1,a2=a2,p1=p1,p2=p2,al1=alpha1,al2=alpha2,al),2))
+           
         }
-    ## unweighted average of single-locus ratio estimators
-    fstU <-   sum(est0*(aMat/baMat),na.rm=T)
-    ## weighted average of single-locus ratio estimators
-    fstW <-   sum(est0*aMat,na.rm=T)/sum(est0*baMat,na.rm=T)
-c(fstW=fstW,fstU=fstU)
+    list(a1=aMat,b1=baMat)
 }
+
 getFst(sfs.2d)
-
-
-
-##
-##matteo
-getFst2 <- function(sfs){
-    sfs[1,1]=NA
-    sfs[nrow(sfs),ncol(sfs)]=NA
-    
-    RELATIVE=1
-    if (max(sfs, na.rm=T)<=1)
-        RELATIVE=0
-    if (RELATIVE)
-        sfs=sfs/sum(sfs,na.rm=T)
-    
-    nind1=(nrow(sfs)-1)/2
-    nind2=(ncol(sfs)-1)/2
-    
-    nind1=(nrow(sfs)-1)/2
-    nind2=(ncol(sfs)-1)/2
-    ##cat("Pop1 (rows) has",nind1,"individuals")
-    ##cat("\nPop2 (cols) has",nind2,"individuals")
-    
-    fsts=matrix(NA, ncol=ncol(sfs), nrow=nrow(sfs))
-    for (i in 1:nrow(sfs)) {
-        for (j in 1:ncol(sfs)) {
-            f1=(i-1)/(nind1*2); f2=(j-1)/(nind2*2)
-                                        #cat("\n",f1," ",f2)
-            fsts[i,j]=reynolds(f1,f2,nind1*2,nind2*2)  
-        }
-    }
-    
-                                        #cat("\nsum sfs:",sum(sfs))
-        
-    if (RELATIVE) {
-        fst=sum(sfs*fsts,na.rm=T)
-    } else {
-        fst=sum(sfs*fsts,na.rm=T)/sum(sfs)
-    }
-    
-    c(fstM=fst)
-}
 
 
 
 if(FALSE){
     if(FALSE){
         ##simulate data with msms
-       nRep <- 10
+       nRep <- 100
        nPop1 <- 24
        nPop2 <- 16
        cmd <- paste("msms -ms",nPop1+nPop2,nRep,"-t 930 -r 400 -I 2",nPop1,nPop2,"0 -g 1 9.70406 -n 1 2 -n 2 1 -ma x 0.0 0.0 x -ej 0.07142857 2 1  >msoutput.txt ",sep=" ")
@@ -128,30 +83,48 @@ if(FALSE){
         par(mfrow=c(1,2))
         barplot(table(p1.d))
         barplot(table(p2.d))
-        sfs.2d <- sapply(0:nPop1,function(x) table(factor(p2.d[p1.d==x],levels=0:nPop2)))
+        sfs.2d <- t(sapply(0:nPop1,function(x) table(factor(p2.d[p1.d==x],levels=0:nPop2))))
         sfs.2d.sub1 <- to2dSFS(p1.d[c(1:40e3)],p2.d[1:40e3],nPop1,nPop2)
         sfs.2d.sub2 <- to2dSFS(p1.d[-c(1:40e3)],p2.d[-c(1:40e3)],nPop1,nPop2)
     }
     if(FALSE){
+       ##generate ANGSD inputfiles without invariable sites and run it
+       system("../misc/msToGlf -in msoutput.txt -out raw -singleOut 1 -regLen 0 -depth 8 -err 0.005")
+       system("../misc/splitgl raw.glf.gz 20 1 12 >pop1.glf.gz")
+       system("../misc/splitgl raw.glf.gz 20 13 20 >pop2.glf.gz")
+       system("echo \"1 250000000\" >fai.fai")
+       system("../angsd -glf pop1.glf.gz -nind 12 -doSaf 1 -out pop1 -fai fai.fai -issim 1")
+       system("../angsd -glf pop2.glf.gz -nind 8 -doSaf 1 -out pop2 -fai fai.fai -issim 1")
+       system("../misc/realSFS pop1.saf.idx >pop1.saf.idx.ml")
+       system("../misc/realSFS pop2.saf.idx >pop2.saf.idx.ml")
+       system("../misc/realSFS pop1.saf.idx pop2.saf.idx -maxIter 500 -start start >pop1.pop2.saf.idx.ml")
+   }
+            
+    
+    if(FALSE){
         source("fstFrom2dSFS.R")
         ##type1
         getFst(sfs.2d)
-        ##type2
-        getFst2(sfs.2d)
-        
     }
     if(FALSE){
         norm <- function(x) x/sum(x)
         prior <- norm(sfs.2d)
-        fs <- matrix(NA,nrow=length(p1.d),ncol=2)
+        coef <- getCoefs(nrow(prior)-1,ncol(prior)-1)
+        ab <- matrix(NA,ncol=2,nrow=length(p1.d))
         for(r in 1:length(p1.d)){
             if((r %% 100 )==0 )
                 cat( "\r  ",r,"/ ", length(p1.d))
             mat <- matrix(0,ncol=nPop1+1,nrow=nPop2+1)
-            mat[p2.d[r],p1.d[r]] <- 1
-            fs[r,] <- getFst(prior*mat)
+            mat[p2.d[r]+1,p1.d[r]+1] <- 1
+        #    mat <- mat*prior
+            ab[r,] <- c(sum(mat*coef$a1),sum(mat*coef$b1))
         }
         
+    }
+    if(FALSE){
+        est <- matrix(scan("pop1.pop2.saf.idx.ml"),byrow=T,ncol=nPop2)
+
+
     }
     
     

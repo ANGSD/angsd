@@ -395,55 +395,6 @@ int index(int argc,char **argv){
 }
 #endif
 
-template <typename T>
-struct Matrix{
-  size_t x;
-  size_t y;
-  T** mat;
-};
-
-
-template <typename T>
-void destroy(Matrix<T> *ret,int x){
-  for(size_t i=0;i<x;i++)
-    delete [] ret->mat[i];
-  delete [] ret->mat;
-  delete ret;
-}
-
-template <typename T>
-void destroy(std::vector< Matrix<T> * > &gls,int x){
-  for(size_t i=0;i<gls.size();i++)
-    destroy(gls[i],x);
-}
-
-
-
-template <typename T>
-void matrix_print( Matrix<T> *gls){
-  for(size_t s=0;s<gls->x;s++){
-    for(size_t i=0;i<gls->y;i++)
-      fprintf(stderr,"\t%f",gls->mat[s][i]);
-  fprintf(stderr,"\n");
-  }
-}
-
-
-
-
-template <typename T>
-Matrix<T> *alloc(size_t x,size_t y){
-  Matrix<T> *ret = new Matrix<T>;
-  ret->x=x;
-  ret->y=y;
-  ret->mat= new T*[x];
-  for(size_t i=0;i<ret->x;i++)
-    ret->mat[i]=new T[y];
-  ret->x=0;
-  return ret;
-};
-
-
 
 template<typename T>
 struct emPars{
@@ -1127,7 +1078,7 @@ int main_opt(args *arg){
 }
 
 template <typename T>
-int stats(int argc,char **argv){
+int fst_index(int argc,char **argv){
   if(argc<1){
     fprintf(stderr,"Must supply afile.saf.idx [chrname, write more info]\n");
     return 0; 
@@ -1136,6 +1087,7 @@ int stats(int argc,char **argv){
   
 
   std::vector<persaf *> &saf =arg->saf;
+  assert(saf.size()==2);
   int nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
@@ -1156,10 +1108,24 @@ int stats(int argc,char **argv){
   int ndim= parspace(saf);
   double *sfs=new double[ndim];
   
+  if(arg->sfsfname!=NULL)
+      readSFS(arg->sfsfname,ndim,sfs);
+  else
+    for(int i=0;i<ndim;i++)
+      sfs[i] = 1.0/((double)(ndim));
+  normalize(sfs,ndim);
   
+  double *a1,*b1;
+  calcCoef(saf[0]->nChr,saf[1]->nChr,&a1,&b1);
+#if 0
+  for(int i=0;i<ndim;i++)
+    fprintf(stdout,"%f %f\n",a1[i],b1[i]);
+  exit(0);
+#endif
+
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop);//read nsites from data
-    //    fprintf(stderr,"\t\tRET:%d\n",ret);
+    
     if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
     
@@ -1177,30 +1143,10 @@ int stats(int argc,char **argv){
       }
 
     }
-  
-      
-    fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
-    
-    if(arg->sfsfname!=NULL)
-      readSFS(arg->sfsfname,ndim,sfs);
-    else
-      for(int i=0;i<ndim;i++)
-	sfs[i] = (i+1)/((double)(ndim));
+        
+    fprintf(stderr,"\t-> Will now do fst temp dump using a chunk of %lu\n",gls[0]->x);
+    block_coef(gls[0],gls[1],sfs,a1,b1);
 
-    normalize(sfs,ndim);
-    emp = setThreadPars<T>(gls,sfs,arg->nThreads,ndim,gls[0]->x);
-    fprintf(stderr,"------------\n");
-    double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
-    fprintf(stderr,"likelihood: %f\n",lik);
-    fprintf(stderr,"------------\n");
-#if 1
-    //    fprintf(stdout,"#### Estimate of the sfs ####\n");
-    for(int x=0;x<ndim;x++)
-      fprintf(stdout,"%f ",gls[0]->x*sfs[x]);
-    fprintf(stdout,"\n");
-    fflush(stdout);
-#endif
-    destroy<T>(emp,arg->nThreads);
     for(int i=0;i<gls.size();i++)
       gls[i]->x =0;
     
@@ -1295,8 +1241,8 @@ int main(int argc,char **argv){
   else if(!strcasecmp(*argv,"index"))
     index(--argc,++argv);
 #endif
-  else if(!strcasecmp(*argv,"stats"))
-    stats<float>(--argc,++argv);
+  else if(!strcasecmp(*argv,"fst_index"))
+    fst_index<float>(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
     if(!arg)

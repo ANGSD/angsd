@@ -36,7 +36,7 @@ safstat: safstat.cpp safstat.h
 
 
 realSFS: realSFS.cpp safreader keep.hpp safstat
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o -I $(HTSDIR) $(HTSLIB) -lz -lpthread
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o safstat.o -I $(HTSDIR) $(HTSLIB) -lz -lpthread
 	cp realSFS emOptim2
 
 smartCount:	smartCount.c  
