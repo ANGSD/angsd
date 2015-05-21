@@ -42,7 +42,9 @@
 #include "keep.hpp"
 
 #include "safstat.h"
- 
+
+
+double ttol = 1e-16; 
 typedef struct {
   char *chooseChr;
   int start;
@@ -56,6 +58,7 @@ typedef struct {
   int posOnly;
   char *fname;
   int onlyOnce;
+  int emAccl;
 }args;
 
 
@@ -183,6 +186,7 @@ args * getArgs(int argc,char **argv){
   p->posOnly = 0;
   p->fname = NULL;
   p->onlyOnce = 0;
+  p->emAccl =1;
   if(argc==0)
     return p;
 
@@ -198,6 +202,9 @@ args * getArgs(int argc,char **argv){
       p->posOnly = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-nSites"))
       p->nSites = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-m"))
+      p->emAccl = atoi(*(++argv));
+
     else  if(!strcasecmp(*argv,"-onlyOnce"))
       p->onlyOnce = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-r")){
@@ -527,7 +534,7 @@ void readSFS(const char*fname,int hint,double *ret){
   }
   for(size_t i=0;i<res.size();i++){
       ret[i] = res[i];
-    // fprintf(stderr,"i=%d %f\n",i,ret[i]);
+      //      fprintf(stderr,"i=%lu %f\n",i,ret[i]);
   }
   normalize(ret,res.size());
   fclose(fp);
@@ -830,6 +837,119 @@ destroy<T>(emp,nThreads);
   return oldLik;
 }
 
+
+template <typename T>
+double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls,int useSq){
+  emp = setThreadPars<T>(gls,p,nThreads,dim,gls[0]->x);
+  fprintf(stderr,"------------\n");
+  double oldLik,lik;
+  oldLik = like_master<T>(nThreads);
+  
+  fprintf(stderr,"startlik=%f\n",oldLik);fflush(stderr);
+  double p1[dim];
+  double p2[dim];
+  double q1[dim];
+  double q2[dim];
+  double pnew[dim];
+  int stepMax = 1;
+  int mstep = 4;
+  int stepMin = 1;
+  
+  int iter =0;
+
+  while(SIG_COND&&iter<maxIter){
+    emStep_master<T>(p1,nThreads);
+    iter++;
+    double sr2 =0;
+    for(int i=0;i<dim;i++){
+      q1[i] = p1[i]-p[i];
+      sr2 += q1[i]*q1[i];
+    }
+    double oldp[dim];
+    memcpy(oldp,p,sizeof(double)*dim);
+
+    memcpy(p,p1,sizeof(double)*dim);  
+    if(sqrt(sr2)<tole){
+      fprintf(stderr,"breaking sr2 at iter:%d\n",iter);
+      break;
+    }
+    emStep_master<T>(p2,nThreads);
+    iter++;
+
+
+    double sq2 =0;
+    for(int i=0;i<dim;i++){
+      q2[i] = p2[i]-p1[i];
+      sq2 += q2[i]*q2[i];
+    }
+
+    if(sqrt(sq2)<tole){
+      fprintf(stderr,"breaking sq2 at iter:%d\n",iter);
+      break;
+    }
+    double sv2=0;
+    for(int i=0;i<dim;i++)
+      sv2 += (q2[i]-q1[i])*(q2[i]-q1[i]);
+
+
+    double alpha = sqrt(sr2/sv2);
+    alpha =std::max(stepMin*1.0,std::min(1.0*stepMax,alpha));
+    
+    //the magical step
+    for(int j=0;j<dim;j++)
+      pnew[j] = oldp[j] + 2.0 * alpha * q1[j] + alpha*alpha * (q2[j] - q1[j]);
+
+#if 1 //fix for going out of bound
+    for(int j=0;j<dim;j++){
+      if(pnew[j]<ttol)
+	pnew[j]=ttol;
+      if(pnew[j]>1-ttol)
+	pnew[j]=1-ttol;
+    }
+    normalize(pnew,dim);
+#endif
+    if(fabs(alpha-1) >0.01){
+      //this is clearly to stabilize
+      double tmp[dim];
+      memcpy(p,pnew,sizeof(double)*dim);
+      emStep_master<T>(tmp,nThreads);
+      memcpy(pnew,tmp,sizeof(double)*dim);
+      iter++;
+    }
+    memcpy(p,pnew,sizeof(double)*dim);
+    
+
+    //like_master is using sfs[] to calculate like
+    lik = like_master<T>(nThreads);
+    fprintf(stderr,"lik[%d]=%f diff=%g stepMax:%d stepMin:%d\n",iter,lik,fabs(lik-oldLik),stepMax,stepMin);
+    if(std::isnan(lik)) {
+      fprintf(stderr,"\t-> Observed NaN in accelerated EM, will use last reliable value. Consider using as input for ordinary em\n");
+      fprintf(stderr,"\t-> E.g ./realSFS -start current.output -m 0 >new.output\n");//thanks morten rasmussen
+      memcpy(p,p2,sizeof(double)*dim);
+      break;
+    }
+
+    
+    if(0&&lik<oldLik)//this should at some point be investigated further //
+      fprintf(stderr,"\t-> New like is worse?\n");
+#if 1
+    if(fabs(lik-oldLik)<tole){
+      oldLik=lik;
+      break;
+    }
+    oldLik=lik;
+#endif
+    if (alpha == stepMax) 
+      stepMax = mstep * stepMax;
+    if(stepMin<0 &&alpha==stepMin)
+      stepMin = mstep*stepMin;
+    
+  }
+  destroy<T>(emp,nThreads);
+  return oldLik;
+}
+
+
 int really_kill =3;
 int VERBOSE = 1;
 void handler(int s) {
@@ -1005,7 +1125,7 @@ int main_opt(args *arg){
   float bytes_req_megs = fsizes<T>(saf,nSites)/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-  fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is atleast: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+  fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is at least: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
 
   std::vector<Matrix<T> *> gls;
   for(int i=0;i<saf.size();i++)
@@ -1046,8 +1166,13 @@ int main_opt(args *arg){
 	sfs[i] = (i+1)/((double)(ndim));
 
     normalize(sfs,ndim);
+
     
-    double lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
+    double lik;
+    if(arg->emAccl==0)
+      lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
+    else
+      lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl);
     fprintf(stderr,"likelihood: %f\n",lik);
     fprintf(stderr,"------------\n");
 #if 1
@@ -1217,7 +1342,7 @@ int main(int argc,char **argv){
     fprintf(stderr,"\n\t->------------------\n\t-> NB: Output is now counts of sites instead of log probs!!\n");
     fprintf(stderr,"\t-> NB: You can print data with ./realSFS print afile.saf.idx !!\n");
     fprintf(stderr,"\t-> NB: Higher order SFS's can be estimated by simply supplying multiple .saf.idx files!!\n");
-    
+    fprintf(stderr,"\t-> NB: Program uses accelerated EM, to use standard EM supply -m 0 \n");
     return 0;
   }
   ++argv;
