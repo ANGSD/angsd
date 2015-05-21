@@ -134,9 +134,9 @@ void abcGL::getOptions(argStruct *arguments){
     exit(0);
   }
   if(doGlf==2){
-    fprintf(stderr,"BEAGLE format 3.0 is deprecated\n please use -doVCF 1\n");
-    for(int j=3;j>=0;j--){
-      fprintf(stderr,"Program will continue in %d seconds    \n",j);fflush(stderr);
+    fprintf(stderr,"\t-> BEAGLE format 3.0 is deprecated\n\t-> Consider using -doVCF 1\n");
+    for(int j=3;j>0;j--){
+      fprintf(stderr,"\t-> Program will continue in %d seconds    \n",j);fflush(stderr);
       sleep(1);
     }
 
