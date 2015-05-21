@@ -21,7 +21,7 @@ ODIR=tajima/output/
 echo "Generating genotype likelihood based on the haplotypes" >>${LOG} 2>&1
 ${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleOut 1 >>${LOG} 2>&1
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/norm -doSaf 1 -nInd 20 -fai hg19.fa.fai  2>>${LOG}
-${WDIR}/misc/realSFS ${ODIR}/norm.saf.idx -P 24 -nSites 1000000 >${ODIR}/norm.saf.em.ml 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/norm.saf.idx -P 24 -nSites 1000000 -m 0 >${ODIR}/norm.saf.em.ml 2>>${LOG}
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/norm -nInd 20 -doThetas 1 -doSaf 1 -pest ${ODIR}/norm.saf.em.ml -fai hg19.fa.fai  2>>${LOG}
 ${WDIR}/misc/thetaStat make_bed ${ODIR}/norm.thetas.gz  2>>${LOG}
 ${WDIR}/misc/thetaStat do_stat ${ODIR}/norm.thetas.gz -nChr 40  2>>${LOG}
@@ -29,7 +29,7 @@ ${WDIR}/misc/thetaStat do_stat ${ODIR}/norm.thetas.gz -nChr 40  2>>${LOG}
 echo "2) Will do folded analysis" >>${LOG} 2>&1
 
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/fold -doSaf 1 -nInd 20 -fold 1 -fai hg19.fa.fai  2>>${LOG}
-${WDIR}/misc/realSFS ${ODIR}/fold.saf.idx -P 24 -nSites 1000000 >${ODIR}/fold.saf.em.ml 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/fold.saf.idx -P 24 -nSites 1000000 -m 0 >${ODIR}/fold.saf.em.ml 2>>${LOG}
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/fold -nInd 20 -doThetas 1 -doSaf 1 -pest ${ODIR}/fold.saf.em.ml -fold 1  -fai hg19.fa.fai 2>>${LOG}
 ${WDIR}/misc/thetaStat make_bed ${ODIR}/fold.thetas.gz  2>>${LOG}
 ${WDIR}/misc/thetaStat do_stat ${ODIR}/fold.thetas.gz -nChr 40  2>>${LOG}
