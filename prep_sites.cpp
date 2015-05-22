@@ -330,6 +330,7 @@ void filt_gen(const char *fname,int posi_off) {
     fprintf(stderr,"nRead:%d\n",nRead);
     for(int i=0;i<nRead;i++)
       fprintf(stderr,"c[%d] -> %s\n",i,parsed[i]);
+    exit(0);
 #endif
     
     //check that we have the same number of columsn acroos all lines
@@ -377,7 +378,7 @@ void filt_gen(const char *fname,int posi_off) {
     //fprintf(stderr,"keep->l:%lu val:%d\n",keep->l,keep->d[posS]);
     if(nCols==3){
       size_t posE=atol(parsed[2]);
-      posE += posE;
+      //posE += posE;
       if(posS>posE){
 	fprintf(stderr,"Problem parsing bedfile, end position looks before start position: %lu vs %lu\n",posS,posE);
 	exit(0);
