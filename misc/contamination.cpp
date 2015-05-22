@@ -186,8 +186,8 @@ double myfun(double x,void *d){
 }
 
 double jackMom(allPars *ap,int len){
-  if(len==-1)
-    len=ap->len;
+  if(len!=-1)
+    len=std::min(ap->len,len);
   int *seqDepth=ap->seqDepth;
   int *nonMajor=ap->nonMajor;
   double *freq =ap->freq;
@@ -225,8 +225,8 @@ void *slave(void *ptr){
 
 
 double jackML(allPars *ap,int nthreads,char *fname,int nJack) {
-  if(nJack==-1)
-    nJack = ap->len;
+  if(nJack!=-1)
+    nJack = std::min(ap->len,nJack);
   double *thetas =new double[nJack];
   double *val = new double[nJack];
   if(nthreads>1){
