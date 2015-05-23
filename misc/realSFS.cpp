@@ -830,7 +830,7 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
 
     fprintf(stderr,"[%d] lik=%f diff=%e sr:%e\n",it,lik,fabs(lik-oldLik),sr2);
 
-    if(fabs(lik-oldLik)<tole||sqrt(sr2)<tole){
+    if(fabs(lik-oldLik)<tole||0&&sqrt(sr2)<tole){//should update simfiles...
       oldLik=lik;
       break;
     }
