@@ -109,7 +109,7 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
 
   getOptions(arguments);
   printArg(arguments->argumentFile);
-  if(doGeno<=0){
+  if(doGeno==0){
     shouldRun[index] =0;
     return;
   }
@@ -117,13 +117,15 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
 
   //make output files
   const char* postfix=GENO;
-  outfileZ = aio::openFileGz(outfiles,postfix,GZOPT);
+  if(doGeno>0)
+    outfileZ = aio::openFileGz(outfiles,postfix,GZOPT);
   
 }
 
 
 abcCallGenotypes::~abcCallGenotypes(){
-  if(outfileZ!=Z_NULL)     gzclose(outfileZ);
+  if(outfileZ!=Z_NULL)     
+    gzclose(outfileZ);
 }
 
 
