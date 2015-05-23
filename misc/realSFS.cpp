@@ -819,15 +819,18 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
   
   for(int it=0;SIG_COND&&it<maxIter;it++) {
     emStep_master<T>(tmp,nThreads);
-    
-    for(int i=0;i<dim;i++)
+    double sr2 = 0;
+    for(int i=0;i<dim;i++){
+      sr2 += (sfs[i]-tmp[i])*(sfs[i]-tmp[i]);
       sfs[i]= tmp[i];
+      
+    }
 
     lik = like_master<T>(nThreads);
 
-    fprintf(stderr,"[%d] lik=%f diff=%g\n",it,lik,fabs(lik-oldLik));
+    fprintf(stderr,"[%d] lik=%f diff=%e sr:%e\n",it,lik,fabs(lik-oldLik),sr2);
 
-    if(fabs(lik-oldLik)<tole){
+    if(fabs(lik-oldLik)<tole||sqrt(sr2)<tole){
       oldLik=lik;
       break;
     }
@@ -870,7 +873,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
 
     memcpy(p,p1,sizeof(double)*dim);  
     if(sqrt(sr2)<tole){
-      fprintf(stderr,"breaking sr2 at iter:%d\n",iter);
+      fprintf(stderr,"\t-> Breaking EM(sr2) at iter:%d, sqrt(sr2):%e\n",iter,sqrt(sr2));
       break;
     }
     emStep_master<T>(p2,nThreads);
@@ -884,7 +887,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     }
 
     if(sqrt(sq2)<tole){
-      fprintf(stderr,"breaking sq2 at iter:%d\n",iter);
+      fprintf(stderr,"\t-> Breaking EM(sq2) at iter:%d, sqrt(sq2):%e\n",iter,sqrt(sq2));
       break;
     }
     double sv2=0;
@@ -921,7 +924,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
 
     //like_master is using sfs[] to calculate like
     lik = like_master<T>(nThreads);
-    fprintf(stderr,"lik[%d]=%f diff=%g stepMax:%d stepMin:%d\n",iter,lik,fabs(lik-oldLik),stepMax,stepMin);
+    fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e\n",iter,lik,fabs(lik-oldLik),alpha,sr2);
     if(std::isnan(lik)) {
       fprintf(stderr,"\t-> Observed NaN in accelerated EM, will use last reliable value. Consider using as input for ordinary em\n");
       fprintf(stderr,"\t-> E.g ./realSFS -start current.output -m 0 >new.output\n");//thanks morten rasmussen
