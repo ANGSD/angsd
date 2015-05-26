@@ -10,9 +10,12 @@
 #include <cstdio>
 #include "bambi_interface.h"
 
+#include "phys_genolike_calc.h"
+
 extern int refToInt[256];
 double **phys_probs = NULL;
 
+phys_genolike_calc *like_calc;
 
 /*
   allocate the prob matrix with
@@ -48,6 +51,8 @@ int offsetss[4][10]={
 
 void phys_init(){
   phys_probs = genLikes_phys(256);
+  like_calc = new phys_genolike_calc();
+  //  like_calc->set_debug( true );
 }
 
 void phys_destroy(){
@@ -55,41 +60,32 @@ void phys_destroy(){
     delete [] phys_probs[i];
   delete [] phys_probs;
   phys_probs=NULL;
+
+  delete like_calc;
 }
 
 void call_phys(chunkyT *chk,double **lk,int trim){
-  fprintf(stderr,"[%s]\n",__FUNCTION__ );
+
+  like_calc->update_chunkyT( chk );
+
   for(int s=0;s<chk->nSites;s++){
     for(int i=0;i<chk->nSamples;i++){
+
       //allocate for all samples, for first sample
       if(i==0){
-	lk[s] = new double[10*chk->nSamples];
-	for(int ii=0;ii<10*chk->nSamples;ii++)
-	  lk[s][ii] = -0.0;//set default values
+        lk[s] = new double[10*chk->nSamples];
+        for(int ii=0;ii<10*chk->nSamples;ii++)
+          lk[s][ii] = -0.0;//set default values
       }
-      
-      tNode *nd = chk->nd[s][i];
-      
-      //calc like persample
-      double *likes1 = lk[s]+10*i;
-      for(int j=0;nd&&j<nd->l;j++){
-	int allele = refToInt[nd->seq[j]];
-	int qs = nd->qs[j];
-	//filter qscore, mapQ,trimming, and always skip n/N
-	if(nd->posi[j]<trim||nd->isop[j]<trim||allele==4){
-	  continue;
-	}
 
-	likes1[offsetss[allele][0]] += phys_probs[0][qs]; //'homo'zygotic hit
-	for(int o=1;o<4;o++){//'heterozygotic' hit{
-	  likes1[offsetss[allele][o]] += phys_probs[1][qs];
-	}
-	for(int o=4;o<10;o++){//non hit
-	  likes1[offsetss[allele][o]] += phys_probs[2][qs];
-	}
-	
-      }
-     
+      // Get pointer to current 'sample' genotypes
+      double *likes1 = lk[s]+10*i;
+
+      // Fill geno_probs array with the 10 values found for site s and smaple i
+      like_calc->get_genolikes( s, i, likes1 );
+
+      
     }
   }
+
 }
