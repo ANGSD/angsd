@@ -251,7 +251,7 @@ char *trealloc(char *ptr,size_t i,size_t j){
 typedef std::map<char *,int,ltstr> mmap;
 
 //return zero if fine.
-int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *minor,BGZF *BFP,FILE *fp){
+int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *minor,BGZF *BFP,FILE *fp,int doCompl){
   assert(last!=NULL);
   if((major!=NULL) ^ (minor!=NULL)){
     fprintf(stderr,"major and minor should be the same\n");
@@ -275,6 +275,13 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
   fwrite(last,clen,sizeof(char),fp);
   
   fwrite(&retVal,1,sizeof(int64_t),fp);
+  for(int i=0;doCompl&&i<keep->l;i++)
+    if(keep->d[i]==0)
+      keep->d[i]=1;
+    else
+      keep->d[i]=0;
+  
+
   fwrite(&keep->l,sizeof(size_t),1,fp);//write len of chr
   fwrite(&hasMajMin,1,sizeof(int),fp);
   bgzf_write(BFP,keep->d,keep->l);//write keep
@@ -285,7 +292,7 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
   return 0;
 }
 
-void filt_gen(const char *fname,int posi_off) {
+void filt_gen(const char *fname,int posi_off,int doCompl) {
   fprintf(stderr,"\t-> Filterfile: %s supplied will generate binary representations... \n",fname);
 
   gzFile gz = Z_NULL;
@@ -350,7 +357,7 @@ void filt_gen(const char *fname,int posi_off) {
     //dump
     if(last!=NULL && strcmp(last,parsed[0])){
       //situation:= we have a change of chr, so we DUMP the data
-      if(writeDat(last,mm,keep,major,minor,cfpD,fp)){
+      if(writeDat(last,mm,keep,major,minor,cfpD,fp,doCompl)){
 	SIG_COND=0;
 	goto cleanup;
       }
@@ -402,7 +409,7 @@ void filt_gen(const char *fname,int posi_off) {
   }
   //now after parsing all files
   if(last!=NULL){
-    if(writeDat(last,mm,keep,major,minor,cfpD,fp)){
+    if(writeDat(last,mm,keep,major,minor,cfpD,fp,doCompl)){
 	SIG_COND=0;
 	goto cleanup;
     }
@@ -448,21 +455,25 @@ void filt_init(int argc,char**argv){
 
   char *fname = *argv;
   int posi_offs = 0;
-  
-  if(argc==2 && strcmp(argv[1],"+1")==0)
-    posi_offs=-1;
-  else if(argc==2 && strcmp(argv[1],"-1")==0)
-    posi_offs=+1;
-  else if(argc==2){
-    fprintf(stderr,"problem interpreting arg: \'%s\'\n",argv[1]);
-    exit(0);
+  int doCompl =0;
+  argv++;argc--;
+  while(*argv){
+    if(strcmp(*argv,"-o")==0)
+      posi_offs =  atoi(*(++argv));
+    else if(strcmp(*argv,"-compl")==0){
+      doCompl =  atoi(*(++argv));
+    }else{
+      fprintf(stderr,"\t-> Problem parsing option: \'%s\' will exit. -o -compl is allowed\n",*argv);
+      exit(0);
+    }
+    ++argv;
   }
-  fprintf(stderr,"indexing %s and will add \'%d\' to pos column\n",fname,posi_offs);
+  fprintf(stderr,"\t-> Indexing %s and will add \'%d\' to pos column\n",fname,posi_offs);
 
   char *bin_name=append(fname,BIN);
   char *idx_name=append(fname,IDX);
   //  if(!aio::fexists(bin_name)||!aio::fexists(idx_name))
-  filt_gen(fname,posi_offs);		//
+  filt_gen(fname,posi_offs,doCompl);		//
   fprintf(stderr,"\t-> Generated files:\t\n\t\t'%s\'\n\t\t'%s\'\n",bin_name,idx_name);
   delete [] bin_name;
   delete [] idx_name;
@@ -474,7 +485,7 @@ int main_sites(int argc,char **argv){
     fprintf(stderr,"argv[%d]:%s\n",i,argv[i]);
 #endif
   if(argc==1){
-    fprintf(stderr,"\tsites print filename\t\tPrint index file\n\tsites index filename [+1][-1]\tgenerate binary index file\n");
+    fprintf(stderr,"\tsites print filename\t\tPrint index file\n\tsites index filename [-r offset -compl doCompl]\tgenerate binary index file\n");
     return 0;
   }
   --argc;++argv;
