@@ -15,7 +15,7 @@
 extern int refToInt[256];
 double **phys_probs = NULL;
 
-phys_genolike_calc *like_calc;
+extern phys_genolike_calc *like_calc;
 
 /*
   allocate the prob matrix with
