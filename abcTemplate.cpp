@@ -425,12 +425,12 @@ void abcTemplate::print(funkyPars *pars){
       //loop over samples
       for(int i=0;i<pars->nInd;i++){
 	//all seqdata associated with single bamfile is in a tNode
-	tNode nd = chk->nd[s][i];
+	tNode *nd = chk->nd[s][i];
 	//loop over the individual bases
-	for(int l=0;l<nd.l;l++){
-	  char c = nd.seq[l]; //this is the base
-	  char q = nd.qs[l]; //this is the associated qscore, fancy shit
-	  int strand = isupper(nd.seq[l])==0; //strand is defined as either small/big letters
+	for(int l=0;l<nd->l;l++){
+	  char c = nd->seq[l]; //this is the base
+	  char q = nd->qs[l]; //this is the associated qscore, fancy shit
+	  int strand = isupper(nd->seq[l])==0; //strand is defined as either small/big letters
 	  
 	  //there is a lookuptable called refToInt which maps
 	  //a->0,A->0,c->1,C->1,g->2,G->2,t->3,T=>3,n->4,N->5
@@ -469,24 +469,24 @@ void abcTemplate::run(funkyPars *pars){
     
     for(int s=0;s<pars->numSites;s++){
       for(int i=0;i<pars->nInd;i++){
-	tNode nd = chk->nd[s][i];
+	tNode *nd = chk->nd[s][i];
 
 	// Reference base:
 	int refB = -1;
-	if (pars->ref == 0) fprintf(outfile,"  Warning: Ref not defined! %x \n", pars->ref);
+	if (pars->ref == 0) fprintf(outfile,"  Warning: Ref not defined! %s \n", pars->ref);
 	else refB = refToInt[pars->ref[s]];
 	
 	
 	// Basic counting for distributions:
 	// ---------------------------------
 	// Depth:
-	int Depth = min(DepthMax, max(0, nd.l));
+	int Depth = min(DepthMax, max(0, nd->l));
 	DepthDist[Depth] += 1;
 
 	// Loop over the individual bases to count these:
 	int Nbases[5] = {0, 0, 0, 0, 0};
-	for (int l=0; l<nd.l; l++) {
-	  char c = nd.seq[l];          // This is the base (a char)
+	for (int l=0; l<nd->l; l++) {
+	  char c = nd->seq[l];          // This is the base (a char)
 	  int base = refToInt[c];      // This is the base (an int)
 	  if (base > -1 && base < 5) Nbases[base]++;
 	}
@@ -501,9 +501,9 @@ void abcTemplate::run(funkyPars *pars){
 	bool UsePosCorr = false;
 
 	// Decide that base is correct, if 30 < depth < 45 and 90% are of one type:
-	if (nd.l >= 30 && nd.l <= 45) {
+	if (nd->l >= 30 && nd->l <= 45) {
 	  for (int i=0; i<4; i++) {
-	    if (float(Nbases[i]) > 0.9*float(nd.l))
+	    if (float(Nbases[i]) > 0.9*float(nd->l))
 	      correct_base = i;   // This could be done smarter (i.e. taking specific bases into account!!!)
 	  }
 	  
@@ -527,13 +527,13 @@ void abcTemplate::run(funkyPars *pars){
 	    }
 	  }
 
-	  if (major > -1 && float(Nmajor) > 0.9*float(nd.l)) {
+	  if (major > -1 && float(Nmajor) > 0.9*float(nd->l)) {
 	    correct_genotype = b2gt_homo[major];
 	    GenotypeFreq[correct_genotype]++;
-	  } else if (major > -1 && minor > -1 && float(Nmajor+Nminor) > 0.9*float(nd.l) && Nminor > 6) {
+	  } else if (major > -1 && minor > -1 && float(Nmajor+Nminor) > 0.9*float(nd->l) && Nminor > 6) {
 	    correct_genotype = b2gt_hetero[major][minor];
 	    GenotypeFreq[correct_genotype]++;
-	    HeteroZygDist[nd.l][Nmajor]++;
+	    HeteroZygDist[nd->l][Nmajor]++;
 	  } else {
 	    GenotypeFreq[10]++;
 	  }
@@ -550,23 +550,23 @@ void abcTemplate::run(funkyPars *pars){
 	// Loop over the individual bases:
 	// ------------------------------------------------------------------------- //
 	int UpperStrands = 0;	// Count number of upper strands.
-	like_calc->update_tNode(&nd);
+	like_calc->update_tNode(nd);
 	
-	for (int l=0; l<nd.l; l++) {
-	  char c = nd.seq[l];          // This is the base (a char)
+	for (int l=0; l<nd->l; l++) {
+	  char c = nd->seq[l];          // This is the base (a char)
 	  int base = refToInt[c];      // This is the base (an int)
-	  int qscore = nd.qs[l];       // This is the associated qscore (NOTE: Implicit type casting!!!)
-	  int strand = (isupper(nd.seq[l]) == 0) ? 0 : 1;   // Strand is defined as either small/big letters
-	  int mscore = nd.mapQ[l];              // Map score - to be understood in the same way as a Phred score (Yana: cut at 33)
-	  int posi_here = nd.posi[l];           // NOTE: Implicit type casting!!!
-	  int isop_here = nd.isop[l];           // NOTE: Implicit type casting!!!
+	  int qscore = nd->qs[l];       // This is the associated qscore (NOTE: Implicit type casting!!!)
+	  int strand = (isupper(nd->seq[l]) == 0) ? 0 : 1;   // Strand is defined as either small/big letters
+	  int mscore = nd->mapQ[l];              // Map score - to be understood in the same way as a Phred score (Yana: cut at 33)
+	  int posi_here = nd->posi[l];           // NOTE: Implicit type casting!!!
+	  int isop_here = nd->isop[l];           // NOTE: Implicit type casting!!!
 	  
 	  if (qscore < 1) continue;
 	  if (base < 0 || base > 3) continue;
 	  
 	  // Read Length:
-	  int ReadLength = min(ReadLengthMax, max(0, nd.posi[l]+nd.isop[l]) + 1);
-	  if (nd.posi[l] == 0) {
+	  int ReadLength = min(ReadLengthMax, max(0, nd->posi[l]+nd->isop[l]) + 1);
+	  if (nd->posi[l] == 0) {
 	    Lread[ReadLength]++;
 	  }
 
