@@ -243,7 +243,8 @@ abcTemplate::abcTemplate(const char *outfiles,argStruct *arguments,int inputtype
 
 //destructor
 abcTemplate::~abcTemplate(){
-
+  if(doTemplate==0)
+    return;
   fprintf(outfile,"\n\nRead length distribution:\n");
   for (int i=0; i<ReadLengthMax; i++) {
     fprintf(outfile,"\t%d \t%d \n", i, Lread[i]);
