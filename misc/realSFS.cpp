@@ -1235,12 +1235,12 @@ int fst_index(int argc,char **argv){
 
   int ndim= parspace(saf);
   double *sfs=new double[ndim];
-  
+  //  assert(arg->sfsfname!=NULL);  
   if(arg->sfsfname!=NULL)
       readSFS(arg->sfsfname,ndim,sfs);
   else
     for(int i=0;i<ndim;i++)
-      sfs[i] = 1.0/((double)(ndim));
+      sfs[i] = (i+1)/((double)(ndim));
   normalize(sfs,ndim);
   
   double *a1,*b1;

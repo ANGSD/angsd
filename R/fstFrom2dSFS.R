@@ -89,7 +89,7 @@ if(FALSE){
     }
     if(FALSE){
        ##generate ANGSD inputfiles without invariable sites and run it
-       system("../misc/msToGlf -in msoutput.txt -out raw -singleOut 1 -regLen 0 -depth 4 -err 0.003")
+       system("../misc/msToGlf -in msoutput.txt -out raw -singleOut 1 -regLen 0 -depth 8 -err 0.005")
        system("../misc/splitgl raw.glf.gz 20 1 12 >pop1.glf.gz")
        system("../misc/splitgl raw.glf.gz 20 13 20 >pop2.glf.gz")
        system("echo \"1 250000000\" >fai.fai")
@@ -97,7 +97,7 @@ if(FALSE){
        system("../angsd -glf pop2.glf.gz -nind 8 -doSaf 1 -out pop2 -fai fai.fai -issim 1")
        system("../misc/realSFS pop1.saf.idx >pop1.saf.idx.ml")
        system("../misc/realSFS pop2.saf.idx >pop2.saf.idx.ml")
-       system("../misc/realSFS pop1.saf.idx pop2.saf.idx -maxIter 500 -p 20 -start start >pop1.pop2.saf.idx.ml")
+       system("../misc/realSFS pop1.saf.idx pop2.saf.idx -maxIter 500 -p 20  >pop1.pop2.saf.idx.ml")
    }
             
     

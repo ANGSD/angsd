@@ -4,7 +4,7 @@
 
 #include "safstat.h"
 void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat){
-  fprintf(stderr,"[%s] sfs1:%d sfs2:%d dimspace:%d \n",__FUNCTION__,sfs1,sfs2,(sfs1+1)*(sfs2+1));
+  fprintf(stderr,"\t-> [%s] sfs1:%d sfs2:%d dimspace:%d \n",__FUNCTION__,sfs1,sfs2,(sfs1+1)*(sfs2+1));
   *aMat = new double[(sfs1+1)*(sfs2+1)];
   *bMat = new double[(sfs1+1)*(sfs2+1)];
   int at=0;
@@ -27,6 +27,7 @@ void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat){
 }
 
 void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1){
+  double tre[3]={0,0,0};//a/b,sum(a),sum(0)
   for(int s=0;s<gl1->x;s++){
     int inc =0 ;
     double tmp[(gl1->y+1)*(gl2->y+1)];
@@ -43,7 +44,10 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
       as += a1[i]*tmp[i];
       bs += b1[i]*tmp[i];
     }
+    tre[0] += as/bs;
+    tre[1] += as;
+    tre[2] += bs;
     fprintf(stdout,"%f %f\n",as,bs);
   }
-
+  fprintf(stderr,"u:%f w:%f\n",tre[0]/(1.0*gl1->x),tre[1]/tre[2]);
 }
