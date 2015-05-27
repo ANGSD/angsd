@@ -31,7 +31,7 @@ splitgl: splitgl.c
 safreader: safreader.cpp safreader.h
 	$(CXX) $(FLAGS) -c safreader.cpp -lz -lpthread -I $(HTSDIR)
 
-safstat: safstat.cpp safstat.h realSFS.h
+safstat: safstat.cpp safstat.h 
 	$(CXX) $(FLAGS) -c safstat.cpp -lz -lpthread -I $(HTSDIR)
 
 realSFS_args: realSFS_args.cpp realSFS_args.h
