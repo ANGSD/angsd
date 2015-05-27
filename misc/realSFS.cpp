@@ -33,50 +33,29 @@
 #include <htslib/bgzf.h>
 #include <htslib/tbx.h>
 
+#include "Matrix.hpp"
+
+#include "safstat.h"
+
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
-
+#include "realSFS_args.h"
+#include "realSFS.h"
 #include "safreader.h"
 #include "keep.hpp"
+int SIG_COND =1;
+int howOften =5e6;//how often should we print out (just to make sure something is happening)
 
-#include "safstat.h"
 
+#include "multisafreader.hpp"
 
 double ttol = 1e-16; 
-typedef struct {
-  char *chooseChr;
-  int start;
-  int stop;
-  int nSites;
-  int maxIter;
-  double tole;
-  int nThreads;
-  char *sfsfname;
-  std::vector<persaf *> saf;
-  int posOnly;
-  char *fname;
-  int onlyOnce;
-  int emAccl;
-}args;
-
-
-int SIG_COND =1;
 pthread_t *thd=NULL;
-int howOften =5e6;//how often should we print out (just to make sure something is happening)
-void destroy_safvec(std::vector<persaf *> &saf){
-  //fprintf(stderr,"destroy &saf\n");
-  for(int i=0;i<saf.size();i++)
-    persaf_destroy(saf[i]);
-}
 
 
-void destroy_args(args *p){
-  //  fprintf(stderr,"destroy args\n");
-  destroy_safvec(p->saf);
-  delete p;
-}
+
 
 //just approximate
 template <typename T>
@@ -110,121 +89,6 @@ size_t nsites(std::vector<persaf *> &pp,args *ar){
 }
 
 
-char * get_region(char *extra,int &start,int &stop) {
-  if(!extra){
-    fprintf(stderr,"Must supply parameter for -r option\n");
-    return NULL;
-  }
-  if(strrchr(extra,':')==NULL){//only chromosomename
-    char *ref = extra;
-    start = stop = -1;;
-    return ref;
-  }
-  char *tok=NULL;
-  tok = strtok(extra,":");
-
-  char *ref = tok;
-
-  start =stop=-1;
-
-  tok = extra+strlen(tok)+1;//tok now contains the rest of the string
- 
-  if(strlen(tok)==0)//not start and/or stop ex: chr21:
-    return ref;
-  
-
-  if(tok[0]=='-'){//only contains stop ex: chr21:-stop
-    tok =strtok(tok,"-");
-    stop = atoi(tok);
-  }else{
-    //catch single point
-    int isProper =0;
-    for(size_t i=0;i<strlen(tok);i++)
-      if(tok[i]=='-'){
-	isProper=1;
-	 break;
-      }
-    //fprintf(stderr,"isProper=%d\n",isProper);
-    if(isProper){
-      tok =strtok(tok,"-");
-      start = atoi(tok)-1;//this is important for the zero offset
-      tok = strtok(NULL,"-");
-      if(tok!=NULL)
-	stop = atoi(tok);
-    }else{
-      //single point
-      stop = atoi(tok);
-      start =stop -1;
-      
-    }
-    
-  }
-  if(stop!=-1&&stop<start){
-    fprintf(stderr,"endpoint:%d is larger than startpoint:%d\n",start,stop);
-    exit(0);
-    
-  }
-  if(0){
-    fprintf(stderr,"[%s] ref=%s,start=%d,stop=%d\n",__FUNCTION__,ref,start,stop);
-    exit(0);
-  }
-  return ref;
-}
-
-
-
-
-args * getArgs(int argc,char **argv){
-  args *p = new args;
-
-  p->sfsfname=p->chooseChr=NULL;
-  p->start=p->stop=-1;
-  p->maxIter=1e2;
-  p->tole=1e-6;
-  p->nThreads=4;
-  p->nSites =0;
-  p->posOnly = 0;
-  p->fname = NULL;
-  p->onlyOnce = 0;
-  p->emAccl =1;
-  if(argc==0)
-    return p;
-
-  while(*argv){
-    //    fprintf(stderr,"%s\n",*argv);
-    if(!strcasecmp(*argv,"-tole"))
-      p->tole = atof(*(++argv));
-    else  if(!strcasecmp(*argv,"-P"))
-      p->nThreads = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-maxIter"))
-      p->maxIter = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-posOnly"))
-      p->posOnly = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-nSites"))
-      p->nSites = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-m"))
-      p->emAccl = atoi(*(++argv));
-
-    else  if(!strcasecmp(*argv,"-onlyOnce"))
-      p->onlyOnce = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-r")){
-      p->chooseChr = get_region(*(++argv),p->start,p->stop);
-      if(!p->chooseChr)
-	return NULL;
-    }
-    else  if(!strcasecmp(*argv,"-start")){
-      p->sfsfname = *(++argv);
-    }else{
-      p->saf.push_back(persaf_init<float>(*argv));
-      p->fname = *argv;
-      //   fprintf(stderr,"toKeep:%p\n",p->saf[p->saf.size()-1]->toKeep);
-    }
-    argv++;
-  }
-
-  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname,p->chooseChr,p->start,p->stop,p->fname);
-  return p;
-}
 
 int printOld(int argc,char **argv){
 
@@ -336,73 +200,6 @@ void print(int argc,char **argv){
   destroy_args(pars);
 }
 
-
-#if 0
-int index(int argc,char **argv){
-  fprintf(stderr,"tabix not implemented yet\n");
-  if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx \n");
-    return -1; 
-  }
-  
-  args *pars = getArgs(argc,argv);
-  
-  if(pars->saf.size()!=1){
-    fprintf(stderr,"Print only implemeted for single safs\n");
-    exit(0);
-  }
-
-  //  writesaf_header(stderr,pars->saf[0]);
-
-  BGZF *fp=pars->saf[0]->saf;
-  if ( !fp->is_compressed ) {
-    bgzf_close(fp);
-    fprintf(stderr,"not compressed\n") ;
-    return -1; 
-  }
-
-  tbx_t *tbx = (tbx_t*)calloc(1, sizeof(tbx_t));
-  int min_shift = 14;
-  int n_lvls = 5;
-  int fmt = HTS_FMT_TBI;
-
-
-  float *flt = new float[pars->saf[0]->nChr+1];
-  for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
-    int *ppos = new int [it->second.nSites];
-    bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
-    bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
-
-    int ret;
-    fprintf(stderr,"in print2 first:%lu last:%lu\n",pars->saf[0]->toKeep->first,pars->saf[0]->toKeep->last);
-    int pos;
-    while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1),&pos))){
-   
-      //      fprintf(stderr,"[%s] pars->saf[0]->at:%d nSites: %lu ret:%d\n",__FUNCTION__,pars->saf[0]->at,it->second.nSites,ret);
-      fprintf(stdout,"%s\t%d",it->first,ppos[pars->saf[0]->at]+1);
-      for(int is=0;is<pars->saf[0]->nChr+1;is++)
-	fprintf(stdout,"\t%f",flt[is]);
-      fprintf(stdout,"\n");
-    }
-    delete [] ppos;
-    //fprintf(stderr,"[%s] after while:%d\n",__FUNCTION__,ret);
-    if(pars->chooseChr!=NULL)
-      break;
-  }
-  
-  delete [] flt;
-  destroy_args(pars);
-
-  const char *suffix = ".tbi";
-  char *idx_fname =(char*) calloc(strlen(pars->fname) + 5, 1);
-  strcat(strcpy(idx_fname, pars->fname), suffix);
-  fprintf(stderr,"idx_fname:%s\n",idx_fname);
-
-
-}
-#endif
-
-
 template<typename T>
 struct emPars{
   int threadId;
@@ -446,50 +243,6 @@ size_t getTotalSystemMemory(){
     return pages * page_size;
 }
 #endif
-
-template<typename T>
-void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
-
-  // ret->x=nSites;
-  ret->y=dim;
-  size_t i;
-  for(i=ret->x;SIG_COND&&i<nSites;i++){
-    if(i>0 &&(i% howOften)==0  )
-      fprintf(stderr,"\r\t-> Has read 5mio sites now at: %lu      ",i);
-    //
-    int pos;
-    int bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim,&pos);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
-    if(bytes_read!=0 && bytes_read<sizeof(T)*dim){
-      fprintf(stderr,"Problem reading chunk from file, please check nChr is correct, will exit \n");
-      exit(0);
-    }
-    if(bytes_read==0){
-      //fprintf(stderr,"[%s] bytes_read==0 at i:%lu\n",__FUNCTION__,i);
-      break;
-    }
-    for(size_t j=0;j<dim;j++)
-      ret->mat[i][j] = exp(ret->mat[i][j]);
-  }
-  //fprintf(stderr,"[%s] i:%lu\n",__FUNCTION__,i);
-  ret->x=i;
-  if(SIG_COND==0)
-    exit(0);
-  //  matrix_print<T>(ret);
-  //  exit(0);
-  fprintf(stderr,"\r");
-}
-
-//returns the number of sites read
-template<typename T>
-int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *> &ret){
-  int pre=ret[0]->x;
-  for(int i=0;i<adolf.size();i++){
-    readGL(adolf[i],nSites,adolf[i]->nChr+1,ret[i]);
-    //    fprintf(stderr,"adolf:%d\t%lu\n",i,ret[i]->x);
-  }
-  
-  return ret[0]->x-pre;
-}
 
 
 size_t fsize(const char* fname){
@@ -927,7 +680,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e\n",iter,lik,fabs(lik-oldLik),alpha,sr2);
     if(std::isnan(lik)) {
       fprintf(stderr,"\t-> Observed NaN in accelerated EM, will use last reliable value. Consider using as input for ordinary em\n");
-      fprintf(stderr,"\t-> E.g ./realSFS -start current.output -m 0 >new.output\n");//thanks morten rasmussen
+      fprintf(stderr,"\t-> E.g ./realSFS -sfs current.output -m 0 >new.output\n");//thanks morten rasmussen
       memcpy(p,p2,sizeof(double)*dim);
       break;
     }
@@ -980,138 +733,149 @@ size_t parspace(std::vector<persaf *> &saf){
   return ndim;
 }
 
-//unthreaded
-//this will populate the keep vector by
-// 1) set the chooseChr and populate toKeep
-// 2) find over lap between different positions
-// this is run once for each chromsome
-int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop){
-  //  fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
-
-  if(saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
-    //fprintf(stderr,"herer\n");
-    return 0 ;
-  }
-  /*
-    What happens here? very good question
-
-   */
-  static int firstTime =1;
-  static myMap::iterator it_outer=saf[0]->mm.begin();
-  if(chooseChr==NULL){
-    if(it_outer==saf[0]->mm.end())//if we are done
-      return -2;
-    else if(firstTime==0){
-      it_outer++;
-      if(it_outer==saf[0]->mm.end()){
-	//	fprintf(stderr,"done reading will exit \n");
-	return -3;
-      }
-    }else
-      firstTime =0;
-    chooseChr = it_outer->first;
-    fprintf(stderr,"\t-> Is in multi sfs, will now read data from chr:%s\n",chooseChr);
-  }
-  
-  fprintf(stderr,"\t-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect \n");
-  fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop\n");
-  assert(chooseChr!=NULL);
-
- //hit will contain the depth for the different populations
-  keep<char> *hit =NULL;
-  //  assert(saf.size()>1);
-
-  if(saf.size()>1)
-    hit =keep_alloc<char>();//
-  
-  
-  //this loop will populate a 'hit' array containing the effective (differnt pops) depth
-  //if we only have one population, then just return after iter_init
-  for(int i=0;i<saf.size();i++){
-    myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
-    assert(it!=saf[i]->mm.end());  
-    if(saf.size()==1)
-      return 0;
-    
-    bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
-    saf[i]->ppos = new int[it->second.nSites];
-    bgzf_read(saf[i]->pos,saf[i]->ppos,it->second.nSites*sizeof(int));
-    if(saf[i]->ppos[it->second.nSites-1] > hit->m)
-      realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
-    assert(hit->m>0);
-    //    fprintf(stderr,"keep[%d].first:%lu last:%lu\n",i,saf[i]->toKeep->first,saf[i]->toKeep->last);
-    for(int j=saf[i]->toKeep->first;j<saf[i]->toKeep->last;j++)
-      if(saf[i]->toKeep->d[j])
-	hit->d[saf[i]->ppos[j]]++;
-  }
-#if 0
-  keep_info(hit,stderr,0,saf.size());
-  for(int i=0;0&i<hit->m;i++)
-    if(hit->d[i]==saf.size())
-      fprintf(stdout,"%d\n",i);
-  exit(0);
-#endif
-  //hit now contains the genomic position (that is the index).
-  
-  //let us now modify the the persaf toKeep char vector
-  int tsk[saf.size()];
-  for(int i=0;i<saf.size();i++){
-    tsk[i] =0;
-    for(int j=0;j<saf[i]->toKeep->last;j++)
-      if(hit->d[saf[i]->ppos[j]]!=saf.size())
-	saf[i]->toKeep->d[j] =0;
-      else
-	tsk[i]++;
-    fprintf(stderr,"\t-> Sites to keep from pop%d:\t%d\n",i,tsk[i]);
-    if(i>0)
-      assert(tsk[i]==tsk[i-1]);
-#if 0
-    keep_info(saf[i]->toKeep,stderr,0,1);
-    //print out overlapping posiitons for all pops
-    
-    for(int j=0;j<saf[i]->toKeep->last;j++){
-      if(hit->d[saf[i]->ppos[j]]==saf.size())
-	fprintf(stdout,"saf%d\t%d\n",i,j);
-    }
-#endif
-  }
-  //  exit(0);
-  keep_destroy(hit);
-}
 /*
   return value 
   -3 indicates that we are doing multi sfs and that we are totally and should flush
 
  */
 
+BGZF *openFileBG(const char* a,const char* b){
 
-
-template <typename T>
-int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop){
-
-  static int lastread=0;
-  //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
-  if(lastread==0 ){
-    //    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
-    int ret = set_intersect_pos(saf,chooseChr,start,stop); 
-    //fprintf(stderr,"ret:%d\n",ret);
-    if(ret==-3)
-      return -3;
-  }
-  lastread=readGLS(saf,nSites,gls);
-  if(lastread==0)
-    fprintf(stderr,"\t-> Only read nSites: %lu will therefore prepare next chromosome (or exit)\n",gls[0]->x);
-  //fprintf(stderr,"readdata lastread:%d\n\n",lastread);
-  // exit(0);
-  if(chooseChr!=NULL&&lastread==0){
-    //fprintf(stderr,"return -2\n");
-    return -2;
-  }
-  else if(chooseChr==NULL &&lastread==0 )
-    return -2;
-  else
-    return 1;
+  char *c = new char[strlen(a)+strlen(b)+1];
+  strcpy(c,a);
+  strncat(c,b,strlen(b));
+  BGZF *fp = bgzf_open(c,"wb");
+  delete [] c;
+  return fp;
 }
+FILE *openFile(const char* a,const char* b){
+  if(0)
+    fprintf(stderr,"[%s] %s %s",__FUNCTION__,a,b);
+  char *c = new char[strlen(a)+strlen(b)+1];
+  strcpy(c,a);
+  strncat(c,b,strlen(b));
+  FILE *fp = fopen(c,"w");
+  delete [] c;
+  return fp;
+}
+
+
+int fst_index(int argc,char **argv){
+  if(argc<1){
+    fprintf(stderr,"Must supply afile.saf.idx [chrname, write more info]\n");
+    return 0; 
+  }
+  args *arg = getArgs(argc,argv);
+  if(!arg->fstout){
+    fprintf(stderr,"\t-> Must supply -fstout for doing fstindex\n");
+    return 0;
+  }
+
+  std::vector<persaf *> &saf =arg->saf;
+  assert(saf.size()==2);
+  int nSites = arg->nSites;
+  if(nSites == 0){//if no -nSites is specified
+    nSites=nsites(saf,arg);
+  }
+  
+  fprintf(stderr,"\t-> nSites: %d\n",nSites);
+
+  std::vector<Matrix<float> *> gls;
+  for(int i=0;i<saf.size();i++)
+    gls.push_back(alloc<float>(nSites,saf[i]->nChr+1));
+
+  int ndim= parspace(saf);
+  double *sfs=new double[ndim];
+  //  assert(arg->sfsfname!=NULL);  
+  if(arg->sfsfname.size()!=0)
+      readSFS(arg->sfsfname[0],ndim,sfs);
+  else
+    for(int i=0;i<ndim;i++)
+      sfs[i] = (i+1)/((double)(ndim));
+  normalize(sfs,ndim);
+  
+  double **a1,**b1;
+  if(saf.size()==2){
+    a1=new double*[choose(saf.size(),2)];
+    b1=new double*[choose(saf.size(),2)];
+    int inc=0;
+    for(int i=0;i<saf.size();i++)
+      for(int j=i+1;j<saf.size();j++){
+	calcCoef(saf[0]->nChr,saf[1]->nChr,&a1[inc],&b1[inc]);
+	inc++;
+      }
+  }
+  BGZF *fstbg = openFileBG(arg->fstout,".fst.gz");
+  FILE *fstfp = openFile(arg->fstout,".fst.idx");
+  char buf[8]="safv3";
+  bgzf_write(fstbg,buf,8);    
+  fwrite(fstfp,1,8,fstfp);
+#if 0
+  for(int i=0;i<ndim;i++)
+    fprintf(stdout,"%f %f\n",a1[i],b1[i]);
+  exit(0);
+#endif
+  std::vector<double> *ares = new std::vector<double> [choose(saf.size(),2)];
+  std::vector<double> *bres = new std::vector<double> [choose(saf.size(),2)];
+  std::vector<int> posi;
+  for(myMap::iterator it = saf[0]->mm.begin();it!=saf[0]->mm.end();++it){
+    for(int i=0;i<choose(saf.size(),2);i++){
+      ares[i].clear();
+      bres[i].clear();
+    }
+    posi.clear();
+    while(1) {
+      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop);//read nsites from data
+      
+      if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
+	break;
+      
+      if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+	//fprintf(stderr,"continue continue\n");
+	continue;
+      }
+      
+      fprintf(stderr,"\t-> Will now do fst temp dump using a chunk of %lu\n",gls[0]->x);
+      int inc=0;
+      for(int i=0;i<saf.size();i++)
+	for(int j=i+1;j<saf.size();j++){
+	  fprintf(stderr,"i:%d j:%d inc:%d\n",i,j,inc);
+	  block_coef(gls[i],gls[j],sfs,a1[inc],b1[inc],ares[inc],bres[inc]);
+	  inc++;
+	}
+      for(int i=0;i<gls.size();i++)
+	gls[i]->x =0;
+    }
+    fprintf(stderr,"nsites:%lu\n",ares[0].size());
+    size_t clen = strlen(it->first);
+    fwrite(&clen,sizeof(size_t),1,fstfp);
+    fwrite(it->first,1,clen,fstfp);
+    size_t nit=posi.size();
+    fwrite(&nit,1,sizeof(size_t),fstfp);
+    int64_t tell = bgzf_tell(fstbg);
+    bgzf_write(fstbg,&posi[0],posi.size()*sizeof(int));
+    int inc =0;
+    for(int i=0;i<saf.size();i++)
+      for(int j=i+1;j<saf.size();j++){
+	bgzf_write(fstbg,&(ares[inc][0]),ares[inc].size()*sizeof(double));
+	bgzf_write(fstbg,&(bres[inc][0]),bres[inc].size()*sizeof(double));
+	inc++;
+      }
+  }
+
+  destroy(gls,nSites);
+  destroy_args(arg);
+  delete [] sfs;
+#if 0
+  fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
+  fprintf(stderr,"\t-> Output is now simply the expected values! \n");
+  fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
+#endif
+  bgzf_close(fstbg);
+  fclose(fstfp);
+  return 0;
+}
+
 
 
 template <typename T>
@@ -1162,8 +926,8 @@ int main_opt(args *arg){
       
     fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
     
-    if(arg->sfsfname!=NULL)
-      readSFS(arg->sfsfname,ndim,sfs);
+    if(arg->sfsfname.size()!=0)
+      readSFS(arg->sfsfname[0],ndim,sfs);
     else
       for(int i=0;i<ndim;i++)
 	sfs[i] = (i+1)/((double)(ndim));
@@ -1205,94 +969,22 @@ int main_opt(args *arg){
   return 0;
 }
 
-template <typename T>
-int fst_index(int argc,char **argv){
-  if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx [chrname, write more info]\n");
-    return 0; 
+int fst(int argc,char**argv){
+  if(argc==0){
+    fprintf(stderr,"\t-> Possible options: index print\n");
+    return 0;
   }
-  args *arg = getArgs(argc,argv);
-  
-
-  std::vector<persaf *> &saf =arg->saf;
-  assert(saf.size()==2);
-  int nSites = arg->nSites;
-  if(nSites == 0){//if no -nSites is specified
-    nSites=nsites(saf,arg);
-  }
-  if(fsizes<T>(saf,nSites)>getTotalSystemMemory())
-    fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
-    
-  fprintf(stderr,"\t-> nSites: %d\n",nSites);
-  float bytes_req_megs = fsizes<T>(saf,nSites)/1024/1024;
-  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
-  //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-  fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is atleast: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
-
-  std::vector<Matrix<T> *> gls;
-  for(int i=0;i<saf.size();i++)
-    gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
-
-  int ndim= parspace(saf);
-  double *sfs=new double[ndim];
-  //  assert(arg->sfsfname!=NULL);  
-  if(arg->sfsfname!=NULL)
-      readSFS(arg->sfsfname,ndim,sfs);
-  else
-    for(int i=0;i<ndim;i++)
-      sfs[i] = (i+1)/((double)(ndim));
-  normalize(sfs,ndim);
-  
-  double *a1,*b1;
-  calcCoef(saf[0]->nChr,saf[1]->nChr,&a1,&b1);
-#if 0
-  for(int i=0;i<ndim;i++)
-    fprintf(stdout,"%f %f\n",a1[i],b1[i]);
-  exit(0);
-#endif
-
-  while(1) {
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop);//read nsites from data
-    
-    if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
-      break;
-    
-    if(saf.size()==1){
-      if(ret!=-2){
-	if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
-	  //	  fprintf(stderr,"continue continue\n");
-	  continue;
-	}
-      }
-    }else{
-      if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
-	//fprintf(stderr,"continue continue\n");
-	continue;
-      }
-
-    }
-        
-    fprintf(stderr,"\t-> Will now do fst temp dump using a chunk of %lu\n",gls[0]->x);
-    block_coef(gls[0],gls[1],sfs,a1,b1);
-
-    for(int i=0;i<gls.size();i++)
-      gls[i]->x =0;
-    
-    if(ret==-2&&arg->chooseChr!=NULL)
-      break;
-    if(arg->onlyOnce)
-      break;
+  if(!strcasecmp(*argv,"index"))  
+    fst_index(--argc,++argv);
+  else  if(!strcasecmp(*argv,"print"))  
+    fst_print(--argc,++argv);
+  else{
+    fprintf(stderr,"unknown option: \'%s\'\n",*argv);
+    return 0;
   }
 
-  destroy(gls,nSites);
-  destroy_args(arg);
-  delete [] sfs;
-  
-  fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
-  fprintf(stderr,"\t-> Output is now simply the expected values! \n");
-  fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
-  return 0;
 }
+
 
 int main(int argc,char **argv){
 #if 0
@@ -1323,7 +1015,7 @@ int main(int argc,char **argv){
   sa.sa_handler = handler;
   sigaction(SIGPIPE, &sa, 0);
   sigaction(SIGINT, &sa, 0);  
-\
+
   if(argc==1){
     //    fprintf(stderr, "\t->------------------\n\t-> ./realSFS\n\t->------------------\n");
     // fprintf(stderr,"\t-> This is the new realSFS program which works on the newer binary files from ANGSD!!\n");
@@ -1365,12 +1057,8 @@ int main(int argc,char **argv){
     printOld(--argc,++argv);
   else if(!strcasecmp(*argv,"print"))
     print(--argc,++argv);
-#if 0
-  else if(!strcasecmp(*argv,"index"))
-    index(--argc,++argv);
-#endif
-  else if(!strcasecmp(*argv,"fst_index"))
-    fst_index<float>(--argc,++argv);
+  else if(!strcasecmp(*argv,"fst"))
+    fst(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
     if(!arg)

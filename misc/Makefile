@@ -31,12 +31,15 @@ splitgl: splitgl.c
 safreader: safreader.cpp safreader.h
 	$(CXX) $(FLAGS) -c safreader.cpp -lz -lpthread -I $(HTSDIR)
 
-safstat: safstat.cpp safstat.h
+safstat: safstat.cpp safstat.h realSFS.h
 	$(CXX) $(FLAGS) -c safstat.cpp -lz -lpthread -I $(HTSDIR)
 
+realSFS_args: realSFS_args.cpp realSFS_args.h
+	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTSDIR)
 
-realSFS: realSFS.cpp safreader keep.hpp safstat
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o safstat.o -I $(HTSDIR) $(HTSLIB) -lz -lpthread
+
+realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o -I $(HTSDIR) $(HTSLIB) -lz -lpthread
 	cp realSFS emOptim2
 
 smartCount:	smartCount.c  
