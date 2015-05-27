@@ -4,6 +4,7 @@
 \usepackage{framed}
 \usepackage{enumitem}
 \usepackage{longtable}
+\usepackage[draft]{fixme}
 \usepackage[pdfborder={0 0 0},hyperfootnotes=false]{hyperref}
 
 \addtolength{\textwidth}{3.4cm}
@@ -48,5 +49,34 @@ Second iteration of the saf files now contains two raw files and an index file. 
 \end{table}
 First 8 bytes in all three files is 8byte magic numer \emph{char[8]
   ``safv3''}. The next size\_t value is the number of categories of the sample allelefrequency.
-
+\section{fst formats}
+\fixme{This is still under development}
+first iteration of the fst files contains two files. 1) PREFIX.fst.idx 2) PREFIX.fst.gz.
+\begin{itemize}
+\item[PREFIX.fst.idx] flat file, described in table \ref{tab2}
+\item[PREFIX.fst.gz] bgzf compressed binary file.
+\end{itemize}
+\begin{table}
+\begin{tabular}{rllll}
+  \hline
+  {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
+  \hline
+  1 & {\sf CLEN} & size\_t &  Length of CHR (not including terminating null)\\
+  2 & {\sf CHR} & char* & Reference sequence name. Length is CLEN\\
+  3 & {\sf NSITES} & size\_t & Number of sites with coverage from reference CHR\\
+  4 & {\sf OFF1} & long int & CHR offset into the PREFIX.saf.pos.gz \\
+  \hline
+\end{tabular}\label{tab2}
+\end{table}
+\begin{table}
+\begin{tabular}{rllll}
+  \hline
+  {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
+  \hline
+  1 & {\sf POSI} & int &  Length of CHR (not including terminating null)\\
+  2 & {\sf acoef1} & char* & Reference sequence name. Length is CLEN\\
+  3 & {\sf bcoef2} & size\_t & Number of sites with coverage from reference CHR\\
+  \hline
+\end{tabular}\label{tab3}
+\end{table}
 \end{document}
