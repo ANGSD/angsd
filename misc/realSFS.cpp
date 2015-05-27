@@ -42,7 +42,6 @@
 #include <sys/sysctl.h>
 #endif
 #include "realSFS_args.h"
-#include "realSFS.h"
 #include "safreader.h"
 #include "keep.hpp"
 int SIG_COND =1;
