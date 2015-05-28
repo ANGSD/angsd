@@ -469,7 +469,8 @@ void filt_init(int argc,char**argv){
     ++argv;
   }
   fprintf(stderr,"\t-> Indexing %s and will add \'%d\' to pos column\n",fname,posi_offs);
-
+  if(doCompl)
+    fprintf(stderr,"\t-> Your are using -compl , consider adding a dummy last position\n");
   char *bin_name=append(fname,BIN);
   char *idx_name=append(fname,IDX);
   //  if(!aio::fexists(bin_name)||!aio::fexists(idx_name))
