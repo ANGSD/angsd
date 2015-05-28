@@ -30,7 +30,6 @@ RVAL=0
 if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing -sites"
 ./testFilterSites.sh $WDIR/angsd $BAMDIR
-echo "error is: $?"
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with -sites exit code: $?"
     cat ./testFilterSites.sh.log
