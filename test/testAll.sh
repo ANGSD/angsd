@@ -27,6 +27,20 @@ WDIR=`dirname $PRG`
 
 RVAL=0
 
+if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing -sites"
+./testFilterSites.sh $WDIR/angsd $BAMDIR
+echo "error is: $?"
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -sites exit code: $?"
+    cat ./testFilterSites.sh.log
+    RVAL=1
+fi
+fi
+
+
+
+
 echo "Testing neutrality test statistics"
 ./testTaj.sh $WDIR
 if [ ! $? -eq 0 ] ;then
@@ -50,15 +64,6 @@ echo "Testing basic mpileup"
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with basic pileup exit code: $?"
     cat ./testBam.sh.log
-    RVAL=1
-fi
-fi
-if [[ ! -z "$BAMDIR" ]]; then
-echo "Testing -sites"
-./testFilterSites.sh $WDIR/angsd $BAMDIR
-if [ ! $? -eq 0  ]   ;then
-    echo "Problem with -sites exit code: $?"
-    cat ./testFilterSites.sh.log
     RVAL=1
 fi
 fi
