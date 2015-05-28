@@ -133,6 +133,7 @@ void abcCounts::getOptions(argStruct *arguments){
 }
 //constructor
 abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
+  globCount = NULL;
   const char *delim = "\t\n ";
   ffileFname=qfileFname=NULL;
   for(int i=0;i<255;i++)
@@ -364,6 +365,9 @@ abcCounts::~abcCounts(){
   free(oFiles);
   free(bpos.s);
   free(bbin.s);
+
+  if(globCount)
+    delete [] globCount;
 }
 
 void countQs(const chunkyT *chk,size_t *ret,int *keepSites){
@@ -488,6 +492,7 @@ void abcCounts::clean(funkyPars *pars){
       delete [] pars->counts[i];
     delete [] pars->counts;
   }
+
 }
 
 
