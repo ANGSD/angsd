@@ -1,8 +1,24 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
+#include <htslib/bgzf.h>
 
+#include <cstring>
 #include "safstat.h"
+#include "realSFS_args.h"
+//#include "realSFS.h"
+//lazy binomial
+int choose(int n,int m){
+  if(n==2&&m==2)
+    return 1;
+  else if(n==3&&m==2)
+    return 3;
+  else{
+    fprintf(stderr,"\t-> Never here\n");
+  }
+}
+
+
 void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat){
   fprintf(stderr,"\t-> [%s] sfs1:%d sfs2:%d dimspace:%d \n",__FUNCTION__,sfs1,sfs2,(sfs1+1)*(sfs2+1));
   *aMat = new double[(sfs1+1)*(sfs2+1)];
@@ -26,7 +42,7 @@ void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat){
     }
 }
 
-void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1){
+void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres){
   double tre[3]={0,0,0};//a/b,sum(a),sum(0)
   for(int s=0;s<gl1->x;s++){
     int inc =0 ;
@@ -38,7 +54,7 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
     
     double as=0;
     double bs=0;
-    void normalize(double *tmp,int len);
+    void normalize(double *,int);
     normalize(tmp,inc);
     for(int i=0;i<inc;i++){
       as += a1[i]*tmp[i];
@@ -47,7 +63,16 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
     tre[0] += as/bs;
     tre[1] += as;
     tre[2] += bs;
-    fprintf(stdout,"%f %f\n",as,bs);
+    ares.push_back(as);
+    bres.push_back(bs);
+      
+    //    fprintf(stdout,"%f %f\n",as,bs);
   }
+  fprintf(stderr,"bres.size:%lu\n",bres.size());
   fprintf(stderr,"u:%f w:%f\n",tre[0]/(1.0*gl1->x),tre[1]/tre[2]);
+}
+
+
+int fst_print(int argc,char **argv){
+  return 0;
 }

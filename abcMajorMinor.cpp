@@ -130,7 +130,7 @@ abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int input
   }
 
   getOptions(arguments);
-  if(doMajorMinor==0 || doMajorMinor ==3 )
+  if(doMajorMinor==0)
     shouldRun[index] =0;
 
   printArg(arguments->argumentFile);
@@ -347,41 +347,41 @@ void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *min
 
 
 void abcMajorMinor::run(funkyPars *pars){
-  if(doMajorMinor==0 || doMajorMinor ==3 )
+  if(doMajorMinor==0)
     return;
   if(doMajorMinor==1 && pars->likes==NULL){
     fprintf(stderr,"[%s.%s():%d] Problem here:\n",__FILE__,__FUNCTION__,__LINE__);
     exit(0);
   }
 
-  
+  if(doMajorMinor!=3){
   //allocate and initialize
-  pars->major = new char [pars->numSites];
-  pars->minor = new char [pars->numSites];
-  memset(pars->major,4,pars->numSites);
-  memset(pars->minor,4,pars->numSites);
-  
-  if(doMajorMinor!=2)
-    majorMinorGL(pars,doMajorMinor);
-  else if(doMajorMinor==2)
-    majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
-  else
-    fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
-
-  if(doSaf!=0&&pest!=NULL&&skipTriallelic==1){
-    //fix case of triallelic site in pest output when doing pest
-    for(int s=0;s<pars->numSites;s++){
-      if(pars->keepSites[s]==0)
-	continue;
-      int a=refToInt[pars->anc[s]];
-      int b=refToInt[pars->major[s]];
-      int c=refToInt[pars->minor[s]];
-      if(a!=b&&a!=c)
-	pars->keepSites[s]=0;
+    pars->major = new char [pars->numSites];
+    pars->minor = new char [pars->numSites];
+    memset(pars->major,4,pars->numSites);
+    memset(pars->minor,4,pars->numSites);
+    
+    if(doMajorMinor!=2)
+      majorMinorGL(pars,doMajorMinor);
+    else if(doMajorMinor==2)
+      majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
+    else
+      fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
+    
+    if(doSaf!=0&&pest!=NULL&&skipTriallelic==1){
+      //fix case of triallelic site in pest output when doing pest
+      for(int s=0;s<pars->numSites;s++){
+	if(pars->keepSites[s]==0)
+	  continue;
+	int a=refToInt[pars->anc[s]];
+	int b=refToInt[pars->major[s]];
+	int c=refToInt[pars->minor[s]];
+	if(a!=b&&a!=c)
+	  pars->keepSites[s]=0;
+      }
+      
     }
-
   }
-
   //if user has requested reference/ancestral then it is done in majorMinorGL and majorMinorCounts 0.585
   /*
   if(doMajorMinor==4||doMajorMinor==5)

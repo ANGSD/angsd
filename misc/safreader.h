@@ -4,7 +4,6 @@
 #include <cassert>
 #include <map>
 #include <htslib/bgzf.h>
-
 #include "keep.hpp"
 
 struct ltstr
