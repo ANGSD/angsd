@@ -53,7 +53,7 @@ int howOften =5e6;//how often should we print out (just to make sure something i
 double ttol = 1e-16; 
 pthread_t *thd=NULL;
 
-
+int **posiG  = NULL;
 
 
 //just approximate
@@ -806,7 +806,7 @@ int fst_index(int argc,char **argv){
   }
   BGZF *fstbg = openFileBG(arg->fstout,".fst.gz");
   FILE *fstfp = openFile(arg->fstout,".fst.idx");
-  char buf[8]="safv3";
+  char buf[8]="fstv1";
   bgzf_write(fstbg,buf,8);    
   fwrite(fstfp,1,8,fstfp);
 #if 0
@@ -823,9 +823,11 @@ int fst_index(int argc,char **argv){
       bres[i].clear();
     }
     posi.clear();
+    int *viggo;
     while(1) {
-      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop);//read nsites from data
-      
+      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,viggo);//read nsites from data
+      for(int i=0;i<gls[0]->x;i++)
+	posi.push_back(viggo[i]);
       if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
 	break;
       
@@ -900,9 +902,14 @@ int main_opt(args *arg){
   int ndim= parspace(saf);
   double *sfs=new double[ndim];
   
-  
+  //temp used for checking pos are in sync
+#if 1
+  posiG = new int*[saf.size()];
+  for(int i=0;i<saf.size();i++)
+      posiG[i] = new int[nSites];
+#endif
   while(1) {
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop);//read nsites from data
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL);//read nsites from data
     //    fprintf(stderr,"\t\tRET:%d\n",ret);
     if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
@@ -957,7 +964,9 @@ int main_opt(args *arg){
     if(arg->onlyOnce)
       break;
   }
-
+  for(int i=0;i<saf.size();i++)
+    delete [] posiG[i];
+  delete [] posiG;
   destroy(gls,nSites);
   destroy_args(arg);
   delete [] sfs;
@@ -1060,6 +1069,8 @@ int main(int argc,char **argv){
     fst(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
+    if(arg->saf.size()>1)
+      fprintf(stderr,"\t-> Multi SFS is 'still' under development. Please report strange behaviour\n");
     if(!arg)
       return 0;
     main_opt<float>(arg);

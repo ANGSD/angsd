@@ -114,7 +114,8 @@ args * getArgs(int argc,char **argv){
     }
     argv++;
   }
-
+  for(int i=0;(p->saf.size()>1)&&(i<p->saf.size());i++)
+    p->saf[i]->kind =2;
   fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname);
   return p;
 }
