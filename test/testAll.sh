@@ -34,7 +34,6 @@ if [ ! $? -eq 0  ]   ;then
     echo "Problem with -sites exit code: $?"
     cat ./testFilterSites.sh.log
     RVAL=1
-    gunzip -c sites/run6.mafs.gz
 fi
 fi
 

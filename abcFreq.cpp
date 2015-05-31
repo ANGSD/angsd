@@ -337,7 +337,10 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
 
 
 abcFreq::~abcFreq(){
-  if(outfileZ!=Z_NULL)     gzclose(outfileZ);
+  if(outfileZ!=Z_NULL){
+    fprintf(stderr,"Z_NULL\n");
+    gzclose(outfileZ);
+  }
   if(outfileZ2!=Z_NULL)    gzclose(outfileZ2);
   free(refName);
   free(ancName);
