@@ -1,16 +1,21 @@
 
-template<typename T>
-void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
 
+
+template<typename T>
+void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret,int *pp){
   // ret->x=nSites;
   ret->y=dim;
   size_t i;
   for(i=ret->x;SIG_COND&&i<nSites;i++){
     if(i>0 &&(i% howOften)==0  )
-      fprintf(stderr,"\r\t-> Has read 5mio sites now at: %lu      ",i);
+      fprintf(stderr,"\r\t-> Has read %fmio sites now at: %lu      ",howOften/1e6,i);
     //
     int pos;
     int bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim,&pos);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
+    if(pp!=NULL)//setpos
+      pp[i] =pos;//
+    //    fprintf(stderr,"ppinner[%lu]:%d\n",i,pos);
+    //exit(0);
     if(bytes_read!=0 && bytes_read<sizeof(T)*dim){
       fprintf(stderr,"Problem reading chunk from file, please check nChr is correct, will exit \n");
       exit(0);
@@ -28,20 +33,22 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret){
     exit(0);
   //  matrix_print<T>(ret);
   //  exit(0);
-  fprintf(stderr,"\r");
+  //  fprintf(stderr," pp[0]:%d\n",pp[0]);
+  
 }
+
 
 
 
 //returns the number of sites read
 template<typename T>
-int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *> &ret){
+int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *> &ret,int **posi){
   int pre=ret[0]->x;
   for(int i=0;i<adolf.size();i++){
-    readGL(adolf[i],nSites,adolf[i]->nChr+1,ret[i]);
-    //    fprintf(stderr,"adolf:%d\t%lu\n",i,ret[i]->x);
+    readGL(adolf[i],nSites,adolf[i]->nChr+1,ret[i],posi!=NULL?posi[i]:NULL);
+    //fprintf(stderr,"adolf:%d\t%lu posi:%d tak:%d\n",i,ret[i]->x,posi[i][0],tak);
   }
-  
+     
   return ret[0]->x-pre;
 }
 
@@ -51,7 +58,7 @@ int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *>
 // 2) find over lap between different positions
 // this is run once for each chromsome
 int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop){
-  //  fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
+  //fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
 
   if(saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
     //fprintf(stderr,"herer\n");
@@ -92,28 +99,40 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   
   //this loop will populate a 'hit' array containing the effective (differnt pops) depth
   //if we only have one population, then just return after iter_init
+  int killbreak =0;
   for(int i=0;i<saf.size();i++){
     myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
-    assert(it!=saf[i]->mm.end());  
+    //    fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
+    //    assert(it!=saf[i]->mm.end());  
+    if(it==saf[i]->mm.end()){
+      killbreak =1;
+      break;
+    }
     if(saf.size()==1)
       return 0;
     
-    bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
-    saf[i]->ppos = new int[it->second.nSites];
-    bgzf_read(saf[i]->pos,saf[i]->ppos,it->second.nSites*sizeof(int));
+    //bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
+    //  saf[i]->ppos = new int[it->second.nSites];
+    //bgzf_read(saf[i]->pos,saf[i]->ppos,it->second.nSites*sizeof(int));
     if(saf[i]->ppos[it->second.nSites-1] > hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
     //    fprintf(stderr,"keep[%d].first:%lu last:%lu\n",i,saf[i]->toKeep->first,saf[i]->toKeep->last);
-    for(int j=saf[i]->toKeep->first;j<saf[i]->toKeep->last;j++)
+    for(int j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++)
       if(saf[i]->toKeep->d[j])
 	hit->d[saf[i]->ppos[j]]++;
+    //fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
   }
+  for(int i=0;0&i<saf.size();i++)     
+    fprintf(stderr,"saf->ppos:%p\n",saf[i]->ppos);//    exit(0);
+  for(int i=0;killbreak&&i<saf.size();i++)
+    saf[i]->dontRead =1;
+
 #if 0
-  keep_info(hit,stderr,0,saf.size());
-  for(int i=0;0&i<hit->m;i++)
+  //  keep_info(hit,stderr,0,saf.size());
+  for(int i=0;1&i<hit->m;i++)
     if(hit->d[i]==saf.size())
-      fprintf(stdout,"%d\n",i);
+      fprintf(stdout,"%d\n",i+1);
   exit(0);
 #endif
   //hit now contains the genomic position (that is the index).
@@ -122,12 +141,12 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   int tsk[saf.size()];
   for(int i=0;i<saf.size();i++){
     tsk[i] =0;
-    for(int j=0;j<saf[i]->toKeep->last;j++)
+    for(int j=0;j<=saf[i]->toKeep->last;j++)
       if(hit->d[saf[i]->ppos[j]]!=saf.size())
 	saf[i]->toKeep->d[j] =0;
       else
 	tsk[i]++;
-    fprintf(stderr,"\t-> Sites to keep from pop%d:\t%d\n",i,tsk[i]);
+    fprintf(stderr,"\t-> Sites to keep[%s] from pop%d:\t%d\n",chooseChr,i,tsk[i]);
     if(i>0)
       assert(tsk[i]==tsk[i-1]);
 #if 0
@@ -142,25 +161,51 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   }
   //  exit(0);
   keep_destroy(hit);
+
 }
 
-template <typename T>
-int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop){
 
+
+template <typename T>
+int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop, int *pp){
   static int lastread=0;
+  extern int ** posiG;
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
   if(lastread==0 ){
     //    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
     int ret = set_intersect_pos(saf,chooseChr,start,stop); 
-    //fprintf(stderr,"ret:%d\n",ret);
+
+    //    fprintf(stderr,"ret:%d\n",ret);
     if(ret==-3)
       return -3;
   }
-  lastread=readGLS(saf,nSites,gls);
+
+  lastread=readGLS(saf,nSites,gls,posiG);
+  if(lastread>0&&saf.size()>1)
+    fprintf(stderr,"\t-> [%s] lastread:%d posi:%d\n",__FUNCTION__,lastread,posiG[0][0]);
+#if 1 //<- below con be removed when we believe all is working
+  if(saf.size()>1&&lastread!=0)
+    for(int i=1;i<saf.size();i++){
+      fprintf(stderr,"\t-> Comparing positions: %d with 0 has:%lu\n",i,gls[0]->x);
+      if(memcmp(posiG[0],posiG[i],gls[0]->x*sizeof(int))!=0){
+	fprintf(stderr,"SAF file is out of sync contact developer\n");
+	for(int s=0;s<gls[0]->x;s++){
+	  //	  fprintf(stderr,"s:%d\n",s);
+	  if(posiG[0][s]!=posiG[i][s]){
+	    fprintf(stderr,"Mismatch at s:%d which is i=0 vs i=%d with pos1:%d pos2:%d\n",s,i,posiG[0][s],posiG[i][s]);
+	    exit(0);
+	  }
+	}
+      }
+    }
+  //  fprintf(stderr,"Done checking\n");
+#endif
   if(lastread==0)
     fprintf(stderr,"\t-> Only read nSites: %lu will therefore prepare next chromosome (or exit)\n",gls[0]->x);
   //fprintf(stderr,"readdata lastread:%d\n\n",lastread);
   // exit(0);
+  if(pp!=NULL)
+    pp =posiG[0];
   if(chooseChr!=NULL&&lastread==0){
     //fprintf(stderr,"return -2\n");
     return -2;

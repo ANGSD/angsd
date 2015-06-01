@@ -33,6 +33,8 @@ typedef struct{
   int at;
   int *ppos;
   int kind;//0 = only llh; 1 = only pos ; 2 = both
+  char *fname;
+  int dontRead;
 }persaf;
 
 size_t iter_read(persaf *saf, void *data, size_t length,int *pos);

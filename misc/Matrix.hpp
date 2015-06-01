@@ -31,11 +31,11 @@ void matrix_print( Matrix<T> *gls){
 template <typename T>
 Matrix<T> *alloc(size_t x,size_t y){
   Matrix<T> *ret = new Matrix<T>;
-  ret->x=x;
+  ret->x=x;//+1;
   ret->y=y;
-  ret->mat= new T*[x];
+  ret->mat= new T*[ret->x];
   for(size_t i=0;i<ret->x;i++)
-    ret->mat[i]=new T[y];
+    ret->mat[i]=new T[ret->y];
   ret->x=0;
   return ret;
 };

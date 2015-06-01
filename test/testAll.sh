@@ -27,6 +27,19 @@ WDIR=`dirname $PRG`
 
 RVAL=0
 
+if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing -sites"
+./testFilterSites.sh $WDIR/angsd $BAMDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -sites exit code: $?"
+    cat ./testFilterSites.sh.log
+    RVAL=1
+fi
+fi
+
+
+
+
 echo "Testing neutrality test statistics"
 ./testTaj.sh $WDIR
 if [ ! $? -eq 0 ] ;then
@@ -53,6 +66,9 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 fi
+
+
+
 exit ${RVAL}
 
 if false; then
