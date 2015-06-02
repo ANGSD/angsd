@@ -89,9 +89,8 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop\n");
   assert(chooseChr!=NULL);
 
- //hit will contain the depth for the different populations
+ //hit will contain the depth across different populations
   keep<char> *hit =NULL;
-  //  assert(saf.size()>1);
 
   if(saf.size()>1)
     hit =keep_alloc<char>();//
@@ -111,23 +110,19 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     if(saf.size()==1)
       return 0;
     
-    //bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
-    //  saf[i]->ppos = new int[it->second.nSites];
-    //bgzf_read(saf[i]->pos,saf[i]->ppos,it->second.nSites*sizeof(int));
     if(saf[i]->ppos[it->second.nSites-1] > hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
-    //    fprintf(stderr,"keep[%d].first:%lu last:%lu\n",i,saf[i]->toKeep->first,saf[i]->toKeep->last);
     for(int j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++)
       if(saf[i]->toKeep->d[j])
 	hit->d[saf[i]->ppos[j]]++;
-    //fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
   }
-  for(int i=0;0&i<saf.size();i++)     
-    fprintf(stderr,"saf->ppos:%p\n",saf[i]->ppos);//    exit(0);
-  for(int i=0;killbreak&&i<saf.size();i++)
-    saf[i]->dontRead =1;
 
+  if(killbreak){
+    for(int i=0;i<saf.size();i++)
+      saf[i]->dontRead =1;
+    return 0;
+  }
 #if 0
   //  keep_info(hit,stderr,0,saf.size());
   for(int i=0;1&i<hit->m;i++)
@@ -151,17 +146,14 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       assert(tsk[i]==tsk[i-1]);
 #if 0
     keep_info(saf[i]->toKeep,stderr,0,1);
-    //print out overlapping posiitons for all pops
-    
+    //print out overlapping positions for all pops
     for(int j=0;j<saf[i]->toKeep->last;j++){
       if(hit->d[saf[i]->ppos[j]]==saf.size())
 	fprintf(stdout,"saf%d\t%d\n",i,j);
     }
 #endif
   }
-  //  exit(0);
   keep_destroy(hit);
-
 }
 
 
