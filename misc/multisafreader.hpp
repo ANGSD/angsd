@@ -123,6 +123,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   if(killbreak){
     for(int i=0;i<saf.size();i++)
       saf[i]->dontRead =1;
+    keep_destroy(hit);
     return 0;
   }
 #if 0
@@ -198,7 +199,8 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites
   //fprintf(stderr,"readdata lastread:%d\n\n",lastread);
   // exit(0);
   if(pp!=NULL)
-    pp =posiG[0];
+    for(int i=0;i<gls[0]->x;i++)
+      pp[i] = posiG[0][i];
   if(chooseChr!=NULL&&lastread==0){
     //fprintf(stderr,"return -2\n");
     return -2;

@@ -224,6 +224,21 @@ int printOld(int argc,char **argv){
   return 0;
 }
 
+void setGloc(std::vector<persaf *> &saf,int nSites){
+#if 1
+  posiG = new int*[saf.size()];
+  for(int i=0;i<saf.size();i++)
+    posiG[i] = new int[nSites];
+#endif
+}
+
+void delGloc(std::vector<persaf *> &saf,int nSites){
+  for(int i=0;i<saf.size();i++)
+    delete [] posiG[i];
+  delete [] posiG;
+}
+
+
 template <typename T>
 int printMulti(args *arg){
   std::vector<persaf *> &saf =arg->saf;
@@ -242,11 +257,7 @@ int printMulti(args *arg){
   double *sfs=new double[ndim];
   
   //temp used for checking pos are in sync
-#if 1
-  posiG = new int*[saf.size()];
-  for(int i=0;i<saf.size();i++)
-      posiG[i] = new int[nSites];
-#endif
+  setGloc(saf,nSites);
   int *posiToPrint = new int[nSites];
   while(1) {
     char *curChr=NULL;
@@ -254,7 +265,10 @@ int printMulti(args *arg){
     //    fprintf(stderr,"ret:%d gls->x:%lu\n",ret,gls[0]->x);
      
     for(int s=0;s<gls[0]->x;s++){
-      fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
+      if(arg->chooseChr==NULL)
+	fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
+      else
+	fprintf(stdout,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
       for(int i=0;i<saf.size();i++)
 	for(int ii=0;ii<gls[i]->y;ii++)
 	  fprintf(stdout,"\t%f",log(gls[i]->mat[s][ii]));
@@ -278,12 +292,11 @@ int printMulti(args *arg){
     if(arg->onlyOnce)
       break;
   }
-  for(int i=0;i<saf.size();i++)
-    delete [] posiG[i];
-  delete [] posiG;
+  delGloc(saf,nSites);
   destroy(gls,nSites);
   destroy_args(arg);
   delete [] sfs;
+  delete [] posiToPrint;
   
   fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
   fprintf(stderr,"\t-> Output is now simply the expected values! \n");
@@ -831,7 +844,6 @@ FILE *openFile(const char* a,const char* b){
   return fp;
 }
 
-
 int fst_index(int argc,char **argv){
   if(argc<1){
     fprintf(stderr,"Must supply afile.saf.idx [chrname, write more info]\n");
@@ -890,17 +902,17 @@ int fst_index(int argc,char **argv){
   std::vector<double> *ares = new std::vector<double> [choose(saf.size(),2)];
   std::vector<double> *bres = new std::vector<double> [choose(saf.size(),2)];
   std::vector<int> posi;
+  setGloc(saf,nSites);
   for(myMap::iterator it = saf[0]->mm.begin();it!=saf[0]->mm.end();++it){
     for(int i=0;i<choose(saf.size(),2);i++){
       ares[i].clear();
       bres[i].clear();
     }
     posi.clear();
-    int *viggo;
+    int *viggo=NULL;
+    setGloc(saf,nSites);
     while(1) {
       int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,viggo,NULL);//read nsites from data
-      for(int i=0;i<gls[0]->x;i++)
-	posi.push_back(viggo[i]);
       if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
 	break;
       
@@ -936,7 +948,7 @@ int fst_index(int argc,char **argv){
 	inc++;
       }
   }
-
+  delGloc(saf,nSites);
   destroy(gls,nSites);
   destroy_args(arg);
   delete [] sfs;
@@ -949,8 +961,6 @@ int fst_index(int argc,char **argv){
   fclose(fstfp);
   return 0;
 }
-
-
 
 template <typename T>
 int main_opt(args *arg){
@@ -976,11 +986,7 @@ int main_opt(args *arg){
   double *sfs=new double[ndim];
   
   //temp used for checking pos are in sync
-#if 1
-  posiG = new int*[saf.size()];
-  for(int i=0;i<saf.size();i++)
-      posiG[i] = new int[nSites];
-#endif
+  setGloc(saf,nSites);
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL);//read nsites from data
     //    fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
@@ -1037,9 +1043,7 @@ int main_opt(args *arg){
     if(arg->onlyOnce)
       break;
   }
-  for(int i=0;i<saf.size();i++)
-    delete [] posiG[i];
-  delete [] posiG;
+  delGloc(saf,nSites);
   destroy(gls,nSites);
   destroy_args(arg);
   delete [] sfs;
