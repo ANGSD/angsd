@@ -57,7 +57,7 @@ int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *>
 // 1) set the chooseChr and populate toKeep
 // 2) find over lap between different positions
 // this is run once for each chromsome
-int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop){
+int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr){
   //fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
 
   if(saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
@@ -82,6 +82,8 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     }else
       firstTime =0;
     chooseChr = it_outer->first;
+    if(curChr)
+      *curChr=it_outer->first;
     fprintf(stderr,"\t-> Is in multi sfs, will now read data from chr:%s\n",chooseChr);
   }
   
@@ -89,9 +91,8 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop\n");
   assert(chooseChr!=NULL);
 
- //hit will contain the depth for the different populations
+ //hit will contain the depth across different populations
   keep<char> *hit =NULL;
-  //  assert(saf.size()>1);
 
   if(saf.size()>1)
     hit =keep_alloc<char>();//
@@ -111,23 +112,20 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     if(saf.size()==1)
       return 0;
     
-    //bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
-    //  saf[i]->ppos = new int[it->second.nSites];
-    //bgzf_read(saf[i]->pos,saf[i]->ppos,it->second.nSites*sizeof(int));
     if(saf[i]->ppos[it->second.nSites-1] > hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
-    //    fprintf(stderr,"keep[%d].first:%lu last:%lu\n",i,saf[i]->toKeep->first,saf[i]->toKeep->last);
     for(int j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++)
       if(saf[i]->toKeep->d[j])
 	hit->d[saf[i]->ppos[j]]++;
-    //fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
   }
-  for(int i=0;0&i<saf.size();i++)     
-    fprintf(stderr,"saf->ppos:%p\n",saf[i]->ppos);//    exit(0);
-  for(int i=0;killbreak&&i<saf.size();i++)
-    saf[i]->dontRead =1;
 
+  if(killbreak){
+    for(int i=0;i<saf.size();i++)
+      saf[i]->dontRead =1;
+    keep_destroy(hit);
+    return 0;
+  }
 #if 0
   //  keep_info(hit,stderr,0,saf.size());
   for(int i=0;1&i<hit->m;i++)
@@ -151,30 +149,26 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       assert(tsk[i]==tsk[i-1]);
 #if 0
     keep_info(saf[i]->toKeep,stderr,0,1);
-    //print out overlapping posiitons for all pops
-    
+    //print out overlapping positions for all pops
     for(int j=0;j<saf[i]->toKeep->last;j++){
       if(hit->d[saf[i]->ppos[j]]==saf.size())
 	fprintf(stdout,"saf%d\t%d\n",i,j);
     }
 #endif
   }
-  //  exit(0);
   keep_destroy(hit);
-
 }
 
 
 
 template <typename T>
-int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop, int *pp){
+int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop, int *pp,char **curChr){
   static int lastread=0;
   extern int ** posiG;
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
   if(lastread==0 ){
     //    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
-    int ret = set_intersect_pos(saf,chooseChr,start,stop); 
-
+    int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr); 
     //    fprintf(stderr,"ret:%d\n",ret);
     if(ret==-3)
       return -3;
@@ -205,7 +199,8 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites
   //fprintf(stderr,"readdata lastread:%d\n\n",lastread);
   // exit(0);
   if(pp!=NULL)
-    pp =posiG[0];
+    for(int i=0;i<gls[0]->x;i++)
+      pp[i] = posiG[0][i];
   if(chooseChr!=NULL&&lastread==0){
     //fprintf(stderr,"return -2\n");
     return -2;

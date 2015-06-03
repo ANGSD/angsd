@@ -213,7 +213,8 @@ persaf * persaf_init(char *fname){
  //chr start stop is given from commandine
  //if chr==NULL, then this function is only called once
  myMap::iterator iter_init(persaf *pp,char *chr,int start,int stop){
-   //   fprintf(stderr,"kind:%d start:%d stop:%d\n\n",pp->kind,start,stop);
+   //  fprintf(stderr,"kind:%d start:%d stop:%d dontread:%d\n",pp->kind,start,stop,pp->dontRead);
+   pp->dontRead = 0;
    assert(chr!=NULL);
 
    myMap::iterator it = pp->mm.find(chr);
