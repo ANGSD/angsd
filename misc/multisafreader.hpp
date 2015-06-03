@@ -57,7 +57,7 @@ int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *>
 // 1) set the chooseChr and populate toKeep
 // 2) find over lap between different positions
 // this is run once for each chromsome
-int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop){
+int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr){
   //fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
 
   if(saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
@@ -82,6 +82,8 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     }else
       firstTime =0;
     chooseChr = it_outer->first;
+    if(curChr)
+      *curChr=it_outer->first;
     fprintf(stderr,"\t-> Is in multi sfs, will now read data from chr:%s\n",chooseChr);
   }
   
@@ -159,14 +161,13 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
 
 
 template <typename T>
-int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop, int *pp){
+int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop, int *pp,char **curChr){
   static int lastread=0;
   extern int ** posiG;
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
   if(lastread==0 ){
     //    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
-    int ret = set_intersect_pos(saf,chooseChr,start,stop); 
-
+    int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr); 
     //    fprintf(stderr,"ret:%d\n",ret);
     if(ret==-3)
       return -3;

@@ -56,6 +56,74 @@ pthread_t *thd=NULL;
 int **posiG  = NULL;
 
 
+void normalize(double *tmp,int len){
+  double s=0;
+  for(int i=0;i<len;i++)
+    s += tmp[i];
+  for(int i=0;i<len;i++)
+    tmp[i] /=s;
+}
+
+
+
+size_t fsize(const char* fname){
+  struct stat st ;
+  stat(fname,&st);
+  return st.st_size;
+}
+
+void readSFS(const char*fname,int hint,double *ret){
+  fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
+  FILE *fp = NULL;
+  if(((fp=fopen(fname,"r")))==NULL){
+    fprintf(stderr,"problems opening file:%s\n",fname);
+    exit(0);
+  }
+  char buf[fsize(fname)+1];
+  if(fsize(fname)!=fread(buf,sizeof(char),fsize(fname),fp)){
+    fprintf(stderr,"Problems reading file: %s\n will exit\n",fname);
+    exit(0);
+  }
+  buf[fsize(fname)]='\0';
+  std::vector<double> res;
+  char *tok=NULL;
+  tok = strtok(buf,"\t\n ");
+  if(!tok){
+    fprintf(stderr,"File:%s looks empty\n",fname);
+    exit(0);
+  }
+  res.push_back(atof(tok));
+
+  while((tok=strtok(NULL,"\t\n "))) {  
+    //fprintf(stderr,"%s\n",tok);
+    res.push_back(atof(tok));
+
+  }
+  //  fprintf(stderr,"size of prior=%lu\n",res.size());
+  if(hint!=res.size()){
+    fprintf(stderr,"problem with size of dimension of prior %d vs %lu\n",hint,res.size());
+    for(size_t i=0;0&&i<res.size();i++)
+      fprintf(stderr,"%zu=%f\n",i,res[i]);
+    exit(0);
+  }
+  for(size_t i=0;i<res.size();i++){
+      ret[i] = res[i];
+      //      fprintf(stderr,"i=%lu %f\n",i,ret[i]);
+  }
+  normalize(ret,res.size());
+  fclose(fp);
+}
+
+
+size_t parspace(std::vector<persaf *> &saf){
+  size_t ndim = 1;
+  for(int i=0;i<saf.size();i++)
+    ndim *= saf[i]->nChr+1;
+  fprintf(stderr,"\t-> Dimension of parameter space: %lu\n",ndim);
+  return ndim;
+}
+
+
 //just approximate
 template <typename T>
 size_t fsizes(std::vector<persaf *> &pp, int nSites){
@@ -156,9 +224,78 @@ int printOld(int argc,char **argv){
   return 0;
 }
 
+template <typename T>
+int printMulti(args *arg){
+  std::vector<persaf *> &saf =arg->saf;
+  int nSites = arg->nSites;
+  if(nSites == 0){//if no -nSites is specified
+    nSites=nsites(saf,arg);
+  }
+    
+  fprintf(stderr,"\t-> nSites: %d\n",nSites);
+
+  std::vector<Matrix<T> *> gls;
+  for(int i=0;i<saf.size();i++)
+    gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
+
+  int ndim= parspace(saf);
+  double *sfs=new double[ndim];
+  
+  //temp used for checking pos are in sync
+#if 1
+  posiG = new int*[saf.size()];
+  for(int i=0;i<saf.size();i++)
+      posiG[i] = new int[nSites];
+#endif
+  int *posiToPrint = new int[nSites];
+  while(1) {
+    char *curChr=NULL;
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr);//read nsites from data
+    //    fprintf(stderr,"ret:%d gls->x:%lu\n",ret,gls[0]->x);
+     
+    for(int s=0;s<gls[0]->x;s++){
+      fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
+      for(int i=0;i<saf.size();i++)
+	for(int ii=0;ii<gls[i]->y;ii++)
+	  fprintf(stdout,"\t%f",log(gls[i]->mat[s][ii]));
+      fprintf(stdout,"\n");
+    }
+    if(ret==-3&&gls[0]->x==0){//no more data in files or in chr, eith way we break;g
+      //fprintf(stderr,"breaking\n");
+      break;
+    }
+    for(int i=0;i<gls.size();i++)
+      gls[i]->x =0;
+#if 0
+    if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+      fprintf(stderr,"continue continue\n");
+      continue;
+    }
+#endif
+    
+    if(ret==-2&&arg->chooseChr!=NULL)
+      break;
+    if(arg->onlyOnce)
+      break;
+  }
+  for(int i=0;i<saf.size();i++)
+    delete [] posiG[i];
+  delete [] posiG;
+  destroy(gls,nSites);
+  destroy_args(arg);
+  delete [] sfs;
+  
+  fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
+  fprintf(stderr,"\t-> Output is now simply the expected values! \n");
+  fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
+  return 0;
+}
+
+
+template<typename T>
 void print(int argc,char **argv){
   if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx \n");
+    fprintf(stderr,"\t-> Must supply afile.saf.idx files \n");
     return; 
   }
   
@@ -167,8 +304,9 @@ void print(int argc,char **argv){
   if(pars->posOnly==1)
     pars->saf[0]->kind = 1;
   if(pars->saf.size()!=1){
-    fprintf(stderr,"Print only implemeted for single safs\n");
-    exit(0);
+    fprintf(stderr,"\t-> Will jump to multisaf printer and will only print intersecting sites between populations\n");
+    printMulti<T>(pars);
+    return;
   }
 
   writesaf_header(stderr,pars->saf[0]);
@@ -218,15 +356,6 @@ emPars<float> *emp = NULL;
 
 
 
-void normalize(double *tmp,int len){
-  double s=0;
-  for(int i=0;i<len;i++)
-    s += tmp[i];
-  for(int i=0;i<len;i++)
-    tmp[i] /=s;
-}
-
-
 
 #ifdef __APPLE__
 size_t getTotalSystemMemory(){
@@ -243,54 +372,6 @@ size_t getTotalSystemMemory(){
 }
 #endif
 
-
-size_t fsize(const char* fname){
-  struct stat st ;
-  stat(fname,&st);
-  return st.st_size;
-}
-
-void readSFS(const char*fname,int hint,double *ret){
-  fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
-  FILE *fp = NULL;
-  if(((fp=fopen(fname,"r")))==NULL){
-    fprintf(stderr,"problems opening file:%s\n",fname);
-    exit(0);
-  }
-  char buf[fsize(fname)+1];
-  if(fsize(fname)!=fread(buf,sizeof(char),fsize(fname),fp)){
-    fprintf(stderr,"Problems reading file: %s\n will exit\n",fname);
-    exit(0);
-  }
-  buf[fsize(fname)]='\0';
-  std::vector<double> res;
-  char *tok=NULL;
-  tok = strtok(buf,"\t\n ");
-  if(!tok){
-    fprintf(stderr,"File:%s looks empty\n",fname);
-    exit(0);
-  }
-  res.push_back(atof(tok));
-
-  while((tok=strtok(NULL,"\t\n "))) {  
-    //fprintf(stderr,"%s\n",tok);
-    res.push_back(atof(tok));
-
-  }
-  //  fprintf(stderr,"size of prior=%lu\n",res.size());
-  if(hint!=res.size()){
-    fprintf(stderr,"problem with size of dimension of prior %d vs %lu\n",hint,res.size());
-    for(size_t i=0;0&&i<res.size();i++)
-      fprintf(stderr,"%zu=%f\n",i,res[i]);
-    exit(0);
-  }
-  for(size_t i=0;i<res.size();i++){
-      ret[i] = res[i];
-      //      fprintf(stderr,"i=%lu %f\n",i,ret[i]);
-  }
-  normalize(ret,res.size());
-  fclose(fp);
-}
 
 template <typename T>
 double lik1(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
@@ -724,14 +805,6 @@ void handler(int s) {
 }
 
 
-size_t parspace(std::vector<persaf *> &saf){
-  size_t ndim = 1;
-  for(int i=0;i<saf.size();i++)
-    ndim *= saf[i]->nChr+1;
-  fprintf(stderr,"\t-> Dimension of parameter space: %lu\n",ndim);
-  return ndim;
-}
-
 /*
   return value 
   -3 indicates that we are doing multi sfs and that we are totally and should flush
@@ -825,7 +898,7 @@ int fst_index(int argc,char **argv){
     posi.clear();
     int *viggo;
     while(1) {
-      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,viggo);//read nsites from data
+      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,viggo,NULL);//read nsites from data
       for(int i=0;i<gls[0]->x;i++)
 	posi.push_back(viggo[i]);
       if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
@@ -909,8 +982,8 @@ int main_opt(args *arg){
       posiG[i] = new int[nSites];
 #endif
   while(1) {
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL);//read nsites from data
-    //    fprintf(stderr,"\t\tRET:%d\n",ret);
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL);//read nsites from data
+    //    fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
     if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
     
@@ -1064,7 +1137,7 @@ int main(int argc,char **argv){
   if(!strcasecmp(*argv,"printOld"))
     printOld(--argc,++argv);
   else if(!strcasecmp(*argv,"print"))
-    print(--argc,++argv);
+    print<float>(--argc,++argv);
   else if(!strcasecmp(*argv,"fst"))
     fst(--argc,++argv);
   else {
