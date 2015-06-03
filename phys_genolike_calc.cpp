@@ -169,7 +169,7 @@ void phys_genolike_calc::update_pbase( int depth ){
   int posi   = nd->posi[depth];
   int isop   = nd->isop[depth];
 
-  int strand = isupper( nd->seq[depth] );
+  int strand = isupper( nd->seq[depth] ) == 0;
 
   int allele = refToInt[nd->seq[depth]];
 
@@ -251,6 +251,7 @@ void phys_genolike_calc::get_genolikes( int site, int sample, double *return_lik
 
   // Get reference to current tNode
   nd = chk->nd[site][sample];
+  if( !nd ) return;
 
   //Reset geno_likes values
   for( int igt=0; igt<10; igt++ ){

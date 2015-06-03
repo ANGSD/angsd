@@ -15,8 +15,6 @@
 extern int refToInt[256];
 double **phys_probs = NULL;
 
-extern phys_genolike_calc *like_calc;
-
 /*
   allocate the prob matrix with
   prob[1][qs] = homohit
@@ -51,8 +49,6 @@ int offsetss[4][10]={
 
 void phys_init(){
   phys_probs = genLikes_phys(256);
-  like_calc = new phys_genolike_calc();
-  //  like_calc->set_debug( true );
 }
 
 void phys_destroy(){
@@ -60,13 +56,13 @@ void phys_destroy(){
     delete [] phys_probs[i];
   delete [] phys_probs;
   phys_probs=NULL;
-
-  delete like_calc;
 }
 
 void call_phys(chunkyT *chk,double **lk,int trim){
 
-  like_calc->update_chunkyT( chk );
+  phys_genolike_calc *glc = new phys_genolike_calc();
+
+  glc->update_chunkyT( chk );
 
   for(int s=0;s<chk->nSites;s++){
     for(int i=0;i<chk->nSamples;i++){
@@ -82,10 +78,12 @@ void call_phys(chunkyT *chk,double **lk,int trim){
       double *likes1 = lk[s]+10*i;
 
       // Fill geno_probs array with the 10 values found for site s and smaple i
-      like_calc->get_genolikes( s, i, likes1 );
+      glc->get_genolikes( s, i, likes1 );
 
       
     }
   }
+
+  delete glc;
 
 }
