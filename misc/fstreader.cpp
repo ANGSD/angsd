@@ -30,9 +30,11 @@ void destroy(myFstMap &mm){
 }
 
 
-void persaf_destroy(perfst *pp){
+void perfst_destroy(perfst *pp){
   bgzf_close(pp->fp);
   destroy(pp->mm);
+  for(int i=0;i<pp->names.size();i++)
+    free(pp->names[i]);
   delete pp;
 }
 
@@ -51,9 +53,9 @@ void writefst_header(FILE *fp,perfst *pp){
 }
 
 
-
 perfst * perfst_init(char *fname){
   perfst *ret = new perfst ;
+  ret->nSites =0;
   size_t clen;
   if(!fexists(fname)){
     fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);

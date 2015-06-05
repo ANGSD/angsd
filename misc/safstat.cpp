@@ -77,6 +77,72 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
 
 #include "fstreader.h"
 int fst_print(int argc,char **argv){
-  perfst *pf = perfst_init(*argv);
+
+  char *bname = *argv;
+  fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
+  perfst *pf = perfst_init(bname);
+  args *pars = getArgs(--argc,++argv);  
+  int *ppos = NULL;
+  fprintf(stderr,"choose:%d \n",choose(pf->names.size(),2));
+  double **ares = new double*[choose(pf->names.size(),2)];
+  double **bres = new double*[choose(pf->names.size(),2)];
+  for(myFstMap::iterator it=pf->mm.begin();it!=pf->mm.end();++it){
+    if(pars->chooseChr!=NULL){
+      it = pf->mm.find(pars->chooseChr);
+      if(it==pf->mm.end()){
+	fprintf(stderr,"Problem finding chr: %s\n",pars->chooseChr);
+	break;
+      }
+    }
+    if(it->second.nSites==0)
+      continue;
+    bgzf_seek(pf->fp,it->second.off,SEEK_SET);
+    ppos = new int[it->second.nSites];
+    
+    bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
+    for(int i=0;i<choose(pf->names.size(),2);i++){
+      ares[i] = new double[it->second.nSites];
+      bres[i] = new double[it->second.nSites];
+      bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
+      bgzf_read(pf->fp,bres[i],sizeof(double)*it->second.nSites);
+    }
+    
+
+
+    int first=0;
+    if(pars->start!=-1)
+      while(ppos[first]<pars->start) 
+	first++;
+    
+    int last=it->second.nSites;
+
+    if(pars->stop!=-1&&pars->stop<=ppos[last-1]){
+      last=first;
+      while(ppos[last]<pars->stop) 
+	last++;
+    }
+
+    fprintf(stderr,"pars->stop:%d ppos:%d first:%d last:%d\n",pars->stop,ppos[last-1],first,last);
+
+    for(int s=first;s<last;s++){
+      fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
+      for(int i=0;i<choose(pf->names.size(),2);i++)
+	fprintf(stdout,"\t%f\t%f",ares[i][s],bres[i][s]);
+      fprintf(stdout,"\n");
+    }
+    for(int i=0;i<choose(pf->names.size(),2);i++){
+      delete [] ares[i];
+      delete [] bres[i];
+    }
+    
+    delete [] ppos;
+    
+    if(pars->chooseChr!=NULL)
+      break;
+  }
+  delete [] ares;
+  delete [] bres;
+  destroy_args(pars);
+  perfst_destroy(pf);
   return 0;
 }
