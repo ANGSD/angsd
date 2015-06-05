@@ -15,7 +15,9 @@ int choose(int n,int m){
     return 3;
   else{
     fprintf(stderr,"\t-> Never here\n");
+    exit(0);
   }
+  return -1;
 }
 
 

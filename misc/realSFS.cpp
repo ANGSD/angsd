@@ -672,7 +672,7 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
 
     fprintf(stderr,"[%d] lik=%f diff=%e sr:%e\n",it,lik,fabs(lik-oldLik),sr2);
 
-    if(fabs(lik-oldLik)<tole||0&&sqrt(sr2)<tole){//should update simfiles...
+    if(fabs(lik-oldLik)<tole||(0&&sqrt(sr2))<tole){//should update simfiles...
       oldLik=lik;
       break;
     }
@@ -872,7 +872,15 @@ int fst_index(int argc,char **argv){
   std::vector<int> posi;
   setGloc(saf,nSites);
   int *posiToPrint = new int[nSites];
-  for(myMap::iterator it = saf[0]->mm.begin();it!=saf[0]->mm.end();++it){
+  for(myMap::iterator it = saf[0]->mm.begin();it!=saf[0]->mm.end();++it) {
+    //    fprintf(stderr,"doing chr:%s\n",it->first);
+    if(arg->chooseChr!=NULL){
+      it = saf[0]->mm.find(arg->chooseChr);
+      if(it==saf[0]->mm.end()){
+	fprintf(stderr,"Problem finding chr: %s\n",arg->chooseChr);
+	break;
+      }
+    }
     for(int i=0;i<choose(saf.size(),2);i++){
       ares[i].clear();
       bres[i].clear();
@@ -880,7 +888,8 @@ int fst_index(int argc,char **argv){
     posi.clear();
     while(1) {
       int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL);//read nsites from data
-      if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
+      //  fprintf(stderr,"ret:%d glsx:%lu\n",ret,gls[0]->x);
+      if(ret==-2)//no more data in files or in chr, eith way we break;
 	break;
       
       if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
@@ -917,6 +926,8 @@ int fst_index(int argc,char **argv){
 	bgzf_write(fstbg,&(bres[inc][0]),bres[inc].size()*sizeof(double));
 	inc++;
       }
+    if(arg->chooseChr!=NULL)
+      break;
   }
   delGloc(saf,nSites);
   destroy(gls,nSites);
