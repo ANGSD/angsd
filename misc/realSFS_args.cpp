@@ -78,6 +78,8 @@ args * getArgs(int argc,char **argv){
   p->emAccl =1;
   p->fstout = NULL;
   p->start=p->stop=-1;
+  p->win=50e3;
+  p->step=1e3;
   if(argc==0)
     return p;
 
