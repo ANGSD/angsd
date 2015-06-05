@@ -50,9 +50,11 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
     double tmp[(gl1->y+1)*(gl2->y+1)];
     
     for(int i=0;i<gl1->y;i++)
-      for(int j=0;j<gl2->y;j++)
-	tmp[inc++] = prior[inc]* gl1->mat[s][i] *gl2->mat[s][j];
-    
+      for(int j=0;j<gl2->y;j++){
+	tmp[inc] = prior[inc]* gl1->mat[s][i] *gl2->mat[s][j];
+	inc++;
+      }
+    //    exit(0);
     double as=0;
     double bs=0;
     void normalize(double *,int);
@@ -73,7 +75,8 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
   // fprintf(stderr,"u:%f w:%f\n",tre[0]/(1.0*gl1->x),tre[1]/tre[2]);
 }
 
-
+#include "fstreader.h"
 int fst_print(int argc,char **argv){
+  perfst *pf = perfst_init(*argv);
   return 0;
 }
