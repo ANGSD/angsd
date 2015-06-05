@@ -29,13 +29,13 @@ splitgl: splitgl.c
 
 
 safreader: safreader.cpp safreader.h header.h
-	$(CXX) $(FLAGS) -c safreader.cpp -lz -lpthread -I $(HTSDIR)
+	$(CXX) $(FLAGS) -c safreader.cpp -I $(HTSDIR)
 
 fstreader: fstreader.cpp fstreader.h header.h
-	$(CXX) $(FLAGS) -c fstreader.cpp -lz -lpthread -I $(HTSDIR)
+	$(CXX) $(FLAGS) -c fstreader.cpp -I $(HTSDIR)
 
 safstat: safstat.cpp safstat.h 
-	$(CXX) $(FLAGS) -c safstat.cpp -lz -lpthread -I $(HTSDIR)
+	$(CXX) $(FLAGS) -c safstat.cpp -I $(HTSDIR)
 
 realSFS_args: realSFS_args.cpp realSFS_args.h
 	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTSDIR)
