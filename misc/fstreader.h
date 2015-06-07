@@ -24,3 +24,4 @@ typedef struct{
 
 perfst* perfst_init(char *fname);
 void perfst_destroy(perfst *pp);
+void writefst_header(FILE *fp,perfst *pp);
