@@ -672,7 +672,7 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
 
     fprintf(stderr,"[%d] lik=%f diff=%e sr:%e\n",it,lik,fabs(lik-oldLik),sr2);
 
-    if(fabs(lik-oldLik)<tole||0&&sqrt(sr2)<tole){//should update simfiles...
+    if((fabs(lik-oldLik)<tole)||(0&&(sqrt(sr2)<tole))){//should update simfiles...
       oldLik=lik;
       break;
     }
@@ -814,7 +814,7 @@ int fst_index(int argc,char **argv){
   }
 
   std::vector<persaf *> &saf =arg->saf;
-  assert(saf.size()==2);
+  //assert(saf.size()==2);
   int nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
@@ -826,27 +826,36 @@ int fst_index(int argc,char **argv){
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<float>(nSites,saf[i]->nChr+1));
 
-  int ndim= parspace(saf);
-  double *sfs=new double[ndim];
-  //  assert(arg->sfsfname!=NULL);  
-  if(arg->sfsfname.size()!=0)
-      readSFS(arg->sfsfname[0],ndim,sfs);
-  else
-    for(int i=0;i<ndim;i++)
-      sfs[i] = (i+1)/((double)(ndim));
-  normalize(sfs,ndim);
+  //  int ndim= parspace(saf);
+  if(arg->sfsfname.size()!=choose(saf.size(),2)){
+    fprintf(stderr,"\t-> You have supplied: %lu populations, that is %d pairs\n",saf.size(),choose(saf.size(),2));
+    fprintf(stderr,"\t-> You therefore need to supply %d 2dsfs priors instead of:%lu\n",choose(saf.size(),2),arg->sfsfname.size());
+    exit(0);
+  }
+  std::vector<double *> sfs;
+  int inc =0;
+  for(int i=0;i<saf.size();i++)
+    for(int j=i+1;j<saf.size();j++){
+      int pairdim = (saf[i]->nChr+1)*(saf[j]->nChr+1);
+      double *ddd=new double[pairdim];
+      readSFS(arg->sfsfname[inc],pairdim,ddd);
+      normalize(ddd,pairdim);
+      sfs.push_back(ddd);
+      inc++;
+    }
+
   
   double **a1,**b1;
-  if(saf.size()==2){
-    a1=new double*[choose(saf.size(),2)];
-    b1=new double*[choose(saf.size(),2)];
-    int inc=0;
-    for(int i=0;i<saf.size();i++)
-      for(int j=i+1;j<saf.size();j++){
-	calcCoef(saf[0]->nChr,saf[1]->nChr,&a1[inc],&b1[inc]);
-	inc++;
-      }
-  }
+  a1=new double*[choose(saf.size(),2)];
+  b1=new double*[choose(saf.size(),2)];
+  inc=0;
+  for(int i=0;i<saf.size();i++)
+    for(int j=i+1;j<saf.size();j++){
+      calcCoef(saf[0]->nChr,saf[1]->nChr,&a1[inc],&b1[inc]);
+      //      fprintf(stderr,"a1[%d]:%p b1[%d]:%p\n",inc,&a1[inc][0],inc,&b1[inc][0]);
+      inc++;
+    }
+
   BGZF *fstbg = openFileBG(arg->fstout,".fst.gz");
   FILE *fstfp = openFile(arg->fstout,".fst.idx");
   char buf[8]="fstv1";
@@ -866,9 +875,11 @@ int fst_index(int argc,char **argv){
     fwrite(saf[i]->fname,1,clen,fstfp);
   }
 #endif
-
+  int asdf = choose(saf.size(),2);
   std::vector<double> *ares = new std::vector<double> [choose(saf.size(),2)];
   std::vector<double> *bres = new std::vector<double> [choose(saf.size(),2)];
+  //  for(int i=0;i<3;i++)
+    //    fprintf(stderr,"ares.size():%lu bres.size():%lu sfs:%p\n",ares[i].size(),bres[i].size(),&sfs[i][0]);
   std::vector<int> posi;
   setGloc(saf,nSites);
   int *posiToPrint = new int[nSites];
@@ -889,26 +900,26 @@ int fst_index(int argc,char **argv){
     while(1) {
       int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL);//read nsites from data
       //  fprintf(stderr,"ret:%d glsx:%lu\n",ret,gls[0]->x);
-      if(ret==-2)//no more data in files or in chr, eith way we break;
-	break;
-      
-      if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+      //if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
 	//fprintf(stderr,"continue continue\n");
-	continue;
-      }
+      //	continue;
+      //}
       
       fprintf(stderr,"\t-> Will now do fst temp dump using a chunk of %lu\n",gls[0]->x);
       int inc=0;
       for(int i=0;i<saf.size();i++)
 	for(int j=i+1;j<saf.size();j++){
-	  //fprintf(stderr,"i:%d j:%d inc:%d\n",i,j,inc);
-	  block_coef(gls[i],gls[j],sfs,a1[inc],b1[inc],ares[inc],bres[inc]);
+	  //	  fprintf(stderr,"i:%d j:%d inc:%d gls[i]:%p gls[j]:%p sfs:%p a1:%p b1:%p\n",i,j,inc,gls[i],gls[j],sfs[i],&a1[inc][0],&a1[inc][0]);
+	  block_coef(gls[i],gls[j],sfs[inc],a1[inc],b1[inc],ares[inc],bres[inc]);
 	  inc++;
 	}
       for(int i=0;i<gls[0]->x;i++)
 	posi.push_back(posiToPrint[i]);
+
       for(int i=0;i<gls.size();i++)
 	gls[i]->x =0;
+      if(ret==-2)//no more data in files or in chr, eith way we break;
+	break;
     }
     size_t clen = strlen(it->first);
     fwrite(&clen,sizeof(size_t),1,fstfp);
@@ -932,7 +943,8 @@ int fst_index(int argc,char **argv){
   delGloc(saf,nSites);
   destroy(gls,nSites);
   destroy_args(arg);
-  delete [] sfs;
+  for(int i=0;i<sfs.size();i++)
+    delete [] sfs[i];
 #if 0
   fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
   fprintf(stderr,"\t-> Output is now simply the expected values! \n");
