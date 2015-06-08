@@ -15,7 +15,8 @@ typedef struct {
   int onlyOnce;
   int emAccl;
   char *fstout;
-  //  std::vector<double*> paisfs;
+  int win;
+  int step;
 }args;
 args * getArgs(int argc,char **argv);
 void destroy_args(args *p);

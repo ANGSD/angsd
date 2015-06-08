@@ -77,6 +77,9 @@ args * getArgs(int argc,char **argv){
   p->onlyOnce = 0;
   p->emAccl =1;
   p->fstout = NULL;
+  p->start=p->stop=-1;
+  p->win=50e3;
+  p->step=1e3;
   if(argc==0)
     return p;
 
@@ -116,7 +119,7 @@ args * getArgs(int argc,char **argv){
   }
   for(int i=0;(p->saf.size()>1)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;
-  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname);
+  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s fstout:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->fstout);
   return p;
 }
 

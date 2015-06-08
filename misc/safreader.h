@@ -5,14 +5,7 @@
 #include <map>
 #include <htslib/bgzf.h>
 #include "keep.hpp"
-
-struct ltstr
-{
-  bool operator()(const char* s1, const char* s2) const
-  {
-    return strcmp(s1, s2) < 0;
-  }
-};
+#include "header.h"
 
 typedef struct{
   size_t nSites;

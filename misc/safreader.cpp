@@ -3,12 +3,6 @@
 #include <zlib.h>
 #include "safreader.h"
 
-int fexists(const char* str){
-  struct stat buffer ;
-  return (stat(str, &buffer )==0 ); /// @return Function returns 1 if file exists.                             
-}
-
-
 void destroy(myMap &mm){
   for(myMap::iterator it=mm.begin();it!=mm.end();++it)
     free(it->first);
@@ -54,7 +48,7 @@ void writesaf_header(FILE *fp,persaf *pp){
 
  */
 
-int version(const char *fname){
+int safversion(const char *fname){
   gzFile gz=Z_NULL;
   gz = gzopen(fname,"r");
   if(gz==Z_NULL){
@@ -97,7 +91,7 @@ persaf * persaf_init(char *fname){
   }
   char buf[8];
   assert(fread(buf,1,8,fp)==8);
-  ret->version = version(fname);
+  ret->version = safversion(fname);
   fprintf(stderr,"\t-> Version of fname:%s is:%d\n",fname,ret->version);
   if(ret->version!=2){
     fprintf(stderr,"\t-> Looks like you are trying to use a version of realSFS that is incompatible with the old binary output from ANGSD\n\t-> Please use realSFS.old instead (or consider redoing the saf files )\n\t-> Will exit\n");
@@ -145,15 +139,15 @@ persaf * persaf_init(char *fname){
   snprintf(tmp2,strlen(fname)+100,"%sgz",tmp);
   fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
   ret->saf = bgzf_open(tmp2,"r");bgzf_seek(ret->saf,8,SEEK_SET);
-  if(ret->version!=version(tmp2)){
-    fprintf(stderr,"\t-> Problem with mismatch of version of %s vs %s %d vs %d\n",fname,tmp2,ret->version,version(tmp2));
+  if(ret->version!=safversion(tmp2)){
+    fprintf(stderr,"\t-> Problem with mismatch of version of %s vs %s %d vs %d\n",fname,tmp2,ret->version,safversion(tmp2));
     exit(0);
   }
 
   snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
   fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
   ret->pos = bgzf_open(tmp2,"r");bgzf_seek(ret->pos,8,SEEK_SET);
-  if(ret->version!=version(tmp2)){
+  if(ret->version!=safversion(tmp2)){
     fprintf(stderr,"Problem with mismatch of version of %s vs %s\n",fname,tmp2);
     exit(0);
   }

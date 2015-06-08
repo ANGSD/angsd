@@ -28,13 +28,9 @@
 #include <cassert>
 #include <pthread.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <zlib.h>
-#include <htslib/bgzf.h>
 #include <htslib/tbx.h>
-
 #include "Matrix.hpp"
-
 #include "safstat.h"
 
 #ifdef __APPLE__
@@ -44,10 +40,9 @@
 #include "realSFS_args.h"
 #include "safreader.h"
 #include "keep.hpp"
+#include "header.h"
 int SIG_COND =1;
 int howOften =5e6;//how often should we print out (just to make sure something is happening)
-
-
 #include "multisafreader.hpp"
 
 double ttol = 1e-16; 
@@ -55,22 +50,24 @@ pthread_t *thd=NULL;
 
 int **posiG  = NULL;
 
+int really_kill =3;
+int VERBOSE = 1;
+void handler(int s) {
+  if(s==13)//this is sigpipe
+    exit(0);
+  if(VERBOSE)
+    fprintf(stderr,"\n\t-> Caught SIGNAL: Will try to exit nicely (no more threads are created.\n\t\t\t  We will wait for the current threads to finish)\n");
+  
+  if(--really_kill!=3)
+  fprintf(stderr,"\n\t-> If you really want \'realSFS\' to exit uncleanly ctrl+c: %d more times\n",really_kill+1);
+  fflush(stderr);
+  if(!really_kill)
+    exit(0);
+  VERBOSE=0;
+  SIG_COND=0;
 
-void normalize(double *tmp,int len){
-  double s=0;
-  for(int i=0;i<len;i++)
-    s += tmp[i];
-  for(int i=0;i<len;i++)
-    tmp[i] /=s;
 }
 
-
-
-size_t fsize(const char* fname){
-  struct stat st ;
-  stat(fname,&st);
-  return st.st_size;
-}
 
 void readSFS(const char*fname,int hint,double *ret){
   fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
@@ -122,7 +119,6 @@ size_t parspace(std::vector<persaf *> &saf){
   fprintf(stderr,"\t-> Dimension of parameter space: %lu\n",ndim);
   return ndim;
 }
-
 
 //just approximate
 template <typename T>
@@ -676,7 +672,7 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
 
     fprintf(stderr,"[%d] lik=%f diff=%e sr:%e\n",it,lik,fabs(lik-oldLik),sr2);
 
-    if(fabs(lik-oldLik)<tole||0&&sqrt(sr2)<tole){//should update simfiles...
+    if((fabs(lik-oldLik)<tole)||(0&&(sqrt(sr2)<tole))){//should update simfiles...
       oldLik=lik;
       break;
     }
@@ -799,50 +795,12 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
 }
 
 
-int really_kill =3;
-int VERBOSE = 1;
-void handler(int s) {
-  if(s==13)//this is sigpipe
-    exit(0);
-  if(VERBOSE)
-    fprintf(stderr,"\n\t-> Caught SIGNAL: Will try to exit nicely (no more threads are created.\n\t\t\t  We will wait for the current threads to finish)\n");
-  
-  if(--really_kill!=3)
-  fprintf(stderr,"\n\t-> If you really want \'realSFS\' to exit uncleanly ctrl+c: %d more times\n",really_kill+1);
-  fflush(stderr);
-  if(!really_kill)
-    exit(0);
-  VERBOSE=0;
-  SIG_COND=0;
-
-}
-
 
 /*
   return value 
   -3 indicates that we are doing multi sfs and that we are totally and should flush
 
  */
-
-BGZF *openFileBG(const char* a,const char* b){
-
-  char *c = new char[strlen(a)+strlen(b)+1];
-  strcpy(c,a);
-  strncat(c,b,strlen(b));
-  BGZF *fp = bgzf_open(c,"wb");
-  delete [] c;
-  return fp;
-}
-FILE *openFile(const char* a,const char* b){
-  if(0)
-    fprintf(stderr,"[%s] %s %s",__FUNCTION__,a,b);
-  char *c = new char[strlen(a)+strlen(b)+1];
-  strcpy(c,a);
-  strncat(c,b,strlen(b));
-  FILE *fp = fopen(c,"w");
-  delete [] c;
-  return fp;
-}
 
 int fst_index(int argc,char **argv){
   if(argc<1){
@@ -856,7 +814,7 @@ int fst_index(int argc,char **argv){
   }
 
   std::vector<persaf *> &saf =arg->saf;
-  assert(saf.size()==2);
+  //assert(saf.size()==2);
   int nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
@@ -868,77 +826,109 @@ int fst_index(int argc,char **argv){
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<float>(nSites,saf[i]->nChr+1));
 
-  int ndim= parspace(saf);
-  double *sfs=new double[ndim];
-  //  assert(arg->sfsfname!=NULL);  
-  if(arg->sfsfname.size()!=0)
-      readSFS(arg->sfsfname[0],ndim,sfs);
-  else
-    for(int i=0;i<ndim;i++)
-      sfs[i] = (i+1)/((double)(ndim));
-  normalize(sfs,ndim);
+  //  int ndim= parspace(saf);
+  if(arg->sfsfname.size()!=choose(saf.size(),2)){
+    fprintf(stderr,"\t-> You have supplied: %lu populations, that is %d pairs\n",saf.size(),choose(saf.size(),2));
+    fprintf(stderr,"\t-> You therefore need to supply %d 2dsfs priors instead of:%lu\n",choose(saf.size(),2),arg->sfsfname.size());
+    exit(0);
+  }
+  std::vector<double *> sfs;
+  int inc =0;
+  for(int i=0;i<saf.size();i++)
+    for(int j=i+1;j<saf.size();j++){
+      int pairdim = (saf[i]->nChr+1)*(saf[j]->nChr+1);
+      double *ddd=new double[pairdim];
+      readSFS(arg->sfsfname[inc],pairdim,ddd);
+      normalize(ddd,pairdim);
+      sfs.push_back(ddd);
+      inc++;
+    }
+
   
   double **a1,**b1;
-  if(saf.size()==2){
-    a1=new double*[choose(saf.size(),2)];
-    b1=new double*[choose(saf.size(),2)];
-    int inc=0;
-    for(int i=0;i<saf.size();i++)
-      for(int j=i+1;j<saf.size();j++){
-	calcCoef(saf[0]->nChr,saf[1]->nChr,&a1[inc],&b1[inc]);
-	inc++;
-      }
-  }
+  a1=new double*[choose(saf.size(),2)];
+  b1=new double*[choose(saf.size(),2)];
+  inc=0;
+  for(int i=0;i<saf.size();i++)
+    for(int j=i+1;j<saf.size();j++){
+      calcCoef(saf[0]->nChr,saf[1]->nChr,&a1[inc],&b1[inc]);
+      //      fprintf(stderr,"a1[%d]:%p b1[%d]:%p\n",inc,&a1[inc][0],inc,&b1[inc][0]);
+      inc++;
+    }
+
   BGZF *fstbg = openFileBG(arg->fstout,".fst.gz");
   FILE *fstfp = openFile(arg->fstout,".fst.idx");
   char buf[8]="fstv1";
   bgzf_write(fstbg,buf,8);    
-  fwrite(fstfp,1,8,fstfp);
+  fwrite(buf,1,8,fstfp);
 #if 0
   for(int i=0;i<ndim;i++)
     fprintf(stdout,"%f %f\n",a1[i],b1[i]);
   exit(0);
 #endif
+#if 1
+  size_t nsafs=saf.size();
+  fwrite(&nsafs,sizeof(size_t),1,fstfp);
+  for(int i=0;i<nsafs;i++){
+    size_t clen= strlen(saf[i]->fname);
+    fwrite(&clen,sizeof(size_t),1,fstfp);
+    fwrite(saf[i]->fname,1,clen,fstfp);
+  }
+#endif
+  int asdf = choose(saf.size(),2);
   std::vector<double> *ares = new std::vector<double> [choose(saf.size(),2)];
   std::vector<double> *bres = new std::vector<double> [choose(saf.size(),2)];
+  //  for(int i=0;i<3;i++)
+    //    fprintf(stderr,"ares.size():%lu bres.size():%lu sfs:%p\n",ares[i].size(),bres[i].size(),&sfs[i][0]);
   std::vector<int> posi;
   setGloc(saf,nSites);
-  for(myMap::iterator it = saf[0]->mm.begin();it!=saf[0]->mm.end();++it){
+  int *posiToPrint = new int[nSites];
+  for(myMap::iterator it = saf[0]->mm.begin();it!=saf[0]->mm.end();++it) {
+    //    fprintf(stderr,"doing chr:%s\n",it->first);
+    if(arg->chooseChr!=NULL){
+      it = saf[0]->mm.find(arg->chooseChr);
+      if(it==saf[0]->mm.end()){
+	fprintf(stderr,"Problem finding chr: %s\n",arg->chooseChr);
+	break;
+      }
+    }
     for(int i=0;i<choose(saf.size(),2);i++){
       ares[i].clear();
       bres[i].clear();
     }
     posi.clear();
-    int *viggo=NULL;
-    setGloc(saf,nSites);
     while(1) {
-      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,viggo,NULL);//read nsites from data
-      if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
-	break;
-      
-      if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL);//read nsites from data
+      //  fprintf(stderr,"ret:%d glsx:%lu\n",ret,gls[0]->x);
+      //if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
 	//fprintf(stderr,"continue continue\n");
-	continue;
-      }
+      //	continue;
+      //}
       
       fprintf(stderr,"\t-> Will now do fst temp dump using a chunk of %lu\n",gls[0]->x);
       int inc=0;
       for(int i=0;i<saf.size();i++)
 	for(int j=i+1;j<saf.size();j++){
-	  fprintf(stderr,"i:%d j:%d inc:%d\n",i,j,inc);
-	  block_coef(gls[i],gls[j],sfs,a1[inc],b1[inc],ares[inc],bres[inc]);
+	  //	  fprintf(stderr,"i:%d j:%d inc:%d gls[i]:%p gls[j]:%p sfs:%p a1:%p b1:%p\n",i,j,inc,gls[i],gls[j],sfs[i],&a1[inc][0],&a1[inc][0]);
+	  block_coef(gls[i],gls[j],sfs[inc],a1[inc],b1[inc],ares[inc],bres[inc]);
 	  inc++;
 	}
+      for(int i=0;i<gls[0]->x;i++)
+	posi.push_back(posiToPrint[i]);
+
       for(int i=0;i<gls.size();i++)
 	gls[i]->x =0;
+      if(ret==-2)//no more data in files or in chr, eith way we break;
+	break;
     }
-    fprintf(stderr,"nsites:%lu\n",ares[0].size());
     size_t clen = strlen(it->first);
     fwrite(&clen,sizeof(size_t),1,fstfp);
     fwrite(it->first,1,clen,fstfp);
     size_t nit=posi.size();
-    fwrite(&nit,1,sizeof(size_t),fstfp);
+
+    assert(1==fwrite(&nit,sizeof(size_t),1,fstfp));
     int64_t tell = bgzf_tell(fstbg);
+    fwrite(&tell,sizeof(int64_t),1,fstfp);
     bgzf_write(fstbg,&posi[0],posi.size()*sizeof(int));
     int inc =0;
     for(int i=0;i<saf.size();i++)
@@ -947,11 +937,14 @@ int fst_index(int argc,char **argv){
 	bgzf_write(fstbg,&(bres[inc][0]),bres[inc].size()*sizeof(double));
 	inc++;
       }
+    if(arg->chooseChr!=NULL)
+      break;
   }
   delGloc(saf,nSites);
   destroy(gls,nSites);
   destroy_args(arg);
-  delete [] sfs;
+  for(int i=0;i<sfs.size();i++)
+    delete [] sfs[i];
 #if 0
   fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
   fprintf(stderr,"\t-> Output is now simply the expected values! \n");
@@ -1063,6 +1056,8 @@ int fst(int argc,char**argv){
     fst_index(--argc,++argv);
   else  if(!strcasecmp(*argv,"print"))  
     fst_print(--argc,++argv);
+  else if(!strcasecmp(*argv,"stats"))  
+    fst_stat(--argc,++argv);
   else{
     fprintf(stderr,"unknown option: \'%s\'\n",*argv);
     return 0;
@@ -1072,26 +1067,6 @@ int fst(int argc,char**argv){
 
 
 int main(int argc,char **argv){
-#if 0
-  char **reg = new char*[6];
-  reg[0] = strdup("avsdf:");
-  reg[1] = strdup("avsdf");
-  reg[2] = strdup("avsdf:200");
-  reg[3] = strdup("avsdf:200-300");
-  reg[4] = strdup("avsdf:-300");
-  reg[5] = strdup("avsdf:300-");
-
-  int a,b;
-  char *ref;
-  for(int i=0;i<6;i++){
-  fprintf(stderr,"%d) string=%s ",i,reg[i]);
-  get_region(reg[i],&ref,a,b);
-  fprintf(stderr," parsed as: ref:\'%s\' a:\'%d\' b:\'%d\'\n",ref,a,b);
-}
-  return 0;
-#endif
-
-
   
   //start of signal handling
   struct sigaction sa;
