@@ -145,6 +145,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders\t%d\tExit if difference in BAM headers\n",checkBamHeaders);
+  fprintf(argFile,"\t-downSample\t%f\tDownsample to the fraction of original data\n",downSample);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
   
   fprintf(argFile,"\n");

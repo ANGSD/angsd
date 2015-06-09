@@ -90,9 +90,14 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     r= sam_read1(fp,hdr,b);
   else
     r = sam_itr_next(fp, itr, b);
+  
   if(r!=-1) {
-    extern abcGetFasta *gf;
-    if(b->core.flag&4||b->core.n_cigar==0)
+
+  if((downSample>0 )&& (drand48()>downSample))
+    goto bam_iter_reread;
+  
+  extern abcGetFasta *gf;
+  if(b->core.flag&4||b->core.n_cigar==0)
       goto bam_iter_reread;
     
     
@@ -132,8 +137,7 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
 	  b->core.qual = q;
       }
     }
-    //    if(rand()>RAND_MAX*downSample)
-    //	 b->core.qual=0;
+
     if(b->core.qual<minMapQ)
       goto bam_iter_reread;
   }
