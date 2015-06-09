@@ -27,7 +27,6 @@ pthread_mutex_t mUpPile_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 extern int SIG_COND;
 extern int minQ;
-extern float downSample;
 extern int trim;
 #define bam_nt16_rev_table seq_nt16_str
 #define __NEW__
@@ -662,18 +661,9 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
   
   for( r=0;r<sgl->readIDstop;r++) {
 
- 
-     bam1_t *rd = sgl->reads[r];
-     if(downSample>0){
-       //      fprintf(stdout,"%f",downSample);
-       if(rand()>RAND_MAX*downSample)
-	 rd->core.qual=0;
-     }
+    bam1_t *rd = sgl->reads[r];
 
     int mapQ = rd->core.qual;
-
-    rd->core.qual=0;
-    mapQ=0;
     if(mapQ>=255) mapQ = 20;
 
     if(sgl->first[r] > last){
