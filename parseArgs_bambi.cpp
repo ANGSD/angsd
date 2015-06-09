@@ -13,6 +13,7 @@ int only_proper_pairs = 1;
 int remove_bads = 1;
 int minMapQ =0;
 int minQ = MINQ;
+float downSample = 0;
 int trim = 0;
 int adjustMapQ =0;
 int baq =0;
@@ -167,6 +168,7 @@ void setArgsBam(argStruct *arguments){
   only_proper_pairs =angsd::getArg("-only_proper_pairs",only_proper_pairs,arguments);
   minMapQ = angsd::getArg("-minMapQ",minMapQ,arguments);
   minQ = angsd::getArg("-minQ",minQ,arguments);
+  downSample = angsd::getArg("-downSample",downSample,arguments);
   trim = angsd::getArg("-trim",trim,arguments);
   adjustMapQ = angsd::getArg("-C",adjustMapQ,arguments);
   baq = angsd::getArg("-baq",baq,arguments);

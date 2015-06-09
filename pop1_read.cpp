@@ -22,6 +22,7 @@ extern int uniqueOnly;
 extern int only_proper_pairs;
 extern int remove_bads;
 extern int minMapQ;
+extern float downSample;
 extern int adjustMapQ;
 extern int baq;
 
@@ -131,6 +132,8 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
 	  b->core.qual = q;
       }
     }
+    if(rand()>RAND_MAX*downSample)
+	 b->core.qual=0;
     if(b->core.qual<minMapQ)
       goto bam_iter_reread;
   }
