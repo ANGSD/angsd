@@ -157,6 +157,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
 #endif
   }
   keep_destroy(hit);
+  return 1;
 }
 
 
@@ -169,7 +170,8 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites
   if(lastread==0 ){
     //    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
     int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr); 
-    //    fprintf(stderr,"ret:%d\n",ret);
+    //fprintf(stderr,"[%s] ret:%d\n",__FUNCTION__,ret);
+    //    exit(0);
     if(ret==-3)
       return -3;
   }

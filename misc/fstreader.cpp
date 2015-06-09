@@ -124,7 +124,7 @@ perfst * perfst_init(char *fname){
 
   free(tmp);
   free(tmp2);
-  writefst_header(stderr,ret);
+  //  writefst_header(stderr,ret);
   return ret;
  }
 

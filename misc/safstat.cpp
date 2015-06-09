@@ -83,6 +83,7 @@ int fst_print(int argc,char **argv){
   char *bname = *argv;
   fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
   perfst *pf = perfst_init(bname);
+  writefst_header(stderr,pf);  
   args *pars = getArgs(--argc,++argv);  
   int *ppos = NULL;
   fprintf(stderr,"choose:%d \n",choose(pf->names.size(),2));
@@ -141,6 +142,95 @@ int fst_print(int argc,char **argv){
     
     if(pars->chooseChr!=NULL)
       break;
+  }
+  delete [] ares;
+  delete [] bres;
+  destroy_args(pars);
+  perfst_destroy(pf);
+  return 0;
+}
+
+int fst_stat(int argc,char **argv){
+  
+  char *bname = *argv;
+  fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
+  perfst *pf = perfst_init(bname);
+  args *pars = getArgs(--argc,++argv);  
+  int *ppos = NULL;
+  int chs = choose(pf->names.size(),2);
+  // fprintf(stderr,"choose:%d \n",chs);
+  double **ares = new double*[chs];
+  double **bres = new double*[chs];
+  double unweight[chs];
+  double wa[chs];
+  double wb[chs];
+  size_t nObs =0;
+  for(int i=0;i<chs;i++)
+    unweight[i] = wa[i] = wb[i] =0.0;
+  for(myFstMap::iterator it=pf->mm.begin();it!=pf->mm.end();++it){
+    if(pars->chooseChr!=NULL){
+      it = pf->mm.find(pars->chooseChr);
+      if(it==pf->mm.end()){
+	fprintf(stderr,"Problem finding chr: %s\n",pars->chooseChr);
+	break;
+      }
+    }
+    if(it->second.nSites==0)
+      continue;
+    bgzf_seek(pf->fp,it->second.off,SEEK_SET);
+    ppos = new int[it->second.nSites];
+    
+    bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
+    for(int i=0;i<choose(pf->names.size(),2);i++){
+      ares[i] = new double[it->second.nSites];
+      bres[i] = new double[it->second.nSites];
+      bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
+      bgzf_read(pf->fp,bres[i],sizeof(double)*it->second.nSites);
+    }
+    
+
+
+    int first=0;
+    if(pars->start!=-1)
+      while(ppos[first]<pars->start) 
+	first++;
+    
+    int last=it->second.nSites;
+
+    if(pars->stop!=-1&&pars->stop<=ppos[last-1]){
+      last=first;
+      while(ppos[last]<pars->stop) 
+	last++;
+    }
+
+    //  fprintf(stderr,"pars->stop:%d ppos:%d first:%d last:%d\n",pars->stop,ppos[last-1],first,last);
+
+    for(int s=first;s<last;s++){
+#if 0
+      fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
+      for(int i=0;i<choose(pf->names.size(),2);i++)
+	fprintf(stdout,"\t%f\t%f",ares[i][s],bres[i][s]);
+      fprintf(stdout,"\n");
+#endif
+      for(int i=0;i<choose(pf->names.size(),2);i++){
+	unweight[i] += ares[i][s]/bres[i][s];
+	wa[i] += ares[i][s];
+	wb[i] += bres[i][s];
+      }
+      nObs++;
+    }
+    for(int i=0;i<choose(pf->names.size(),2);i++){
+      delete [] ares[i];
+      delete [] bres[i];
+    }
+    
+    delete [] ppos;
+    
+    if(pars->chooseChr!=NULL)
+      break;
+  }
+  for(int i=0;i<chs;i++){
+    fprintf(stdout,"\t-> FST.Unweight:%f Fst.Weight:%f\n",unweight[i]/(1.0*nObs),wa[i]/wb[i]);
   }
   delete [] ares;
   delete [] bres;
