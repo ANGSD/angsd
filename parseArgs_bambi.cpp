@@ -13,6 +13,7 @@ int only_proper_pairs = 1;
 int remove_bads = 1;
 int minMapQ =0;
 int minQ = MINQ;
+float downSample = 0;
 int trim = 0;
 int adjustMapQ =0;
 int baq =0;
@@ -144,6 +145,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders\t%d\tExit if difference in BAM headers\n",checkBamHeaders);
+  fprintf(argFile,"\t-downSample\t%f\tDownsample to the fraction of original data\n",downSample);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
   
   fprintf(argFile,"\n");
@@ -167,6 +169,7 @@ void setArgsBam(argStruct *arguments){
   only_proper_pairs =angsd::getArg("-only_proper_pairs",only_proper_pairs,arguments);
   minMapQ = angsd::getArg("-minMapQ",minMapQ,arguments);
   minQ = angsd::getArg("-minQ",minQ,arguments);
+  downSample = angsd::getArg("-downSample",downSample,arguments);
   trim = angsd::getArg("-trim",trim,arguments);
   adjustMapQ = angsd::getArg("-C",adjustMapQ,arguments);
   baq = angsd::getArg("-baq",baq,arguments);
