@@ -169,8 +169,7 @@ int fst_stat2(int argc,char **argv){
   double wa[chs];
   double wb[chs];
   size_t nObs =0;
-  for(int i=0;i<chs;i++)
-    unweight[i] = wa[i] = wb[i] =0.0;
+ 
   for(myFstMap::iterator it=pf->mm.begin();it!=pf->mm.end();++it){
     if(pars->chooseChr!=NULL){
       it = pf->mm.find(pars->chooseChr);
@@ -196,24 +195,33 @@ int fst_stat2(int argc,char **argv){
     }
     
 
+    if(pars->type==0)
+      pS = (ppos[0]/pars->step)*pars->step +pars->step;
+    else if(pars->type==1)
+      pS = ppos[0];
+    else if(pars->type==2)
+      pS = 1;
+    pE = pS+pars->win;
+    begI=endI=0;
 
-    begI=0;
-    endI=it->second.nSites;
-    if(pars->start!=-1)
-      while(ppos[begI]<pars->start) 
-	begI++;
-    
-    
 
-    if(pars->stop!=-1&&pars->stop<=ppos[endI-1]){
-      endI=begI;
-      
-      while(ppos[endI]<pars->stop) 
-	endI++;
-    }
+  if(pE>ppos[it->second.nSites-1]){
+    fprintf(stderr,"end of dataset is before end of window: end of window:%d last position in chr:%d\n",pE,ppos[it->second.nSites-1]);
+    //    return str;
+  }
+
+  while(ppos[begI]<pS) begI++;
+  
+  endI=begI;
+  while(ppos[endI]<pE) endI++;
+
 
     //  fprintf(stderr,"pars->stop:%d ppos:%d first:%d last:%d\n",pars->stop,ppos[last-1],first,last);
-
+  while(1){
+    for(int i=0;i<chs;i++)
+      unweight[i] = wa[i] = wb[i] =0.0;
+    nObs=0;
+    fprintf(stdout,"(%d,%d)(%d,%d)(%d,%d)\t%s\t%d",begI,endI,ppos[begI],ppos[endI],pS,pE,it->first,pS+(pE-pS)/2);
     for(int s=begI;s<endI;s++){
 #if 0
       fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
@@ -228,6 +236,17 @@ int fst_stat2(int argc,char **argv){
       }
       nObs++;
     }
+    for(int i=0;nObs>0&&i<chs;i++)
+      fprintf(stdout,"\t%f\t%f",unweight[i]/(1.0*nObs),wa[i]/wb[i]);
+    fprintf(stdout,"\n");
+    pS += pars->step;
+    pE =pS+pars->win;
+    if(pE>ppos[it->second.nSites-1])
+      break;
+    
+    while(ppos[begI]<pS) begI++;
+    while(ppos[endI]<pE) endI++;
+  }
     for(int i=0;i<choose(pf->names.size(),2);i++){
       delete [] ares[i];
       delete [] bres[i];
@@ -238,9 +257,7 @@ int fst_stat2(int argc,char **argv){
     if(pars->chooseChr!=NULL)
       break;
   }
-  for(int i=0;nObs>0&&i<chs;i++){
-    fprintf(stdout,"\t-> FST.Unweight:%f Fst.Weight:%f\n",unweight[i]/(1.0*nObs),wa[i]/wb[i]);
-  }
+ 
   delete [] ares;
   delete [] bres;
   destroy_args(pars);
