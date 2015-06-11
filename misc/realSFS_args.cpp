@@ -78,8 +78,8 @@ args * getArgs(int argc,char **argv){
   p->emAccl =1;
   p->fstout = NULL;
   p->start=p->stop=-1;
-  p->win=50e3;
-  p->step=1e3;
+  p->win=p->step=-1;
+  p->type =0;
   if(argc==0)
     return p;
 
@@ -89,6 +89,12 @@ args * getArgs(int argc,char **argv){
       p->tole = atof(*(++argv));
     else  if(!strcasecmp(*argv,"-P"))
       p->nThreads = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-win"))
+      p->win = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-type"))
+      p->type = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-step"))
+      p->step = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-maxIter"))
       p->maxIter = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-posOnly"))
@@ -120,6 +126,11 @@ args * getArgs(int argc,char **argv){
   for(int i=0;(p->saf.size()>1)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;
   fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s fstout:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->fstout);
+  if((p->win==-1 &&p->step!=-1) || (p->win!=-1&&p->step==-1)){
+    fprintf(stderr,"\t-> Both -win and -step must be supplied for sliding window analysis\n");
+    exit(0);
+
+  }
   return p;
 }
 

@@ -1058,11 +1058,12 @@ int fst(int argc,char**argv){
     fst_print(--argc,++argv);
   else if(!strcasecmp(*argv,"stats"))  
     fst_stat(--argc,++argv);
+  else if(!strcasecmp(*argv,"stats2"))  
+    fst_stat2(--argc,++argv);
   else{
     fprintf(stderr,"unknown option: \'%s\'\n",*argv);
-    return 0;
   }
-
+  return 0;
 }
 
 

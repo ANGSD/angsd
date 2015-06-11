@@ -7,3 +7,4 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
 int choose(int n,int m);
 int fst_print(int argc,char **argv);
 int fst_stat(int argc,char **argv);
+int fst_stat2(int argc,char **argv);
