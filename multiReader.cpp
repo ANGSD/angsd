@@ -1,4 +1,5 @@
 #include <libgen.h>//for checking if output dir exists 'dirname'
+#include <cassert>
 #include "abc.h"
 #include "shared.h"
 #include "multiReader.h"
@@ -134,6 +135,22 @@ void setInputType(argStruct *args){
     return;
   }
   tmp=NULL;
+  tmp = angsd::getArg("-vcf-PL",tmp,args);
+  if(tmp!=NULL){
+    args->inputtype=INPUT_VCF_GL;
+    args->infile = tmp;
+    args->nams.push_back(strdup(args->infile));
+    char *tmp_fai = NULL;
+    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
+    if(tmp_fai==NULL){
+      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using VCF input\n");
+      exit(0);
+
+    }
+    free(tmp_fai);
+    return;
+  }
+  tmp=NULL;
   tmp = angsd::getArg("-pileup",tmp,args);
   if(tmp!=NULL){
     args->inputtype=INPUT_PILEUP;
@@ -214,6 +231,7 @@ argStruct *setArgStruct(int argc,char **argv) {
     arguments->argumentFile=aio::openFile(arguments->outfiles,ARGS);
    
   setInputType(arguments);
+  //  fprintf(stderr,"setintputtype:%d\n",arguments->inputtype);exit(0);
   return arguments;
 }
 
@@ -247,6 +265,7 @@ void multiReader::getOptions(argStruct *arguments){
   fname=angsd::getArg("-glf3",fname,arguments);
   fname=angsd::getArg("-vcf-GL",fname,arguments);
   fname=angsd::getArg("-vcf-GP",fname,arguments);
+  fname=angsd::getArg("-vcf-pl",fname,arguments);
   intName=angsd::getArg("-intName",intName,arguments);
   isSim=angsd::getArg("-isSim",intName,arguments);
   nInd=angsd::getArg("-nInd",nInd,arguments);
@@ -292,6 +311,7 @@ multiReader::multiReader(int argc,char**argv){
        (!strcasecmp(args->argv[1],"-glf3")) ||
        (!strcasecmp(args->argv[1],"-pileup")) ||
        (!strcasecmp(args->argv[1],"-vcf-GL")) ||
+       (!strcasecmp(args->argv[1],"-vcf-pl")) ||
        (!strcasecmp(args->argv[1],"-vcf-GP"))) {
       printArg(stdout);
       exit(0);
@@ -303,11 +323,12 @@ multiReader::multiReader(int argc,char**argv){
       return;
   }
   getOptions(args);
+
   if(fai){
     hd=getHeadFromFai(fai);
   }else{
     if(args->nams.size()==0){
-      fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp filename\n");
+      fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp/-vcf-pl filename\n");
       exit(0);
     }
     htsFile *in=sam_open(args->nams[0],"r");
@@ -334,9 +355,11 @@ multiReader::multiReader(int argc,char**argv){
   revMap = buildRevTable(args->hd);
 
   args->revMap = revMap;
+
   setArgsBam(args);
   if(fname==NULL)
     return;
+
   gz=Z_NULL;
   gz=gzopen(fname,"r");   
   if(gz==Z_NULL){
@@ -362,6 +385,7 @@ multiReader::multiReader(int argc,char**argv){
     break;
   }
   case INPUT_VCF_GL:{
+    fprintf(stderr,"input_vcf\n");
     myvcf = new vcfReader(args->nInd,gz,bytesPerLine,args->revMap);
     break;
   }
@@ -382,6 +406,7 @@ multiReader::multiReader(int argc,char**argv){
     fprintf(stderr,"\t   2. will use chrom, pos, ref, alt columns\n");
     fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln\n");
     fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...)\n");
+    fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
 
   }
 }
@@ -488,7 +513,10 @@ funkyPars *multiReader::fetch(){
   }
   if(fp&&0)
     fprintf(stderr,"numSites:%d\n",fp->numSites);
-    
+  if(fp!=NULL && fp->refId==-1){
+    fprintf(stderr,"\t-> Unkown refid found will close program\n");
+    return NULL;
+  }
   return fp;
 
 }

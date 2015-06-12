@@ -39,6 +39,7 @@ vcfReader::vcfReader(int &nInd_a,gzFile gz_a,int bytesPerLine,const aMap *revMap
 
 //return value is pos. If this is zero means dont use site
 int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
+  // fprintf(stderr,"aprseline\n");
   int pos = atoi(angsd::strpop(&saveptr,'\t'));
   angsd::strpop(&saveptr,'\t');//ID
   char *ref = angsd::strpop(&saveptr,'\t');
@@ -49,12 +50,12 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
   char *format= angsd::strpop(&saveptr,'\t');
   
   // fprintf(stderr,"\npos:%d ref:%s alt:%s qual:%s flt:%s info:%s format:%s strlen(ref):%zu strlen(alt):%zu\n",pos,ref,alt,qual,filter,info,format,strlen(ref),strlen(alt)); exit(0);
- 
+
  if(strlen(ref)!=1||strlen(alt)!=1){
     fprintf(stderr,"skipping site:%d multiref/multialt (indel)\n",pos+1);
     return 0;
   }
-  if(strcmp(filter,"PASS")){
+  if(0&&strcmp(filter,"PASS")){
     fprintf(stderr,"skipping site:%d (non PASS)\n",pos+1);
     return 0;
     
@@ -64,6 +65,7 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
     fprintf(stderr,"skipping site:%d (indel)\n",pos+1);
     return 0;
   }
+
   ref[0]=refToInt[ref[0]];
   alt[0]=refToInt[alt[0]];
   if(ref[0]==4|| alt[0]==4){
@@ -75,11 +77,12 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
     return 0;
 
   }
+
   major=ref[0];
   minor=alt[0];
-  char pick[2]={-1,-1};//pick[0]=GL,pick[1]=GP;
+  char pick[3]={-1,-1,-1};//pick[0]=GL,pick[1]=GP,pick[2]=PL;
   int i=0;
-  
+
   while(1){
     if(format[0]=='G'){
       if(format[1]=='L')
@@ -88,15 +91,18 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
 	pick[1] = i;
       }
     }
+    if(format[0]=='P'&&format[1]=='L')
+	pick[2] = i;
+
     i++;
     format=strchr(format,':');
     if(format==NULL)
       break;
     format++;
   }
-
-  if(pick[0]+pick[1]==-2){
-    fprintf(stderr,"skipping site:%d (no GT/GP tag)\n",pos);
+  //  fprintf(stderr,"pick[0]:%d pick[1]:%d pick[2]:%d\n",pick[0],pick[1],pick[2]);
+  if(pick[0]+pick[1]+pick[2]==-3){
+    fprintf(stderr,"skipping site:%d (no GT/GP/PL tag)\n",pos);
     return 0;
   }
   //  fprintf(stderr,"pick[0]:%d pick[1]:%d\n",pick[0],pick[1]);
@@ -138,6 +144,19 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
 	  (*gp)[i*3+pp++]=atof(val);
 	}
 	assert(pp==3);
+      }if(p==pick[2]){
+	//PL tag
+	
+	double tre[3];
+	for(int j=0;j<3;j++){
+	  tre[j] = log(pow(10,-atof(angsd::strpop(&tok,','))/10.0));//hack
+	  // fprintf(stdout,"j[%d]:%f\n",j,tre[j]);
+	}
+	lk[0][i*10+angsd::majorminor[ref[0]][ref[0]]]=tre[0]/M_LOG10E;
+	lk[0][i*10+angsd::majorminor[ref[0]][alt[0]]]=tre[1]/M_LOG10E;
+	lk[0][i*10+angsd::majorminor[alt[0]][alt[0]]]=tre[2]/M_LOG10E;
+
+
       }
 
       p++;
@@ -150,49 +169,51 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
 
 
 funkyPars *vcfReader::fetch(int chunkSize){
+  //  fprintf(stderr,"fetch:%d curChr:%d\n\n",chunkSize,curChr);
   static int eof=0;
   if(eof)
     return NULL;
   funkyPars *r = allocFunkyPars();  
-  r->likes=NULL;
+  //  r->likes=r->post=NULL;
   r->likes=new double*[chunkSize];
   r->post=new double*[chunkSize];
+  for(int i=0;i<chunkSize;i++){
+    memset(r->likes,0,chunkSize*sizeof(double*));
+    memset(r->post,0,chunkSize*sizeof(double*));
+  }
   r->posi=new int[chunkSize];
   r->major = new char[chunkSize];
   r->minor = new char[chunkSize];
   
   memset(r->major,0,chunkSize);
   memset(r->minor,0,chunkSize);
+  //  fprintf(stderr,"curChr:%d\n",curChr);
   r->refId = curChr;
   
   static int changed =0;
+ reread:
+  int i=0;
   if(changed){
-    fprintf(stderr,"inchange\n");
-    double *lk = new double [10*nInd];
+    //    fprintf(stderr,"inchange\n");
     int p = parseline(r->likes,r->post,r->major[0],r->minor[0]);
     if(p>0)
-      r->posi[0]=p-1;
-    
-    
+      r->posi[i++]=p-1;
   }
 
-  int i=changed>0?1:0;
   changed=0;
   int cnt=i;//counter for the in-array position.
 
   for(;i<chunkSize;i++){
+    //    fprintf(stderr,"in for loop\n");
     if(Z_NULL==gzgets(gz,buf,len)){
-      fprintf(stderr,"\t-> Done reading vcffile\n");
+      fprintf(stderr,"\t-> Done reading vcffile\n");fflush(stderr);
       eof=1;
       break;
     }
+    //    fprintf(stderr,"in for loop2\n");
     buf[strlen(buf)-1] = '\0';
     saveptr=buf;
   
-    // double *lk = new double [10*nInd];
-    //    double *lk =NULL;
-    //double *gp = new double [3*nInd];
-
     char *tmp = strchr(saveptr,'\t');
     tmp[0]='\0';
     char *chr = saveptr;
@@ -203,6 +224,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
       fprintf(stderr,"Problem finding chromosome: %s in fai file\n",chr);
       exit(0);
     }
+
     if(curChr==-1){
       //init chr
       r->refId=curChr=it->second;
@@ -210,9 +232,12 @@ funkyPars *vcfReader::fetch(int chunkSize){
     if(curChr!=it->second){
       changed =1;
       curChr=it->second;
+      //      fprintf(stderr,"breaking for change of chr\n");
       break;
     }
+    //  fprintf(stderr,"in for loop3\n");
     int p = parseline(r->likes+cnt,r->post+cnt,r->major[cnt],r->minor[cnt]);
+    //  fprintf(stderr,"in for loop4\n");
     if(p==0)
       continue;
     else{
@@ -220,11 +245,12 @@ funkyPars *vcfReader::fetch(int chunkSize){
       cnt++;//only update cnt
     }
   }
-  
   r->nInd=nInd;
   r->numSites=cnt;
   //  fprintf(stderr,"\t-> r->nind:%d r->numSites:%d r->refId:%d\n",r->nInd,r->numSites,r->refId);
-  assert(r->refId!=-1);
+  if(r->numSites==0&&eof!=1)
+    goto reread;
+  //  fprintf(stderr,"\t-> r->nind:%d r->numSites:%d r->refId:%d\n",r->nInd,r->numSites,r->refId);
   return r;
 }
 
