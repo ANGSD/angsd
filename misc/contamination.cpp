@@ -713,7 +713,7 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
   it = myMap.begin();
   aMap newMap;
   for(int i=0;i<myMap.size()-1;i++){
-    if(fabs(vec[i])>=minDist){
+    if(std::abs(vec[i])>=minDist){
       newMap[it->first] = it->second;
       //     fprintf(stdout,"test\t%d\n",it->first);
     }
