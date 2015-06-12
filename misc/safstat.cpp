@@ -281,9 +281,11 @@ int fst_stat(int argc,char **argv){
   double unweight[chs];
   double wa[chs];
   double wb[chs];
-  size_t nObs =0;
-  for(int i=0;i<chs;i++)
+  size_t nObs[chs];
+  for(int i=0;i<chs;i++){
     unweight[i] = wa[i] = wb[i] =0.0;
+    nObs[i] = 0;
+  }
   for(myFstMap::iterator it=pf->mm.begin();it!=pf->mm.end();++it){
     if(pars->chooseChr!=NULL){
       it = pf->mm.find(pars->chooseChr);
@@ -331,11 +333,13 @@ int fst_stat(int argc,char **argv){
       fprintf(stdout,"\n");
 #endif
       for(int i=0;i<choose(pf->names.size(),2);i++){
-	unweight[i] += ares[i][s]/bres[i][s];
+	if(bres[i][s]!=0){
+	  unweight[i] += ares[i][s]/bres[i][s];
+	  nObs[i]++;
+	}
 	wa[i] += ares[i][s];
 	wb[i] += bres[i][s];
       }
-      nObs++;
     }
     for(int i=0;i<choose(pf->names.size(),2);i++){
       delete [] ares[i];
@@ -348,7 +352,7 @@ int fst_stat(int argc,char **argv){
       break;
   }
   for(int i=0;i<chs;i++){
-    fprintf(stdout,"\t-> FST.Unweight:%f Fst.Weight:%f\n",unweight[i]/(1.0*nObs),wa[i]/wb[i]);
+    fprintf(stdout,"\t-> FST.Unweight[nObs:%lu]:%f Fst.Weight:%f\n",nObs[i],unweight[i]/(1.0*nObs[i]),wa[i]/wb[i]);
   }
   delete [] ares;
   delete [] bres;
