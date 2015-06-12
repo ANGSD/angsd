@@ -17,7 +17,7 @@ HTSDIR = ../htslib
 HTS = $(realpath $(HTSDIR))
 HTSLIB = $(HTS)/libhts.a
 
-PACKAGE_VERSION  = 0.900
+PACKAGE_VERSION  = 0.901
 
 ifneq "$(wildcard .git)" ""
 PACKAGE_VERSION := $(shell git describe --always --dirty)
