@@ -196,16 +196,16 @@ int fst_stat2(int argc,char **argv){
     
 
     if(pars->type==0)
-      pS = (ppos[0]/pars->step)*pars->step +pars->step;
+      pS = ((pars->start!=-1?pars->start:ppos[0])/pars->step)*pars->step +pars->step;
     else if(pars->type==1)
-      pS = ppos[0];
+      pS = (pars->start!=-1?pars->start:ppos[0]);
     else if(pars->type==2)
       pS = 1;
     pE = pS+pars->win;
     begI=endI=0;
 
-
-  if(pE>ppos[it->second.nSites-1]){
+    //    fprintf(stderr,"ps:%d\n",pS);exit(0);
+    if(pE>(pars->stop!=-1?pars->stop:ppos[it->second.nSites-1])){
     fprintf(stderr,"end of dataset is before end of window: end of window:%d last position in chr:%d\n",pE,ppos[it->second.nSites-1]);
     //    return str;
   }
@@ -215,8 +215,8 @@ int fst_stat2(int argc,char **argv){
   endI=begI;
   while(ppos[endI]<pE) endI++;
 
+  //fprintf(stderr,"begI:%d endI:%d\n",begI,endI);
 
-    //  fprintf(stderr,"pars->stop:%d ppos:%d first:%d last:%d\n",pars->stop,ppos[last-1],first,last);
   while(1){
     for(int i=0;i<chs;i++)
       unweight[i] = wa[i] = wb[i] =0.0;
@@ -241,7 +241,7 @@ int fst_stat2(int argc,char **argv){
     fprintf(stdout,"\n");
     pS += pars->step;
     pE =pS+pars->win;
-    if(pE>ppos[it->second.nSites-1])
+    if(pE>(pars->stop!=-1?pars->stop:ppos[it->second.nSites-1]))
       break;
     
     while(ppos[begI]<pS) begI++;
