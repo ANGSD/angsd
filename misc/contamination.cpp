@@ -186,8 +186,10 @@ double myfun(double x,void *d){
 }
 
 double jackMom(allPars *ap,int len){
-  if(len!=-1)
+  len=ap->len;
+  if(len>0)
     len=std::min(ap->len,len);
+  assert(len>-1);
   int *seqDepth=ap->seqDepth;
   int *nonMajor=ap->nonMajor;
   double *freq =ap->freq;
@@ -225,8 +227,12 @@ void *slave(void *ptr){
 
 
 double jackML(allPars *ap,int nthreads,char *fname,int nJack) {
-  if(nJack!=-1)
+  
+  if(nJack==-1)
+    nJack = ap->len;
+  else
     nJack = std::min(ap->len,nJack);
+  assert(nJack>0);
   double *thetas =new double[nJack];
   double *val = new double[nJack];
   if(nthreads>1){
@@ -360,17 +366,17 @@ void analysis(dat &d,int nThreads,int nJack) {
 #endif
   int n11, n12, n21, n22;
   double left, right, twotail, prob;
-  fprintf(stderr,"--------\nMAIN RESULTS: Fisher exact test:\n");
+  //  fprintf(stderr,"--------\nMAIN RESULTS: Fisher exact test:\n");
   n11=mat1[0];n12=mat1[2];n21=mat1[1];n22=mat1[3];
   prob = kt_fisher_exact(n11, n12, n21, n22, &left, &right, &twotail);
-  fprintf(stdout,"Method\t n11 n12 n21 n22 prob left right twotail\n");
-  fprintf(stdout,"%s\t%d\t%d\t%d\t%d\t%.6g\t%.6g\t%.6g\t%.6g\n", "method1", n11, n12, n21, n22,
-				prob, left, right, twotail);
+  //  fprintf(stdout,"Method\t n11 n12 n21 n22 prob left right twotail\n");
+  //fprintf(stdout,"%s\t%d\t%d\t%d\t%d\t%.6g\t%.6g\t%.6g\t%.6g\n", "method1", n11, n12, n21, n22,
+  //		prob, left, right, twotail);
 
   n11=mat2[0];n12=mat2[2];n21=mat2[1];n22=mat2[3];
   prob = kt_fisher_exact(n11, n12, n21, n22, &left, &right, &twotail);
-  fprintf(stdout,"%s\t%d\t%d\t%d\t%d\t%.6g\t%.6g\t%.6g\t%.6g\n", "method2", n11, n12, n21, n22,
-				prob, left, right, twotail);
+//fprintf(stdout,"%s\t%d\t%d\t%d\t%d\t%.6g\t%.6g\t%.6g\t%.6g\n", "method2", n11, n12, n21, n22,
+  //			prob, left, right, twotail);
 
   //estimate how much contamination
   double c= mat1[2]/(1.0*(mat1[2]+mat1[3]));//this is error for flanking site
