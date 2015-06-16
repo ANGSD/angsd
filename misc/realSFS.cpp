@@ -355,6 +355,7 @@ struct emPars{
   double lik;
   double *sfs;//shared for all threads
   double *post;//allocated for every thread
+  double *inner;//allocated for every thread
   int dim;
 };
 
@@ -476,8 +477,7 @@ double like_master(int nThreads){
 
 
 template <typename T>
-void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,int stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -495,8 +495,7 @@ void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,
 
 
 template <typename T>
-void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -516,8 +515,7 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
 }
 
 template <typename T>
-void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -538,8 +536,8 @@ void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
 }
 
 template <typename T>
-void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
+
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -566,13 +564,13 @@ template <typename T>
 void *emStep_slave(void *p){
   emPars<T> &pars = emp[(size_t) p];
   if(pars.gls.size()==1)
-    emStep1<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+    emStep1<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
   else if(pars.gls.size()==2)
-    emStep2<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+    emStep2<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
   else if(pars.gls.size()==3)
-    emStep3<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+    emStep3<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
   else if(pars.gls.size()==4)
-    emStep4<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+    emStep4<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
   pthread_exit(NULL);
 }
 
@@ -619,6 +617,7 @@ emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads
     temp[i].to=blockSize;
     temp[i].sfs = sfs;
     temp[i].post=new double[dim];
+    temp[i].inner=new double[dim];
     temp[i].dim = dim;
   }
   //redo the from,to
@@ -641,8 +640,10 @@ emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads
 
 template<typename T>
 void destroy(emPars<T> *a,int nThreads ){
-  for(int i=0;i<nThreads;i++)
+  for(int i=0;i<nThreads;i++){
+    delete [] a[i].inner;
     delete [] a[i].post;
+  }
   delete [] a;
   delete [] thd;
 }
