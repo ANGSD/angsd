@@ -48,6 +48,13 @@ if [ ! $? -eq 0 ] ;then
     RVAL=1
 fi
 
+echo "Testing fst using msms"
+./testFst.sh $WDIR
+if [ ! $? -eq 0 ] ;then
+    echo "Problem with neutrality test statistics exit code: $?"
+    cat ./testFst.sh.log
+    RVAL=1
+fi
 
 echo "Testing SFS"
 ./testSFS.sh $WDIR
