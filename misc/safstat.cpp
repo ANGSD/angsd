@@ -352,7 +352,8 @@ int fst_stat(int argc,char **argv){
       break;
   }
   for(int i=0;i<chs;i++){
-    fprintf(stdout,"\t-> FST.Unweight[nObs:%lu]:%f Fst.Weight:%f\n",nObs[i],unweight[i]/(1.0*nObs[i]),wa[i]/wb[i]);
+    fprintf(stderr,"\t-> FST.Unweight[nObs:%lu]:%f Fst.Weight:%f\n",nObs[i],unweight[i]/(1.0*nObs[i]),wa[i]/wb[i]);
+    fprintf(stdout,"%f %f\n",unweight[i]/(1.0*nObs[i]),wa[i]/wb[i]);
   }
   delete [] ares;
   delete [] bres;
