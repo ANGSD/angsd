@@ -477,7 +477,7 @@ double like_master(int nThreads){
 
 template <typename T>
 void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+  static double *inner = new double[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -496,7 +496,7 @@ void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,
 
 template <typename T>
 void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+  static double *inner = new double[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -517,7 +517,7 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
 
 template <typename T>
 void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+  static double *inner = new double[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -539,7 +539,7 @@ void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
 
 template <typename T>
 void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+  static double *inner = new double[dim];
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
