@@ -852,7 +852,7 @@ int fst_index(int argc,char **argv){
   inc=0;
   for(int i=0;i<saf.size();i++)
     for(int j=i+1;j<saf.size();j++){
-      calcCoef(saf[0]->nChr,saf[1]->nChr,&a1[inc],&b1[inc]);
+      calcCoef(saf[i]->nChr,saf[j]->nChr,&a1[inc],&b1[inc]);
       //      fprintf(stderr,"a1[%d]:%p b1[%d]:%p\n",inc,&a1[inc][0],inc,&b1[inc][0]);
       inc++;
     }
