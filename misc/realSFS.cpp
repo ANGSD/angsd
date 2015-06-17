@@ -114,8 +114,10 @@ void readSFS(const char*fname,int hint,double *ret){
 
 size_t parspace(std::vector<persaf *> &saf){
   size_t ndim = 1;
-  for(int i=0;i<saf.size();i++)
+  for(int i=0;i<saf.size();i++){
     ndim *= saf[i]->nChr+1;
+    fprintf(stderr,"\t-> dim(%s):%lu\n",saf[i]->fname,saf[i]->nChr+1);
+  }
   fprintf(stderr,"\t-> Dimension of parameter space: %lu\n",ndim);
   return ndim;
 }
@@ -293,9 +295,9 @@ int printMulti(args *arg){
     }else{
       for(int s=0;s<gls[0]->x;s++){
 	if(arg->chooseChr==NULL)
-	  gzprintf(oldpos,"%s\t%d",curChr,posiToPrint[s]+1);
+	  gzprintf(oldpos,"%s\t%d\n",curChr,posiToPrint[s]+1);
 	else
-	  gzprintf(oldpos,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
+	  gzprintf(oldpos,"%s\t%d\n",arg->chooseChr,posiToPrint[s]+1);
 	for(int i=0;i<saf.size();i++){
 	  double mytmp[gls[i]->y];
 	  for(int ii=0;ii<gls[i]->y;ii++)
@@ -351,7 +353,7 @@ void print(int argc,char **argv){
   pars->saf[0]->kind = 2;
   if(pars->posOnly==1)
     pars->saf[0]->kind = 1;
-  if(pars->saf.size()!=1){
+  if(1||pars->saf.size()!=1){
     fprintf(stderr,"\t-> Will jump to multisaf printer and will only print intersecting sites between populations\n");
     printMulti<T>(pars);
     return;
@@ -1143,16 +1145,6 @@ int main(int argc,char **argv){
   }
   ++argv;
   --argc;
-
-  if(isatty(fileno(stdout))){
-    fprintf(stderr,"\t-> You are printing the optimized SFS to the terminal consider dumping into a file\n");
-    fprintf(stderr,"\t-> E.g.: \'./realSFS");
-    for(int i=0;i<argc;i++)
-      fprintf(stderr," %s",argv[i]);
-    fprintf(stderr," >sfs.ml.txt\'\n");   
-
-  }
-  
   
   if(!strcasecmp(*argv,"printOld"))
     printOld(--argc,++argv);
@@ -1166,6 +1158,16 @@ int main(int argc,char **argv){
       fprintf(stderr,"\t-> Multi SFS is 'still' under development. Please report strange behaviour\n");
     if(!arg)
       return 0;
+
+    if(isatty(fileno(stdout))){
+      fprintf(stderr,"\t-> You are printing the optimized SFS to the terminal consider dumping into a file\n");
+      fprintf(stderr,"\t-> E.g.: \'./realSFS");
+      for(int i=0;i<argc;i++)
+	fprintf(stderr," %s",argv[i]);
+      fprintf(stderr," >sfs.ml.txt\'\n");   
+    }
+  
+
     main_opt<float>(arg);
     
   }
