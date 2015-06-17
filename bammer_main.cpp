@@ -103,7 +103,7 @@ int checkIfSorted(char *str){
     return 2;
   }
   if(strchr(str,'\n')<so){
-    fprintf(stderr,"\t-> We require a SO:coordinate tag in the firs line of header\n");
+    fprintf(stderr,"\t-> We require a SO:coordinate tag in the first line of header\n");
     return 3;
   }
   return 0;
