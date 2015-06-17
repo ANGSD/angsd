@@ -25,6 +25,8 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t3: use the base with highest ebd (under development) \n");
   fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases perline in output file)\n",NbasesPerLine);
   fprintf(argFile,"\t-explode\t%d\t(Should we include chrs with no data?)",explode);
+  fprintf(argFile,"\t-rmTrans\t%d\t(remove transitions (as different from -ref bases)?)",rmTrans);
+  fprintf(argFile,"\t-ref\t%s\t(reference fasta, only used with -rmTrans 1)",ref);
   fprintf(argFile,"\n");
 }
 
@@ -35,7 +37,8 @@ void abcWriteFasta::getOptions(argStruct *arguments){
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   explode=angsd::getArg("-explode",explode,arguments);
   NbasesPerLine = angsd::getArg("-basesPerLine",NbasesPerLine,arguments);
-  
+  rmTrans=angsd::getArg("-rmTrans",rmTrans,arguments);
+  ref=angsd::getArg("-ref",ref,arguments);
   if(doFasta){
     if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
       fprintf(stderr,"Error: bam or soap input needed for -doFasta \n");
@@ -50,7 +53,10 @@ void abcWriteFasta::getOptions(argStruct *arguments){
       exit(0);
     }
   }
-
+  if(rmTrans && ref==NULL){
+    fprintf(stderr,"\t-> Must supply reference with -rmTrans 1\n");
+    exit(0);
+  }
 
 }
 void writeChr(kstring_t *bufstr,size_t len,char *nam,char*d,int nbpl){

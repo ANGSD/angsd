@@ -7,6 +7,8 @@ private:
   double lphred[256];//these are log phread scores log(10^(1:255)/(-10))
   char *myFasta;//contains the new fastasequence for the currrent chr
   int hasData;
+  int rmTrans;
+  char *ref;
 public:
   int doFasta;
   BGZF *outfileZ;
