@@ -32,7 +32,7 @@
 #include <htslib/tbx.h>
 #include "Matrix.hpp"
 #include "safstat.h"
-
+#include <libgen.h>
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -255,20 +255,54 @@ int printMulti(args *arg){
   //temp used for checking pos are in sync
   setGloc(saf,nSites);
   int *posiToPrint = new int[nSites];
+  //used for printout old format
+  FILE **oldfp = NULL;
+  gzFile oldpos = Z_NULL;
+  if(arg->oldout){
+    oldfp = new FILE*[saf.size()];
+    for(int i=0;i<saf.size();i++){
+      unsigned newlen = strlen(saf[i]->fname)+100;
+      char *tmp =(char*) calloc(newlen,sizeof(char));
+      tmp = strncpy(tmp,saf[i]->fname,strlen(saf[i]->fname)-4);
+      fprintf(stderr,"\t-> Generating outputfile: %s\n",tmp);
+      oldfp[i] = fopen(tmp,"wb");
+      free(tmp);
+    }
+    unsigned newlen = strlen(dirname(saf[0]->fname))+100;
+    char *tmp = (char*) calloc(newlen,sizeof(char));
+    snprintf(tmp,newlen,"%s/shared.pos.gz",dirname(saf[0]->fname));
+    fprintf(stderr,"\t-> Generating outputfile: %s\n",tmp);
+    oldpos = gzopen(tmp,"wb");
+    free(tmp);
+  }
   while(1) {
     char *curChr=NULL;
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr);//read nsites from data
     //    fprintf(stderr,"ret:%d gls->x:%lu\n",ret,gls[0]->x);
-     
-    for(int s=0;s<gls[0]->x;s++){
-      if(arg->chooseChr==NULL)
-	fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
-      else
-	fprintf(stdout,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
-      for(int i=0;i<saf.size();i++)
-	for(int ii=0;ii<gls[i]->y;ii++)
-	  fprintf(stdout,"\t%f",log(gls[i]->mat[s][ii]));
-      fprintf(stdout,"\n");
+    if(arg->oldout==0){
+      for(int s=0;s<gls[0]->x;s++){
+	if(arg->chooseChr==NULL)
+	  fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
+	else
+	  fprintf(stdout,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
+	for(int i=0;i<saf.size();i++)
+	  for(int ii=0;ii<gls[i]->y;ii++)
+	    fprintf(stdout,"\t%f",log(gls[i]->mat[s][ii]));
+	fprintf(stdout,"\n");
+      }
+    }else{
+      for(int s=0;s<gls[0]->x;s++){
+	if(arg->chooseChr==NULL)
+	  gzprintf(oldpos,"%s\t%d",curChr,posiToPrint[s]+1);
+	else
+	  gzprintf(oldpos,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
+	for(int i=0;i<saf.size();i++){
+	  double mytmp[gls[i]->y];
+	  for(int ii=0;ii<gls[i]->y;ii++)
+	    mytmp[ii] = log(gls[i]->mat[s][ii]);
+	  fwrite(mytmp,sizeof(double),gls[i]->y,oldfp[i]);
+	}
+      }
     }
     if(ret==-3&&gls[0]->x==0){//no more data in files or in chr, eith way we break;g
       //fprintf(stderr,"breaking\n");
@@ -290,13 +324,18 @@ int printMulti(args *arg){
   }
   delGloc(saf,nSites);
   destroy(gls,nSites);
-  destroy_args(arg);
+
   delete [] sfs;
   delete [] posiToPrint;
-  
-  fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
-  fprintf(stderr,"\t-> Output is now simply the expected values! \n");
-  fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
+
+  if(arg->oldout==1){
+    for(int i=0;i<saf.size();i++)
+      fclose(oldfp[i]);
+    delete [] oldfp;
+    gzclose(oldpos);
+  }
+  destroy_args(arg);
+  fprintf(stderr,"\t-> Run completed\n");
   return 0;
 }
 
