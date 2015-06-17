@@ -80,6 +80,8 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   currentChr=-1;
   NbasesPerLine=50;
   hasData =0;
+  ref = NULL;
+  rmTrans = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doFasta")){
       printArg(stdout);
@@ -237,6 +239,26 @@ void abcWriteFasta::run(funkyPars *pars){
 	myFasta[pars->posi[s]] = intToRef[wh];
       }
     }
+  }
+  //Do transitions removal
+  if(rmTrans){
+    assert(pars->ref!=NULL);
+    for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
+
+      int ob = refToInt[myFasta[pars->posi[s]]];
+      int rb = refToInt[pars->ref[pars->posi[s]]];
+      //A <-> G, C <-> T
+      if(ob==0&&rb==2)
+	myFasta[pars->posi[s]]=intToRef[4];
+      else if(ob==2&&rb==0)
+	myFasta[pars->posi[s]]=intToRef[4];
+      else if(ob==1&&rb==3)
+	myFasta[pars->posi[s]]=intToRef[4];
+      else if(ob==3&&rb==1)
+	myFasta[pars->posi[s]]=intToRef[4];
+
+    }
+
   }
 }
 
