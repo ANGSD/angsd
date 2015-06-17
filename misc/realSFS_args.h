@@ -18,6 +18,7 @@ typedef struct {
   int win;
   int step;
   int type;
+  int oldout;
 }args;
 args * getArgs(int argc,char **argv);
 void destroy_args(args *p);
