@@ -21,9 +21,9 @@ ODIR=fst/output/
 echo "Generating genotype likelihood based on the haplotypes" >>${LOG} 2>&1
 ${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleOut 1 -regLen 0 >>${LOG} 2>&1
 echo "Splitting gl file into different populations" >>${LOG} 2>&1
-${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 1 6 >${ODIR}/pop1.glf.gz
-${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 7 13 >${ODIR}/pop2.glf.gz
-${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 14 22 >${ODIR}/pop3.glf.gz
+${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 1 6 >${ODIR}/pop1.glf.gz 2>>${LOG}
+${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 7 13 >${ODIR}/pop2.glf.gz 2>>${LOG}
+${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 14 22 >${ODIR}/pop3.glf.gz 2>>${LOG}
 echo 1 250000000 >${ODIR}/fai.fai
 echo "Calculating perpop saf" >>${LOG} 2>&1
 ${WDIR}/angsd -glf ${ODIR}/pop1.glf.gz -nind 6 -doSaf 1 -out ${ODIR}/pop1 -fai ${ODIR}/fai.fai -issim 1  2>>${LOG}
