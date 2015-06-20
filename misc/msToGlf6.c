@@ -469,7 +469,10 @@ int main(int argc,char **argv){
     fprintf(stderr,"Problem reading from file:\n");
   sscanf(line," %s  %d %d", dum,  &nsam, &howmany);
   double ttt=0;
-  
+  if(nsam % 2 ){
+    fprintf(stderr,"\nGL calculation is based on diploid samples, you need to supply an even number of haplotypes\n");
+    return 0;
+  }
   for(int i=1;i<=nsam-1;i++){
     ttt += 1.0*1/i;
     //    fprintf(stderr,"nsam=%d\tttt=%f,i=%d\n",nsam,ttt,i); 

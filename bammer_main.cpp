@@ -89,7 +89,25 @@ void printHd(const bam_hdr_t *hd,FILE *fp){
 }
 
 
-
+int checkIfSorted(char *str){
+  //check if proper header exists
+  if(strncmp(str,"@HD",3)!=0){
+    fprintf(stderr,"\t-> We require a proper header starting with @HD for ANGSD\n");
+    fprintf(stderr,"\t-> We observed: \'%.10s\' will exit\n",str);
+    return 1;
+  }
+  //check if SO:coordinate exists
+  char *so = strstr(str,"SO:coordinate");
+  if(so==NULL){
+    fprintf(stderr,"\t-> We require files to be sorted by coordinate\n");
+    return 2;
+  }
+  if(strchr(str,'\n')<so){
+    fprintf(stderr,"\t-> We require a SO:coordinate tag in the first line of header\n");
+    return 3;
+  }
+  return 0;
+}
 
 
 
@@ -103,6 +121,8 @@ bufReader initBufReader2(const char*fname){
   ret.idx=NULL;
  
   ret.hdr = sam_hdr_read(ret.fp);
+  if(checkIfSorted(ret.hdr->text))
+    exit(0);
   if(ret.hdr==NULL) {
     fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
     exit(0);

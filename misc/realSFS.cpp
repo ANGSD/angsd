@@ -32,7 +32,7 @@
 #include <htslib/tbx.h>
 #include "Matrix.hpp"
 #include "safstat.h"
-
+#include <libgen.h>
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -114,8 +114,10 @@ void readSFS(const char*fname,int hint,double *ret){
 
 size_t parspace(std::vector<persaf *> &saf){
   size_t ndim = 1;
-  for(int i=0;i<saf.size();i++)
+  for(int i=0;i<saf.size();i++){
     ndim *= saf[i]->nChr+1;
+    fprintf(stderr,"\t-> dim(%s):%lu\n",saf[i]->fname,saf[i]->nChr+1);
+  }
   fprintf(stderr,"\t-> Dimension of parameter space: %lu\n",ndim);
   return ndim;
 }
@@ -255,20 +257,54 @@ int printMulti(args *arg){
   //temp used for checking pos are in sync
   setGloc(saf,nSites);
   int *posiToPrint = new int[nSites];
+  //used for printout old format
+  FILE **oldfp = NULL;
+  gzFile oldpos = Z_NULL;
+  if(arg->oldout){
+    oldfp = new FILE*[saf.size()];
+    for(int i=0;i<saf.size();i++){
+      unsigned newlen = strlen(saf[i]->fname)+100;
+      char *tmp =(char*) calloc(newlen,sizeof(char));
+      tmp = strncpy(tmp,saf[i]->fname,strlen(saf[i]->fname)-4);
+      fprintf(stderr,"\t-> Generating outputfile: %s\n",tmp);
+      oldfp[i] = fopen(tmp,"wb");
+      free(tmp);
+    }
+    unsigned newlen = strlen(dirname(saf[0]->fname))+100;
+    char *tmp = (char*) calloc(newlen,sizeof(char));
+    snprintf(tmp,newlen,"%s/shared.pos.gz",dirname(saf[0]->fname));
+    fprintf(stderr,"\t-> Generating outputfile: %s\n",tmp);
+    oldpos = gzopen(tmp,"wb");
+    free(tmp);
+  }
   while(1) {
     char *curChr=NULL;
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr);//read nsites from data
     //    fprintf(stderr,"ret:%d gls->x:%lu\n",ret,gls[0]->x);
-     
-    for(int s=0;s<gls[0]->x;s++){
-      if(arg->chooseChr==NULL)
-	fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
-      else
-	fprintf(stdout,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
-      for(int i=0;i<saf.size();i++)
-	for(int ii=0;ii<gls[i]->y;ii++)
-	  fprintf(stdout,"\t%f",log(gls[i]->mat[s][ii]));
-      fprintf(stdout,"\n");
+    if(arg->oldout==0){
+      for(int s=0;s<gls[0]->x;s++){
+	if(arg->chooseChr==NULL)
+	  fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
+	else
+	  fprintf(stdout,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
+	for(int i=0;i<saf.size();i++)
+	  for(int ii=0;ii<gls[i]->y;ii++)
+	    fprintf(stdout,"\t%f",log(gls[i]->mat[s][ii]));
+	fprintf(stdout,"\n");
+      }
+    }else{
+      for(int s=0;s<gls[0]->x;s++){
+	if(arg->chooseChr==NULL)
+	  gzprintf(oldpos,"%s\t%d\n",curChr,posiToPrint[s]+1);
+	else
+	  gzprintf(oldpos,"%s\t%d\n",arg->chooseChr,posiToPrint[s]+1);
+	for(int i=0;i<saf.size();i++){
+	  double mytmp[gls[i]->y];
+	  for(int ii=0;ii<gls[i]->y;ii++)
+	    mytmp[ii] = log(gls[i]->mat[s][ii]);
+	  fwrite(mytmp,sizeof(double),gls[i]->y,oldfp[i]);
+	}
+      }
     }
     if(ret==-3&&gls[0]->x==0){//no more data in files or in chr, eith way we break;g
       //fprintf(stderr,"breaking\n");
@@ -290,13 +326,18 @@ int printMulti(args *arg){
   }
   delGloc(saf,nSites);
   destroy(gls,nSites);
-  destroy_args(arg);
+
   delete [] sfs;
   delete [] posiToPrint;
-  
-  fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
-  fprintf(stderr,"\t-> Output is now simply the expected values! \n");
-  fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
+
+  if(arg->oldout==1){
+    for(int i=0;i<saf.size();i++)
+      fclose(oldfp[i]);
+    delete [] oldfp;
+    gzclose(oldpos);
+  }
+  destroy_args(arg);
+  fprintf(stderr,"\t-> Run completed\n");
   return 0;
 }
 
@@ -312,7 +353,7 @@ void print(int argc,char **argv){
   pars->saf[0]->kind = 2;
   if(pars->posOnly==1)
     pars->saf[0]->kind = 1;
-  if(pars->saf.size()!=1){
+  if(1||pars->saf.size()!=1){
     fprintf(stderr,"\t-> Will jump to multisaf printer and will only print intersecting sites between populations\n");
     printMulti<T>(pars);
     return;
@@ -355,6 +396,7 @@ struct emPars{
   double lik;
   double *sfs;//shared for all threads
   double *post;//allocated for every thread
+  double *inner;//allocated for every thread
   int dim;
 };
 
@@ -476,8 +518,7 @@ double like_master(int nThreads){
 
 
 template <typename T>
-void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,int stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -495,8 +536,7 @@ void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,
 
 
 template <typename T>
-void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -516,8 +556,7 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
 }
 
 template <typename T>
-void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -538,8 +577,8 @@ void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
 }
 
 template <typename T>
-void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim){
-  double inner[dim];
+void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
+
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
@@ -566,13 +605,13 @@ template <typename T>
 void *emStep_slave(void *p){
   emPars<T> &pars = emp[(size_t) p];
   if(pars.gls.size()==1)
-    emStep1<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+    emStep1<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
   else if(pars.gls.size()==2)
-    emStep2<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+    emStep2<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
   else if(pars.gls.size()==3)
-    emStep3<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+    emStep3<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
   else if(pars.gls.size()==4)
-    emStep4<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim);
+    emStep4<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
   pthread_exit(NULL);
 }
 
@@ -619,6 +658,7 @@ emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads
     temp[i].to=blockSize;
     temp[i].sfs = sfs;
     temp[i].post=new double[dim];
+    temp[i].inner=new double[dim];
     temp[i].dim = dim;
   }
   //redo the from,to
@@ -641,8 +681,10 @@ emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads
 
 template<typename T>
 void destroy(emPars<T> *a,int nThreads ){
-  for(int i=0;i<nThreads;i++)
+  for(int i=0;i<nThreads;i++){
+    delete [] a[i].inner;
     delete [] a[i].post;
+  }
   delete [] a;
   delete [] thd;
 }
@@ -851,7 +893,7 @@ int fst_index(int argc,char **argv){
   inc=0;
   for(int i=0;i<saf.size();i++)
     for(int j=i+1;j<saf.size();j++){
-      calcCoef(saf[0]->nChr,saf[1]->nChr,&a1[inc],&b1[inc]);
+      calcCoef(saf[i]->nChr,saf[j]->nChr,&a1[inc],&b1[inc]);
       //      fprintf(stderr,"a1[%d]:%p b1[%d]:%p\n",inc,&a1[inc][0],inc,&b1[inc][0]);
       inc++;
     }
@@ -1058,11 +1100,12 @@ int fst(int argc,char**argv){
     fst_print(--argc,++argv);
   else if(!strcasecmp(*argv,"stats"))  
     fst_stat(--argc,++argv);
+  else if(!strcasecmp(*argv,"stats2"))  
+    fst_stat2(--argc,++argv);
   else{
     fprintf(stderr,"unknown option: \'%s\'\n",*argv);
-    return 0;
   }
-
+  return 0;
 }
 
 
@@ -1102,16 +1145,6 @@ int main(int argc,char **argv){
   }
   ++argv;
   --argc;
-
-  if(isatty(fileno(stdout))){
-    fprintf(stderr,"\t-> You are printing the optimized SFS to the terminal consider dumping into a file\n");
-    fprintf(stderr,"\t-> E.g.: \'./realSFS");
-    for(int i=0;i<argc;i++)
-      fprintf(stderr," %s",argv[i]);
-    fprintf(stderr," >sfs.ml.txt\'\n");   
-
-  }
-  
   
   if(!strcasecmp(*argv,"printOld"))
     printOld(--argc,++argv);
@@ -1125,6 +1158,16 @@ int main(int argc,char **argv){
       fprintf(stderr,"\t-> Multi SFS is 'still' under development. Please report strange behaviour\n");
     if(!arg)
       return 0;
+
+    if(isatty(fileno(stdout))){
+      fprintf(stderr,"\t-> You are printing the optimized SFS to the terminal consider dumping into a file\n");
+      fprintf(stderr,"\t-> E.g.: \'./realSFS");
+      for(int i=0;i<argc;i++)
+	fprintf(stderr," %s",argv[i]);
+      fprintf(stderr," >sfs.ml.txt\'\n");   
+    }
+  
+
     main_opt<float>(arg);
     
   }
