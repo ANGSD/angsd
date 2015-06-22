@@ -467,7 +467,7 @@ void abcGL::printLike(funkyPars *pars) {
 	gzwrite(gzoutfile,dump,3*sizeof(double));
       }
       gzprintf(gzoutfile2,"%s\t%d\t",header->target_name[pars->refId],pars->posi[s]+1);
-      gzprintf(gzoutfile2,"%c\t%c\n",major,minor,sizeof(char));
+      gzprintf(gzoutfile2,"%c\t%c\n",intToRef[major],intToRef[minor]);
     }
   } else if(doGlf==4){
     bufstr.l=0;
