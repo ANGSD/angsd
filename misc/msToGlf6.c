@@ -9,7 +9,7 @@
 #include <assert.h>
 int static z_rndu=137;
 
-int simpleRand = 3;
+int simpleRand = 2;
 
 
 #define LENS 100000
@@ -47,6 +47,10 @@ double uniform(){
     sampled = uniform_rasmus();
   else if(simpleRand==2)
     sampled = drand48();
+  else{
+    fprintf(stderr,"\t-> unknown rand method:%d\n",simpleRand);
+    exit(0);
+  }
   //  fprintf(stdout,"%f\n",sampled);
   return sampled;
 }
