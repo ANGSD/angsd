@@ -19,7 +19,7 @@ ODIR=fst/output/
 #grep -i afs ${MSMS} |grep -i sum|cut -f2 -d":"|tr " " "\n" >${MSMS}.sfs
 
 echo "Generating genotype likelihood based on the haplotypes" >>${LOG} 2>&1
-${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleOut 1 -regLen 0 >>${LOG} 2>&1
+${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleOut 1 -regLen 0 -simpleRand >>${LOG} 2>&1
 echo "Splitting gl file into different populations" >>${LOG} 2>&1
 ${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 1 6 >${ODIR}/pop1.glf.gz 2>>${LOG}
 ${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 7 13 >${ODIR}/pop2.glf.gz 2>>${LOG}

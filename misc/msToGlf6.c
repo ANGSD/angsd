@@ -9,7 +9,7 @@
 #include <assert.h>
 int static z_rndu=137;
 
-int simpleRand = 0;
+int simpleRand = 3;
 
 
 #define LENS 100000
@@ -18,7 +18,6 @@ int simpleRand = 0;
 Wichmann BA & Hill ID.  1982.  An efficient and portable
 pseudo-random number generator.  Appl. Stat. 31:188-190
 x, y, z are any numbers in the range 1-30000.  Integer operation up to 30323 required.
-
 Suggested to me by Z. Yang who also provided me with the source code used here. */
 double uniform_rasmus()
 {
@@ -42,14 +41,15 @@ double uniform_thorfinn(){
 
 double uniform(){
   double sampled;
-  if(simpleRand)
+  if(simpleRand==1)
     sampled = uniform_thorfinn();    
-  else
+  else if(simpleRand==0)
     sampled = uniform_rasmus();
+  else if(simpleRand==2)
+    sampled = drand48();
   //  fprintf(stdout,"%f\n",sampled);
   return sampled;
 }
-
 
 double Poisson(double xm)
 {
@@ -394,6 +394,7 @@ double *getDepths(const char*fname,int len){
 }
 
 
+
 int main(int argc,char **argv){
   double errate = 0.01;
   double meanDepth = 4;
@@ -407,6 +408,7 @@ int main(int argc,char **argv){
   double *depths = NULL;
   int nind = 0;
   char **orig = argv;
+  int seed = -1;
   while(*argv){
     if(strcmp(*argv,"-in")==0) inS = *++argv;
     else if(strcmp(*argv,"-out")==0) prefix=*++argv; 
@@ -414,7 +416,9 @@ int main(int argc,char **argv){
     else if(strcmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
     else if(strcmp(*argv,"-depthFile")==0) depthFile=*++argv; 
     else if(strcmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
-    else if(strcmp(*argv,"-regLen")==0) regLen=atoi(*++argv); 
+    else if(strcmp(*argv,"-regLen")==0) regLen=atoi(*++argv);
+    else if(strcmp(*argv,"-seed")==0) seed=atoi(*++argv);
+    else if(strcmp(*argv,"-simpleRand")==0) simpleRand=atoi(*++argv); 
     else if(strcmp(*argv,"-nind")==0) nind=atoi(*++argv); 
     else{
       fprintf(stderr,"Unknown arg:%s\n",*argv);
@@ -422,17 +426,20 @@ int main(int argc,char **argv){
     }
     ++argv;
   }
-
+  if(seed==-1)
+    srand48(time(NULL));
+  else
+    srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
-    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen -nind\n");
+    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen -nind -seed \n");
     return 0;
   }
 
-  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -singleOut=%d -regLen=%d \n",inS,prefix,errate,meanDepth,singleOut,regLen);
+  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -singleOut=%d -regLen=%d -depthFile=%s -seed %d -nind %d \n",inS,prefix,errate,meanDepth,singleOut,regLen,depthFile,seed,nind);
   //print args file
   FILE *argFP=openFile(prefix,".argg");
-  fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -singleOut=%d -regLen=%d \n",inS,prefix,errate,meanDepth,singleOut,regLen);
+  fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -singleOut=%d -regLen=%d -depthFile=%s -seed %d -nind %d \n",inS,prefix,errate,meanDepth,singleOut,regLen,depthFile,seed,nind);
   for(int i=0;i<argc;i++)
     fprintf(argFP,"%s ",orig[i]);
   fclose(argFP);
