@@ -466,14 +466,8 @@ void abcGL::printLike(funkyPars *pars) {
 	dump[2] = pars->likes[s][i*10+angsd::majorminor[minor][minor]] ;
 	gzwrite(gzoutfile,dump,3*sizeof(double));
       }
-      
-      gzwrite(gzoutfile2,header->target_name[pars->refId],sizeof(char)*strlen(header->target_name[pars->refId]));
-      gzputc(gzoutfile2,'\0');
-      //      fprintf(stderr,"%s\n",header->name[pars->refId]);
-      //exit(0);
-      gzwrite(gzoutfile2,&pars->posi[s],sizeof(int));
-      gzwrite(gzoutfile2,&major,sizeof(char));
-      gzwrite(gzoutfile2,&minor,sizeof(char));
+      gzprintf(gzoutfile2,"%s\t%d\t",header->target_name[pars->refId],pars->posi[s]+1);
+      gzprintf(gzoutfile2,"%c\t%c\n",intToRef[major],intToRef[minor]);
     }
   } else if(doGlf==4){
     bufstr.l=0;

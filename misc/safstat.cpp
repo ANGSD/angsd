@@ -187,6 +187,8 @@ int fst_stat2(int argc,char **argv){
     ppos = new int[it->second.nSites];
     
     bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
+    for(int i=0;i<it->second.nSites;i++)
+      ppos[i]++;
     for(int i=0;i<choose(pf->names.size(),2);i++){
       ares[i] = new double[it->second.nSites];
       bres[i] = new double[it->second.nSites];
@@ -221,7 +223,7 @@ int fst_stat2(int argc,char **argv){
     for(int i=0;i<chs;i++)
       unweight[i] = wa[i] = wb[i] =0.0;
     nObs=0;
-    fprintf(stdout,"(%d,%d)(%d,%d)(%d,%d)\t%s\t%d",begI,endI,ppos[begI],ppos[endI],pS,pE,it->first,pS+(pE-pS)/2);
+    fprintf(stdout,"(%d,%d)(%d,%d)(%d,%d)\t%s\t%d",begI,endI-1,ppos[begI],ppos[endI-1],pS,pE,it->first,pS+(pE-pS)/2);
     for(int s=begI;s<endI;s++){
 #if 0
       fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
