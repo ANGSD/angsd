@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include "bambi_interface.h"
+#include "analysisFunction.h"
 #include "phys_likes.h"
 #include "phys_genolike_calc.h"
 
@@ -48,7 +49,22 @@ int offsetss[4][10]={
 
 
 void phys_init(std::vector<char *> bamnames){
+  char *tmpnam = new char[4096];
+  for(size_t i=0;i<bamnames.size();i++){
+    snprintf(tmpnam,4096,"%s.phys",bamnames[i]);
+    fprintf(stderr,"Reading pars bam:\n\t\t%s\n\t Assuming pars name is:\n\t\t%s\n",bamnames[i],tmpnam);
+    if(angsd::fexists(bamnames[i])==0){
+      fprintf(stderr,"bamfile:%s doesnt exists",bamnames[i]);
+      exit(0);
+    }
+    if(angsd::fexists(tmpnam)==0){
+      fprintf(stderr,"coefficient filefile:%s doesnt exists\n",tmpnam);
+      exit(0);
+    }
+
+  }
   phys_probs = genLikes_phys(256);
+  delete [] tmpnam;
 }
 
 void phys_destroy(){
