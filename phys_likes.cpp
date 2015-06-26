@@ -9,7 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include "bambi_interface.h"
-
+#include "phys_likes.h"
 #include "phys_genolike_calc.h"
 
 extern int refToInt[256];
@@ -47,7 +47,7 @@ int offsetss[4][10]={
 };
 
 
-void phys_init(){
+void phys_init(std::vector<char *> bamnames){
   phys_probs = genLikes_phys(256);
 }
 
