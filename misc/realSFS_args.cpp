@@ -1,5 +1,5 @@
 #include "realSFS_args.h"
-
+#include <ctime>
 char * get_region(char *extra,int &start,int &stop) {
   if(!extra){
     fprintf(stderr,"Must supply parameter for -r option\n");
