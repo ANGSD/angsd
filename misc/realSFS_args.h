@@ -19,6 +19,7 @@ typedef struct {
   int step;
   int type;
   int oldout;
+  long seed;//<-seed=-1 old version;seed=0 means time; othervise it will be used as seed
 }args;
 args * getArgs(int argc,char **argv);
 void destroy_args(args *p);

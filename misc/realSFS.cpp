@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <vector>
 #include <cstdlib>
+
 #include <cstring>
 #include <cmath>
 #include <cfloat>
@@ -33,6 +34,7 @@
 #include "Matrix.hpp"
 #include "safstat.h"
 #include <libgen.h>
+
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -1048,10 +1050,21 @@ int main_opt(args *arg){
     
     if(arg->sfsfname.size()!=0)
       readSFS(arg->sfsfname[0],ndim,sfs);
-    else
-      for(int i=0;i<ndim;i++)
-	sfs[i] = (i+1)/((double)(ndim));
-
+    else{
+      if(arg->seed==-1){
+	for(int i=0;i<ndim;i++)
+	  sfs[i] = (i+1)/((double)(ndim));
+      }else{
+	srand48(arg->seed);
+	for(int i=0;i<ndim;i++){
+	  double r=drand48();
+	  while(r==0.0)
+	    r = drand48();
+	  sfs[i] = r;
+	}
+      }
+      
+    }
     normalize(sfs,ndim);
 
     
