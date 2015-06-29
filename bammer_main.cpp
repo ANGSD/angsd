@@ -121,8 +121,8 @@ bufReader initBufReader2(const char*fname){
   ret.idx=NULL;
  
   ret.hdr = sam_hdr_read(ret.fp);
-  if(checkIfSorted(ret.hdr->text))
-    exit(0);
+  checkIfSorted(ret.hdr->text);
+
   if(ret.hdr==NULL) {
     fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
     exit(0);
