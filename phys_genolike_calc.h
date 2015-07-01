@@ -10,7 +10,13 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
+#include <vector>
+#include <algorithm>
+
 #include <math.h>
+
+using namespace std;
 
 extern int refToInt[256];
 class phys_genolike_calc {
@@ -31,11 +37,11 @@ class phys_genolike_calc {
   float m_base_geno[4][10];
 
   // Contains q score corrections
-  static const float qscore_corr[61];
+  float qscore_corr[61];
 
   // model parameters
-  static const float parlist[18];
-  static const float pararray[2][2][4][4];
+  float parlist[18];
+  //  float pararray[2][2][4][4];
 
   void init_p_base();
 
@@ -45,7 +51,7 @@ class phys_genolike_calc {
   float base_prob[4];
  
   // Default constructor
-  phys_genolike_calc();
+  phys_genolike_calc( char *parspath );
 
   // Default destructor
   ~phys_genolike_calc();

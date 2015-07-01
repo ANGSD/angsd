@@ -15,6 +15,7 @@
 
 extern int refToInt[256];
 double **phys_probs = NULL;
+char *phys_refpath;
 
 /*
   allocate the prob matrix with
@@ -49,25 +50,32 @@ int offsetss[4][10]={
 
 
 void phys_init(std::vector<char *> bamnames){
-  char *tmpnam = new char[4096];
+
+  phys_refpath = new char[4096];
+
   for(size_t i=0;i<bamnames.size();i++){
-    snprintf(tmpnam,4096,"%s.phys",bamnames[i]);
-    fprintf(stderr,"Reading pars bam:\n\t\t%s\n\t Assuming pars name is:\n\t\t%s\n",bamnames[i],tmpnam);
+    snprintf(phys_refpath,4096,"%s.phys",bamnames[i]);
+    fprintf(stderr,"Reading pars bam:\n\t\t%s\n\t Assuming pars name is:\n\t\t%s\n",bamnames[i],phys_refpath);
     if(angsd::fexists(bamnames[i])==0){
       fprintf(stderr,"bamfile:%s doesnt exists",bamnames[i]);
       exit(0);
     }
-    if(angsd::fexists(tmpnam)==0){
-      fprintf(stderr,"coefficient filefile:%s doesnt exists\n",tmpnam);
+    if(angsd::fexists(phys_refpath)==0){
+      fprintf(stderr,"coefficient filefile:%s doesnt exists\n",phys_refpath);
       exit(0);
     }
 
   }
   phys_probs = genLikes_phys(256);
-  delete [] tmpnam;
+
+  //  
+
+  delete [] phys_refpath;
+
 }
 
 void phys_destroy(){
+
   for(int i=0;i<3;i++)
     delete [] phys_probs[i];
   delete [] phys_probs;
@@ -76,7 +84,8 @@ void phys_destroy(){
 
 void call_phys(chunkyT *chk,double **lk,int trim){
 
-  phys_genolike_calc *glc = new phys_genolike_calc();
+  phys_genolike_calc *glc = new phys_genolike_calc( phys_refpath );
+  //  glc->set_debug( true );
 
   glc->update_chunkyT( chk );
 

@@ -1,28 +1,36 @@
 #include "phys_genolike_calc.h"
 
 // Corrections to q-score determined from Yana sample
-const float phys_genolike_calc::qscore_corr[61] = {1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,
-						   0.623,1.082,0.930,0.979,3.552,4.249,5.041,1.837,2.817,2.272,2.460,1.854,1.263,
-						   1.841,1.466,1.994,0.972,7.822,1.150,2.499,1.468,1.681,1.962,2.306,2.372,3.564,
-						   2.501,3.056,3.471,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,
-						   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000};
+//const float phys_genolike_calc::qscore_corr[61] = {1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,
+//						   0.623,1.082,0.930,0.979,3.552,4.249,5.041,1.837,2.817,2.272,2.460,1.854,1.263,
+//						   1.841,1.466,1.994,0.972,7.822,1.150,2.499,1.468,1.681,1.962,2.306,2.372,3.564,
+//						   2.501,3.056,3.471,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,
+//						   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000};
+
+
+
+
 
 // Fitted model parameters, also not to be hardcoded
-const float phys_genolike_calc::parlist[18] = { 1.40519, 1.03243, 0.85508, 1.15778, 0.21355, -0.15465, 0.33590, 0.50438, 0.47351 , 
-						0.99191, 0.72090, 0.50917, 0.09018, 0.40386, 0.01166, -0.01656, 0.02668, 0.01919 };
+//const float phys_genolike_calc::parlist[18] = { 1.40519, 1.03243, 0.85508, 1.15778, 0.21355, -0.15465, 0.33590, 0.50438, 0.47351 , 
+//						0.99191, 0.72090, 0.50917, 0.09018, 0.40386, 0.01166, -0.01656, 0.02668, 0.01919 };
 
-const float phys_genolike_calc::pararray[2][2][4][4] = {{{{ 1.0    , parlist[0] , parlist[1] , parlist[2] },{ parlist[3], 1.0     , parlist[4], parlist[5] },
-							  { parlist[6], parlist[7] , 1.0     , parlist[8] },{ parlist[9], parlist[10],parlist[11], 1.0     }},   // 4X4 Matrix
-							 {{ 1.0    , parlist[11], parlist[10], parlist[9] },{ parlist[8], 1.0     , parlist[7], parlist[6] },
-							  { parlist[5], parlist[4] , 1.0     , parlist[3] },{ parlist[2], parlist[1] , parlist[0], 1.0     }}},  // 4X4 Matrix
-							{{{ 1.0    , parlist[0] , parlist[1] , parlist[2] },{ parlist[3], 1.0     , parlist[4], parlist[5] },
-							  { parlist[6], parlist[7] , 1.0     , parlist[8] },{ parlist[9], parlist[10],parlist[11], 1.0     }},   // 4X4 Matrix
-							 {{ 1.0    , parlist[11], parlist[10], parlist[9] },{ parlist[8], 1.0     , parlist[7], parlist[6] },
-							  { parlist[5], parlist[4] , 1.0     , parlist[3] },{ parlist[2], parlist[1] , parlist[0], 1.0     }}}}; // 4x4 Matrix
+
+//const float phys_genolike_calc::pararray[2][2][4][4] = {{{{ 1.0    , parlist[0] , parlist[1] , parlist[2] },{ parlist[3], 1.0     , parlist[4], parlist[5] },
+//							  { parlist[6], parlist[7] , 1.0     , parlist[8] },{ parlist[9], parlist[10],parlist[11], 1.0     }},   // 4X4 Matrix
+//							 {{ 1.0    , parlist[11], parlist[10], parlist[9] },{ parlist[8], 1.0     , parlist[7], parlist[6] },
+//							  { parlist[5], parlist[4] , 1.0     , parlist[3] },{ parlist[2], parlist[1] , parlist[0], 1.0     }}},  // 4X4 Matrix
+//							{{{ 1.0    , parlist[0] , parlist[1] , parlist[2] },{ parlist[3], 1.0     , parlist[4], parlist[5] },
+//							  { parlist[6], parlist[7] , 1.0     , parlist[8] },{ parlist[9], parlist[10],parlist[11], 1.0     }},   // 4X4 Matrix
+//							 {{ 1.0    , parlist[11], parlist[10], parlist[9] },{ parlist[8], 1.0     , parlist[7], parlist[6] },
+//							  { parlist[5], parlist[4] , 1.0     , parlist[3] },{ parlist[2], parlist[1] , parlist[0], 1.0     }}}}; // 4x4 Matrix
+
+vector<string> split_string( string instring, char split_by );
+double str_to_double( string textstring );
 
 // --------------------------------------------------------------------------------
 // Constructor
-phys_genolike_calc::phys_genolike_calc(){
+phys_genolike_calc::phys_genolike_calc( char *parspath ){
 
   // Don't spam output to stderr unless specified
   debug     = false;
@@ -100,7 +108,60 @@ phys_genolike_calc::phys_genolike_calc(){
   }
 
 
+  ifstream infile;
+  string readline;
+
+  infile.open( parspath );
+  while( !infile.eof() && infile.good() ){
+
+    getline(infile, readline);
+    fprintf( stderr, "Reading Parameter line %s \n ", readline.c_str() );
+
+    vector<double> qscores;
+    vector<double> params;
+
+    //Start by splitting string by tabs
+    vector<string> format_line = split_string( readline, ' ' );
+    if( format_line.size() < 2 ) continue;
+
+    //Remove empty strings
+    for( unsigned int i=0; i<format_line.size(); i++ ){
+      format_line[i].erase( remove(format_line[i].begin(), format_line[i].end(), ' '), format_line[i].end() );
+    }
+
+
+    if( format_line[0].find( "QscoreCorrections" ) != string::npos ){
+      fprintf( stderr, "Reading Qscores \n" );
+      int counter = 0;
+      for( unsigned int i=1; i<format_line.size(); i++ ){
+	if( format_line[i].empty() ) continue;
+
+	qscore_corr[counter] = str_to_double( format_line[i] );
+
+	fprintf( stderr, "\t %d %5.3f \n",i, qscore_corr[counter] );
+
+	counter++;
+      }
+    }
  
+    if( format_line[0].find( "ModelParameters" ) != string::npos ){
+      fprintf( stderr, "Reading Model Parameters \n" );
+      int counter = 0;
+      for( unsigned int i=1; i<format_line.size(); i++ ){
+	if( format_line[i].empty() ) continue;
+	
+	parlist[counter] = str_to_double( format_line[i] );
+
+	fprintf( stderr, "\t %d %5.3f \n",i, parlist[counter] );
+
+	counter++;
+      }
+    }
+
+  }
+
+  infile.close();
+
   // Initialise probability model
   // It is likely that once we stop hardcoding the model that 
   // the arrays will be initialised by the constructor instead?
@@ -163,6 +224,17 @@ void phys_genolike_calc::update_tNode( tNode *curr_nd ){
 // --------------------------------------------------------------------------------
 // Update probabilities (4) for each base, for observed base at depth ''depth''
 void phys_genolike_calc::update_pbase( int depth ){
+
+  //junk MOVE TO CONSTRUCTOR!!!!
+  float pararray[2][2][4][4] = {{{{ 1.0    , parlist[0] , parlist[1] , parlist[2] },{ parlist[3], 1.0     , parlist[4], parlist[5] },
+				  { parlist[6], parlist[7] , 1.0     , parlist[8] },{ parlist[9], parlist[10],parlist[11], 1.0     }},   // 4X4 Matrix
+				 {{ 1.0    , parlist[11], parlist[10], parlist[9] },{ parlist[8], 1.0     , parlist[7], parlist[6] },
+				  { parlist[5], parlist[4] , 1.0     , parlist[3] },{ parlist[2], parlist[1] , parlist[0], 1.0     }}},  // 4X4 Matrix
+				{{{ 1.0    , parlist[0] , parlist[1] , parlist[2] },{ parlist[3], 1.0     , parlist[4], parlist[5] },
+				  { parlist[6], parlist[7] , 1.0     , parlist[8] },{ parlist[9], parlist[10],parlist[11], 1.0     }},   // 4X4 Matrix
+				 {{ 1.0    , parlist[11], parlist[10], parlist[9] },{ parlist[8], 1.0     , parlist[7], parlist[6] },
+				  { parlist[5], parlist[4] , 1.0     , parlist[3] },{ parlist[2], parlist[1] , parlist[0], 1.0     }}}}; // 4x4 Matrix
+
 
   // Retrieve information from node
   int qscore = nd->qs[depth];
@@ -317,3 +389,32 @@ void phys_genolike_calc::get_genolikes_str( char *results_str ){
 void phys_genolike_calc::set_debug( bool db ){
   debug = db;
 }
+
+
+//---------------------------------------------------------------------------
+// format input reduce_string to match RooAbsData and RooSimultaneous
+vector<string> split_string( string instring, char split_by ){
+  istringstream ss( instring );
+  string token;
+
+  vector<string> return_vec;
+  if( instring.size() == 0 ) return return_vec;
+
+  while( getline( ss, token, split_by ) ) {
+
+    return_vec.push_back( token );
+
+  } // 
+  return return_vec;
+
+}//end format_cut
+
+//---------------------------------------------------------------------------
+// Convert string to double
+double str_to_double( string textstring ){
+  stringstream ss; //create a stringstream
+  double value;
+  ss << textstring;    //add number to the stream
+  ss >> value;
+  return value;
+}// end str to double

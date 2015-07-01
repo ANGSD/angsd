@@ -120,7 +120,8 @@ abcTemplate::abcTemplate(const char *outfiles,argStruct *arguments,int inputtype
   refName = NULL;
   outfile = NULL;
 
-  like_calc = new phys_genolike_calc();
+  char *empty;
+  like_calc = new phys_genolike_calc( empty );
 
   //first a hook for the interactive help:
   //  ./angsd -doTemplate
