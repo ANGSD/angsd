@@ -1023,7 +1023,7 @@ int main_opt(args *arg){
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL);//read nsites from data
     //    fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
-    if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
+    if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
     
     if(saf.size()==1){
@@ -1040,8 +1040,9 @@ int main_opt(args *arg){
       }
 
     }
-  
-      
+    if(gls[0]->x==0)
+      continue;
+    
     fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
     
     if(arg->sfsfname.size()!=0)
