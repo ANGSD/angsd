@@ -204,13 +204,9 @@ int printOld(int argc,char **argv){
     for(int s=0;SIG_COND&&s<it->second.nSites;s++) {
       bgzf_read(pars->saf[0]->saf,flt,sizeof(float)*(pars->saf[0]->nChr+1));
       if(at>=first&&at<last){
-	if(pars->posOnly==0){
-	  fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
-	  for(int is=0;is<pars->saf[0]->nChr+1;is++)
-	    fprintf(stdout,"\t%f",flt[is]);
-	}else
-	  fprintf(stdout,"%d",ppos[s]+1);
-	  fprintf(stdout,"\n");
+	fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
+	for(int is=0;is<pars->saf[0]->nChr+1;is++)
+	  fprintf(stdout,"\t%f",flt[is]);
       }
       at++;
     }
@@ -241,6 +237,7 @@ void delGloc(std::vector<persaf *> &saf,int nSites){
 
 template <typename T>
 int printMulti(args *arg){
+  fprintf(stderr,"[%s]\n",__FUNCTION__);
   std::vector<persaf *> &saf =arg->saf;
   int nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
@@ -280,7 +277,7 @@ int printMulti(args *arg){
     free(tmp);
   }
   while(1) {
-    char *curChr=NULL;
+    static char *curChr=NULL;
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr);//read nsites from data
     //    fprintf(stderr,"ret:%d gls->x:%lu\n",ret,gls[0]->x);
     if(arg->oldout==0){
@@ -352,9 +349,8 @@ void print(int argc,char **argv){
   }
   
   args *pars = getArgs(argc,argv);
-  pars->saf[0]->kind = 2;
-  if(pars->posOnly==1)
-    pars->saf[0]->kind = 1;
+  for(int i=0;i<pars->saf.size();i++)
+    pars->saf[0]->kind = 2;
   if(1||pars->saf.size()!=1){
     fprintf(stderr,"\t-> Will jump to multisaf printer and will only print intersecting sites between populations\n");
     printMulti<T>(pars);
@@ -376,7 +372,7 @@ void print(int argc,char **argv){
 
     while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1),&pos))){
       fprintf(stdout,"%s\t%d",it->first,pos+1);
-      for(int is=0;pars->posOnly!=1&&is<pars->saf[0]->nChr+1;is++)
+      for(int is=0;is<pars->saf[0]->nChr+1;is++)
 	fprintf(stdout,"\t%f",flt[is]);
       fprintf(stdout,"\n");
     }

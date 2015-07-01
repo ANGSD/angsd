@@ -72,7 +72,6 @@ args * getArgs(int argc,char **argv){
   p->tole=1e-6;
   p->nThreads=4;
   p->nSites =0;
-  p->posOnly = 0;
   p->fname = NULL;
   p->onlyOnce = 0;
   p->emAccl =1;
@@ -99,11 +98,8 @@ args * getArgs(int argc,char **argv){
       p->step = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-maxIter"))
       p->maxIter = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-posOnly"))
-      p->posOnly = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-oldout"))
       p->oldout = atoi(*(++argv));
-
     else  if(!strcasecmp(*argv,"-nSites"))
       p->nSites = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-m"))
