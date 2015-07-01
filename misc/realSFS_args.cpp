@@ -1,5 +1,5 @@
 #include "realSFS_args.h"
-
+#include <ctime>
 char * get_region(char *extra,int &start,int &stop) {
   if(!extra){
     fprintf(stderr,"Must supply parameter for -r option\n");
@@ -65,7 +65,7 @@ char * get_region(char *extra,int &start,int &stop) {
 
 args * getArgs(int argc,char **argv){
   args *p = new args;
-
+  
   p->chooseChr=NULL;
   p->start=p->stop=-1;
   p->maxIter=1e2;
@@ -81,6 +81,7 @@ args * getArgs(int argc,char **argv){
   p->win=p->step=-1;
   p->type =0;
   p->oldout =0;
+  p->seed =0;
   if(argc==0)
     return p;
 
@@ -107,6 +108,8 @@ args * getArgs(int argc,char **argv){
       p->nSites = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-m"))
       p->emAccl = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-seed"))
+      p->seed = atol(*(++argv));
 
     else  if(!strcasecmp(*argv,"-onlyOnce"))
       p->onlyOnce = atoi(*(++argv));
@@ -127,9 +130,12 @@ args * getArgs(int argc,char **argv){
     }
     argv++;
   }
+  if(p->seed==0)
+    p->seed = time(NULL);
   for(int i=0;(p->saf.size()>1)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;
-  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s fstout:%s oldout:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->fstout,p->oldout);
+  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%d start:%s chr:%s start:%d stop:%d fname:%s fstout:%s oldout:%d seed:%ld\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->fstout,p->oldout,p->seed);
+
   if((p->win==-1 &&p->step!=-1) || (p->win!=-1&&p->step==-1)){
     fprintf(stderr,"\t-> Both -win and -step must be supplied for sliding window analysis\n");
     exit(0);

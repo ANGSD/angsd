@@ -19,7 +19,7 @@ ODIR=fst/output/
 #grep -i afs ${MSMS} |grep -i sum|cut -f2 -d":"|tr " " "\n" >${MSMS}.sfs
 
 echo "Generating genotype likelihood based on the haplotypes" >>${LOG} 2>&1
-${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleOut 1 -regLen 0 >>${LOG} 2>&1
+${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleOut 1 -regLen 0 -simpleRand 0  >>${LOG} 2>&1
 echo "Splitting gl file into different populations" >>${LOG} 2>&1
 ${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 1 6 >${ODIR}/pop1.glf.gz 2>>${LOG}
 ${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 7 13 >${ODIR}/pop2.glf.gz 2>>${LOG}
@@ -31,13 +31,13 @@ ${WDIR}/angsd -glf ${ODIR}/pop2.glf.gz -nind 7 -doSaf 1 -out ${ODIR}/pop2 -fai $
 ${WDIR}/angsd -glf ${ODIR}/pop3.glf.gz -nind 9 -doSaf 1 -out ${ODIR}/pop3 -fai ${ODIR}/fai.fai -issim 1  2>>${LOG}
 
 echo "Calculating perpop sfs based on the perpop saf" >>${LOG} 2>&1
-${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx >${ODIR}/pop1.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS ${ODIR}/pop2.saf.idx >${ODIR}/pop2.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS ${ODIR}/pop3.saf.idx >${ODIR}/pop3.saf.idx.ml 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx -seed -1 >${ODIR}/pop1.saf.idx.ml 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/pop2.saf.idx -seed -1 >${ODIR}/pop2.saf.idx.ml 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/pop3.saf.idx -seed -1 >${ODIR}/pop3.saf.idx.ml 2>>${LOG}
 echo "Calculating parwise 2d sfs" >>${LOG} 2>&1
-${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx >${ODIR}/pop1.pop2.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx ${ODIR}/pop3.saf.idx >${ODIR}/pop1.pop3.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS ${ODIR}/pop2.saf.idx ${ODIR}/pop3.saf.idx >${ODIR}/pop2.pop3.saf.idx.ml 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx -seed -1 >${ODIR}/pop1.pop2.saf.idx.ml 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx ${ODIR}/pop3.saf.idx -seed -1 >${ODIR}/pop1.pop3.saf.idx.ml 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/pop2.saf.idx ${ODIR}/pop3.saf.idx -seed -1 >${ODIR}/pop2.pop3.saf.idx.ml 2>>${LOG}
 echo "Calculating fst index for 3 pairwise, and multi fst" >>${LOG} 2>&1
 ${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx -fstout ${ODIR}/pop1.pop2 -sfs ${ODIR}/pop1.pop2.saf.idx.ml 2>>${LOG}
 ${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop3.saf.idx -fstout ${ODIR}/pop1.pop3 -sfs ${ODIR}/pop1.pop3.saf.idx.ml 2>>${LOG}
