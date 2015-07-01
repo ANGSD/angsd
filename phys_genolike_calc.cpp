@@ -31,7 +31,8 @@ double str_to_double( string textstring );
 // --------------------------------------------------------------------------------
 // Constructor
 phys_genolike_calc::phys_genolike_calc( char *parspath ){
-
+  fprintf(stderr,"%s.%s():%d parspath:%s\n",__FILE__,__FUNCTION__,__LINE__,parspath);
+  exit(0);
   // Don't spam output to stderr unless specified
   debug     = false;
 
@@ -110,7 +111,7 @@ phys_genolike_calc::phys_genolike_calc( char *parspath ){
 
   ifstream infile;
   string readline;
-
+  fprintf(stderr,"parsparth:%s\n",parspath);
   infile.open( parspath );
   while( !infile.eof() && infile.good() ){
 
