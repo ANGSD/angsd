@@ -39,6 +39,14 @@ double uniform_thorfinn(){
   return((double)rand() / (double)RAND_MAX);
 }
 
+// translate from int code to letters, for like computation, maybe it's useless now
+char int_to_base(int b) {
+  if (b==0) return 'A';
+  else if (b==1) return 'C';
+  else if (b==2) return 'G';
+  else return 'T';
+}
+
 double uniform(){
   double sampled;
   if(simpleRand==1)
@@ -157,12 +165,13 @@ void calclike(int base, double errate, double *like)	{
   
 }
 
-int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile){
+int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,gzFile resultfile){
 
   int i, b, numreads;
   double like[10];
 
   numreads = Poisson(meandepth);
+  char res[numreads]; // char alleles for all the reads
   //fprintf(stderr,"%d (%d,%d)\n",numreads,genotype[0],genotype[1]);
 
   for (i=0; i<10; i++)
@@ -170,13 +179,8 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
   
   for (i=0; i<numreads; i++){
     b = pick_a_base(errate,genotype);
-    for(int j=0;0&&j<10;j++)
-      fprintf(stderr," %f ",like[j]);
-    //    fprintf(stderr," pre\n ");
+    res[i] = int_to_base(b); 
     calclike(b, errate, like);
-    for(int j=0;0&&j<10;j++)
-      fprintf(stderr," %f ",like[j]);
-    //fprintf(stderr," post\n\n");
   }
 
     
@@ -193,12 +197,13 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
   }
   //exit(0);
   gzwrite(glffile,like,sizeof(double)*10);
+  gzwrite(resultfile, res, numreads);
   return numreads;
 }
 
 //nsam=2*nind
-void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen){
-  fprintf(stderr,"segsites=%d\n",segsites);
+void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,gzFile gzSeq){
+  //  fprintf(stderr,"segsites=%d\n",segsites,gzFile gzSeq);
   
   int p =0;
   char ** res=malloc(nsam/2*sizeof(char*));
@@ -232,11 +237,13 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	if(res[i][s]==2)
 	  genotypes[0] = 1;
 	if(depths==NULL)
-	  print_ind_site(errate,meandepth,genotypes,gz);
+	  print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
 	else
-	  print_ind_site(errate,depths[i],genotypes,gz);
+	  print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
+	if(i<nsam/2-1)
+	  gzprintf(gzSeq,"\t");
       }
-
+      gzprintf(gzSeq,"\n");
     }
   }else{
 
@@ -251,19 +258,25 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  if(res[i][s]==2)
 	    genotypes[0] = 1;
 	  if(depths==NULL)
-	    print_ind_site(errate,meandepth,genotypes,gz);
+	    print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
 	  else
-	    print_ind_site(errate,depths[i],genotypes,gz);
+	    print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
+	  if(i<nsam/2-1)
+	    gzprintf(gzSeq,"\t");
 	}
+	gzprintf(gzSeq,"\n");
 	s++;
       }else{
 	for(int i=0;i<nsam/2;i++){
 	  int genotypes[2] = {0,0};
 	  if(depths==NULL)
-	    print_ind_site(errate,meandepth,genotypes,gz);
+	    print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
 	  else
-	    print_ind_site(errate,depths[i],genotypes,gz);
+	    print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
+	  if(i<nsam/2-1)
+	    gzprintf(gzSeq,"\t");
 	}
+	gzprintf(gzSeq,"\n");
       }
       
     }
@@ -414,16 +427,16 @@ int main(int argc,char **argv){
   char **orig = argv;
   int seed = -1;
   while(*argv){
-    if(strcmp(*argv,"-in")==0) inS = *++argv;
-    else if(strcmp(*argv,"-out")==0) prefix=*++argv; 
-    else if(strcmp(*argv,"-err")==0) errate=atof(*++argv); 
-    else if(strcmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
-    else if(strcmp(*argv,"-depthFile")==0) depthFile=*++argv; 
-    else if(strcmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
-    else if(strcmp(*argv,"-regLen")==0) regLen=atoi(*++argv);
-    else if(strcmp(*argv,"-seed")==0) seed=atoi(*++argv);
-    else if(strcmp(*argv,"-simpleRand")==0) simpleRand=atoi(*++argv); 
-    else if(strcmp(*argv,"-nind")==0) nind=atoi(*++argv); 
+    if(strcasecmp(*argv,"-in")==0) inS = *++argv;
+    else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
+    else if(strcasecmp(*argv,"-err")==0) errate=atof(*++argv); 
+    else if(strcasecmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
+    else if(strcasecmp(*argv,"-depthFile")==0) depthFile=*++argv; 
+    else if(strcasecmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
+    else if(strcasecmp(*argv,"-regLen")==0) regLen=atoi(*++argv);
+    else if(strcasecmp(*argv,"-seed")==0) seed=atoi(*++argv);
+    else if(strcasecmp(*argv,"-simpleRand")==0) simpleRand=atoi(*++argv); 
+    else if(strcasecmp(*argv,"-nind")==0) nind=atoi(*++argv); 
     else{
       fprintf(stderr,"Unknown arg:%s\n",*argv);
       return 0;
@@ -501,11 +514,13 @@ int main(int argc,char **argv){
   probflag = 0 ;
 
   gzFile gz=Z_NULL;
+  gzFile gzSeq = Z_NULL;
   FILE *vPosFP = NULL;
   //  infoFp = openFile(prefix,".info");
 
   if(singleOut==1){
-    gz=openFileGz(prefix,".glf.gz","w");
+    gz = openFileGz(prefix,".glf.gz","w");
+    gzSeq = openFileGz(prefix,".seq.gz","w");
     vPosFP=openFile(prefix,".vPos");
   }
   FILE *pgEst = openFile(prefix,".pgEstH");
@@ -553,12 +568,14 @@ int main(int argc,char **argv){
 
   if(singleOut==0){
     gz = openFileGzI(prefix,".glf",count,"w");
+    gzSeq = openFileGzI(prefix,".seq",count,"w");
     vPosFP = openFileI(prefix,".vPos",count);
   }
   //  if(1||count==58)
-  test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind) ;
+  test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq) ;
   if(singleOut==0){
     gzclose(gz);
+    gzclose(gzSeq);
     fclose(vPosFP);
   }
   pi = nucdiv(nsam, segsites, list) ;
@@ -575,8 +592,10 @@ int main(int argc,char **argv){
 
   }
   count--;
-  if(singleOut==1)
+  if(singleOut==1){
     gzclose(gz);
+    gzclose(gzSeq);
+  }
   fclose(pgEst);
   return 0;
 
