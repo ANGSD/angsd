@@ -149,8 +149,7 @@ void abcFilter::run(funkyPars *pars){
 	  dep++;
       }
       if(dep<minIndDepth){//set to N 
-	for(int l=0; pars->chk->nd[s][n] && l < pars->chk->nd[s][n]->l; l++)
-	  pars->chk->nd[s][n]->seq[l] = 'N';
+	pars->chk->nd[s][n] = 0;
 	dep=0;
       }
       else
