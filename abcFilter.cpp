@@ -36,6 +36,7 @@ abcFilter::abcFilter(argStruct *arguments){
   curChr = -1;
   fp = NULL;
   minInd = 0;
+  minIndDepth = 0;
   fname = NULL;
   doMajorMinor =0;
   
@@ -85,66 +86,109 @@ void abcFilter::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> Potential problem you  filter -minInd %d but you only have %d samples?\n",minInd,arguments->nInd);
     exit(0);
   }
+
+
+  minIndDepth = angsd::getArg("-minIndDepth",minIndDepth,arguments);
+  if(minIndDepth!=0 && arguments->inputtype!=INPUT_BAM && arguments->inputtype!=INPUT_PILEUP){
+    fprintf(stderr,"Cannot use -minIndDepth from GL/GP data\n");
+    exit(0);
+  }
+
 }
 
 
-void abcFilter::run(funkyPars *p){
+void abcFilter::run(funkyPars *pars){
   //fprintf(stderr,"nsites=%d\n",p->numSites);
-  p->keepSites=new int[p->numSites];
+  pars->keepSites=new int[pars->numSites];
   
-  for(int s=0;s<p->numSites;s++){
-    p->keepSites[s]=p->nInd;
-    //    p->results->freq->keepInd[s]=nInd;  
+  for(int s=0;s<pars->numSites;s++){
+    pars->keepSites[s]=pars->nInd;
+    //    pars->results->freq->keepInd[s]=nInd;  
   }
 
 
   if(fl!=NULL && fl->hasMajMin==1 && doMajorMinor==3){
-    p->major = new char [p->numSites];
-    p->minor = new char [p->numSites];
-    for(int i=0;i<p->numSites;i++){
-      p->major[i] = 4;
-      p->minor[i] = 4;
+    pars->major = new char [pars->numSites];
+    pars->minor = new char [pars->numSites];
+    for(int i=0;i<pars->numSites;i++){
+      pars->major[i] = 4;
+      pars->minor[i] = 4;
     }
   }
   
   if(fl!=NULL) {
     if(fl->keeps==NULL){
-      for(int s=0;s<p->numSites;s++)
-	p->keepSites[s] =0;
+      for(int s=0;s<pars->numSites;s++)
+	pars->keepSites[s] =0;
     }else{
-      for(int s=0;s<p->numSites;s++){
-	if(fl->keeps[p->posi[s]]==0){
-	  p->keepSites[s] =0;
+      for(int s=0;s<pars->numSites;s++){
+	if(fl->keeps[pars->posi[s]]==0){
+	  pars->keepSites[s] =0;
 	}
-	if(p->keepSites[s] && fl->hasMajMin==1 &&doMajorMinor==3){
-	  p->major[s] = fl->major[p->posi[s]];
-	  p->minor[s] = fl->minor[p->posi[s]];
+	if(pars->keepSites[s] && fl->hasMajMin==1 &&doMajorMinor==3){
+	  pars->major[s] = fl->major[pars->posi[s]];
+	  pars->minor[s] = fl->minor[pars->posi[s]];
 	}
       }
     }
   }
+
+
+  //set bases for individuals with less than minIndDepth to N
+  for(int s=0;s<pars->numSites;s++){
+    if(pars->keepSites[s]==0)
+      continue;
+    int totalDep=0;
+    int nInfo=0;
+    for(int n=0;n < pars->chk->nSamples;n++){
+      
+      int dep=0;
+      for(int l=0; pars->chk->nd[s][n] && l < pars->chk->nd[s][n]->l; l++){
+	if(refToInt[pars->chk->nd[s][n]->seq[l]]!=4)
+	  dep++;
+      }
+      if(dep<minIndDepth){//set to N 
+	for(int l=0; pars->chk->nd[s][n] && l < pars->chk->nd[s][n]->l; l++)
+	  pars->chk->nd[s][n]->seq[l] = 'N';
+	dep=0;
+      }
+      else
+	nInfo++;
+      totalDep += dep;
+    }
+    pars->keepSites[s] =nInfo;
+    if(minInd>nInfo)
+      pars->keepSites[s] = 0;
+
+  }
+
+
+
+  /*
   //how set the keepsites according the effective sample size persite
   //if(0!=minInd){
-    if(p->chk!=NULL){
+    if(pars->chk!=NULL){
       //loop over sites;
-      for(int s=0;s<p->numSites;s++){
-	if(p->keepSites[s]==0)
+      for(int s=0;s<pars->numSites;s++){
+	if(pars->keepSites[s]==0)
 	  continue;
 	int nInfo =0;
-	tNode **tn = p->chk->nd[s];
+	tNode **tn = pars->chk->nd[s];
 	//loop over samples;
-	for(int i=0;i<p->nInd;i++){
+	for(int i=0;i<pars->nInd;i++){
 	  if(tn[i]&&tn[i]->l!=0)
 	    nInfo++;
 	}
-	p->keepSites[s] =nInfo;
+	pars->keepSites[s] =nInfo;
 	if(0!=minInd){
 	  if(minInd>nInfo)
-	    p->keepSites[s] =0;
-	}
+	    pars->keepSites[s] =0;
+	    }
     
+      }
     }
-  }
+*/
+  
 }
 void abcFilter::print(funkyPars *p){
 }
