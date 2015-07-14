@@ -526,8 +526,10 @@ double *angsd::readDouble(const char*fname,int hint){
   }
   //  fprintf(stderr,"size of prior=%lu\n",res.size());
   if(hint!=res.size()){
-    fprintf(stderr,"problem with size of dimension of prior %d vs %lu\n",hint,res.size());
+    fprintf(stderr,"\t-> File: \'%s\' should contain %d values, but has %lu\n",fname,hint,res.size());
+    fprintf(stderr,"\t-> If you are supplying an estimated sfs, make sure your input file is a single line (an estimate for a single region)\n");
     for(size_t i=0;i<res.size();i++)
+      
       fprintf(stderr,"%zu=%f\n",i,res[i]);
     exit(0);
   }
