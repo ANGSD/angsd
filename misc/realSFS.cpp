@@ -345,6 +345,12 @@ template<typename T>
 void print(int argc,char **argv){
   if(argc<1){
     fprintf(stderr,"\t-> Must supply afile.saf.idx files \n");
+    fprintf(stderr,"\t-> Examples \n");
+    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx \n");
+    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx -r chr1:10000000-12000000\n");
+    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx pop2.saf.idx -r chr2:10000000-12000000\n");
+    fprintf(stderr,"\t-> You can generate the oldformat by appending the -oldout 1 to the print command like\n");
+    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx pop2.saf.idx -oldout 1\n");
     return; 
   }
   
