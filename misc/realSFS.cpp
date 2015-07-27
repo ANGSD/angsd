@@ -1028,10 +1028,10 @@ int main_opt(args *arg){
   setGloc(saf,nSites);
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL);//read nsites from data
-    //    fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
+    //fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
     if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
-    
+#if 0
     if(saf.size()==1){
       if(ret!=-2){
 	if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
@@ -1039,7 +1039,9 @@ int main_opt(args *arg){
 	  continue;
 	}
       }
-    }else{
+    }else
+#endif
+      {
       if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
 	//fprintf(stderr,"continue continue\n");
 	continue;
