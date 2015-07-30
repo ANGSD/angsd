@@ -385,7 +385,7 @@ int fst_stat(int argc,char **argv){
     //if chr==3 then we have 3pops and we will also calculate pbs statistics
     calcpbs(fstW);//<- NOTE: the pbs values will replace the fstW values
     for(int i=0;i<3;i++)
-      fprintf(stdout,"\t-> pbs.pop%d\t%f\n",i+1,fstW[i]);
+      fprintf(stderr,"\t-> pbs.pop%d\t%f\n",i+1,fstW[i]);
   }
   delete [] ares;
   delete [] bres;
