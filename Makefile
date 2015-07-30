@@ -17,7 +17,7 @@ HTSDIR = ../htslib
 HTS = $(realpath $(HTSDIR))
 HTSLIB = $(HTS)/libhts.a
 
-PACKAGE_VERSION  = 0.901
+PACKAGE_VERSION  = 0.902
 
 ifneq "$(wildcard .git)" ""
 PACKAGE_VERSION := $(shell git describe --always --dirty)
@@ -54,7 +54,7 @@ testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
 
 clean:	testclean
-	rm  -f *.o *.d angsd angsd.static *~
+	rm  -f *.o *.d angsd angsd.static version.h *~
 	make -C misc/ clean
 
 test:
