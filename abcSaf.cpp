@@ -1029,7 +1029,6 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,BGZF *fpgz){
        seq=log(0.0);
      else
        seq = log(pv)-aConst;//watterson
-     //     gzprintf(fpgz,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
      ksprintf(&kb,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
      if(fold==0) {
        double pairwise=0;    //Find theta_pi the pairwise
@@ -1043,14 +1042,12 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,BGZF *fpgz){
 	 thL += exp(workarray[ii])*ii;
 	 thH += exp(2*li+workarray[ii]);
        }
-       //gzprintf(fpgz,"%f\t%f\t%f\t%f\n",log(pairwise)-aConst2,workarray[1],log(thH)-aConst2,log(thL)-aConst3);
        ksprintf(&kb,"%f\t%f\t%f\t%f\n",log(pairwise)-aConst2,workarray[1],log(thH)-aConst2,log(thL)-aConst3);
      }else{
        double pairwise=0;    //Find theta_pi the pairwise
        for(size_t ii=1;ii<newDim;ii++)
 	 pairwise += exp(workarray[ii]+scalings[ii] );
        
-       // gzprintf(fpgz,"%f\t-Inf\t-Inf\t-Inf\n",log(pairwise)-aConst2);
        ksprintf(&kb,"%f\t-Inf\t-Inf\t-Inf\n",log(pairwise)-aConst2);
      }
    }else if(r->oklist[i]==2)
