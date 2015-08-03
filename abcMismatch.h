@@ -5,7 +5,8 @@ class abcTsk:public abc{
 private:
   int doMismatch;
   char *refName;
-  gzFile outfilegz;
+  BGZF *outfilegz;
+  kstring_t bufstr;
 public:
   void run(funkyPars  *pars);
   void clean(funkyPars *pars);  

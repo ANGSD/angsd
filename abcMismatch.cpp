@@ -1,8 +1,10 @@
+#include <ctype.h>
+#include <htslib/kstring.h>
 #include "shared.h"
-#include <cmath>
+
 #include "analysisFunction.h"
 #include "abcMismatch.h"
-#include <ctype.h>
+
 
 #define rlen 150
 #define qslen 64
@@ -42,7 +44,8 @@ void setZero2(){
 }
 
 
-void printMat(gzFile fp){
+void printMat(BGZF* fp,kstring_t &bufstr){
+  bufstr.l=0;
   for(int p1=0;p1<rlen;p1++)
     for(int p2=0;p2<rlen;p2++){
       for(int q=0;q<qslen;q++){
@@ -56,20 +59,22 @@ void printMat(gzFile fp){
 		ts += mat[p2][p1][q][s][rb][ob];
 	    }
 	    if(ts>0){
-	      gzprintf(fp,"%d\t%d\t%d\t%d\t%d",p1,p2,q,s,rb);
+	      ksprintf(&bufstr,"%d\t%d\t%d\t%d\t%d",p1,p2,q,s,rb);
 	      for(int ob=0;ob<4;ob++){
 		if(s==1)
-		  gzprintf(fp,"\t%zu",mat[p1][p2][q][s][rb][ob]);
+		  ksprintf(&bufstr,"\t%zu",mat[p1][p2][q][s][rb][ob]);
 		else
-		  gzprintf(fp,"\t%zu",mat[p2][p1][q][s][rb][ob]);
+		  ksprintf(&bufstr,"\t%zu",mat[p2][p1][q][s][rb][ob]);
 		
 	      }
-	      gzprintf(fp,"\n");
+	      ksprintf(&bufstr,"\n");
 	    }
 	  }
 	}
       }
     }
+
+  bgzf_write(fp,bufstr.s,bufstr.l);bufstr.l=0;
 }
 
 
@@ -102,6 +107,7 @@ void abcTsk::getOptions(argStruct *arguments){
 
 abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
  doMismatch=0;
+ bufstr.s=NULL;bufstr.l=bufstr.m=0;
  refName = NULL;
 
   if(arguments->argc==2){
@@ -124,12 +130,13 @@ abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
   //make output files
   const char* postfix;
   postfix=".mismatch.gz";
-  outfilegz=Z_NULL;
-  outfilegz = aio::openFileGz(outfiles,postfix,GZOPT);
-  gzprintf(outfilegz,"posi\tisop\tqs\tstrand\tRef");
+  outfilegz=NULL;
+  outfilegz = aio::openFileBG(outfiles,postfix);
+  ksprintf(&bufstr,"posi\tisop\tqs\tstrand\tRef");
   for(int j=0;j<4;j++)
-    gzprintf(outfilegz,"\t%c",intToRef[j]);
-  gzprintf(outfilegz,"\n");
+    ksprintf(&bufstr,"\t%c",intToRef[j]);
+  ksprintf(&bufstr,"\n");
+  bgzf_write(outfilegz,bufstr.s,bufstr.l);bufstr.l=0;
   setZero2();
   
 }
@@ -137,8 +144,9 @@ abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
 
 abcTsk::~abcTsk(){
   if(doMismatch){
-    printMat(outfilegz);
-    if(outfilegz) gzclose(outfilegz);
+    printMat(outfilegz,bufstr);
+    if(outfilegz!=NULL)
+      bgzf_close(outfilegz);
  
     for(int p1=0;p1<rlen;p1++){
       for(int p2=0;p2<rlen;p2++){
