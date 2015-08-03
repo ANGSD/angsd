@@ -410,8 +410,10 @@ void abcCounts::print(funkyPars *pars){
     return;
   if(dumpCounts)
     printCounts(header->target_name[pars->refId],pars->posi,pars->counts,pars->numSites,pars->nInd,bpos,bbin,dumpCounts,pars->keepSites);
-  bgzf_write(oFileCountsBin,bbin.s,bbin.l);bbin.l=0;
-  bgzf_write(oFileCountsPos,bpos.s,bpos.l);bpos.l=0;
+  if(bbin.l>0)
+    bgzf_write(oFileCountsBin,bbin.s,bbin.l);bbin.l=0;
+  if(bpos.l>0)
+    bgzf_write(oFileCountsPos,bpos.s,bpos.l);bpos.l=0;
 
   if(doQsDist)
     countQs(pars->chk,qsDist,pars->keepSites);
