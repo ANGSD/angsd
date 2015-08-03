@@ -175,7 +175,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   outfileSAF = NULL;
   outfileSAFPOS = NULL;
   outfileSAFIDX = NULL;
-  theta_fp = Z_NULL;
+  theta_fp = NULL;
   outfileGprobs = NULL;
   scalings = NULL;
   nnnSites = 0;
