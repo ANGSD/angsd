@@ -17,7 +17,7 @@ mpileup::~mpileup(){
 
 tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
 
-  tNode **ret = new tNode*[nInd];
+  tNode **ret =(tNode**) calloc(nInd,sizeof(tNode*));
 
   for(int i=0;i<nInd;i++) {
 
