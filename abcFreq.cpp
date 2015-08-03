@@ -338,10 +338,15 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
 
 abcFreq::~abcFreq(){
   if(outfileZ!=Z_NULL){
-    fprintf(stderr,"Clsoing file Z_NULL\n");
+    fprintf(stderr,"Closing file1 Z_NULL\n");
     gzclose(outfileZ);
+    outfileZ=Z_NULL;
   }
-  if(outfileZ2!=Z_NULL)    gzclose(outfileZ2);
+  if(outfileZ2!=Z_NULL){
+    fprintf(stderr,"Closing file2 Z_NULL\n");
+    gzclose(outfileZ2);
+    outfileZ2=Z_NULL;
+  }
   free(refName);
   free(ancName);
   delete [] indF;
