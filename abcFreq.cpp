@@ -13,6 +13,7 @@
 #include <cmath>
 #include <zlib.h>
 #include <htslib/kstring.h>
+#include <htslib/bgzf.h>
 #include "abcFreq.h"
 
 int abcFreq::emIter = EM_NITER;
@@ -247,8 +248,8 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   SNP_pval = 1;
   nInd = arguments->nInd;
   eps = 0.001;
-  outfileZ2 = Z_NULL;
-  outfileZ = Z_NULL;
+  outfileZ2 = NULL;
+  outfileZ = NULL;
   indFname = NULL;
   doMaf=0;
   rmTriallelic=0;
@@ -284,10 +285,10 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
     //make output files
     const char* postfix;
     postfix=".mafs.gz";
-    outfileZ = aio::openFileGz(outfiles,postfix,GZOPT);
+    outfileZ = aio::openFileBG(outfiles,postfix);
     if(beagleProb){
       postfix=".beagle.gprobs.gz";
-      outfileZ2 = aio::openFileGz(outfiles,postfix,GZOPT);
+      outfileZ2 = aio::openFileBG(outfiles,postfix);
     }
   }else
     doMaf=abs(doMaf);
@@ -316,7 +317,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
       kputs("pu-EM\t",&bufstr);
   }
   kputs("nInd\n",&bufstr);
-  gzwrite(outfileZ,bufstr.s,bufstr.l);
+  bgzf_write(outfileZ,bufstr.s,bufstr.l);
   bufstr.l=0;
   if(beagleProb){
     kputs("marker\tallele1\tallele2",&bufstr);
@@ -329,7 +330,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
       kputw(i,&bufstr);
     }
     kputc('\n',&bufstr);
-    gzwrite(outfileZ2,bufstr.s,bufstr.l);
+    bgzf_write(outfileZ2,bufstr.s,bufstr.l);
   }
 
   free(bufstr.s);
@@ -337,15 +338,13 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
 
 
 abcFreq::~abcFreq(){
-  if(outfileZ!=Z_NULL){
-    fprintf(stderr,"Closing file1 Z_NULL\n");
-    gzclose(outfileZ);
-    outfileZ=Z_NULL;
+  if(outfileZ!=NULL){
+    //  fprintf(stderr,"Closing file1 Z_NULL\n");
+    bgzf_close(outfileZ);
   }
-  if(outfileZ2!=Z_NULL){
-    fprintf(stderr,"Closing file2 Z_NULL\n");
-    gzclose(outfileZ2);
-    outfileZ2=Z_NULL;
+  if(outfileZ2!=NULL){
+    //fprintf(stderr,"Closing file2 Z_NULL\n");
+    bgzf_close(outfileZ2);
   }
   free(refName);
   free(ancName);
@@ -358,7 +357,7 @@ abcFreq::~abcFreq(){
 
 
 void abcFreq::print(funkyPars *pars) {
-  if(outfileZ==Z_NULL&&outfileZ2==Z_NULL)
+  if(outfileZ==NULL&&outfileZ2==NULL)
     return;
   kstring_t bufstr;
   bufstr.s=NULL; bufstr.l=bufstr.m=0;
@@ -401,7 +400,7 @@ void abcFreq::print(funkyPars *pars) {
     kputw(pars->keepSites[s],&bufstr);kputc('\n',&bufstr);
   }
 
-  gzwrite(outfileZ,bufstr.s,bufstr.l);  
+  bgzf_write(outfileZ,bufstr.s,bufstr.l);  
   bufstr.l=0;
 
   if(beagleProb){
@@ -431,7 +430,7 @@ void abcFreq::print(funkyPars *pars) {
     
     }
     //valgrind on osx complains here check if prob on unix
-    int ret=gzwrite(outfileZ2,bufstr.s,bufstr.l);
+    int ret=bgzf_write(outfileZ2,bufstr.s,bufstr.l);
     //fprintf(stderr,"ret.l:%d bufstr.l:%zu\n",ret,bufstr.l);
     bufstr.l=0;
   }

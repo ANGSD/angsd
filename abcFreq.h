@@ -30,8 +30,8 @@ private:
   
   void prepPrint(funkyPars *pars);
 
-  gzFile outfileZ;
-  gzFile outfileZ2;
+  BGZF *outfileZ;
+  BGZF *outfileZ2;
 
   int doMaf;
   double rmTriallelic;
