@@ -16,7 +16,7 @@ private:
   kstring_t bufstr;
 public:
   //none optional stuff
-  gzFile *MultiOutfile;
+  BGZF **multiOutfile;
   int doPrint;
   int minCov; //not for users
   int doMaf;
