@@ -7,7 +7,7 @@
   part of angsd
 
  */
-#include <cmath>
+#include <htslib/kstring.h>
 #include "abcFreq.h"
 #include "abcHWE.h"
  
@@ -55,7 +55,7 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   HWE_pval = 0;
   testMe=0;
   tolStop = 0.00001;
-
+  bufstr.s=NULL;bufstr.l=bufstr.m=0;
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-HWE_pval")){
@@ -75,9 +75,10 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   const char* postfix;
   postfix=".hwe.gz";
   if(doHWE>0){
-    outfileZ = aio::openFileGz(outfiles,postfix,GZOPT);
+    outfileZ = aio::openFileBG(outfiles,postfix);
     //print header
-    gzprintf(outfileZ,"Chromo\tPosition\tMajor\tMinor\tFreq\thweFreq\tF\tLRT\tp-value\n");
+    const char *str = "Chromo\tPosition\tMajor\tMinor\tFreq\thweFreq\tF\tLRT\tp-value\n";
+    bgzf_write(outfileZ,str,strlen(str));
   }
 }
 
@@ -87,7 +88,8 @@ abcHWE::~abcHWE(){
   if(doHWE==0)
     return;
   if(doHWE>0)
-    if(outfileZ) gzclose(outfileZ);
+    if(outfileZ!=NULL)
+      bgzf_close(outfileZ);
   delete chisq;
 }
 
@@ -110,7 +112,7 @@ void abcHWE::print(funkyPars *pars){
     return;
 
   funkyHWE *hweStruct = (funkyHWE *) pars->extras[index];//new
-
+  bufstr.l=0;
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0) 
       continue;
@@ -122,10 +124,10 @@ void abcHWE::print(funkyPars *pars){
     else
       pval=1-chisq->cdf(lrt);
     //    fprintf(stderr,"lrt:%f\n",lrt);
-    gzprintf(outfileZ,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],hweStruct->freq[s],hweStruct->F[s],lrt,pval);
+    ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],hweStruct->freq[s],hweStruct->F[s],lrt,pval);
 
   }
-
+  bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
 }
 
 
