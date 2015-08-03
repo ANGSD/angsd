@@ -21,10 +21,10 @@ private:
 
   kstring_t bpos;
   kstring_t bbin;
-
-  gzFile oFileCountsBin;
-  gzFile oFileCountsPos;
-  gzFile oFileIcounts;
+  kstring_t bufstr;
+  BGZF* oFileCountsBin;
+  BGZF* oFileCountsPos;
+  BGZF* oFileIcounts;
 
   size_t *qsDist;
   int nInd;
