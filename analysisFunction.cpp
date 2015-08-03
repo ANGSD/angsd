@@ -757,19 +757,6 @@ FILE *aio::openFile(const char* a,const char* b){
   delete [] c;
   return fp;
 }
-gzFile aio::openFileGz(const char* a,const char* b,const char *mode){
-  if(0)
-    fprintf(stderr,"[%s] %s%s\n",__FUNCTION__,a,b);
-  char *c = new char[strlen(a)+strlen(b)+1];
-  strcpy(c,a);
-  strncat(c,b,strlen(b));
-  //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
-  dumpedFiles.push_back(strdup(c));
-  gzFile fp = aio::getGz(c,mode);
-  delete [] c;
-  return fp;
-}
-
 
 BGZF *aio::openFileBG(const char* a,const char* b){
 
@@ -796,25 +783,10 @@ FILE *aio::getFILE(const char*fname,const char* mode){
   return fp;
 }
 
-gzFile aio::getGz(const char*fname,const char* mode){
-  int writeFile = 0;
-  for(size_t i=0;i<strlen(mode);i++)
-    if(mode[i]=='w')
-      writeFile = 1;
-
-  //  fprintf(stderr,"\t-> opening: %s\n",fname);
-  gzFile fp=Z_NULL;
-  if(NULL==(fp=gzopen(fname,mode))){
-    fprintf(stderr,"\t-> Error opening gzFile handle for file:%s exiting\n",fname);
-    exit(0);
-  }
-  return fp;
-}
-
 
 
 //checks that newer is newer than older
-int isNewer(const char *newer,const char *older){
+int aio::isNewer(const char *newer,const char *older){
    if (strstr(older, "ftp://") == older || strstr(older, "http://") == older)
      return 0;
   //  fprintf(stderr,"newer:%s older:%s\n",newer,older);

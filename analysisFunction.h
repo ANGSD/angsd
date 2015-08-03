@@ -97,13 +97,11 @@ namespace aio{
   size_t fsize(const char* fname);
   int fexists(const char* str);//{///@param str Filename given as a string.
   FILE *openFile(const char* a,const char* b);
-  gzFile openFileGz(const char* a,const char* b,const char *mode);
   FILE *getFILE(const char*fname,const char* mode);
-  gzFile getGz(const char*fname,const char* mode);
   BGZF *openFileBG(const char* a,const char* b);
+  int isNewer(const char *newer,const char *older);
 }
 
-int isNewer(const char *newer,const char *older);
 #endif
 
 

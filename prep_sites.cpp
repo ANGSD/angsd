@@ -181,7 +181,7 @@ filt *filt_read(const char *fname){
     fprintf(stderr,"Binary file doesnt exists:%s you should index:%s\n",idx_name,fname);
     exit(0);
   }
-  if(isNewer(fname,bin_name)||isNewer(fname,idx_name)){ 
+  if(aio::isNewer(fname,bin_name)||aio::isNewer(fname,idx_name)){ 
     fprintf(stderr,"\t-> Potential problem: File: \'%s\' looks newer than files: \'%s\',\'%s\'\n\t-> Please delete %s/%s files and rerun.\n",fname,bin_name,idx_name,bin_name,idx_name);
     exit(0);
   }
