@@ -256,7 +256,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   GL=0;
   doSNP=0;
   doPost=0;
-
+  bufstr.s=NULL;bufstr.l=bufstr.m=0;
   //emIter=EM_NITER; //these are static see top of this file
   //EM_start = EM_START; //these are static see top of this file
   doMajorMinor=0;
@@ -293,8 +293,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   }else
     doMaf=abs(doMaf);
   //print header
-  kstring_t bufstr;
-  bufstr.s=NULL;bufstr.l=bufstr.m=0;
+  
   kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
   if(refName!=NULL)
     kputs("ref\t",&bufstr);
@@ -331,9 +330,9 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
     }
     kputc('\n',&bufstr);
     bgzf_write(outfileZ2,bufstr.s,bufstr.l);
+    bufstr.l=0;
   }
 
-  free(bufstr.s);
 }
 
 
@@ -352,6 +351,7 @@ abcFreq::~abcFreq(){
   delete chisq1;
   delete chisq2;
   delete chisq3;
+  free(bufstr.s);
 }
 
 
@@ -359,8 +359,6 @@ abcFreq::~abcFreq(){
 void abcFreq::print(funkyPars *pars) {
   if(outfileZ==NULL&&outfileZ2==NULL)
     return;
-  kstring_t bufstr;
-  bufstr.s=NULL; bufstr.l=bufstr.m=0;
 
   freqStruct *freq =(freqStruct *) pars->extras[index];
 
@@ -431,10 +429,11 @@ void abcFreq::print(funkyPars *pars) {
     }
     //valgrind on osx complains here check if prob on unix
     int ret=bgzf_write(outfileZ2,bufstr.s,bufstr.l);
-    //fprintf(stderr,"ret.l:%d bufstr.l:%zu\n",ret,bufstr.l);
     bufstr.l=0;
+    //fprintf(stderr,"ret.l:%d bufstr.l:%zu\n",ret,bufstr.l);
+
   }
-  free(bufstr.s);
+
 }
 
 
