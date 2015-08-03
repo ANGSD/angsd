@@ -26,7 +26,6 @@
 #include <zlib.h>
 #include <assert.h>
 #include <htslib/kstring.h>
-#include "bfgs.h"
 #include "analysisFunction.h"
 #include "abc.h"
 
