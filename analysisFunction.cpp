@@ -783,8 +783,6 @@ FILE *aio::getFILE(const char*fname,const char* mode){
   return fp;
 }
 
-
-
 //checks that newer is newer than older
 int aio::isNewer(const char *newer,const char *older){
    if (strstr(older, "ftp://") == older || strstr(older, "http://") == older)
