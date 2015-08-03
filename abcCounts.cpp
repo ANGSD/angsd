@@ -381,7 +381,7 @@ abcCounts::~abcCounts(){
   free(oFiles);
   free(bpos.s);
   free(bbin.s);
-
+  free(bufstr.s);
   if(globCount)
     delete [] globCount;
 }
