@@ -179,10 +179,10 @@ void parseArgStruct(argStruct *arguments){
 }
 
 int main(int argc, char** argv){
-  if(strcmp(ZLIB_VERSION,zlib_version)){
+  if(1||strcmp(ZLIB_VERSION,zlib_version)){
     fprintf(stderr,"\t-> Problem with difference in zlib version used for compiling and linking\n");
     fprintf(stderr,"\t-> ZLIB_VERSION: %s zlibversion: %s \n",ZLIB_VERSION,zlib_version);
-    return 0;
+    //return 0;
   }
 
   //no arguments supplied -> print info
