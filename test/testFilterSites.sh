@@ -38,4 +38,5 @@ cd sites
 md5sum  -c md5orig.orig &>>../${LOG}
 ls -lh *.mafs.gz &>>../${LOG}
 gunzip -c run1.mafs.gz &>>../${LOG}
+cat run1.mafs.gz &>>../${LOG}
 exit 8
