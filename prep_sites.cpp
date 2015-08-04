@@ -284,10 +284,10 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
 
   fwrite(&keep->l,sizeof(size_t),1,fp);//write len of chr
   fwrite(&hasMajMin,1,sizeof(int),fp);
-  bgzf_write(BFP,keep->d,keep->l);//write keep
+  aio::bgzf_write(BFP,keep->d,keep->l);//write keep
   if(hasMajMin){
-    bgzf_write(BFP,major->d,major->l);//write maj
-    bgzf_write(BFP,minor->d,minor->l);//write min
+    aio::bgzf_write(BFP,major->d,major->l);//write maj
+    aio::bgzf_write(BFP,minor->d,minor->l);//write min
   }
   return 0;
 }

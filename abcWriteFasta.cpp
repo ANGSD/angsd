@@ -127,7 +127,7 @@ void abcWriteFasta::changeChr(int refId) {
   if(myFasta!=NULL){//proper case we have data
     if(explode||hasData){
       writeChr(&bufstr,header->target_len[currentChr],header->target_name[currentChr],myFasta,NbasesPerLine);
-    bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     }
   }
   
@@ -137,7 +137,7 @@ void abcWriteFasta::changeChr(int refId) {
   if(refId!=-1){//-1 = destructor
     for(int i=currentChr+1;explode&&i<refId;i++){
       writeChr(&bufstr,header->target_len[i],header->target_name[i],NULL,NbasesPerLine);
-      bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+      aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     }
     currentChr=refId;
     free(myFasta);
@@ -147,10 +147,10 @@ void abcWriteFasta::changeChr(int refId) {
     free(myFasta);
     for(int i=currentChr+1;explode&&i<header->n_targets;i++){
       writeChr(&bufstr,header->target_len[i],header->target_name[i],NULL,NbasesPerLine);
-      bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+      aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     }
   }
-  bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+  aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
 }
 
 

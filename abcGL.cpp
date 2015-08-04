@@ -239,7 +239,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
 	kputw(i,&bufstr);
       }
       kputc('\n',&bufstr);
-      bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
+      aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
     }
  
   }
@@ -409,7 +409,7 @@ void abcGL::printLike(funkyPars *pars) {
     for(int i=0;i<pars->numSites;i++){
       if(pars->keepSites[i]==0)
 	continue;
-      bgzf_write(gzoutfile,pars->likes[i],sizeof(double)*10*pars->nInd);
+      aio::bgzf_write(gzoutfile,pars->likes[i],sizeof(double)*10*pars->nInd);
     }
   }
   else if(doGlf==2){
@@ -448,7 +448,7 @@ void abcGL::printLike(funkyPars *pars) {
 	kputc('\n',&bufstr);
 
     }
-    bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
+    aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
   }
   else if(doGlf==3) { //FGV v0.208 Aug,28
     for(int s=0;s<pars->numSites;s++) {
@@ -463,12 +463,12 @@ void abcGL::printLike(funkyPars *pars) {
 	dump[0] = pars->likes[s][i*10+angsd::majorminor[major][major]] ;
 	dump[1] = pars->likes[s][i*10+angsd::majorminor[major][minor]] ;
 	dump[2] = pars->likes[s][i*10+angsd::majorminor[minor][minor]] ;
-	bgzf_write(gzoutfile,dump,3*sizeof(double));
+	aio::bgzf_write(gzoutfile,dump,3*sizeof(double));
       }
       bufstr.l=0;
       ksprintf(&bufstr,"%s\t%d\t",header->target_name[pars->refId],pars->posi[s]+1);
       ksprintf(&bufstr,"%c\t%c\n",intToRef[major],intToRef[minor]);
-      bgzf_write(gzoutfile2,bufstr.s,bufstr.l);bufstr.l=0;
+      aio::bgzf_write(gzoutfile2,bufstr.s,bufstr.l);bufstr.l=0;
     }
   } else if(doGlf==4){
     bufstr.l=0;
@@ -484,7 +484,7 @@ void abcGL::printLike(funkyPars *pars) {
 
       kputc('\n',&bufstr);
     }
-    bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
+    aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
   }
 
 

@@ -316,7 +316,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
       kputs("pu-EM\t",&bufstr);
   }
   kputs("nInd\n",&bufstr);
-  bgzf_write(outfileZ,bufstr.s,bufstr.l);
+  aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
   bufstr.l=0;
   if(beagleProb){
     kputs("marker\tallele1\tallele2",&bufstr);
@@ -329,7 +329,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
       kputw(i,&bufstr);
     }
     kputc('\n',&bufstr);
-    bgzf_write(outfileZ2,bufstr.s,bufstr.l);
+    aio::bgzf_write(outfileZ2,bufstr.s,bufstr.l);
     bufstr.l=0;
   }
 
@@ -396,7 +396,7 @@ void abcFreq::print(funkyPars *pars) {
     kputw(pars->keepSites[s],&bufstr);kputc('\n',&bufstr);
   }
 
-  bgzf_write(outfileZ,bufstr.s,bufstr.l);  
+  aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);  
   bufstr.l=0;
 
   if(beagleProb){
@@ -426,7 +426,7 @@ void abcFreq::print(funkyPars *pars) {
     
     }
     //valgrind on osx complains here check if prob on unix
-    int ret=bgzf_write(outfileZ2,bufstr.s,bufstr.l);
+    int ret=aio::bgzf_write(outfileZ2,bufstr.s,bufstr.l);
     bufstr.l=0;
     //fprintf(stderr,"ret.l:%d bufstr.l:%zu\n",ret,bufstr.l);
 

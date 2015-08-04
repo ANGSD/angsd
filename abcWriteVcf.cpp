@@ -53,7 +53,7 @@ void abcWriteVcf::print(funkyPars *pars){
     ksprintf(kstr,"\n");
   }
   
-  bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
+  aio::bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
 void abcWriteVcf::getOptions(argStruct *arguments){
@@ -105,7 +105,7 @@ abcWriteVcf::abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype
   ksprintf(kstr,"\n");
 
   fp=aio::openFileBG(outfiles,".vcf.gz");
-  bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
+  aio::bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
 

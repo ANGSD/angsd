@@ -243,7 +243,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   else
     ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\n");
   for(int yi=0;yi<ymat.y;yi++)
-    bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);
+    aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);
   bufstr.l=0;
 }
 
@@ -1117,6 +1117,6 @@ void abcAsso::printDoAsso(funkyPars *pars){
 
       }
     }
-    bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);bufstr.l=0;
+    aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);bufstr.l=0;
   }
 }

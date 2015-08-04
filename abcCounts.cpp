@@ -248,29 +248,29 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   if(dumpCounts){
     oFileCountsPos = aio::openFileBG(outfiles,postfix1);
     bufstr.l=0;ksprintf(&bufstr,"chr\tpos\ttotDepth\n");
-    bgzf_write(oFileCountsPos,bufstr.s,bufstr.l);bufstr.l=0;
+    aio::bgzf_write(oFileCountsPos,bufstr.s,bufstr.l);bufstr.l=0;
     if(dumpCounts>1)
       oFileCountsBin = aio::openFileBG(outfiles,postfix2);
     if(dumpCounts==2){
       bufstr.l=0;
       for(int i=0;i<arguments->nInd;i++)
 	ksprintf(&bufstr,"ind%dTotDepth\t",i);
-      bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
+      aio::bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
     }
     if(dumpCounts==3){
       bufstr.l=0;
       ksprintf(&bufstr,"totA\ttotC\ttotG\ttotT");
-      bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
+      aio::bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
     }
     if(dumpCounts==4){
       bufstr.l=0;
       for(int i=0;i<arguments->nInd;i++)
 	ksprintf(&bufstr,"ind%d_A\tind%d_C\tind%d_G\tind%d_T\t",i,i,i,i);
-      bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
+      aio::bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
     }
     if(dumpCounts>1){
       bufstr.l=0;ksprintf(&bufstr,"\n");
-      bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
+      aio::bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
     }
   }
   if(iCounts){
@@ -411,9 +411,9 @@ void abcCounts::print(funkyPars *pars){
   if(dumpCounts)
     printCounts(header->target_name[pars->refId],pars->posi,pars->counts,pars->numSites,pars->nInd,bpos,bbin,dumpCounts,pars->keepSites);
   if(bbin.l>0)
-    bgzf_write(oFileCountsBin,bbin.s,bbin.l);bbin.l=0;
+    aio::bgzf_write(oFileCountsBin,bbin.s,bbin.l);bbin.l=0;
   if(bpos.l>0)
-    bgzf_write(oFileCountsPos,bpos.s,bpos.l);bpos.l=0;
+    aio::bgzf_write(oFileCountsPos,bpos.s,bpos.l);bpos.l=0;
 
   if(doQsDist)
     countQs(pars->chk,qsDist,pars->keepSites);
@@ -457,8 +457,8 @@ void abcCounts::print(funkyPars *pars){
 	cnt[i] = pars->counts[s][i];
      
       int p = pars->posi[s]+1;
-      bgzf_write(oFileIcounts,&p,sizeof(int)); // new
-      bgzf_write(oFileIcounts,cnt,sizeof(int)*4); // new
+      aio::bgzf_write(oFileIcounts,&p,sizeof(int)); // new
+      aio::bgzf_write(oFileIcounts,cnt,sizeof(int)*4); // new
 
     }
   }
@@ -495,8 +495,8 @@ void abcCounts::print(funkyPars *pars){
       }
       if(1||count[0]+ count[1]+count[2]+count[3]){
 	int p = pars->posi[s]+1;
-	bgzf_write(oFileIcounts,&p,sizeof(int)); // new
-	bgzf_write(oFileIcounts,count,sizeof(int)*4); // new
+	aio::bgzf_write(oFileIcounts,&p,sizeof(int)); // new
+	aio::bgzf_write(oFileIcounts,count,sizeof(int)*4); // new
       }
     }
   }

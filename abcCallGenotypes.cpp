@@ -198,7 +198,7 @@ void abcCallGenotypes::printGeno(funkyPars *pars){
     if(doGenoInner&GENO_MAJOR_MINOR&&!(doGenoInner&GENO_FOR_COVAR))
       ksprintf(&bufstr,"%c\t%c\t",intToRef[pars->major[s]],intToRef[pars->minor[s]]);
     if(doGenoInner&GENO_FOR_COVAR){
-      bgzf_write(outfileZ,pars->post[s],sizeof(double)*3*pars->nInd);
+      aio::bgzf_write(outfileZ,pars->post[s],sizeof(double)*3*pars->nInd);
       continue;
     }
 
@@ -234,7 +234,7 @@ void abcCallGenotypes::printGeno(funkyPars *pars){
 
   }
   if(bufstr.l>0)
-    bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
 }
 
 

@@ -202,7 +202,7 @@ void abcFilterSNP::print(funkyPars *pars){
   if(!doSnpStat)
     return;
   kstring_t *bufstr =(kstring_t*) pars->extras[index];
-  bgzf_write(outfileZ,bufstr->s,bufstr->l);bufstr->l=0;
+  aio::bgzf_write(outfileZ,bufstr->s,bufstr->l);bufstr->l=0;
   free(bufstr->s);
   delete bufstr;
 }
@@ -257,7 +257,7 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
     outfileZ = aio::openFileBG(outfiles,postfix);
     kstring_t bufstr;bufstr.s=NULL;bufstr.l=bufstr.m=0;
     ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\n");
-    bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     free(bufstr.s);
   }
 }

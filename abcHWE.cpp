@@ -78,7 +78,7 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
     outfileZ = aio::openFileBG(outfiles,postfix);
     //print header
     const char *str = "Chromo\tPosition\tMajor\tMinor\tFreq\thweFreq\tF\tLRT\tp-value\n";
-    bgzf_write(outfileZ,str,strlen(str));
+    aio::bgzf_write(outfileZ,str,strlen(str));
   }
 }
 
@@ -127,7 +127,7 @@ void abcHWE::print(funkyPars *pars){
     ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],hweStruct->freq[s],hweStruct->F[s],lrt,pval);
 
   }
-  bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+  aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
 }
 
 

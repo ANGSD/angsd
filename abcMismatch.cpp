@@ -74,7 +74,7 @@ void printMat(BGZF* fp,kstring_t &bufstr){
       }
     }
 
-  bgzf_write(fp,bufstr.s,bufstr.l);bufstr.l=0;
+  aio::bgzf_write(fp,bufstr.s,bufstr.l);bufstr.l=0;
 }
 
 
@@ -136,7 +136,7 @@ abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
   for(int j=0;j<4;j++)
     ksprintf(&bufstr,"\t%c",intToRef[j]);
   ksprintf(&bufstr,"\n");
-  bgzf_write(outfilegz,bufstr.s,bufstr.l);bufstr.l=0;
+  aio::bgzf_write(outfilegz,bufstr.s,bufstr.l);bufstr.l=0;
   setZero2();
   
 }
