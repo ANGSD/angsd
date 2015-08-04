@@ -797,6 +797,12 @@ int aio::isNewer(const char *newer,const char *older){
   return one.st_mtime>=two.st_mtime;
 }
 
+ssize_t aio::bgzf_write(BGZF *fp, const void *data, size_t length){
+  if(length>0)
+    return ::bgzf_write(fp,data,length);
+  return 0;
+}
+
 void angsd::norm(double *d,size_t len){
   double ts=0;
   for(int i=0;i<len;i++)
