@@ -43,7 +43,7 @@ pthread_t thread1;
 pthread_cond_t cvMaxThread;
 pthread_mutex_t counterMut;
 
-
+int currentChr=0;
 int curRunning =0;
 int chunkNumber =1;
 printRes printer;
@@ -297,8 +297,13 @@ void waiter(int refId){
     pthread_mutex_unlock(&counterMut);
     sleep(1);
   }
-  changeChr(refId);
+  if(refId!=currentChr){
 
+    currentChr=refId;
+    fprintf(stdout,"changeChr\n");
+    fflush(stdout);
+    changeChr(refId);
+  }
   
 }
 
