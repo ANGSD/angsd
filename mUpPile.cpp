@@ -1313,7 +1313,7 @@ void destroy_tnode_pool(){
     //fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
     tNode **nd =(tNode**)tnodes->pools[i].pool;
     
-    int nitem = tnodes->pools[i]->used/tnodes->dsize;
+    int nitem = tnodes->pools[i].used/tnodes->dsize;
 
     for(int j=0;j<nitem;j++){
       tNode *tn =(tNode*) nd+j;
