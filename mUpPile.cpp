@@ -1485,7 +1485,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     }
 
     //below loop will continue untill eoc/oef/eor <- funky abbrev =end of chr, file and region
-    while(notDone&& SIG_COND) {
+    while(notDone) {
 
       //before collecting reads from the files, lets first check if we should pop reads from the buffered queue in each sgl
       for(int i=0;i<nFiles;i++){
