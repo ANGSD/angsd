@@ -89,12 +89,11 @@ void abcFilter::getOptions(argStruct *arguments){
 
 
 void abcFilter::run(funkyPars *p){
-  //fprintf(stderr,"nsites=%d\n",p->numSites);
-  p->keepSites=new int[p->numSites];
-  
-  for(int s=0;s<p->numSites;s++){
-    p->keepSites[s]=p->nInd;
-    //    p->results->freq->keepInd[s]=nInd;  
+  //if we are comping form BAM/CRAM then we dont need to set the below
+  if(p->keepSites==NULL){
+    p->keepSites=new int[p->numSites];
+    for(int s=0;s<p->numSites;s++)
+      p->keepSites[s]=p->nInd;
   }
 
 
