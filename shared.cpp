@@ -444,7 +444,6 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
 }
 #ifdef __WITH_POOL__
 extern int currentnodes;
-extern size_t *sl_l;
 #endif
 
 //only one instance at a time is running this function
@@ -454,7 +453,7 @@ void printFunky(funkyPars *p){
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
 #ifdef __WITH_POOL__
-	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d (%d,%zu) numSites:%d     ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,currentnodes,sl_l,p->numSites);
+	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d (%d) numSites:%d     ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,currentnodes,p->numSites);
 #else
       fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
 #endif

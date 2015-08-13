@@ -13,12 +13,13 @@
 
 #ifdef __WITH_POOL__
 #include "pooled_alloc.h"
-size_t sl_l;
-size_t sl_m;
-tNode **sl_d;
-pthread_mutex_t slist_mutex = PTHREAD_MUTEX_INITIALIZER;
+void *tail=NULL;//<- this will be point to the pool->free
+void *head=NULL;//<- this will be the last node adjoint
 tpool_alloc_t *tnodes = NULL;
-int currentnodes=0;
+size_t currentnodes=0;
+size_t freenodes =0;
+pthread_mutex_t slist_mutex = PTHREAD_MUTEX_INITIALIZER;
+size_t when_to_flush = 5000;
 #endif
 
 pthread_mutex_t mUpPile_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -87,13 +88,13 @@ void tnode_destroy(tNode *n){
   if(n==NULL)
     return;
 #ifdef __WITH_POOL__
-  if(sl_l == sl_m){
-    //    fprintf(stderr,"%zu %zu\n",sl_l, sl_m);
-    int newsize = sl_m+500;
-    sl_d = (tNode **) realloc(sl_d,sizeof(tNode *)*newsize);
-    sl_m = newsize;
+  if(tail==NULL&&head==NULL)
+    head = tail = n;
+  else{
+    *(void **)n = head;
+    head=n;
   }
-  sl_d[sl_l++] = n;
+  freenodes++;
 #else
   tnode_destroy1(n);
   free(n);
@@ -303,14 +304,24 @@ void realloc(tNode *d,int newsize){
  
 }
 
+//this is called from a threadsafe context
 #ifdef __WITH_POOL__
 void flush_queue(){
+  //  fprintf(stderr,"[%s]IN currentnodes:%lu freenodes:%lu when_to_flush:%lu\n",__FUNCTION__,currentnodes,freenodes,when_to_flush);
   pthread_mutex_lock(&slist_mutex);
-  for(int i=0;i<sl_l;i++)
-    tpool_free(tnodes,sl_d[i]);
-  currentnodes -= sl_l;
-  sl_l =0;
+  if(freenodes>0){
+    if(tail!=NULL&&head!=NULL){
+      //  fprintf(stderr,"PRE: infree:%lu\n",tpool_infree(tnodes));
+      *(void **)tail = tnodes->free;
+      tnodes->free = head;
+      head=tail=NULL;
+      //fprintf(stderr,"POST: infree:%lu\n",tpool_infree(tnodes));
+    }
+    currentnodes -=freenodes;
+    freenodes=0;
+  }
   pthread_mutex_unlock(&slist_mutex);
+  // fprintf(stderr,"[%s]OUT currentnodes:%lu freenodes:%lu when_to_flush:%lu\n",__FUNCTION__,currentnodes,freenodes,when_to_flush);
 }
 #endif
 //int staaa =0;
@@ -341,7 +352,7 @@ tNode *initNodeT(int l){
   d->insert = NULL;
 #ifdef __WITH_POOL__
   currentnodes++;
-  if(currentnodes>5000)
+  if(currentnodes>when_to_flush &&(currentnodes % 5000)==0)
     flush_queue();
 #endif
 
@@ -1308,7 +1319,7 @@ void callBack_bambi(fcb *fff);//<-angsd.cpp
 //type=0 -> callback to angsd
 #ifdef __WITH_POOL__
 void destroy_tnode_pool(){
-  //  fprintf(stderr,"npools:%zu unfreed tnodes before clean:%d\n",tnodes->npools,currentnodes);
+  fprintf(stderr,"\n\t-> npools:%zu unfreed tnodes before clean:%lu \n",tnodes->npools,currentnodes);
   for(int i=0;i<tnodes->npools;i++){
     //fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
     tNode **nd =(tNode**)tnodes->pools[i].pool;
@@ -1333,18 +1344,14 @@ void destroy_tnode_pool(){
 
   //  delete [] ary;
   tpool_destroy(tnodes);
-  free(sl_d);
 }
 #endif
 
-//function below is a merge between the original TESTOUTPUT and the angsdcallback. Typenames with T are the ones for the callback
+//f Typenames with T are the ones for the callback, in main angsd
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
 int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
   
 #ifdef __WITH_POOL__
-  sl_l =0;
-  sl_m =10000;
-  sl_d =(tNode**) calloc(sl_m,sizeof(tNode*));
   tnodes = tpool_create(sizeof(tNode));
 #endif
 
@@ -1353,9 +1360,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   fflush(stderr);
   if(show!=1)
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
-  //extern abcGetFasta *gf;
 
-  //  sglPool *sglp= new sglPool[nFiles];
   readPool *sglp= new readPool[nFiles];
   
   nodePool *nps =NULL;
@@ -1598,7 +1603,13 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 	f->dn=dnT; f->nFiles = nFiles; f->regStart = regStart; f->regStop = regStop; f->refId = theRef;
 	callBack_bambi(f);
       }
-
+      if(SIG_COND==0){
+	for(int i=0;i<nFiles;i++){
+	  rd[i].isEOF = 1;
+	  rd[i].regionDone =1;
+	}
+      }
+      
       //if we flush, its due to end of chr/region or end of files
       if(doFlush)
 	break;
@@ -1606,7 +1617,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
   }
   //below can be written nice but is just a copy paste, time is 10pm to lazy now
-  if(show==0){
+  if(show==0) {
     callBack_bambi(NULL);//cleanup signal
     pthread_mutex_lock(&mUpPile_mutex);//just to make sure, its okey to clean up
     for(int i=0;1&&i<nFiles;i++){
@@ -1617,16 +1628,11 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     delete [] sglp;
     pthread_mutex_unlock(&mUpPile_mutex);//just to make sure, its okey to clean up
   }else{
-    //clean up
-    for(int i=0;0&&i<nFiles;i++){
-      // dalloc_nodePool(nps[i]);
-      delete [] nps[i].nds;
-      dalloc(&sglp[i]);
-    }
-
     delete [] nps;
     delete [] sglp;
   }
+  void waiter(int);
+  waiter(theRef);//will wait for exisiting threads and then load stuff relatin
 #ifdef __WITH_POOL__
   flush_queue();
   destroy_tnode_pool();
