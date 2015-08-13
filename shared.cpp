@@ -222,6 +222,7 @@ void *slave(void *ptr){
 
 
 void *slave2(void *ptr){
+  pthread_mutex_lock( &counterMut );
   funkyPars *p = (funkyPars *) ptr;
   if(p->killSig==0)
     main_analysis(p);
@@ -237,7 +238,9 @@ void master2(funkyPars *p){
     fprintf(stderr,"[%s] Problem spawning thread\n%s\n",__FUNCTION__,strerror(errno));
     exit(0);
   }
+
   pthread_detach(thread1);
+  pthread_mutex_unlock( &counterMut );
 }
 
 
@@ -452,11 +455,7 @@ void printFunky(funkyPars *p){
   if(p->killSig==0) {//don't print the empty killSig chunk
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
-#ifdef __WITH_POOL__
-	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d (%d) numSites:%d     ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,currentnodes,p->numSites);
-#else
       fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
-#endif
       else
 	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
     }if(p->numSites!=0){
@@ -468,6 +467,7 @@ void printFunky(funkyPars *p){
     deallocFunkyPars(p);
     
   }else{
+    fprintf(stderr,"Never fucking here!!\n");
     deallocFunkyPars(p);
     pthread_mutex_unlock(&mUpPile_mutex);
     fprintf(stderr,"\n");//after last positions print add a neu line mutafuka
