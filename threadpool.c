@@ -2,38 +2,45 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#define NUM_THREADS	10
+
+#define NUM_THREADS	4
+
 pthread_barrier_t   barrier; // barrier synchronization object
 
+int data[NUM_THREADS];
 
-size_t data[NUM_THREADS];
+void doanal(int a){
+  int sleepval=lrand48() % 10+1;
+  fprintf(stderr,"INLOOP Thread %ld is taken:%lu is sleeping:%d\n",a,data[a], sleepval);   fflush(stderr);   
+  sleep(sleepval);
+}
 
-
-void *BusyWork(void *t)
-{
+void *BusyWork(void *t){
    int i;
    long tid;
    tid = (long)t;
    pthread_barrier_wait (&barrier);
    while(1){
-     int sleepval=lrand48() % 5+1;
-     printf("INLOOP Thread %ld is taken:%lu is sleeping:%d\n",tid,data[tid], sleepval);
-     sleep(sleepval);
+     fprintf(stderr,"is wiaigin\n");fflush(stderr);
      pthread_barrier_wait (&barrier);
-     fprintf(stderr,"after barrier\n");
-     fflush(stderr);   
+     doanal(tid);
    }
-     
    pthread_exit((void*) t);
 }
 
-int runner(){
-  static int i=0;
-  
+int runner(int chunknr){
+  int batch = chunknr %NUM_THREADS;
+  data[batch] = chunknr;
+  fprintf(stderr,"[%s] chunknr:%d batch:%d\n",__FUNCTION__,chunknr,batch);
+  if(batch==NUM_THREADS-1){
+    fprintf(stderr,"THREAD[%d] will run\n",batch);fflush(stderr);
+    pthread_barrier_wait (&barrier);
+    doanal(batch);
+    fprintf(stderr,"THREAD[%d] Will print also\n",batch);fflush(stderr);
+  }
+ }
 
-}
-
-
+#ifdef __WITH_MAIN__
 
 int main (int argc, char *argv[])
 {
@@ -48,27 +55,34 @@ int main (int argc, char *argv[])
    pthread_attr_init(&attr);
    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-   for(t=0; t<NUM_THREADS; t++) {
-      printf("Main: creating thread %ld\n", t);
-      rc = pthread_create(&thread[t], &attr, BusyWork, (void *)t); 
-      if (rc) {
-         printf("ERROR; return code from pthread_create() is %d\n", rc);
-         exit(-1);
-         }
-      }
-   for(i=0;i<100;i++)
-     runner();
+   for(t=0; t<NUM_THREADS-1; t++) {
+     data[t]=-1;
+     rc = pthread_create(&thread[t], &attr, BusyWork, (void *)t); 
+     if (rc) {
+       fprintf(stderr,"ERROR; return code from pthread_create() is %d\n", rc);
+       exit(-1);
+     }
+
+   }
+   pthread_barrier_wait (&barrier);
+   for(i=0;1&&i<100;i++)
+     runner(i);
+
+
+
+   
    /* Free attribute and wait for the other threads */
    pthread_attr_destroy(&attr);
    for(t=0; t<NUM_THREADS; t++) {
       rc = pthread_join(thread[t], &status);
       if (rc) {
-         printf("ERROR; return code from pthread_join() is %d\n", rc);
+	fprintf(stderr,"ERROR; return code from pthread_join() is %d\n", rc);
          exit(-1);
          }
-      printf("Main: completed join with thread %ld having a status   of %ld\n",t,(long)status);
+      fprintf(stderr,"Main: completed join with thread %ld having a status   of %ld\n",t,(long)status);
       }
  
-printf("Main: program completed. Exiting.\n");
+   fprintf(stderr,"Main: program completed. Exiting.\n");
 pthread_exit(NULL);
 }
+#endif
