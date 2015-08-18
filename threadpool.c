@@ -19,19 +19,13 @@ typedef struct{
 
 astruct **data=NULL;
 
-//if as->chunknr is -1 then we dont do anything at all. Lets call this a dryrun
 void doanal(int tid,astruct *as){
   if(as!=NULL){
-    int sleepval=lrand48() % 4+1;
-    fprintf(stderr,"INANAL Thread[%d] is taken:%d is sleeping:%d\n",tid,as->chunknr, sleepval);   fflush(stderr);   
+    int sleepval=lrand48() % 2+1;
     sleep(sleepval);
     as->chunknr += 100;
-    //    fprintf(stderr,"tmp:%d\n",as->chunknr);
-  }else{
-    fprintf(stderr,"as=NULL in thread[%d]\n",tid);fflush(stderr);}
-
+  }else{fprintf(stderr,"donal is dryrun at:%d\n",tid);fflush(stderr);}
   pthread_barrier_wait (&barrier);//we are waiting here to make sure all threads are finished with analysis
-  fprintf(stderr,"thread[%d] has done analis\n",tid);fflush(stderr);
 }
 
 // this will run eternaly untill data[threadid] is NULL
@@ -41,22 +35,21 @@ void *BusyWork(void *t){
    tid = (long)t;
    pthread_barrier_wait (&barrier);//we are locking all threads, untill we are certain we have data
    while(SIG_COND){
-     fprintf(stderr,"Thread[%d] inloop waiting\n",tid);fflush(stderr);
      pthread_barrier_wait (&barrier);
-     if(SIG_COND==0)
-       break;
      doanal(tid,data[tid]);
+     if(0&&SIG_COND==0)
+       break;
    }
-   fprintf(stderr,"WILL close thread[%d]\n",tid);fflush(stderr);
+   fprintf(stderr,"Will shutdown threadid: %d\n",tid);fflush(stderr);
    pthread_exit((void*) t);
 }
 
 void closethreads(){
-  pthread_barrier_wait (&barrier);
+  fprintf(stderr,"Will close threads\n");fflush(stderr);
   memset(data,0,sizeof(astruct*)*NUM_THREADS);
   SIG_COND=0;
   pthread_barrier_wait (&barrier);
-
+  pthread_barrier_wait (&barrier);
 }
 
 
@@ -74,16 +67,16 @@ int runner(astruct *as){
   fprintf(stderr,"[%s] chunknr:%d batch:%d\n",__FUNCTION__,as->chunknr,batch);fflush(stderr); 
   //case where we launch all analysis threads
   if(batch==NUM_THREADS-1){
-    fprintf(stderr,"FULL Will launch all analysis:\n");fflush(stderr);
+    //    fprintf(stderr,"FULL Will launch all analysis:\n");fflush(stderr);
     pthread_barrier_wait (&barrier);//RUN ALL THREADS
     pthread_barrier_wait (&barrier);//MAKE SURE THEY ARE FINISHED
     for(i=0;i<NUM_THREADS;i++)
       fprintf(stderr,"RESULTS-> %d) chunknr:%d\n",i,data[i]->chunknr);
     fflush(stderr);
   }else if(as->chunknr==-1){
-    fprintf(stderr,"SUBSUB Will launch all analysis but only to bach:%d:\n",batch);fflush(stderr);
+    //fprintf(stderr,"SUBSUB Will launch all analysis but only to bach:%d:\n",batch);fflush(stderr);
     for(i=batch+1;i<NUM_THREADS;i++){
-      fprintf(stderr,"i'%d is set to null\n",i);fflush(stderr);
+      fprintf(stderr,"data[%d] is set to null\n",i);fflush(stderr);
       data[i] = NULL;
     }
     pthread_barrier_wait (&barrier);//RUN ALL THREADS
@@ -95,7 +88,6 @@ int runner(astruct *as){
 }
 
 int selector(int a){
-  //fprintf(stderr,"selector:%d\n",a);
   static int counter=0;
   astruct *as =calloc(1,sizeof(astruct)); 
   if(a!=-1)
@@ -133,14 +125,13 @@ int main (int argc, char *argv[])
    }
    pthread_barrier_wait (&barrier);//we are waiting here to make sure all threads are finished with analysis
    //sleep(100);
-   for(i=0;i<4;i++){
+   for(i=0;i<5;i++){
      selector(i);
      int sleep_val = drand48()*1e6+1;
      usleep(sleep_val);
    }
    selector(-1);
    closethreads();
-   fprintf(stderr,"main closethreads\n");fflush(stderr);
    
    /* Free attribute and wait for the other threads */
    pthread_attr_destroy(&attr);
