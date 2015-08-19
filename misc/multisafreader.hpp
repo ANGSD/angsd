@@ -112,7 +112,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     if(saf.size()==1)
       return 0;
     
-    if(saf[i]->ppos[it->second.nSites-1] > hit->m)
+    if(saf[i]->ppos[it->second.nSites-1] >= hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
     for(int j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++)
