@@ -48,7 +48,6 @@ typedef struct {
   //stuff needed for bamreader
   fcb *for_callback;
   chunkyT *chk;
-  int killSig;
   
   //extra stuff associated with each analysis module
   void **extras;

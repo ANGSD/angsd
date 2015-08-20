@@ -9,7 +9,7 @@
 pthread_t thread[NUM_THREADS];
 pthread_attr_t attr;
 
-int SIG_COND2 =1;//<- this could cause race condition, but lets assume printing takes some time
+int SIG_COND3 =1;//<- this could cause race condition, but lets assume printing takes some time
 
 pthread_barrier_t   barrier; // barrier synchronization object
 
@@ -36,7 +36,7 @@ void *BusyWork(void *t){
    long tid;
    tid = (long)t;
    pthread_barrier_wait (&barrier);//we are locking all threads, untill we are certain we have data
-   while(SIG_COND2){
+   while(SIG_COND3){
      pthread_barrier_wait (&barrier);
      doanal(tid,data[tid]);
      pthread_barrier_wait (&barrier);//we are waiting here to make sure all threads are finished with analysis
@@ -48,7 +48,7 @@ void *BusyWork(void *t){
 void closethreads(){
   pthread_barrier_wait (&barrier);
   fprintf(stderr,"Will close threads\n");fflush(stderr);
-  SIG_COND2=0;
+  SIG_COND3=0;
   pthread_barrier_wait (&barrier);
 }
 

@@ -13,13 +13,7 @@
 
 #ifdef __WITH_POOL__
 #include "pooled_alloc.h"
-void *tail=NULL;//<- this will be point to the pool->free
-void *head=NULL;//<- this will be the last node adjoint
 tpool_alloc_t *tnodes = NULL;
-size_t currentnodes=0;
-size_t freenodes =0;
-pthread_mutex_t slist_mutex = PTHREAD_MUTEX_INITIALIZER;
-size_t when_to_flush = 5000;
 #endif
 
 pthread_mutex_t mUpPile_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -88,13 +82,7 @@ void tnode_destroy(tNode *n){
   if(n==NULL)
     return;
 #ifdef __WITH_POOL__
-  if(tail==NULL&&head==NULL)
-    head = tail = n;
-  else{
-    *(void **)n = head;
-    head=n;
-  }
-  freenodes++;
+  tpool_free(tnodes,n);
 #else
   tnode_destroy1(n);
   free(n);
@@ -212,9 +200,6 @@ void dalloc_nodePool (nodePool& np){
 }
 
 void cleanUpChunkyT(chunkyT *chk){
-#ifdef __WITH_POOL__
-  pthread_mutex_lock(&slist_mutex);//just to make sure, its okey to clean up
-#endif
   for(int s=0;s<chk->nSites;s++) {
     for(int i=0;i<chk->nSamples;i++) {
       if(chk->nd[s][i]==NULL)
@@ -233,9 +218,7 @@ void cleanUpChunkyT(chunkyT *chk){
   delete [] chk->refPos;
   delete [] chk->nd;
   delete chk;
-#ifdef __WITH_POOL__
-  pthread_mutex_unlock(&slist_mutex);//just to make sure, its okey to clean up
-#endif
+
 }
 
 
@@ -304,26 +287,6 @@ void realloc(tNode *d,int newsize){
  
 }
 
-//this is called from a threadsafe context
-#ifdef __WITH_POOL__
-void flush_queue(){
-  //  fprintf(stderr,"[%s]IN currentnodes:%lu freenodes:%lu when_to_flush:%lu\n",__FUNCTION__,currentnodes,freenodes,when_to_flush);
-  pthread_mutex_lock(&slist_mutex);
-  if(freenodes>0){
-    if(tail!=NULL&&head!=NULL){
-      //  fprintf(stderr,"PRE: infree:%lu\n",tpool_infree(tnodes));
-      *(void **)tail = tnodes->free;
-      tnodes->free = head;
-      head=tail=NULL;
-      //fprintf(stderr,"POST: infree:%lu\n",tpool_infree(tnodes));
-    }
-    currentnodes -=freenodes;
-    freenodes=0;
-  }
-  pthread_mutex_unlock(&slist_mutex);
-  // fprintf(stderr,"[%s]OUT currentnodes:%lu freenodes:%lu when_to_flush:%lu\n",__FUNCTION__,currentnodes,freenodes,when_to_flush);
-}
-#endif
 //int staaa =0;
 tNode *initNodeT(int l){
   if(l<UPPILE_LEN)
@@ -350,11 +313,6 @@ tNode *initNodeT(int l){
   //d->l = d->l2 = d->m2 = 0;
   d->refPos= -999;
   d->insert = NULL;
-#ifdef __WITH_POOL__
-  currentnodes++;
-  if(currentnodes>when_to_flush &&(currentnodes % 5000)==0)
-    flush_queue();
-#endif
 
   return d;
 }
@@ -1319,7 +1277,6 @@ void callBack_bambi(fcb *fff);//<-angsd.cpp
 //type=0 -> callback to angsd
 #ifdef __WITH_POOL__
 void destroy_tnode_pool(){
-  fprintf(stderr,"\n\t-> npools:%zu unfreed tnodes before clean:%lu \n",tnodes->npools,currentnodes);
   for(int i=0;i<tnodes->npools;i++){
     //fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
     tNode **nd =(tNode**)tnodes->pools[i].pool;
@@ -1634,7 +1591,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   void waiter(int);
   waiter(theRef);//will wait for exisiting threads and then load stuff relatin
 #ifdef __WITH_POOL__
-  flush_queue();
   destroy_tnode_pool();
 #endif
   return 0;

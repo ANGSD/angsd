@@ -57,7 +57,7 @@ void abcError::consolidate(funkyPars *p) {
     }
   
   //  fprintf(stderr,"sizeof alist=%lu\n",aList.size());
-  if(aList.size()>minSites||(p->killSig==1)){
+  if(aList.size()>minSites){
     fprintf(stderr,"\t Triggering error estimation with nsites=%lu\n",aList.size());
     int numSites = aList.size();
     int *major = new int[aList.size()];
@@ -377,6 +377,7 @@ abcError::abcError(const char *outfiles,argStruct *arguments,int inputtype){
 abcError::~abcError(){
   if(doError==0)
     return;
+  //consolidate(); consolidate should be called here. DRAGON
   //  if(outfile1) fclose(outfile1);
   if(outfile2) fclose(outfile2);
 }

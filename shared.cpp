@@ -21,15 +21,11 @@
 #include "abc.h" //<-new way, to add additional analysis to angsd
 #include "analysisFunction.h" //<-included fancy parsing of argument
 
-#define THRESHOLD_FOR_NICEOUTPUT 0//200 //we normally print whenever we change a chr, but don't bother if we have more the 200, looks ugly for contig data
-
 //small hack for the keepsites, this should be included allready in the bam parsing
 #include "abcFilter.h"
 #include "abcSmartCounts.h"
 #include "abcWriteFasta.h"
 #include "abcSaf.h"
-//class to keep track of chunk order when dumping results
-#include "printRes.h"
 #include "mUpPile.h"
 
 pthread_attr_t attr;
@@ -39,93 +35,21 @@ char *shouldRun = NULL;
 extern pthread_mutex_t mUpPile_mutex;
 
 int maxThreads=1;//this value is given from the commandline -nThreads
-pthread_t thread1;
-pthread_cond_t cvMaxThread;
-pthread_mutex_t counterMut;
-
+pthread_t *thread = NULL;
+funkyPars **fdata = NULL;
+pthread_barrier_t   barrier; // barrier synchronization object
 int currentChr=-1;
-int curRunning =0;
-int chunkNumber =1;
-printRes printer;
-
-
+int chunkNumber =0;
+int SIG_COND2 = 1;
 // print nicely into files.
 int isAtty =1;
 
 
 const bam_hdr_t *header = NULL;
 
-//Max number of "finished" threads waiting to be printed
-// -1 indicates no limit
-int nQueueSize = -1;
-// queueStop =1 shouldnt stop new threads
-// queueStop =0 should spawn newthreads;
-int queueStop =0;
-
 // howoften should we printout to screen default 100
 int howOften = 100;
 
-
-void init(argStruct *arguments){
-  if(!isatty(fileno(stderr))){
-    isAtty = 0;
-  }
-  maxThreads=angsd::getArg("-nThreads",maxThreads,arguments);
-  maxThreads=angsd::getArg("-P",maxThreads,arguments);
-  nQueueSize = angsd::getArg("-nQueueSize",nQueueSize,arguments);
-  howOften = angsd::getArg("-howOften",howOften,arguments);
-  if(!isatty(fileno(arguments->argumentFile)))
-    fprintf(arguments->argumentFile,"--------------------\n[%s:%s()]\n\t-nThreads\t%d\tNumber of threads to use\n\t-nQueueSize\t%d\tMaximum number of queud elements\n\t-howOften\t%d\tHow often should the program show progress\n",__FILE__,__FUNCTION__,maxThreads,nQueueSize,howOften);
-  //  fprintf(stderr,"nQueue=%d howOften=%d\n",nQueueSize,howOften);
-
-  //these are  analysis that might be performed
-  allMethods = extra(andersSux,arguments->outfiles,arguments->inputtype,arguments);
-  shouldRun = allMethods[0]->shouldRun;
-  pthread_mutex_init(&counterMut, NULL);
-  pthread_cond_init (&cvMaxThread, NULL);
-
-
-  header = arguments->hd;
-  pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
-}
-
-
-void destroy(){
-  //  fprintf(stderr,"\t-> Calling destroy\n");
-  while(1){
-    pthread_mutex_lock(&counterMut);
-    if(curRunning==0&&printer.contains()==0)
-      break;
-    fprintf(stderr,"\t-> Waiting for nThreads:%d\n",curRunning);
-    pthread_mutex_unlock(&counterMut);
-    sleep(1);
-  }
-  pthread_mutex_unlock(&counterMut);
-  fprintf(stderr,"\t-> Done waiting for threads\n");
-  for(int i=0;i<andersSux;i++)
-    delete allMethods[i];
-  delete [] abc::shouldRun;
-  delete [] allMethods;
-
-}
-void tnode_destroy(tNode*);
-void cleanUptNodeArray(tNode **row,int nSamples){
-  //  fprintf(stderr,"nodearray\n");
-    for(int i=0;i< nSamples;i++) {
-      if(row[i]==NULL)
-	continue;
-      if(row[i]->l2!=0){
-	for(int j=0;j<row[i]->l2;j++)
-	  tnode_destroy(row[i]->insert[j]);
-	free(row[i]->insert);
-      }
-      
-      tnode_destroy(row[i]);
-    }
-    free(row);
-}
 
 void collapse(funkyPars *p){
   fcb *f = p->for_callback;
@@ -169,9 +93,9 @@ void collapse(funkyPars *p){
 
 }
 
-
 int main_analysis(funkyPars *p) {
-
+  assert(p);
+  //  fprintf(stderr,"p->fhunknurmber:%d\n",p->chunkNumber);
   //first step is to make a chunk of data from the sample "uppiles"
   if(p->for_callback!=NULL) 
     collapse(p);
@@ -186,120 +110,147 @@ int main_analysis(funkyPars *p) {
   return 1;
 }
 
+// this will run eternaly untill data[threadid] is NULL
+void *BusyWork(void *t){
+   int i;
+   long tid;
+   tid = (long)t;
+   pthread_barrier_wait (&barrier);//we are locking all threads, untill we are certain we have data
+   while(SIG_COND2){
+     pthread_barrier_wait (&barrier);
+     if(fdata[tid]!=NULL)
+       main_analysis(fdata[tid]);
+     pthread_barrier_wait (&barrier);
+   }
+   pthread_exit((void*) t);
+}
+
+
+void init(argStruct *arguments){
+  if(!isatty(fileno(stderr))){
+    isAtty = 0;
+  }
+  maxThreads=angsd::getArg("-nThreads",maxThreads,arguments);
+  maxThreads=angsd::getArg("-P",maxThreads,arguments);
+  howOften = angsd::getArg("-howOften",howOften,arguments);
+  if(!isatty(fileno(arguments->argumentFile)))
+    fprintf(arguments->argumentFile,"--------------------\n[%s:%s()]\n\t-nThreads\t%d\tNumber of threads to use\n\\n\t-howOften\t%d\tHow often should the program show progress\n",__FILE__,__FUNCTION__,maxThreads,howOften);
+
+  //these are  analysis that might be performed
+  allMethods = extra(andersSux,arguments->outfiles,arguments->inputtype,arguments);
+  shouldRun = allMethods[0]->shouldRun;
+  header = arguments->hd;
+  pthread_attr_init(&attr);
+  pthread_barrier_init(&barrier, NULL, maxThreads+1);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+  thread = new pthread_t [maxThreads];
+  fdata =(funkyPars**) calloc(maxThreads,sizeof(funkyPars*));
+  for(size_t t=0; t<maxThreads; t++) {
+    int rc = pthread_create(&thread[t], &attr, BusyWork, (void *)t); 
+    if (rc) {
+      fprintf(stderr,"ERROR; return code from pthread_create() is %d\n", rc);
+      exit(-1);
+    }
+  }
+  pthread_barrier_wait (&barrier);//we are locking all threads, untill we are certain we have data
+}
+
+void closethreads(){
+  fprintf(stderr,"\n");//after last positions print add a neu line mutafuka
+  pthread_barrier_wait (&barrier);
+  //  fprintf(stderr,"Will close threads\n");fflush(stderr);
+  SIG_COND2=0;
+  pthread_barrier_wait (&barrier);
+  void *status = NULL;
+  for(int t=0; t<maxThreads; t++) {
+    int rc = pthread_join(thread[t], &status);
+    if (rc) {
+      fprintf(stderr,"ERROR; return code from pthread_join() is %d\n", rc);
+      exit(-1);
+    }
+    fprintf(stderr,"Main: completed join with thread %d having a status   of %ld\n",t,(long)status);
+  }
+
+}
+
+
+
+void destroy(){
+  fprintf(stderr,"\t-> Calling destroy\n");
+  closethreads();
+
+  
+
+  fprintf(stderr,"\t-> Done waiting for threads\n");
+  for(int i=0;i<andersSux;i++)
+    delete allMethods[i];
+  delete [] abc::shouldRun;
+  delete [] allMethods;
+
+}
+void tnode_destroy(tNode*);
+void cleanUptNodeArray(tNode **row,int nSamples){
+  //  fprintf(stderr,"nodearray\n");
+    for(int i=0;i< nSamples;i++) {
+      if(row[i]==NULL)
+	continue;
+      if(row[i]->l2!=0){
+	for(int j=0;j<row[i]->l2;j++)
+	  tnode_destroy(row[i]->insert[j]);
+	free(row[i]->insert);
+      }
+      
+      tnode_destroy(row[i]);
+    }
+    free(row);
+}
+
+
+
+//only one instance at a time is running this function
+void printFunky(funkyPars *p){
+  if((p->chunkNumber%howOften)==0){
+    if(isAtty){
+      //	fprintf(stderr,"posi:%d\n",p->posi[0]);
+      fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
+    }else
+      fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
+  }if(p->numSites!=0){
+    for(int i=0;i<andersSux;i++)
+      if(shouldRun[i])
+	allMethods[i]->print(p);
+  }
+   
+  deallocFunkyPars(p);
+  
+}
+
+
+
 
 
 void interface(funkyPars *p){
-
-  if(p->killSig==0)
-    main_analysis(p);//dont do analysis on the killsig chunk
-
-  printer.prop(p);
-}
-
-void *slave(void *ptr){
-  funkyPars *p = (funkyPars *) ptr;
-  interface(p);
-
-  pthread_mutex_lock( &counterMut );
-  curRunning--;
-
-  
-  if(nQueueSize==-1){//no limit on queuesize, always signal
-    pthread_cond_signal(&cvMaxThread);
-  }else{
-    // this is for limiting the number of elements in queue. 
-    // Only a problem with large >1000 samples.    
-    if(printer.contains()<(unsigned int)nQueueSize){
-      pthread_cond_signal(&cvMaxThread);
-      queueStop =0; //can
-    }else
-      queueStop =1; //should not
-  }
-  //  fprintf(stderr,"queueStop =%d contains=%lu\n",queueStop,printer.contains());
-  pthread_mutex_unlock( &counterMut );
-  pthread_exit(NULL);
-}
-
-
-void *slave2(void *ptr){
-  pthread_mutex_lock( &counterMut );
-  funkyPars *p = (funkyPars *) ptr;
-  if(p->killSig==0)
-    main_analysis(p);
+  main_analysis(p);
   printFunky(p);
-  pthread_mutex_unlock( &counterMut );
-  pthread_exit(NULL);
-}
-
-void master2(funkyPars *p){
-  //  fprintf(stderr,"[%s] Number of threads running=%d\n",__FUNCTION__,curRunning);
-  pthread_mutex_lock( &counterMut );
-  if(pthread_create( &thread1, NULL, slave2, (void*) p)){
-    fprintf(stderr,"[%s] Problem spawning thread\n%s\n",__FUNCTION__,strerror(errno));
-    exit(0);
-  }
-
-  pthread_detach(thread1);
-  pthread_mutex_unlock( &counterMut );
-}
-
-
-
-void master(funkyPars *p){
-  //  fprintf(stderr,"[%s] Number of threads running=%d inqueue=%lu\n",__FUNCTION__,curRunning,printer.contains());
-  pthread_mutex_lock( &counterMut );
-
-  curRunning++;
-  if(curRunning==maxThreads||queueStop==1){
-    //fprintf(stderr,"We are running max number of threads will wait for finishing threads: %d\n",curRunning);
-    pthread_cond_wait(&cvMaxThread, &counterMut);
-    //fprintf(stderr,"Done waiting for finishing threads:%d\n",curRunning);
-  }
-  pthread_mutex_unlock( &counterMut );
-  if(pthread_create( &thread1, &attr, slave, (void*) p)){
-    fprintf(stderr,"[%s] Problem spawning thread\n%s\n",__FUNCTION__,strerror(errno));
-    while(1){
-      fprintf(stderr,"[%s] Problem spawning thread\n%s\n",__FUNCTION__,strerror(errno));
-      
-    }
-    exit(0);
-  }
-  // pthread_detach(thread1);
 }
 
 
 void changeChr(int refId){
-  //fprintf(stderr,"[%s.%s():%d] refid:%d\n",__FILE__,__FUNCTION__,__LINE__,refId);
+  //fprintf(stderr,"[%s.%s():%d] refid:%d\n",__FILE__,__FUNCTION__,__LINE__,refId);fflush(stderr);
+  funkyPars p;p.chunkNumber=-1;
+  int runner(funkyPars *as);
+  runner(&p);
   ((abcFilter *)allMethods[0])->readSites(refId);
   ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
   ((abcSaf *)allMethods[11])->changeChr(refId);//used when changing chr;
-#ifdef __WITH_POOL__
-  void flush_queue();
-  flush_queue();
-#endif 
+
 }
 
 
 void waiter(int refId){
-  //fprintf(stderr,"_%s_\n",__FUNCTION__);fflush(stderr);
+  //  fprintf(stderr,"_%s_\n",__FUNCTION__);fflush(stderr);
 
-  //change of chr detected wait untill all threads are done
-  if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT)
-    fprintf(stderr,"Change of chromo detected Waiting for nThreads:%d\n",curRunning);
-  while(1){
-    pthread_mutex_lock(&counterMut);
-    if(curRunning==0&&printer.contains()==0){
-      pthread_mutex_unlock(&counterMut);//need to do this because rest of while is not used
-      break;
-    }
-    if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT){
-      fprintf(stderr,"Change of chromo detected Waiting for nThreads:%d printer.contains=%lu\n",curRunning,printer.contains());
-      fflush(stderr);
-    }
-    pthread_mutex_unlock(&counterMut);
-    sleep(1);
-  }
   if(currentChr==-1||refId!=currentChr){
     currentChr=refId;
     changeChr(refId);
@@ -308,27 +259,74 @@ void waiter(int refId){
 }
 
 
+int runner(funkyPars *as){
+  assert(as!=NULL);
+  static int batch=-1;//<- this is the inarray position id
+  int i;
+
+  //plugin data in array if we have data;
+  if(as->chunkNumber!=-1){
+    batch = as->chunkNumber %maxThreads;
+    fdata[batch] = as;
+
+  }
+  //  fprintf(stderr,"[%s] chunknr:%d batch:%d\n",__FUNCTION__,as->chunkNumber,batch);fflush(stderr); 
+  //case where we launch all analysis threads
+  if(batch==maxThreads-1){
+    //fprintf(stderr,"FULL Will launch all analysis:\n");fflush(stderr);
+    pthread_barrier_wait (&barrier);//RUN ALL THREADS
+    pthread_barrier_wait (&barrier);//MAKE SURE THEY ARE FINISHED
+    //    fprintf(stderr,"Will print results\n");fflush(stderr);
+    for(i=0;i<maxThreads;i++)
+      if(fdata[i])
+	printFunky(fdata[i]);
+    batch=-1;
+    memset(fdata,0,sizeof(funkyPars*)*maxThreads);
+    //fprintf(stderr,"Done print results\n");fflush(stderr);
+    //fprintf(stderr,"RESULTS-> %d) chunknr:%d\n",i,fdata[i]->chunkNumber);
+    //fflush(stderr);
+  }else if(as->chunkNumber==-1){
+    //fprintf(stderr,"SUBSUB Will launch all analysis but only to bach:%d:\n",batch);fflush(stderr);
+    for(i=batch+1;i<maxThreads;i++){
+      //fprintf(stderr,"data[%d] is set to null\n",i);fflush(stderr);
+      fdata[i] = NULL;
+    }
+    pthread_barrier_wait (&barrier);//RUN ALL THREADS
+    pthread_barrier_wait (&barrier);//MAKE SURE THEY ARE FINISHED
+    for(i=0;i<=batch;i++)
+      if(fdata[i]!=NULL)
+	printFunky(fdata[i]);
+      //      fprintf(stderr,"RESULTS-> %d) chunknr:%d\n",i,fdata[i]->chunkNumber);
+    //fflush(stderr);
+    batch=-1;
+    memset(fdata,0,sizeof(funkyPars*)*maxThreads);
+  }
+}
+
+
 
 
 /*
-  This is the function that determines whether or not to start a new thread
+  This is the function that determines whether or not to start threads
 */
 void selector(funkyPars *p){
-  // fprintf(stderr,"funkypars\n");
-  if(p==NULL){
-    p = allocFunkyPars();
-    p->killSig = 1;
-  }else
-    p->extras = new void*[andersSux];//funky
-  
-  p->chunkNumber = chunkNumber++;
-
-  if(maxThreads==1)
-    interface(p);
-  else if(maxThreads==2)//simple serialization, allow one chunk to be computated
-    master2(p);
-  else
-    master(p);
+ 
+  if(p!=NULL){
+    p->chunkNumber = chunkNumber++;
+    
+    if(maxThreads==1)
+      interface(p);
+    else
+      runner(p);
+  }else{
+    fprintf(stderr,"selector is NULL\n");fflush(stderr);
+    if(maxThreads>1){
+      funkyPars pp;pp.chunkNumber=-1;
+      runner(&pp);
+    }
+    fprintf(stderr,"selector is NULL2\n");fflush(stderr);
+    pthread_mutex_unlock(&mUpPile_mutex);
+  }
 }
 
 
@@ -340,7 +338,7 @@ funkyPars *allocFunkyPars(){
 
   funkyPars *r = new funkyPars;
   r->numSites =0;
-  r->extras = NULL;
+  r->extras = new void*[andersSux];//funky;
 
   r->counts = NULL;
   r->likes = NULL;
@@ -354,7 +352,6 @@ funkyPars *allocFunkyPars(){
   r->keepSites =NULL;
   r->chk = NULL;
   r->for_callback = NULL;
-  r->killSig =0;
   r->posi = NULL;
   r->refId = -1;
   return r;
@@ -448,32 +445,4 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
 #ifdef __WITH_POOL__
 extern int currentnodes;
 #endif
-
-//only one instance at a time is running this function
-void printFunky(funkyPars *p){
-  //  fprintf(stderr,"printFunky killsig=%d nsites=%d refid:%d\n",p->killSig,p->numSites,p->refId);
-  if(p->killSig==0) {//don't print the empty killSig chunk
-    if((p->chunkNumber%howOften)==0){
-      if(isAtty)
-      fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
-      else
-	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
-    }if(p->numSites!=0){
-      for(int i=0;i<andersSux;i++)
-	if(shouldRun[i])
-	  allMethods[i]->print(p);
-    }
-   
-    deallocFunkyPars(p);
-    
-  }else{
-    fprintf(stderr,"Never fucking here!!\n");
-    deallocFunkyPars(p);
-    pthread_mutex_unlock(&mUpPile_mutex);
-    fprintf(stderr,"\n");//after last positions print add a neu line mutafuka
-  }
-
-}
-
-
-
+ 
