@@ -34,11 +34,11 @@
 #include "analysisFunction.h" //<-contains some utility functions, usefull for parsing args
 #include "abcTemplate.h"//contains the analysis class defition associated with this file
 
-#include "phys_genolike_calc.h"
+//#include "phys_genolike_calc.h"
 
 
 // Define pointer s.t. it can:
-phys_genolike_calc *like_calc;
+//phys_genolike_calc *like_calc;
 
 #define ReadLengthMax 110
 #define DepthMax 200
@@ -121,7 +121,7 @@ abcTemplate::abcTemplate(const char *outfiles,argStruct *arguments,int inputtype
   outfile = NULL;
 
   char *empty;
-  like_calc = new phys_genolike_calc( empty );
+  //like_calc = new phys_genolike_calc( empty );
 
   //first a hook for the interactive help:
   //  ./angsd -doTemplate
@@ -397,7 +397,7 @@ abcTemplate::~abcTemplate(){
   }
 
 
-  delete like_calc;
+  //delete like_calc;
 
   if(outfile!=NULL) 
     fclose(outfile);
@@ -467,7 +467,7 @@ void abcTemplate::run(funkyPars *pars){
     chunkyT *chk = pars->chk;
     
     // Point the likelihood calculator to the correct chunkyT
-    like_calc->update_chunkyT( chk );
+    //like_calc->update_chunkyT( chk );
     
     for(int s=0;s<pars->numSites;s++){
       for(int i=0;i<pars->nInd;i++){
@@ -552,7 +552,7 @@ void abcTemplate::run(funkyPars *pars){
 	// Loop over the individual bases:
 	// ------------------------------------------------------------------------- //
 	int UpperStrands = 0;	// Count number of upper strands.
-	like_calc->update_tNode(nd);
+	//like_calc->update_tNode(nd);
 	
 	for (int l=0; l<nd->l; l++) {
 	  char c = nd->seq[l];          // This is the base (a char)
