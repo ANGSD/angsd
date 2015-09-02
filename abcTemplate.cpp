@@ -258,12 +258,12 @@ abcTemplate::~abcTemplate(){
 
   fprintf(outfile,"\n\nQscore distribution:\n");
   for (int i=0; i<QscoreMax; i++) {
-    fprintf(outfile,"\t%d \t%d \n", i, QscoreDist[i]);
+    fprintf(outfile,"\t%d \t%ld \n", i, QscoreDist[i]);
   }
 
   fprintf(outfile,"\n\nMapScore distribution:\n");
   for (int i=0; i<MapScoreMax; i++) {
-    fprintf(outfile,"\t%d \t%d \n", i, MapScoreDist[i]);
+    fprintf(outfile,"\t%d \t%ld \n", i, MapScoreDist[i]);
   }
 
   fprintf(outfile,"\n\nAllele Frequency vs. Position in Read distribution:\n");
@@ -650,12 +650,13 @@ void abcTemplate::run(funkyPars *pars){
 	    CheckPQ[notbase[base][0]][base][0] += prob_Qscore / 3.0;
 	    CheckPQ[notbase[base][1]][base][0] += prob_Qscore / 3.0;
 	    CheckPQ[notbase[base][2]][base][0] += prob_Qscore / 3.0;
+#if 0
 	    like_calc->update_pbase(l);
 	    CheckPQ[0][base][1] += like_calc->base_prob[0];
 	    CheckPQ[1][base][1] += like_calc->base_prob[1];
 	    CheckPQ[2][base][1] += like_calc->base_prob[2];
 	    CheckPQ[3][base][1] += like_calc->base_prob[3];
-	    
+#endif	    
 	    // CheckPQ[correct_base][base][1] += like_calc->base_prob[correct_base];
 	    CheckPQ[correct_base][base][2] += 1.0;
 	  }

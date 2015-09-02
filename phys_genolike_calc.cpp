@@ -3,8 +3,7 @@
 // Corrections to q-score determined from Yana sample
 //const float phys_genolike_calc::qscore_corr[61] = {1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,
 //						   0.623,1.082,0.930,0.979,3.552,4.249,5.041,1.837,2.817,2.272,2.460,1.854,1.263,
-//						   1.841,1.466,1.994,0.972,7.822,1.150,2.499,1.468,1.681,1.962,2.306,2.372,3.564,
-//						   2.501,3.056,3.471,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,
+//						   1.841,1.466,1.994,0.972,7.822,1.150,2.499,1.468,1.681,1.962,2.306,2.372,3.564,.501,3.056,3.471,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,
 //						   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000};
 
 
@@ -29,10 +28,9 @@ vector<string> split_string( string instring, char split_by );
 double str_to_double( string textstring );
 
 // --------------------------------------------------------------------------------
-// Constructor
-phys_genolike_calc::phys_genolike_calc( char *parspath ){
-  fprintf(stderr,"%s.%s():%d parspath:%s\n",__FILE__,__FUNCTION__,__LINE__,parspath);
-  exit(0);
+// 
+void phys_genolike_calc::read_coef( char *parspath ) {
+    
   // Don't spam output to stderr unless specified
   debug     = false;
 
@@ -42,10 +40,11 @@ phys_genolike_calc::phys_genolike_calc( char *parspath ){
   }
   
   // Inititialise array containing probabilities for individual geno types
+#if 0
   for( int igt=0; igt<10; igt++ ){
     geno_likes[igt] = 0.0;
   }
-  
+#endif
   // Inititialise 'matrix' containing probablilities that a base come
   // from a specific genotype
   
@@ -62,8 +61,9 @@ phys_genolike_calc::phys_genolike_calc( char *parspath ){
   // 8 : GT
   // 
   // 9 : TT
-  
+  float **m_base_geno = new float*[4];
   for( int ibase=0; ibase<4; ibase++ ){
+    m_base_geno[ibase] = new float[10];
     for( int igt=0; igt<10; igt++ ){
       m_base_geno[ibase][igt] = 0.0;
     }
@@ -104,7 +104,7 @@ phys_genolike_calc::phys_genolike_calc( char *parspath ){
 	fprintf( stderr, "%6.4f   ", m_base_geno[ibase][igt] );
       }
 
-      fprintf( stderr, "\n", ibase );
+      // fprintf( stderr, "\n", ibase );
     }
   }
 
@@ -113,6 +113,8 @@ phys_genolike_calc::phys_genolike_calc( char *parspath ){
   string readline;
   fprintf(stderr,"parsparth:%s\n",parspath);
   infile.open( parspath );
+  float *qscore_corr = new float[61];
+  float *parlist = new float[18];
   while( !infile.eof() && infile.good() ){
 
     getline(infile, readline);
@@ -167,7 +169,9 @@ phys_genolike_calc::phys_genolike_calc( char *parspath ){
   // It is likely that once we stop hardcoding the model that 
   // the arrays will be initialised by the constructor instead?
   // init_p_base();
-  
+  m_base_geno_vec.push_back(m_base_geno);
+  qscore_corr_vec.push_back(qscore_corr);
+  parlist_vec.push_back(parlist);
 } //End constructor
 
 // --------------------------------------------------------------------------------
@@ -179,14 +183,13 @@ phys_genolike_calc::~phys_genolike_calc(){
 
 } //End destructor
 
-// --------------------------------------------------------------------------------
+
 // Update pointer current chunkyT
 void phys_genolike_calc::update_chunkyT( chunkyT *curr_chk ){
 
   chk = curr_chk;
 
-} // end update_chunkyT
-
+}
 // --------------------------------------------------------------------------------
 // Update pointer current tNode
 void phys_genolike_calc::update_tNode( tNode *curr_nd ){
@@ -224,7 +227,7 @@ void phys_genolike_calc::update_tNode( tNode *curr_nd ){
 
 // --------------------------------------------------------------------------------
 // Update probabilities (4) for each base, for observed base at depth ''depth''
-void phys_genolike_calc::update_pbase( int depth ){
+void phys_genolike_calc::update_pbase( int depth,float *qscore_corr,float *parlist ){
 
   //junk MOVE TO CONSTRUCTOR!!!!
   float pararray[2][2][4][4] = {{{{ 1.0    , parlist[0] , parlist[1] , parlist[2] },{ parlist[3], 1.0     , parlist[4], parlist[5] },
@@ -321,23 +324,24 @@ void phys_genolike_calc::update_pbase( int depth ){
 // Function to return probabilities for each of the 10 individual geno-types
 // Takes array with 10 floating points numbers
 void phys_genolike_calc::get_genolikes( int site, int sample, double *return_likes ){
-
+  float **m_base_geno = m_base_geno_vec[sample];
   // Get reference to current tNode
   nd = chk->nd[site][sample];
   if( !nd ) return;
 
-  //Reset geno_likes values
+  //Reset geno_likes values TSK THESE ARE RESET AT ALLOCATION
+#if 0
   for( int igt=0; igt<10; igt++ ){
     geno_likes[igt] = 0.0;
   }
-
+#endif
   // Loop over node depth
   if( debug ) fprintf( stderr, "GenoTs   \tAA       AC       AG       AT       CC       CG       CT       GG       GT       TT \n" );
 
   for( int idepth=0; idepth<nd->l; idepth++ ){
     if( refToInt[nd->seq[idepth]] >= 4 ) continue;
 
-    update_pbase( idepth );
+    update_pbase( idepth,qscore_corr_vec[sample],parlist_vec[sample] );
 
     if( debug ) fprintf( stderr, "Dep (%2d) \t", idepth );
     for( int igt=0; igt<10; igt++ ){
@@ -349,17 +353,18 @@ void phys_genolike_calc::get_genolikes( int site, int sample, double *return_lik
       }//base loop
 
       if( gt_prob_temp < 0.0000001 ) continue;
-      geno_likes[igt] += log( gt_prob_temp );
+      return_likes[igt] += log( gt_prob_temp );
 
     } //geno-type loop
     if( debug ) fprintf( stderr, "\n");
 
   } // Depth loop
-
+#if 0
   for( int igt=0; igt<10; igt++ ){
     return_likes[igt] = geno_likes[igt];
   }
-
+#endif
+  
 }// get_genoprobs
 
 // --------------------------------------------------------------------------------
@@ -372,7 +377,7 @@ void phys_genolike_calc::get_base_prob_str( char *results_str ){
   }
 
 } // end get_base_prob_str
-
+#if 0
 // --------------------------------------------------------------------------------
 // Put genotype probabilities into the results_str
 void phys_genolike_calc::get_genolikes_str( char *results_str ){
@@ -384,7 +389,7 @@ void phys_genolike_calc::get_genolikes_str( char *results_str ){
 
 
 } // end get_geno_likes_str
-
+#endif
 // --------------------------------------------------------------------------------
 // Use this to change to debug mode
 void phys_genolike_calc::set_debug( bool db ){

@@ -15,8 +15,8 @@
 
 extern int refToInt[256];
 double **phys_probs = NULL;
-char *phys_refpath;
-
+//char *phys_refpath;
+phys_genolike_calc *glc = NULL;
 /*
   allocate the prob matrix with
   prob[1][qs] = homohit
@@ -50,8 +50,8 @@ int offsetss[4][10]={
 
 
 void phys_init(std::vector<char *> bamnames){
-
-  phys_refpath = new char[4096];
+  glc = new phys_genolike_calc();
+  char phys_refpath[4096];
 
   for(size_t i=0;i<bamnames.size();i++){
     snprintf(phys_refpath,4096,"%s.phys",bamnames[i]);
@@ -64,13 +64,13 @@ void phys_init(std::vector<char *> bamnames){
       fprintf(stderr,"coefficient filefile:%s doesnt exists\n",phys_refpath);
       exit(0);
     }
-
+    glc->read_coef(phys_refpath);
   }
   phys_probs = genLikes_phys(256);
 
   //  
 
-  delete [] phys_refpath;
+  
 
 }
 
@@ -80,11 +80,12 @@ void phys_destroy(){
     delete [] phys_probs[i];
   delete [] phys_probs;
   phys_probs=NULL;
+  //  delete [] phys_refpath;
 }
 
 void call_phys(chunkyT *chk,double **lk,int trim){
 
-  phys_genolike_calc *glc = new phys_genolike_calc( phys_refpath );
+  //  new phys_genolike_calc( phys_refpath );
   //  glc->set_debug( true );
 
   glc->update_chunkyT( chk );
@@ -109,6 +110,6 @@ void call_phys(chunkyT *chk,double **lk,int trim){
     }
   }
 
-  delete glc;
+  // delete glc;
 
 }

@@ -31,16 +31,18 @@ class phys_genolike_calc {
 
   // Use thie to store probabilties for the resulting genotypes
   // implemented with double precision in angsd
-  double geno_likes[10];
+  // double geno_likes[10];
   
   // Probability matrix that a base is from a given geno-type
-  float m_base_geno[4][10];
+  //float m_base_geno[4][10];
+  std::vector<float**> m_base_geno_vec;
 
   // Contains q score corrections
-  float qscore_corr[61];
-
+  //float qscore_corr[61];
+  std::vector<float*> qscore_corr_vec;  
   // model parameters
-  float parlist[18];
+  //float parlist[18];
+  std::vector<float*> parlist_vec;
   //  float pararray[2][2][4][4];
 
   void init_p_base();
@@ -51,7 +53,7 @@ class phys_genolike_calc {
   float base_prob[4];
  
   // Default constructor
-  phys_genolike_calc( char *parspath );
+  //phys_genolike_calc( char *parspath );
 
   // Default destructor
   ~phys_genolike_calc();
@@ -61,7 +63,7 @@ class phys_genolike_calc {
 
   void update_chunkyT( chunkyT *curr_chk );
 
-  void update_pbase( int depth );
+  void update_pbase( int depth,float *qscore_cor,float *parlist );
 
   void get_genolikes( int site, int sample, double *return_likes );
 
@@ -70,7 +72,7 @@ class phys_genolike_calc {
   void get_genolikes_str( char *results_str );
 
   void set_debug( bool db );
-
+  void read_coef(char *);
 
 };
 
