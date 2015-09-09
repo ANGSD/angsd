@@ -38,7 +38,7 @@ abcFilter::abcFilter(argStruct *arguments){
   minInd = 0;
   fname = NULL;
   doMajorMinor =0;
-  
+  capDepth = -1;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-sites")){
       printArg(stdout);
@@ -60,6 +60,7 @@ void abcFilter::printArg(FILE *argFile){
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr regStart regStop))\n",fname);
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos major minor))\n",fname);
   fprintf(argFile,"\t-minInd\t\t%d\tOnly use site if atleast minInd of samples has data\n",minInd);
+  fprintf(argFile,"\t-capDepth\t%d\tOnly use the first capDepth bases\n",capDepth);
   fprintf(argFile,"\t1) You can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");
 }
 
@@ -79,7 +80,7 @@ void abcFilter::getOptions(argStruct *arguments){
   if(doMajorMinor!=3 && fl!=NULL&& fl->hasMajMin==1){
     fprintf(stderr,"\t-> Filter file contains major/minor information to use these in analysis supper \'-doMajorMinor 3\'\n");
   }
-  
+  capDepth = angsd::getArg("-capDepth",capDepth,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
   if(minInd >arguments->nInd){
     fprintf(stderr,"\t-> Potential problem you  filter -minInd %d but you only have %d samples?\n",minInd,arguments->nInd);
@@ -95,7 +96,12 @@ void abcFilter::run(funkyPars *p){
     for(int s=0;s<p->numSites;s++)
       p->keepSites[s]=p->nInd;
   }
-
+  if(capDepth!=-1){
+    for(int s=0;s<p->numSites;s++)
+      for(int i=0;i<p->nInd;i++)
+	if(p->chk->nd[s][i]&&p->chk->nd[s][i]->l>capDepth)
+	  p->chk->nd[s][i]->l=capDepth;
+  }
 
   if(fl!=NULL && fl->hasMajMin==1 && doMajorMinor==3){
     p->major = new char [p->numSites];
