@@ -175,7 +175,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   outfileSAF = NULL;
   outfileSAFPOS = NULL;
   outfileSAFIDX = NULL;
-  theta_fp = Z_NULL;
+  theta_fp = NULL;
   outfileGprobs = NULL;
   scalings = NULL;
   nnnSites = 0;
@@ -218,8 +218,8 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     outfileSAFPOS =  aio::openFileBG(outfiles,SAFPOS);
     outfileSAFIDX = aio::openFile(outfiles,SAFIDX);
     char buf[8]="safv3";
-    bgzf_write(outfileSAF,buf,8);
-    bgzf_write(outfileSAFPOS,buf,8);
+    aio::bgzf_write(outfileSAF,buf,8);
+    aio::bgzf_write(outfileSAFPOS,buf,8);
     fwrite(buf,1,8,outfileSAFIDX);
     offs[0] = bgzf_tell(outfileSAFPOS);
     offs[1] = bgzf_tell(outfileSAF);
@@ -229,7 +229,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   }else {
     theta_fp = aio::openFileBG(outfiles,THETAS);
     const char *hd= "#Chromo\tPos\tWatterson\tPairwise\tthetaSingleton\tthetaH\tthetaL\n";
-    bgzf_write(theta_fp,hd,strlen(hd));
+    aio::bgzf_write(theta_fp,hd,strlen(hd));
     aConst=0;
     int nChr = 2*arguments->nInd;
     for(int i=1;i<nChr;i++)
@@ -992,14 +992,14 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
   for(int s=0; s<p->numSites;s++){
     if(r->oklist[s]==1){
       nnnSites++;
-      bgzf_write(outfileSFS,r->pLikes[id++],sizeof(float)*newDim);
+      aio::bgzf_write(outfileSFS,r->pLikes[id++],sizeof(float)*newDim);
     }
   }
 
   for(int i=0;i<p->numSites;i++){
     int mypos = p->posi[i];
     if(r->oklist[i]==1)
-      bgzf_write(outfileSFSPOS,&mypos,sizeof(int));
+      aio::bgzf_write(outfileSFSPOS,&mypos,sizeof(int));
     else if (r->oklist[i]==2)
       fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
   }
@@ -1029,7 +1029,6 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,BGZF *fpgz){
        seq=log(0.0);
      else
        seq = log(pv)-aConst;//watterson
-     //     gzprintf(fpgz,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
      ksprintf(&kb,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
      if(fold==0) {
        double pairwise=0;    //Find theta_pi the pairwise
@@ -1043,20 +1042,18 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,BGZF *fpgz){
 	 thL += exp(workarray[ii])*ii;
 	 thH += exp(2*li+workarray[ii]);
        }
-       //gzprintf(fpgz,"%f\t%f\t%f\t%f\n",log(pairwise)-aConst2,workarray[1],log(thH)-aConst2,log(thL)-aConst3);
        ksprintf(&kb,"%f\t%f\t%f\t%f\n",log(pairwise)-aConst2,workarray[1],log(thH)-aConst2,log(thL)-aConst3);
      }else{
        double pairwise=0;    //Find theta_pi the pairwise
        for(size_t ii=1;ii<newDim;ii++)
 	 pairwise += exp(workarray[ii]+scalings[ii] );
        
-       // gzprintf(fpgz,"%f\t-Inf\t-Inf\t-Inf\n",log(pairwise)-aConst2);
        ksprintf(&kb,"%f\t-Inf\t-Inf\t-Inf\n",log(pairwise)-aConst2);
      }
    }else if(r->oklist[i]==2)
      fprintf(stderr,"PROBS at: %s\t%d\n",header->target_name[pars->refId],pars->posi[i]+1);
  }
- bgzf_write(fpgz,kb.s,kb.l);
+ aio::bgzf_write(fpgz,kb.s,kb.l);
  free(kb.s);
 }
 
@@ -1070,7 +1067,7 @@ void abcSaf::print(funkyPars *p){
   //  fprintf(stderr,"newDim:%d doSaf:%d\n",newDim,doSaf);
   if(doSaf==3){
     kstring_t *buf =(kstring_t *) p->extras[index];
-    bgzf_write(outfileGprobs,buf->s,buf->l);
+    aio::bgzf_write(outfileGprobs,buf->s,buf->l);
     free(buf->s);delete buf;
   }else{
     realRes *r=(realRes *) p->extras[index];

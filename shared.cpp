@@ -43,7 +43,7 @@ pthread_t thread1;
 pthread_cond_t cvMaxThread;
 pthread_mutex_t counterMut;
 
-
+int currentChr=-1;
 int curRunning =0;
 int chunkNumber =1;
 printRes printer;
@@ -134,23 +134,10 @@ void collapse(funkyPars *p){
   chk->regStop = f->regStop;
   chk->refId = f->refId;
 
-  // assert(!(chk->refPos[0]>f->regStop));//this could happen when we work with regions
+  p->refId = chk->refId;
+  p->numSites=chk->nSites;
+  p->nInd = chk->nSamples;  
 
-  //regstop and regstart are the usersupplied startstop region, strip ends if needed
-
-  if((chk->refPos[0]<chk->regStart)||(chk->refPos[chk->nSites-1]>chk->regStop)){
-
-    int at=0;
-    for(int i=0;i<chk->nSites;i++){//can be written faster
-      if(chk->refPos[i]<chk->regStart)//should cleanup
-	cleanUptNodeArray(chk->nd[i],chk->nSamples);
-      else if(chk->refPos[i]<chk->regStop)
-	chk->nd[at++] = chk->nd[i];
-      else
-	cleanUptNodeArray(chk->nd[i],chk->nSamples);
-    }
-    chk->nSites = at;
-  }
   //now chk contains the merged data
   p->chk = chk;
   p->posi = new int[chk->nSites];
@@ -160,12 +147,25 @@ void collapse(funkyPars *p){
 	p->posi[i] = chk->nd[i][j]->refPos;
 	break;
       }
+
+
+  p->keepSites = new int [p->numSites];
+  for(int i=0;i<p->numSites;i++)
+    p->keepSites[i] = p->nInd;
+
+  /*
+    we are in running different threads now, so dont clean up nodes
+    but modify keeplist
+  */
+  if((p->posi[0]<chk->regStart)||(p->posi[p->numSites-1]>chk->regStop)){
+    for(int i=0;i<p->numSites;i++){
+      if(p->posi[i]<chk->regStart)
+	p->keepSites[i] = 0;
+      if(p->posi[i]>=chk->regStop)
+	p->keepSites[i] = 0;
+    }
+  }
     
-  //chk->refPos=NULL;
-  p->refId = chk->refId;//thiss will be new approach
-  p->numSites=chk->nSites;
-  
-  p->nInd = chk->nSamples;  
 
 }
 
@@ -175,7 +175,7 @@ int main_analysis(funkyPars *p) {
   //first step is to make a chunk of data from the sample "uppiles"
   if(p->for_callback!=NULL) 
     collapse(p);
-  //assert(p->numSites>0);
+  
   //run all methods (ORDER is defined in general.cpp)
   if(p->numSites==0)
     return 0;
@@ -297,8 +297,10 @@ void waiter(int refId){
     pthread_mutex_unlock(&counterMut);
     sleep(1);
   }
-  changeChr(refId);
-
+  if(currentChr==-1||refId!=currentChr){
+    currentChr=refId;
+    changeChr(refId);
+  }
   
 }
 
@@ -442,7 +444,6 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
 }
 #ifdef __WITH_POOL__
 extern int currentnodes;
-extern size_t *sl_l;
 #endif
 
 //only one instance at a time is running this function
@@ -452,7 +453,7 @@ void printFunky(funkyPars *p){
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
 #ifdef __WITH_POOL__
-	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d (%d,%zu) numSites:%d     ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,currentnodes,sl_l,p->numSites);
+	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d (%d) numSites:%d     ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,currentnodes,p->numSites);
 #else
       fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
 #endif

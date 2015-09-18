@@ -1,6 +1,5 @@
 //DRAGON fix degree of freedom in chisq unknown
 #include "abc.h"
-
 typedef struct{
   double *freq_EM; 
   double *freq_EM_unknown; 
@@ -16,6 +15,7 @@ typedef struct{
 
 class abcFreq:public abc{
 private:
+  kstring_t bufstr;
   double to_pval(Chisqdist *str,double f);
   Chisqdist *chisq1;
   Chisqdist *chisq2;
@@ -30,8 +30,8 @@ private:
   
   void prepPrint(funkyPars *pars);
 
-  gzFile outfileZ;
-  gzFile outfileZ2;
+  BGZF *outfileZ;
+  BGZF *outfileZ2;
 
   int doMaf;
   double rmTriallelic;

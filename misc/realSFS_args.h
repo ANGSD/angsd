@@ -10,7 +10,6 @@ typedef struct {
   int nThreads;
   std::vector<char *> sfsfname;
   std::vector<persaf *> saf;
-  int posOnly;
   char *fname;
   int onlyOnce;
   int emAccl;

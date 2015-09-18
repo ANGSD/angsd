@@ -35,5 +35,5 @@ $ANGSD -out sites/run6 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 
 
 
 cd sites
-md5sum  -c md5orig &>>../${LOG} ||exit 8
+md5sum  -c md5orig.orig &>>../${LOG}||exit 8
 

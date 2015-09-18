@@ -99,8 +99,8 @@ void abcAsso::getOptions(argStruct *arguments){
 }
  
 abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
+  multiOutfile=NULL;
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
-  //default
   model=1;
   doPrint=0;
   doAsso=0;
@@ -163,7 +163,8 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   }
 
   //make output files
-  MultiOutfile = new gzFile[ymat.y];
+  
+  multiOutfile = new BGZF*[ymat.y];
   const char* postfix;
   postfix=".lrt";
 
@@ -231,17 +232,19 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   for(int i=0;i<ymat.y;i++){
     char ary[5000];
     snprintf(ary,5000,"%s%d.gz",postfix,i);
-    MultiOutfile[i] = Z_NULL;
-    MultiOutfile[i] = aio::openFileGz(outfiles,ary,GZOPT);
+    multiOutfile[i] = NULL;
+    multiOutfile[i] = aio::openFileBG(outfiles,ary);
   }
 
   //print header
-  for(int yi=0;yi<ymat.y;yi++){
-    if(doAsso==2)
-      gzprintf(MultiOutfile[yi],"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
-    else
-      gzprintf(MultiOutfile[yi],"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\n");
-  }
+  bufstr.l=0;
+  if(doAsso==2)
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
+  else
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\n");
+  for(int yi=0;yi<ymat.y;yi++)
+    aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);
+  bufstr.l=0;
 }
 
 
@@ -253,8 +256,9 @@ abcAsso::~abcAsso(){
   if(doAsso==0)
     return;
   for(int i=0;i<ymat.y;i++)
-    if(MultiOutfile[i]) gzclose(MultiOutfile[i]);
-  delete [] MultiOutfile;
+    if(multiOutfile[i]!=NULL)
+      bgzf_close(multiOutfile[i]);
+  delete [] multiOutfile;
 
   if(covfile!=NULL)
     angsd::deleteMatrix(covmat);
@@ -1113,6 +1117,6 @@ void abcAsso::printDoAsso(funkyPars *pars){
 
       }
     }
-    gzwrite(MultiOutfile[yi],bufstr.s,bufstr.l);
+    aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);bufstr.l=0;
   }
 }

@@ -20,6 +20,16 @@ int choose(int n,int m){
   return -1;
 }
 
+void calcpbs(double fstW[3]){
+  double p01 = -log(1.0-fstW[0]);
+  double p02 = -log(1.0-fstW[1]);
+  double p12 = -log(1.0-fstW[2]);
+  fstW[0] = (p01+p02-p12)/2.0;
+  fstW[1] = (p12+p12-p02)/2.0;
+  fstW[2] = (p12+p02-p01)/2.0;
+
+
+}
 
 void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat){
   fprintf(stderr,"\t-> [%s] sfs1:%d sfs2:%d dimspace:%d \n",__FUNCTION__,sfs1,sfs2,(sfs1+1)*(sfs2+1));
@@ -238,9 +248,19 @@ int fst_stat2(int argc,char **argv){
       }
       nObs++;
     }
-    for(int i=0;nObs>0&&i<chs;i++)
-      fprintf(stdout,"\t%f\t%f",unweight[i]/(1.0*nObs),wa[i]/wb[i]);
+    double fstW[chs];
+    for(int i=0;nObs>0&&i<chs;i++){
+      fstW[i] = wa[i]/wb[i];
+      fprintf(stdout,"\t%f\t%f",unweight[i]/(1.0*nObs),fstW[i]);
+    }
+    if(chs==3){
+      //if chr==3 then we have 3pops and we will also calculate pbs statistics
+      calcpbs(fstW);//<- NOTE: the pbs values will replace the fstW values
+      for(int i=0;i<3;i++)
+	fprintf(stdout,"\t%f",fstW[i]);
+    }
     fprintf(stdout,"\n");
+
     pS += pars->step;
     pE =pS+pars->win;
     if(pE>(pars->stop!=-1?pars->stop:ppos[it->second.nSites-1]))
@@ -353,9 +373,19 @@ int fst_stat(int argc,char **argv){
     if(pars->chooseChr!=NULL)
       break;
   }
+  double fstUW[chs];
+  double fstW[chs];
   for(int i=0;i<chs;i++){
-    fprintf(stderr,"\t-> FST.Unweight[nObs:%lu]:%f Fst.Weight:%f\n",nObs[i],unweight[i]/(1.0*nObs[i]),wa[i]/wb[i]);
-    fprintf(stdout,"%f %f\n",unweight[i]/(1.0*nObs[i]),wa[i]/wb[i]);
+    fstUW[i] = unweight[i]/(1.0*nObs[i]);
+    fstW[i] = wa[i]/wb[i];
+    fprintf(stderr,"\t-> FST.Unweight[nObs:%lu]:%f Fst.Weight:%f\n",nObs[i],fstUW[i],fstW[i]);
+    fprintf(stdout,"%f %f\n",fstUW[i],fstW[i]);
+  }
+  if(chs==3){
+    //if chr==3 then we have 3pops and we will also calculate pbs statistics
+    calcpbs(fstW);//<- NOTE: the pbs values will replace the fstW values
+    for(int i=0;i<3;i++)
+      fprintf(stderr,"\t-> pbs.pop%d\t%f\n",i+1,fstW[i]);
   }
   delete [] ares;
   delete [] bres;

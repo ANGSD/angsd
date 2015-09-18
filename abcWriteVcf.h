@@ -1,6 +1,6 @@
 class abcWriteVcf:public abc{
 private:
-  gzFile fp;//tfam/fam/bim
+  BGZF *fp;
   kstring_t *kstr;
 public:
   int doVcf;

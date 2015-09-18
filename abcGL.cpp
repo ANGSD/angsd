@@ -26,7 +26,6 @@
 #include <zlib.h>
 #include <assert.h>
 #include <htslib/kstring.h>
-#include "bfgs.h"
 #include "analysisFunction.h"
 #include "abc.h"
 
@@ -218,17 +217,17 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
       phys_init(arguments->nams);
   }
   
-  gzoutfile = gzoutfile2 = Z_NULL;
+  gzoutfile = gzoutfile2 = NULL;
   bufstr.s=NULL; bufstr.l=bufstr.m=0;// <- used for buffered output 
-  bufstr.l=0;
+
   if(doGlf){
  
     if(doGlf!=2){
-      gzoutfile = aio::openFileGz(outfiles,postfix,GZOPT);
+      gzoutfile = aio::openFileBG(outfiles,postfix);
       if(doGlf==3)
-	gzoutfile2 = aio::openFileGz(outfiles,".glf.pos.gz",GZOPT);
+	gzoutfile2 = aio::openFileBG(outfiles,".glf.pos.gz");
     }else{
-      gzoutfile = aio::openFileGz(outfiles,beaglepostfix,GZOPT);
+      gzoutfile = aio::openFileBG(outfiles,beaglepostfix);
       
       kputs("marker\tallele1\tallele2",&bufstr);
       for(int i=0;i<arguments->nInd;i++){
@@ -240,7 +239,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
 	kputw(i,&bufstr);
       }
       kputc('\n',&bufstr);
-      gzwrite(gzoutfile,bufstr.s,bufstr.l);
+      aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
     }
  
   }
@@ -262,10 +261,10 @@ abcGL::~abcGL(){
     abcError::killGlobalErrorProbs(errorProbs);
   else if(GL==5)
     phys_destroy();
-  if(doGlf)    gzclose(gzoutfile);
+  if(doGlf)    bgzf_close(gzoutfile);
     
-  if(gzoutfile!=Z_NULL)
-    gzclose(gzoutfile2);
+  if(gzoutfile!=NULL)
+    bgzf_close(gzoutfile2);
 
   if(bufstr.s!=NULL)
     free(bufstr.s);
@@ -410,7 +409,7 @@ void abcGL::printLike(funkyPars *pars) {
     for(int i=0;i<pars->numSites;i++){
       if(pars->keepSites[i]==0)
 	continue;
-      gzwrite(gzoutfile,pars->likes[i],sizeof(double)*10*pars->nInd);
+      aio::bgzf_write(gzoutfile,pars->likes[i],sizeof(double)*10*pars->nInd);
     }
   }
   else if(doGlf==2){
@@ -449,7 +448,7 @@ void abcGL::printLike(funkyPars *pars) {
 	kputc('\n',&bufstr);
 
     }
-    gzwrite(gzoutfile,bufstr.s,bufstr.l);
+    aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
   }
   else if(doGlf==3) { //FGV v0.208 Aug,28
     for(int s=0;s<pars->numSites;s++) {
@@ -464,10 +463,12 @@ void abcGL::printLike(funkyPars *pars) {
 	dump[0] = pars->likes[s][i*10+angsd::majorminor[major][major]] ;
 	dump[1] = pars->likes[s][i*10+angsd::majorminor[major][minor]] ;
 	dump[2] = pars->likes[s][i*10+angsd::majorminor[minor][minor]] ;
-	gzwrite(gzoutfile,dump,3*sizeof(double));
+	aio::bgzf_write(gzoutfile,dump,3*sizeof(double));
       }
-      gzprintf(gzoutfile2,"%s\t%d\t",header->target_name[pars->refId],pars->posi[s]+1);
-      gzprintf(gzoutfile2,"%c\t%c\n",intToRef[major],intToRef[minor]);
+      bufstr.l=0;
+      ksprintf(&bufstr,"%s\t%d\t",header->target_name[pars->refId],pars->posi[s]+1);
+      ksprintf(&bufstr,"%c\t%c\n",intToRef[major],intToRef[minor]);
+      aio::bgzf_write(gzoutfile2,bufstr.s,bufstr.l);bufstr.l=0;
     }
   } else if(doGlf==4){
     bufstr.l=0;
@@ -483,7 +484,7 @@ void abcGL::printLike(funkyPars *pars) {
 
       kputc('\n',&bufstr);
     }
-    gzwrite(gzoutfile,bufstr.s,bufstr.l);
+    aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
   }
 
 

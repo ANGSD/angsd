@@ -132,7 +132,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"---------------\n%s: bam reader:\n",__FILE__);
   fprintf(argFile,"\t-r\t\t%s\tSupply a single region in commandline (see examples below)\n",regfile);
   fprintf(argFile,"\t-rf\t\t%s\tSupply multiple regions in a file (see examples below)\n",regfiles);
-  fprintf(argFile,"\t-remove_bads\t%d\tDiscard \'bad\' reads, (flag >=255) \n",remove_bads);
+  fprintf(argFile,"\t-remove_bads\t%d\tDiscard \'bad\' reads, (flag >=256) \n",remove_bads);
   //  fprintf(argFile,"\t-type\t\t%d\n",ret->type);
   fprintf(argFile,"\t-uniqueOnly\t%d\tDiscards reads that doesn't map uniquely\n",uniqueOnly);
   fprintf(argFile,"\t-show\t\t%d\tMimic 'samtools mpileup' also supply -ref fasta for printing reference column\n",ret->show);

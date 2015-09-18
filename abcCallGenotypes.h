@@ -11,11 +11,12 @@ class abcCallGenotypes:public abc{
 private:
   int doGeno;
   float postCutoff;
-  gzFile outfileZ;
+  BGZF* outfileZ;
   double geno_minMM;
   int geno_minDepth;
   int geno_maxDepth;
   int minInd;
+  kstring_t bufstr;
 public:
   abcCallGenotypes(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcCallGenotypes();

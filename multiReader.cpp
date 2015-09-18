@@ -332,6 +332,7 @@ multiReader::multiReader(int argc,char**argv){
       exit(0);
     }
     htsFile *in=sam_open(args->nams[0],"r");
+    assert(in);
     hd= sam_hdr_read(in);
     hts_close(in);
   }

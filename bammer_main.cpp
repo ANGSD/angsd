@@ -121,6 +121,11 @@ bufReader initBufReader2(const char*fname){
   ret.idx=NULL;
  
   ret.hdr = sam_hdr_read(ret.fp);
+  if(strlen(ret.hdr->text)==0){
+    fprintf(stderr,"\t-> No header information could be found for BAM/CRAM file: \'%s\' will exit\n",fname);
+    exit(1);
+  }
+  
   checkIfSorted(ret.hdr->text);
 
   if(ret.hdr==NULL) {

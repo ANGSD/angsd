@@ -202,7 +202,7 @@ void abcFilterSNP::print(funkyPars *pars){
   if(!doSnpStat)
     return;
   kstring_t *bufstr =(kstring_t*) pars->extras[index];
-  gzwrite(outfileZ,bufstr->s,bufstr->l);
+  aio::bgzf_write(outfileZ,bufstr->s,bufstr->l);bufstr->l=0;
   free(bufstr->s);
   delete bufstr;
 }
@@ -234,7 +234,7 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 
 abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputtype){
   doSnpStat=0;
-  outfileZ = Z_NULL;
+  outfileZ = NULL;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSnpStat")||!strcasecmp(arguments->argv[1],"-doPost")){
       printArg(stdout);
@@ -254,12 +254,16 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
   if(doSnpStat){
     //    fprintf(stderr,"running doSnpStat=%d\n",doSnpStat);
     const char *postfix=".snpStat.gz";
-    outfileZ = aio::openFileGz(outfiles,postfix,GZOPT);
-    gzprintf(outfileZ,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\n");
+    outfileZ = aio::openFileBG(outfiles,postfix);
+    kstring_t bufstr;bufstr.s=NULL;bufstr.l=bufstr.m=0;
+    ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\n");
+    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
+    free(bufstr.s);
   }
 }
 
 abcFilterSNP::~abcFilterSNP(){
-  if(outfileZ!=Z_NULL)     gzclose(outfileZ);
+  if(outfileZ!=NULL)
+    bgzf_close(outfileZ);
 
 }
