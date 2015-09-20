@@ -66,7 +66,6 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   //below is used only validating if doMajorMinor has the data it needs
   int GL=0;
   int doCounts=0;
-  int rmTrans=0;
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   rmTrans=angsd::getArg("-rmTrans",rmTrans,arguments);
@@ -119,6 +118,8 @@ void abcMajorMinor::getOptions(argStruct *arguments){
 abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int inputtype){
   skipTriallelic=0;
   doMajorMinor = 0;
+  rmTrans=0;
+
   doSaf = 0;
   pest = NULL;
   doVcf = 0;
