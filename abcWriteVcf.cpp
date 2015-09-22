@@ -98,7 +98,7 @@ abcWriteVcf::abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype
   }
   kstr =(kstring_t*) calloc(1,sizeof(kstring_t));
   //format is taken from: http://faculty.washington.edu/browning/beagle/intro-to-vcf.html
-  const char *hdstring= "##fileformat=VCFv4.2(angsd version)\n##FORMAT=<ID=GT,Number=1,Type=Integer,Description=\"Genotype\">\n##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">\n##FORMAT=<ID=PL,Number=G,Type=Float,Description=\"Phred-scaled Genotype Likelihoods\">\n##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
+  const char *hdstring= "##fileformat=VCFv4.2(angsd version)\n##FORMAT=<ID=GT,Number=1,Type=Integer,Description=\"Genotype\">\n##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">\n##FORMAT=<ID=PL,Number=G,Type=Float,Description=\"Phred-scaled Genotype Likelihoods\">\n##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
   ksprintf(kstr,"%s",hdstring);
   for(int i=0;i<arguments->nInd;i++)
     ksprintf(kstr,"\tind%d",i);
