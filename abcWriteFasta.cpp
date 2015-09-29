@@ -39,6 +39,9 @@ void abcWriteFasta::getOptions(argStruct *arguments){
   NbasesPerLine = angsd::getArg("-basesPerLine",NbasesPerLine,arguments);
   rmTrans=angsd::getArg("-rmTrans",rmTrans,arguments);
   ref=angsd::getArg("-ref",ref,arguments);
+
+  if(doFasta==0)
+    return;
   if(doFasta){
     if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
       fprintf(stderr,"Error: bam or soap input needed for -doFasta \n");
