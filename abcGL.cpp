@@ -132,6 +132,7 @@ void abcGL::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> Must supply -doCounts for SYK model\n");
     exit(0);
   }
+  /*
   if(doGlf==2){
     fprintf(stderr,"\t-> BEAGLE format 3.0 is deprecated\n\t-> Consider using -doVCF 1\n");
     for(int j=3;j>0;j--){
@@ -140,6 +141,7 @@ void abcGL::getOptions(argStruct *arguments){
     }
 
   }
+  */
   if((doGlf==2||doGlf==3) && doMajorMinor==0){
     fprintf(stderr,"\t-> For dumping beaglestyle output you need to estimate major/minor: -doMajorMinor\n");
     exit(0);
