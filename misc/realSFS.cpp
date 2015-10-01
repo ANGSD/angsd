@@ -126,7 +126,7 @@ size_t parspace(std::vector<persaf *> &saf){
 
 //just approximate
 template <typename T>
-size_t fsizes(std::vector<persaf *> &pp, int nSites){
+size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
   size_t res = 0;
   for(int i=0;i<pp.size();i++){
     res += nSites*(pp[i]->nChr+1)*sizeof(T)+nSites*sizeof( T*);
@@ -144,7 +144,9 @@ size_t helper(persaf * pp,char *chr){
   }
   return it->second.nSites;
 }
-
+/*
+  returns the maxnumber of sites across all samples
+ */
 size_t nsites(std::vector<persaf *> &pp,args *ar){
   if(ar->start!=-1 &&ar->stop!=-1)
     return ar->stop-ar->start;
@@ -220,6 +222,26 @@ int printOld(int argc,char **argv){
   return 0;
 }
 
+int print_header(int argc,char **argv){
+
+  if(argc<1){
+    fprintf(stderr,"Must supply afile.saf.idx \n");
+    return 0; 
+  }
+  
+  args *pars = getArgs(argc,argv);
+  if(!pars)
+    return 1;
+  if(pars->saf.size()!=1){
+    fprintf(stderr,"print_header only implemeted for single safs\n");
+    exit(0);
+  }
+  writesaf_header(stderr,pars->saf[0]);
+  
+  destroy_args(pars);
+  return 0;
+}
+
 void setGloc(std::vector<persaf *> &saf,int nSites){
 #if 1
   posiG = new int*[saf.size()];
@@ -239,13 +261,10 @@ template <typename T>
 int printMulti(args *arg){
   fprintf(stderr,"[%s]\n",__FUNCTION__);
   std::vector<persaf *> &saf =arg->saf;
-  int nSites = arg->nSites;
+  size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
   }
-    
-  fprintf(stderr,"\t-> nSites: %d\n",nSites);
-
   std::vector<Matrix<T> *> gls;
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
@@ -861,13 +880,11 @@ int fst_index(int argc,char **argv){
 
   std::vector<persaf *> &saf =arg->saf;
   //assert(saf.size()==2);
-  int nSites = arg->nSites;
+  size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
   }
-  
-  fprintf(stderr,"\t-> nSites: %d\n",nSites);
-
+  fprintf(stderr,"\t-> nSites: %lu\n",nSites);
   std::vector<Matrix<float> *> gls;
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<float>(nSites,saf[i]->nChr+1));
@@ -1004,14 +1021,14 @@ int fst_index(int argc,char **argv){
 template <typename T>
 int main_opt(args *arg){
   std::vector<persaf *> &saf =arg->saf;
-  int nSites = arg->nSites;
+  size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
   }
   if(fsizes<T>(saf,nSites)>getTotalSystemMemory())
     fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
     
-  fprintf(stderr,"\t-> nSites: %d\n",nSites);
+  fprintf(stderr,"\t-> nSites: %lu\n",nSites);
   float bytes_req_megs = fsizes<T>(saf,nSites)/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
@@ -1170,6 +1187,8 @@ int main(int argc,char **argv){
     print<float>(--argc,++argv);
   else if(!strcasecmp(*argv,"fst"))
     fst(--argc,++argv);
+  else if(!strcasecmp(*argv,"print_header"))
+    print_header(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
     if(arg->saf.size()>1)
