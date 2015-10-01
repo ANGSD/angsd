@@ -101,12 +101,11 @@ args * getArgs(int argc,char **argv){
     else  if(!strcasecmp(*argv,"-oldout"))
       p->oldout = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-nSites"))
-      p->nSites = atoi(*(++argv));
+      p->nSites = atol(*(++argv));
     else  if(!strcasecmp(*argv,"-m"))
       p->emAccl = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-seed"))
       p->seed = atol(*(++argv));
-
     else  if(!strcasecmp(*argv,"-onlyOnce"))
       p->onlyOnce = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-r")){

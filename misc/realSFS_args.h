@@ -4,7 +4,7 @@ typedef struct {
   char *chooseChr;
   int start;
   int stop;
-  int nSites;
+  size_t nSites;
   int maxIter;
   double tole;
   int nThreads;
