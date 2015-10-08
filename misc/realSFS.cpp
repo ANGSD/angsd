@@ -882,7 +882,8 @@ int fst_index(int argc,char **argv){
   //assert(saf.size()==2);
   size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
-    nSites=nsites(saf,arg);
+    nSites = 100000;//<- set default to 100k sites, no need to load everything...
+    // nSites=nsites(saf,arg);
   }
   fprintf(stderr,"\t-> nSites: %lu\n",nSites);
   std::vector<Matrix<float> *> gls;
