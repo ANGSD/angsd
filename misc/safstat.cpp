@@ -233,7 +233,7 @@ int fst_stat2(int argc,char **argv){
     for(int i=0;i<chs;i++)
       unweight[i] = wa[i] = wb[i] =0.0;
     nObs=0;
-    fprintf(stdout,"(%d,%d)(%d,%d)(%d,%d)\t%s\t%d",begI,endI-1,ppos[begI],ppos[endI-1],pS,pE,it->first,pS+(pE-pS)/2);
+
     for(int s=begI;s<endI;s++){
 #if 0
       fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
@@ -248,18 +248,21 @@ int fst_stat2(int argc,char **argv){
       }
       nObs++;
     }
+    if(nObs>0)
+      fprintf(stdout,"(%d,%d)(%d,%d)(%d,%d)\t%s\t%d",begI,endI-1,ppos[begI],ppos[endI-1],pS,pE,it->first,pS+(pE-pS)/2);
     double fstW[chs];
     for(int i=0;nObs>0&&i<chs;i++){
       fstW[i] = wa[i]/wb[i];
       fprintf(stdout,"\t%f\t%f",unweight[i]/(1.0*nObs),fstW[i]);
     }
-    if(chs==3){
+    if(nObs>0&&chs==3){
       //if chr==3 then we have 3pops and we will also calculate pbs statistics
       calcpbs(fstW);//<- NOTE: the pbs values will replace the fstW values
       for(int i=0;i<3;i++)
 	fprintf(stdout,"\t%f",fstW[i]);
     }
-    fprintf(stdout,"\n");
+    if(nObs>0)
+      fprintf(stdout,"\n");
 
     pS += pars->step;
     pE =pS+pars->win;
