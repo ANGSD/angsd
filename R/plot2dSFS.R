@@ -1,3 +1,5 @@
+norm <- function(x) x/sum(x)
+
 pplot<-function(x,ylab="YRI",xlab="CEU",pal,...){
     x[x<1e-9]<-1e-9
     p2<-x
@@ -41,42 +43,47 @@ color.palette <- function(steps, n.steps.between=NULL, ...){
     return(pal)
 }
 if(FALSE){
-
     require(lattice)
     source("plot2dSFS.R")
+    pdf("tmp.pdf")
     
     pal <- color.palette(c("darkgreen","#00A600FF","yellow","#E9BD3AFF","orange","red4","darkred","black"), space="rgb")
-
-  est<-as.matrix(exp(read.table("/ricco/home/home/thorfinn/sfs_greenland/ext_accessible2/chb.gr.2dsfs.ml")))
-    rownames(est)<-1:nrow(est)-1 # Greenland
-    colnames(est)<-1:ncol(est)-1 # China
-
-    minVal<-1e-9
-    est[est<minVal]<-minVal
-est0<-est
-    est0[1,1]<-NA
-    pdf("~/public/albrecht/open/tmp.pdf")
-    pplot(est,pal=pal,ylab="CHB",xlab="Greenland",main="2D site frequency spectrum")
-    pplot(est0,pal=pal,ylab="CHB",xlab="Greenland",main="2D site frequency spectrum")
+    mplot <- function(fname,ncol,pop1,pop2,minVal=1e-9){
+        if(missing(ncol))
+            stop("must supply number of chrs from first pop")
+        est<-matrix(norm(scan(fname)),nrow=ncol,byrow=T)
+        rownames(est)<-1:nrow(est)-1 # Greenland
+        colnames(est)<-1:ncol(est)-1 # China
+        est[est<minVal]<-minVal
+        est0<-est
+        est0[1,1]<-NA
+        
+        pplot(est,pal=pal,ylab=pop2,xlab=pop1,main="2D site frequency spectrum")
+     #   pplot(est0,pal=pal,ylab="CHB",xlab="Greenland",main="2D site frequency spectrum")
+    }
+    mplot("../../ceu.chb.ml",37,pop1="CEU",pop2="CHB",minVal=1e-12)
+    mplot("../../ceu.yri.ml",37,pop1="CEU",pop2="YRI",minVal=1e-12)
+    mplot("../../yri.chb.ml",45,pop1="YRI",pop2="CHB",minVal=1e-12)
+    
     dev.off()
 
-
-    ## come to dadi
-    pol<-"folded"
-    sfs<-est*1e7
-    n1=nrow(sfs);
-    n2=ncol(sfs);
-    ns=paste(n1,n2,collapse=' ');
-    ns=paste(ns,pol,collapse=' ');
-    ## Convert 2D sfs to dadi array format
-    dadi=NULL;
-    for(i in 1:n1){
-        dadi=c(dadi,as.numeric(sfs[i,]))
+    if(FALSE){
+        ## come to dadi
+        pol<-"folded"
+        sfs<-est*1e7
+        n1=nrow(sfs);
+        n2=ncol(sfs);
+        ns=paste(n1,n2,collapse=' ');
+        ns=paste(ns,pol,collapse=' ');
+        ## Convert 2D sfs to dadi array format
+        dadi=NULL;
+        for(i in 1:n1){
+            dadi=c(dadi,as.numeric(sfs[i,]))
+        }
+        file<-"tmpDadi"
+        ## Write out dadi format to file with same name as 2D sfs file with .fs appeded
+        write.table(ns,file=paste(file,'.fs',sep=''),col.names=FALSE,row.names=FALSE,quote=FALSE);
+        write.table(paste(dadi,collapse=' '),file=paste(file,'.fs',sep=''),col.names=FALSE,row.names=FALSE,quote=FALSE,append=TRUE);
     }
-    file<-"tmpDadi"
-# Write out dadi format to file with same name as 2D sfs file with .fs appeded
-write.table(ns,file=paste(file,'.fs',sep=''),col.names=FALSE,row.names=FALSE,quote=FALSE);
-write.table(paste(dadi,collapse=' '),file=paste(file,'.fs',sep=''),col.names=FALSE,row.names=FALSE,quote=FALSE,append=TRUE);
-
 
 }
