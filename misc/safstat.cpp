@@ -25,7 +25,7 @@ void calcpbs(double fstW[3]){
   double p02 = -log(1.0-fstW[1]);
   double p12 = -log(1.0-fstW[2]);
   fstW[0] = (p01+p02-p12)/2.0;
-  fstW[1] = (p12+p12-p02)/2.0;
+  fstW[1] = (p12+p01-p02)/2.0;
   fstW[2] = (p12+p02-p01)/2.0;
 
 
@@ -249,7 +249,7 @@ int fst_stat2(int argc,char **argv){
       nObs++;
     }
     if(nObs>0)
-      fprintf(stdout,"(%d,%d)(%d,%d)(%d,%d)\t%s\t%d",begI,endI-1,ppos[begI],ppos[endI-1],pS,pE,it->first,pS+(pE-pS)/2);
+      fprintf(stdout,"(%d,%d)(%d,%d)(%d,%d)\t%s\t%d\t%d",begI,endI-1,ppos[begI],ppos[endI-1],pS,pE,it->first,pS+(pE-pS)/2,endI-begI+1);
     double fstW[chs];
     for(int i=0;nObs>0&&i<chs;i++){
       fstW[i] = wa[i]/wb[i];
