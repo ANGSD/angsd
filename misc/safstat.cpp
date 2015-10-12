@@ -180,6 +180,18 @@ int fst_stat2(int argc,char **argv){
   double wb[chs];
   size_t nObs =0;
  
+
+  //print header
+  fprintf(stdout,"region\tchr\tmidPos\tNsites");
+  for(int c1=0;c1<chs-1;c1++)
+    for(int c2=c1+1;c2<chs;c2++)
+      fprintf(stdout,"\tFst%d%d",c1,c2);
+  if(chs==3)
+    fprintf(stdout,"\tPBS0\tPBS1\tPBS2");
+  
+  fprintf(stdout,"\n");
+
+
   for(myFstMap::iterator it=pf->mm.begin();it!=pf->mm.end();++it){
     if(pars->chooseChr!=NULL){
       it = pf->mm.find(pars->chooseChr);
@@ -253,7 +265,9 @@ int fst_stat2(int argc,char **argv){
     double fstW[chs];
     for(int i=0;nObs>0&&i<chs;i++){
       fstW[i] = wa[i]/wb[i];
-      fprintf(stdout,"\t%f\t%f",unweight[i]/(1.0*nObs),fstW[i]);
+      //      fprintf(stdout,"\t%f\t%f",unweight[i]/(1.0*nObs),fstW[i]);
+      fprintf(stdout,"\t%f",fstW[i]);
+       
     }
     if(nObs>0&&chs==3){
       //if chr==3 then we have 3pops and we will also calculate pbs statistics
