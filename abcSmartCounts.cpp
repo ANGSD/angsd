@@ -39,11 +39,11 @@ void abcSmartCounts::changeChr(int newRefId){
   if(curChr!=-1){
     int64_t retVal =bgzf_tell(fbin); 
     int clen = strlen(header->target_name[curChr]);
-    bgzf_write(fbin,&clen,sizeof(int));
-    bgzf_write(fbin,header->target_name[curChr],clen);
-    bgzf_write(fbin,&len,sizeof(int));
+    aio::bgzf_write(fbin,&clen,sizeof(int));
+    aio::bgzf_write(fbin,header->target_name[curChr],clen);
+    aio::bgzf_write(fbin,&len,sizeof(int));
     for(int i=0;i<4;i++)
-      bgzf_write(fbin,counts[i],len);//write len of chr
+      aio::bgzf_write(fbin,counts[i],len);//write len of chr
     
     //write index stuff
     fprintf(stderr,"Writing index for chr: %s\n",header->target_name[curChr]);
@@ -101,11 +101,11 @@ abcSmartCounts::~abcSmartCounts(){
 
   int64_t retVal =bgzf_tell(fbin); 
   int clen = strlen(header->target_name[curChr]);
-  bgzf_write(fbin,&clen,sizeof(int));
-  bgzf_write(fbin,header->target_name[curChr],clen);
-  bgzf_write(fbin,&len,sizeof(int));
+  aio::bgzf_write(fbin,&clen,sizeof(int));
+  aio::bgzf_write(fbin,header->target_name[curChr],clen);
+  aio::bgzf_write(fbin,&len,sizeof(int));
   for(int i=0;i<4;i++)
-    bgzf_write(fbin,counts[i],len);//write len of chr
+    aio::bgzf_write(fbin,counts[i],len);//write len of chr
   
   //write index stuff
   fwrite(&clen,sizeof(int),1,fidx);

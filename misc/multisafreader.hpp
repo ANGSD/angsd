@@ -60,7 +60,7 @@ int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *>
 int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr){
   //fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
 
-  if(saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
+  if(0&&saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
     //fprintf(stderr,"herer\n");
     return 0 ;
   }
@@ -112,7 +112,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     if(saf.size()==1)
       return 0;
     
-    if(saf[i]->ppos[it->second.nSites-1] > hit->m)
+    if(saf[i]->ppos[it->second.nSites-1] >= hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
     for(int j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++)
@@ -168,9 +168,9 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites
   extern int ** posiG;
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
   if(lastread==0 ){
-    //    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
+    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
     int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr); 
-    //fprintf(stderr,"[%s] ret:%d\n",__FUNCTION__,ret);
+    //    fprintf(stderr,"[%s] ret:%d\n",__FUNCTION__,ret);
     //    exit(0);
     if(ret==-3)
       return -3;

@@ -10,7 +10,6 @@
 #include "abcCallGenotypes.h"
 #include "abcMajorMinor.h"
 #include "abcWriteVcf.h"
-#include <zlib.h>
 void abcWriteVcf::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doVcf\t%d\n",doVcf);
@@ -54,7 +53,7 @@ void abcWriteVcf::print(funkyPars *pars){
     ksprintf(kstr,"\n");
   }
   
-  gzwrite(fp,kstr->s,kstr->l);kstr->l=0;
+  aio::bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
 void abcWriteVcf::getOptions(argStruct *arguments){
@@ -78,7 +77,7 @@ void abcWriteVcf::getOptions(argStruct *arguments){
 }
 
 abcWriteVcf::abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype){
-  fp=Z_NULL;
+  fp=NULL;
   doVcf =0;
   kstr=NULL;
   if(arguments->argc==2){
@@ -99,21 +98,19 @@ abcWriteVcf::abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype
   }
   kstr =(kstring_t*) calloc(1,sizeof(kstring_t));
   //format is taken from: http://faculty.washington.edu/browning/beagle/intro-to-vcf.html
-  const char *hdstring= "##fileformat=VCFv4.2(angsd version)\n##FORMAT=<ID=GT,Number=1,Type=Integer,Description=\"Genotype\">\n##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">\n##FORMAT=<ID=PL,Number=G,Type=Float,Description=\"Phred-scaled Genotype Likelihoods\">\n##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (these are really llh eventhough they sum to one)\">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
+  const char *hdstring= "##fileformat=VCFv4.2(angsd version)\n##FORMAT=<ID=GT,Number=1,Type=Integer,Description=\"Genotype\">\n##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">\n##FORMAT=<ID=PL,Number=G,Type=Float,Description=\"Phred-scaled Genotype Likelihoods\">\n##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT";
   ksprintf(kstr,"%s",hdstring);
   for(int i=0;i<arguments->nInd;i++)
     ksprintf(kstr,"\tind%d",i);
   ksprintf(kstr,"\n");
 
-  fp=aio::openFileGz(outfiles,".vcf.gz",GZOPT);
-  gzwrite(fp,kstr->s,kstr->l);kstr->l=0;
+  fp=aio::openFileBG(outfiles,".vcf.gz");
+  aio::bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
 
 abcWriteVcf::~abcWriteVcf(){
-  if(fp!=Z_NULL) gzclose(fp);
+  if(fp!=NULL) bgzf_close(fp);
   if(kstr && kstr->s)
     free(kstr->s);
 }
-
-

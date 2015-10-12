@@ -31,7 +31,7 @@ perFasta *init(const char *fname){
   char *strtsk=NULL;
   strtsk = (char*)calloc(strlen(fname) + 5, 1);
   sprintf(strtsk, "%s.fai", fname);
-  if(isNewer(fname,strtsk)){
+  if(aio::isNewer(fname,strtsk)){
     fprintf(stderr,"\t-> fai index file: \'%s\' looks older than corresponding fastafile: \'%s\'.\n\t-> Please reindex fasta file\n",strtsk,fname);
     exit(0);
   }

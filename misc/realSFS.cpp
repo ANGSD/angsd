@@ -126,7 +126,7 @@ size_t parspace(std::vector<persaf *> &saf){
 
 //just approximate
 template <typename T>
-size_t fsizes(std::vector<persaf *> &pp, int nSites){
+size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
   size_t res = 0;
   for(int i=0;i<pp.size();i++){
     res += nSites*(pp[i]->nChr+1)*sizeof(T)+nSites*sizeof( T*);
@@ -144,7 +144,9 @@ size_t helper(persaf * pp,char *chr){
   }
   return it->second.nSites;
 }
-
+/*
+  returns the maxnumber of sites across all samples
+ */
 size_t nsites(std::vector<persaf *> &pp,args *ar){
   if(ar->start!=-1 &&ar->stop!=-1)
     return ar->stop-ar->start;
@@ -204,13 +206,9 @@ int printOld(int argc,char **argv){
     for(int s=0;SIG_COND&&s<it->second.nSites;s++) {
       bgzf_read(pars->saf[0]->saf,flt,sizeof(float)*(pars->saf[0]->nChr+1));
       if(at>=first&&at<last){
-	if(pars->posOnly==0){
-	  fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
-	  for(int is=0;is<pars->saf[0]->nChr+1;is++)
-	    fprintf(stdout,"\t%f",flt[is]);
-	}else
-	  fprintf(stdout,"%d",ppos[s]+1);
-	  fprintf(stdout,"\n");
+	fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
+	for(int is=0;is<pars->saf[0]->nChr+1;is++)
+	  fprintf(stdout,"\t%f",flt[is]);
       }
       at++;
     }
@@ -220,6 +218,26 @@ int printOld(int argc,char **argv){
   }
   
   delete [] flt;
+  destroy_args(pars);
+  return 0;
+}
+
+int print_header(int argc,char **argv){
+
+  if(argc<1){
+    fprintf(stderr,"Must supply afile.saf.idx \n");
+    return 0; 
+  }
+  
+  args *pars = getArgs(argc,argv);
+  if(!pars)
+    return 1;
+  if(pars->saf.size()!=1){
+    fprintf(stderr,"print_header only implemeted for single safs\n");
+    exit(0);
+  }
+  writesaf_header(stderr,pars->saf[0]);
+  
   destroy_args(pars);
   return 0;
 }
@@ -241,14 +259,12 @@ void delGloc(std::vector<persaf *> &saf,int nSites){
 
 template <typename T>
 int printMulti(args *arg){
+  fprintf(stderr,"[%s]\n",__FUNCTION__);
   std::vector<persaf *> &saf =arg->saf;
-  int nSites = arg->nSites;
+  size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
   }
-    
-  fprintf(stderr,"\t-> nSites: %d\n",nSites);
-
   std::vector<Matrix<T> *> gls;
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
@@ -280,7 +296,7 @@ int printMulti(args *arg){
     free(tmp);
   }
   while(1) {
-    char *curChr=NULL;
+    static char *curChr=NULL;
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr);//read nsites from data
     //    fprintf(stderr,"ret:%d gls->x:%lu\n",ret,gls[0]->x);
     if(arg->oldout==0){
@@ -348,13 +364,18 @@ template<typename T>
 void print(int argc,char **argv){
   if(argc<1){
     fprintf(stderr,"\t-> Must supply afile.saf.idx files \n");
+    fprintf(stderr,"\t-> Examples \n");
+    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx \n");
+    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx -r chr1:10000000-12000000\n");
+    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx pop2.saf.idx -r chr2:10000000-12000000\n");
+    fprintf(stderr,"\t-> You can generate the oldformat by appending the -oldout 1 to the print command like\n");
+    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx pop2.saf.idx -oldout 1\n");
     return; 
   }
   
   args *pars = getArgs(argc,argv);
-  pars->saf[0]->kind = 2;
-  if(pars->posOnly==1)
-    pars->saf[0]->kind = 1;
+  for(int i=0;i<pars->saf.size();i++)
+    pars->saf[0]->kind = 2;
   if(1||pars->saf.size()!=1){
     fprintf(stderr,"\t-> Will jump to multisaf printer and will only print intersecting sites between populations\n");
     printMulti<T>(pars);
@@ -376,7 +397,7 @@ void print(int argc,char **argv){
 
     while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1),&pos))){
       fprintf(stdout,"%s\t%d",it->first,pos+1);
-      for(int is=0;pars->posOnly!=1&&is<pars->saf[0]->nChr+1;is++)
+      for(int is=0;is<pars->saf[0]->nChr+1;is++)
 	fprintf(stdout,"\t%f",flt[is]);
       fprintf(stdout,"\n");
     }
@@ -859,13 +880,11 @@ int fst_index(int argc,char **argv){
 
   std::vector<persaf *> &saf =arg->saf;
   //assert(saf.size()==2);
-  int nSites = arg->nSites;
+  size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
   }
-  
-  fprintf(stderr,"\t-> nSites: %d\n",nSites);
-
+  fprintf(stderr,"\t-> nSites: %lu\n",nSites);
   std::vector<Matrix<float> *> gls;
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<float>(nSites,saf[i]->nChr+1));
@@ -1002,14 +1021,14 @@ int fst_index(int argc,char **argv){
 template <typename T>
 int main_opt(args *arg){
   std::vector<persaf *> &saf =arg->saf;
-  int nSites = arg->nSites;
+  size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
   }
   if(fsizes<T>(saf,nSites)>getTotalSystemMemory())
     fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
     
-  fprintf(stderr,"\t-> nSites: %d\n",nSites);
+  fprintf(stderr,"\t-> nSites: %lu\n",nSites);
   float bytes_req_megs = fsizes<T>(saf,nSites)/1024/1024;
   float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
   //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
@@ -1026,10 +1045,10 @@ int main_opt(args *arg){
   setGloc(saf,nSites);
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL);//read nsites from data
-    //    fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
-    if(ret==-2&gls[0]->x==0)//no more data in files or in chr, eith way we break;
+    //fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
+    if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
-    
+#if 0
     if(saf.size()==1){
       if(ret!=-2){
 	if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
@@ -1037,15 +1056,18 @@ int main_opt(args *arg){
 	  continue;
 	}
       }
-    }else{
+    }else
+#endif
+      {
       if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
 	//fprintf(stderr,"continue continue\n");
 	continue;
       }
 
     }
-  
-      
+    if(gls[0]->x==0)
+      continue;
+    
     fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
     
     if(arg->sfsfname.size()!=0)
@@ -1165,6 +1187,8 @@ int main(int argc,char **argv){
     print<float>(--argc,++argv);
   else if(!strcasecmp(*argv,"fst"))
     fst(--argc,++argv);
+  else if(!strcasecmp(*argv,"print_header"))
+    print_header(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
     if(arg->saf.size()>1)

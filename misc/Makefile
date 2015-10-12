@@ -8,7 +8,7 @@ HTSLIB = $(HTSDIR)/libhts.a
 
 
 
-all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix
+all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2
 
 kmath.o: kmath.c kmath.h
 	$(CC) $(FLAGS) -c kmath.c 
@@ -24,6 +24,10 @@ supersim: supersim.cpp rbeta.cpp
 
 contamination: contamination.cpp kmath.o
 	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination kmath.o -lpthread
+
+contamination2: contamination2.cpp kmath.o
+	$(CXX) $(FLAGS) contamination2.cpp -lz -o contamination2 kmath.o -lpthread
+
 splitgl: splitgl.c
 	$(CC) $(FLAGS) splitgl.c -lz -o splitgl
 

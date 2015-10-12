@@ -1,7 +1,7 @@
 
 
 class abcFilterSNP:public abc{
-  gzFile outfileZ;
+  BGZF* outfileZ;
 public:
   int doSnpStat;
   

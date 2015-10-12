@@ -1,3 +1,4 @@
+//modified by thorfinn@binf.ku.dk
 /*
 Copyright (c) 2009 Genome Research Ltd.
 Author: Rob Davies <rmd@sanger.ac.uk>
@@ -62,7 +63,8 @@ tpool_alloc_t *tpool_create(size_t dsize) {
 }
 
 static tpool_t *new_pool(tpool_alloc_t *p) {
-  size_t n = PSIZE / p->dsize;
+
+    size_t n = PSIZE / p->dsize;
     tpool_t *pool;
     
     pool = realloc(p->pools, (p->npools + 1) * sizeof(*p->pools));
@@ -77,6 +79,10 @@ static tpool_t *new_pool(tpool_alloc_t *p) {
     pool->used = 0;
 
     p->npools++;
+
+    if(!(p->npools % 10)){
+      fprintf(stderr,"\n\t-> We have now allocated approximately %lu Megabytes of raw nodes to the nodepool\n",p->npools);
+    }
 
     return pool;
 }
@@ -123,6 +129,16 @@ void *tpool_alloc(tpool_alloc_t *p) {
 void tpool_free(tpool_alloc_t *p, void *ptr) {
     *(void **)ptr = p->free;
     p->free = ptr;
+}
+
+size_t tpool_infree(tpool_alloc_t *p) {
+  size_t nItems=0;
+  void *tmp=p->free;
+  while(tmp!=NULL){
+    tmp = *((void **)tmp);
+    nItems++;
+  }
+  return nItems;
 }
 
 #ifdef TEST_MAIN

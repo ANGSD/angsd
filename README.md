@@ -13,7 +13,6 @@ cd angsd;make HTSDIR=../htslib
 Notes
 ====
 * I've switched over to using htslib for parsing single reads (to allow for CRAM reading, while avoid having to write my own CRAM parser). I'm still using my own readpools. Users should therefore also download and install htslib.
-* http://www.popgen.dk/angsd/
 
 Program has a paper
 =====

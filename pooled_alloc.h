@@ -55,7 +55,7 @@ tpool_alloc_t *tpool_create(size_t dsize);
 void tpool_destroy(tpool_alloc_t *p);
 void *tpool_alloc(tpool_alloc_t *p);
 void tpool_free(tpool_alloc_t *p, void *ptr);
-
+size_t tpool_infree(tpool_alloc_t *p);
 #ifdef __cplusplus
 }
 #endif

@@ -15,6 +15,7 @@ class abcMajorMinor:public abc{
   void majorMinorGL(funkyPars *pars,int doMajorMinor);
   int doVcf;
   int doGlf;
+  int rmTrans;
 public:
   void printArg(FILE *argFile);
   void run(funkyPars *pars);

@@ -4,13 +4,12 @@ typedef struct {
   char *chooseChr;
   int start;
   int stop;
-  int nSites;
+  size_t nSites;
   int maxIter;
   double tole;
   int nThreads;
   std::vector<char *> sfsfname;
   std::vector<persaf *> saf;
-  int posOnly;
   char *fname;
   int onlyOnce;
   int emAccl;

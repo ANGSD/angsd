@@ -3,8 +3,10 @@
   class to call genotypes
 */
 
+#include <assert.h>
+#include <htslib/kstring.h>
 #include "shared.h"
-#include <cmath>
+
 #include "analysisFunction.h"
 #include "abcCallGenotypes.h"
 
@@ -93,11 +95,12 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
 abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int inputtype){
   doGeno=0;
   postCutoff= 1.0/3.0;
-  outfileZ = Z_NULL;
+  outfileZ = NULL;
   geno_minMM = -1;
   geno_minDepth = -1;
   geno_maxDepth = -1;
   minInd = 0;
+  bufstr.s=NULL;bufstr.l=bufstr.m=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doGeno")){
       printArg(stdout);
@@ -118,14 +121,14 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
   //make output files
   const char* postfix=GENO;
   if(doGeno>0)
-    outfileZ = aio::openFileGz(outfiles,postfix,GZOPT);
+    outfileZ = aio::openFileBG(outfiles,postfix);
   
 }
 
 
 abcCallGenotypes::~abcCallGenotypes(){
-  if(outfileZ!=Z_NULL)     
-    gzclose(outfileZ);
+  if(outfileZ!=NULL)     
+    bgzf_close(outfileZ);
 }
 
 
@@ -184,56 +187,54 @@ void abcCallGenotypes::getGeno(funkyPars *pars){
 
 void abcCallGenotypes::printGeno(funkyPars *pars){
   genoCalls *geno =(genoCalls *) pars->extras[index];
-
-  if(pars->keepSites==NULL){
-    fprintf(stderr,"\t->[%s] We would expect to have an array of keepsites\n",__FUNCTION__);
-    exit(0);
-  }
+  assert(pars->keepSites!=NULL);
+  bufstr.l=0;
   int doGenoInner = abs(doGeno);
   for(int s=0;s<pars->numSites;s++) {
     if(pars->keepSites[s]==0)
       continue;
     if(!(doGenoInner&GENO_FOR_COVAR))
-      gzprintf(outfileZ,"%s\t%d\t",header->target_name[pars->refId],pars->posi[s]+1);
+      ksprintf(&bufstr,"%s\t%d\t",header->target_name[pars->refId],pars->posi[s]+1);
     if(doGenoInner&GENO_MAJOR_MINOR&&!(doGenoInner&GENO_FOR_COVAR))
-      gzprintf(outfileZ,"%c\t%c\t",intToRef[pars->major[s]],intToRef[pars->minor[s]]);
+      ksprintf(&bufstr,"%c\t%c\t",intToRef[pars->major[s]],intToRef[pars->minor[s]]);
     if(doGenoInner&GENO_FOR_COVAR){
-      gzwrite(outfileZ,pars->post[s],sizeof(double)*3*pars->nInd);
+      aio::bgzf_write(outfileZ,pars->post[s],sizeof(double)*3*pars->nInd);
       continue;
     }
 
     for(int i=0;i<pars->nInd;i++){
       if(doGenoInner&GENO_PRINT)
-	gzprintf(outfileZ,"%d\t",geno->dat[s][i]);
+	ksprintf(&bufstr,"%d\t",geno->dat[s][i]);
       if(doGenoInner&GENO_ALLELE){
 	if(geno->dat[s][i]==0)
-	  gzprintf(outfileZ,"%c%c\t",intToRef[pars->major[s]],intToRef[pars->major[s]]);
+	  ksprintf(&bufstr,"%c%c\t",intToRef[pars->major[s]],intToRef[pars->major[s]]);
 	else if(geno->dat[s][i]==1)
-	  gzprintf(outfileZ,"%c%c\t",intToRef[pars->major[s]],intToRef[pars->minor[s]]);
+	  ksprintf(&bufstr,"%c%c\t",intToRef[pars->major[s]],intToRef[pars->minor[s]]);
 	else if(geno->dat[s][i]==2)
-	  gzprintf(outfileZ,"%c%c\t",intToRef[pars->minor[s]],intToRef[pars->minor[s]]);
+	  ksprintf(&bufstr,"%c%c\t",intToRef[pars->minor[s]],intToRef[pars->minor[s]]);
 	else if(geno->dat[s][i]==-1)
-	  gzprintf(outfileZ,"NN\t");
+	  ksprintf(&bufstr,"NN\t");
 
       }
       if(doGenoInner&GENO_WRITE_POST){
 	int which = angsd::whichMax(&pars->post[s][i*3],3);
 	if(which!=-1)
-	  gzprintf(outfileZ,"%f\t",pars->post[s][i*3+which]);
+	  ksprintf(&bufstr,"%f\t",pars->post[s][i*3+which]);
 	else
-	  gzprintf(outfileZ,"%0.0\t");
+	  ksprintf(&bufstr,"0.0\t");
 	
       }
 
 
       if(doGenoInner&GENO_ALL_POST)
 	for(int n=0;n<3;n++)
-	  gzprintf(outfileZ,"%f\t",pars->post[s][i*3+n]);
+	  ksprintf(&bufstr,"%f\t",pars->post[s][i*3+n]);
     }
-    gzprintf(outfileZ,"\n");
+    ksprintf(&bufstr,"\n");
 
   }
-
+  if(bufstr.l>0)
+    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
 }
 
 

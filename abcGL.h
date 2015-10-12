@@ -23,8 +23,8 @@ private:
   int trim;
 
   
-  gzFile gzoutfile;
-  gzFile gzoutfile2;
+  BGZF *gzoutfile;
+  BGZF *gzoutfile2;
   int GL;
   int doGlf;
   int minInd;
