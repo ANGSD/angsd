@@ -88,8 +88,6 @@ void call_phys(chunkyT *chk,double **lk,int trim){
   //  new phys_genolike_calc( phys_refpath );
   //  glc->set_debug( true );
 
-  glc->update_chunkyT( chk );
-
   for(int s=0;s<chk->nSites;s++){
     for(int i=0;i<chk->nSamples;i++){
 
@@ -104,7 +102,7 @@ void call_phys(chunkyT *chk,double **lk,int trim){
       double *likes1 = lk[s]+10*i;
 
       // Fill geno_probs array with the 10 values found for site s and smaple i
-      glc->get_genolikes( s, i, likes1 );
+      glc->get_genolikes( s, i, chk, likes1 );
 
       
     }

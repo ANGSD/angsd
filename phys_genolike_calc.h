@@ -24,8 +24,8 @@ class phys_genolike_calc {
  private : 
   
   // Information stored in chunkyT
-  chunkyT *chk;
-  tNode *nd;
+  
+  
 
   bool debug;
 
@@ -59,13 +59,9 @@ class phys_genolike_calc {
   ~phys_genolike_calc();
 
   // 
-  void update_tNode( tNode *curr_nd );
+  void update_pbase( int depth,float *qscore_cor,float *parlist, tNode *nd );
 
-  void update_chunkyT( chunkyT *curr_chk );
-
-  void update_pbase( int depth,float *qscore_cor,float *parlist );
-
-  void get_genolikes( int site, int sample, double *return_likes );
+  void get_genolikes( int site, int sample, chunkyT *chk, double *return_likes );
 
   // Helper functions to get results
   void get_base_prob_str( char *results_str );

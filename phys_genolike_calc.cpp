@@ -183,21 +183,6 @@ phys_genolike_calc::~phys_genolike_calc(){
 
 } //End destructor
 
-
-// Update pointer current chunkyT
-void phys_genolike_calc::update_chunkyT( chunkyT *curr_chk ){
-
-  chk = curr_chk;
-
-}
-// --------------------------------------------------------------------------------
-// Update pointer current tNode
-void phys_genolike_calc::update_tNode( tNode *curr_nd ){
-
-  nd = curr_nd;
-
-} // end update_tNode
-
 // // --------------------------------------------------------------------------------
 // // Method to initialise pbase histogram
 // void phys_genolike_calc::init_p_base(){
@@ -227,7 +212,7 @@ void phys_genolike_calc::update_tNode( tNode *curr_nd ){
 
 // --------------------------------------------------------------------------------
 // Update probabilities (4) for each base, for observed base at depth ''depth''
-void phys_genolike_calc::update_pbase( int depth,float *qscore_corr,float *parlist ){
+void phys_genolike_calc::update_pbase( int depth, float *qscore_corr, float *parlist, tNode *nd ){
 
   //junk MOVE TO CONSTRUCTOR!!!!
   float pararray[2][2][4][4] = {{{{ 1.0    , parlist[0] , parlist[1] , parlist[2] },{ parlist[3], 1.0     , parlist[4], parlist[5] },
@@ -323,10 +308,10 @@ void phys_genolike_calc::update_pbase( int depth,float *qscore_corr,float *parli
 // --------------------------------------------------------------------------------
 // Function to return probabilities for each of the 10 individual geno-types
 // Takes array with 10 floating points numbers
-void phys_genolike_calc::get_genolikes( int site, int sample, double *return_likes ){
+void phys_genolike_calc::get_genolikes( int site, int sample, chunkyT *chk, double *return_likes ){
   float **m_base_geno = m_base_geno_vec[sample];
   // Get reference to current tNode
-  nd = chk->nd[site][sample];
+  tNode *nd = chk->nd[site][sample];
   if( !nd ) return;
 
   //Reset geno_likes values TSK THESE ARE RESET AT ALLOCATION
@@ -341,7 +326,7 @@ void phys_genolike_calc::get_genolikes( int site, int sample, double *return_lik
   for( int idepth=0; idepth<nd->l; idepth++ ){
     if( refToInt[nd->seq[idepth]] >= 4 ) continue;
 
-    update_pbase( idepth,qscore_corr_vec[sample],parlist_vec[sample] );
+    update_pbase( idepth,qscore_corr_vec[sample],parlist_vec[sample], nd );
 
     if( debug ) fprintf( stderr, "Dep (%2d) \t", idepth );
     for( int igt=0; igt<10; igt++ ){
