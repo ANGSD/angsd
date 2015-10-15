@@ -236,7 +236,7 @@ int print_header(int argc,char **argv){
     fprintf(stderr,"print_header only implemeted for single safs\n");
     exit(0);
   }
-  writesaf_header(stderr,pars->saf[0]);
+  writesaf_header(stdout,pars->saf[0]);
   
   destroy_args(pars);
   return 0;
