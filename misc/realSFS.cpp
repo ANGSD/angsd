@@ -261,6 +261,9 @@ template <typename T>
 int printMulti(args *arg){
   fprintf(stderr,"[%s]\n",__FUNCTION__);
   std::vector<persaf *> &saf =arg->saf;
+  for(int i=0;i<saf.size();i++)
+    assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
+
   size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
@@ -1022,6 +1025,8 @@ int fst_index(int argc,char **argv){
 template <typename T>
 int main_opt(args *arg){
   std::vector<persaf *> &saf =arg->saf;
+  for(int i=0;i<saf.size();i++)
+    assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
   size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=nsites(saf,arg);
@@ -1171,7 +1176,9 @@ int main(int argc,char **argv){
     fprintf(stderr, "\n\t-> 4) Estimate the SFS around a gene ??\n");
     fprintf(stderr,"\t-> ./realSFS afile.saf.idx -r chr2:135000000-140000000 \n");
     fprintf(stderr, "\n\t-> Other options [-P nthreads -tole tolerence_for_breaking_EM -maxIter max_nr_iterations ]\n");
-    
+
+    fprintf(stderr,"\n\t-> See realSFS print for possible print options\n");
+    fprintf(stderr,"\t-> Use realSFS print_header for printing the header\n");
 
     fprintf(stderr,"\n\t->------------------\n\t-> NB: Output is now counts of sites instead of log probs!!\n");
     fprintf(stderr,"\t-> NB: You can print data with ./realSFS print afile.saf.idx !!\n");

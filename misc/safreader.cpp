@@ -138,20 +138,24 @@ persaf * persaf_init(char *fname){
   char *tmp2 = (char*)calloc(strlen(fname)+100,1);//that should do it
   snprintf(tmp2,strlen(fname)+100,"%sgz",tmp);
   fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
-  ret->saf = bgzf_open(tmp2,"r");bgzf_seek(ret->saf,8,SEEK_SET);
-  if(ret->version!=safversion(tmp2)){
+  ret->saf = bgzf_open(tmp2,"r");
+  if(ret->saf)
+    bgzf_seek(ret->saf,8,SEEK_SET);
+  if(ret->saf && ret->version!=safversion(tmp2)){
     fprintf(stderr,"\t-> Problem with mismatch of version of %s vs %s %d vs %d\n",fname,tmp2,ret->version,safversion(tmp2));
     exit(0);
   }
 
   snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
   fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
-  ret->pos = bgzf_open(tmp2,"r");bgzf_seek(ret->pos,8,SEEK_SET);
-  if(ret->version!=safversion(tmp2)){
+  ret->pos = bgzf_open(tmp2,"r");
+  if(ret->pos)
+    bgzf_seek(ret->pos,8,SEEK_SET);
+  if(ret->pos&& ret->version!=safversion(tmp2)){
     fprintf(stderr,"Problem with mismatch of version of %s vs %s\n",fname,tmp2);
     exit(0);
   }
-  assert(ret->pos!=NULL&&ret->saf!=NULL);
+  //assert(ret->pos!=NULL&&ret->saf!=NULL);
   free(tmp);free(tmp2);
   
  return ret;
