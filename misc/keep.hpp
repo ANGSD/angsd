@@ -21,9 +21,9 @@ struct keep{
 template<typename T>
 void keep_info(keep<T> *k,FILE *fp,int full,int hit){
   fprintf(fp,"[%s] \t k->m:%lu hit:%d\n",__FUNCTION__,k->m,hit);
-  for(int i=0;full&&i<k->m;i++)
+  for(size_t i=0;full&&i<k->m;i++)
     fprintf(stderr,"[%s]&k->d[%d]:%p ; k->d+%d:%p ; &k->d[%d+1]:%p k->d+%d+1:%p val:%d\n",__FUNCTION__,i,&k->d[i],i,k->d+i,i,&k->d[i]+1,i,k->d+i+1,k->d[i]);
-  int tt =0;
+  size_t tt =0;
   for(int i=0;i<k->m;i++)
     if(k->d[i]==hit)
       tt++;
