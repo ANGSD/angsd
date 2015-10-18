@@ -85,7 +85,7 @@ perfst * perfst_init(char *fname){
 #if 1  
   while(fread(&clen,sizeof(size_t),1,fp)){
     char *chr = (char*)calloc(clen+1,1);
-    unsigned a = fread(chr,1,clen,fp);
+    unsigned a =(unsigned) fread(chr,1,clen,fp);
     assert(clen==a);    
     dat d;
     if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){

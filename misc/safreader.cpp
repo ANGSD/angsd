@@ -243,7 +243,7 @@ persaf * persaf_init(char *fname){
    keep_set<char>(pp->toKeep,it->second.nSites,0);
    keep_clear(pp->toKeep);
      
-   int first=0;
+   size_t first=0;
    if(start!=-1){
      //fprintf(stderr,"ppos[%d]:%d start:%d pp<start:%d\n",first,pp->ppos[first],start,pp->ppos[first]<start);
      while(first<it->second.nSites&&pp->ppos[first]<start){
@@ -252,7 +252,7 @@ persaf * persaf_init(char *fname){
      }
    }
    //   fprintf(stderr,"first:%d\n",first);
-   int last = it->second.nSites;
+   size_t last = it->second.nSites;
    if(stop!=-1&&stop<=pp->ppos[last-1]){
      last=first;
      while(pp->ppos[last]<stop) 
@@ -260,7 +260,7 @@ persaf * persaf_init(char *fname){
    }
    // fprintf(stderr,"last:%d\n",last);
    
-   for(int s=first;s<last;s++)
+   for(size_t s=first;s<last;s++)
      keep_set<char>(pp->toKeep,s,1);
    
    if(pp->kind==0){
@@ -283,7 +283,7 @@ persaf * persaf_init(char *fname){
    if(saf->toKeep && saf->at>=(int)saf->toKeep->last)
      return 0;
    
-   int ret= saf->kind!=1 ? bgzf_read(saf->saf,data,length):length;
+   size_t ret= saf->kind!=1 ? bgzf_read(saf->saf,data,length):length;
    
 
    if(ret==0)
