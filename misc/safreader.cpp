@@ -188,10 +188,10 @@ persaf * persaf_init(char *fname){
      bgzf_seek(saf->saf,it->second.saf,SEEK_SET);
      int *ppos = new int[it->second.nSites];
      bgzf_read(saf->pos,ppos,sizeof(int)*it->second.nSites);
-     for(int s=0;s<it->second.nSites;s++){
+     for(size_t s=0;s<it->second.nSites;s++){
        bgzf_read(saf->saf,flt,sizeof(float)*(saf->nChr+1));
        fprintf(stdout,"%s\t%d",it->first,ppos[s]);
-       for(int is=0;is<saf->nChr+1;is++)
+       for(size_t is=0;is<saf->nChr+1;is++)
 	 fprintf(stdout,"\t%f",flt[is]);
        fprintf(stdout,"\n");
      }
@@ -273,6 +273,7 @@ persaf * persaf_init(char *fname){
  }
 
  size_t iter_read(persaf *saf, void *data, size_t length,int *pos){
+   assert(data);
    //   fprintf(stderr,"[%s] kind:%d saf->ppos:%p\n",__FUNCTION__,saf->kind,saf->ppos);//exit(0);
    if(saf->dontRead==1)
      return 0;
