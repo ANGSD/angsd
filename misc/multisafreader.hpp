@@ -178,7 +178,7 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,size_t nSi
 
   lastread=readGLS(saf,nSites,gls,posiG);
   if(lastread>0&&saf.size()>1)
-    fprintf(stderr,"\t-> [%s] lastread:%d posi:%d\n",__FUNCTION__,lastread,posiG[0][0]);
+    fprintf(stderr,"\t-> [%s] lastread:%lu posi:%d\n",__FUNCTION__,lastread,posiG[0][0]);
 #if 1 //<- below con be removed when we believe all is working
   if(saf.size()>1&&lastread!=0)
     for(int i=1;i<saf.size();i++){

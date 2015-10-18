@@ -138,7 +138,7 @@ int fst_print(int argc,char **argv){
 	last++;
     }
 
-    fprintf(stderr,"pars->stop:%d ppos:%d first:%d last:%d\n",pars->stop,ppos[last-1],first,last);
+    fprintf(stderr,"pars->stop:%d ppos:%d first:%lu last:%lu\n",pars->stop,ppos[last-1],first,last);
 
     for(size_t s=first;s<last;s++){
       fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
