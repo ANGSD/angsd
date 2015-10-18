@@ -71,7 +71,7 @@ void handler(int s) {
 }
 
 
-void readSFS(const char*fname,int hint,double *ret){
+void readSFS(const char*fname,size_t hint,double *ret){
   fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
   FILE *fp = NULL;
   if(((fp=fopen(fname,"r")))==NULL){
@@ -109,7 +109,7 @@ void readSFS(const char*fname,int hint,double *ret){
       ret[i] = res[i];
       //      fprintf(stderr,"i=%lu %f\n",i,ret[i]);
   }
-  normalize(ret,res.size());
+  normalize(ret,(int)res.size());
   fclose(fp);
 }
 
@@ -159,69 +159,6 @@ size_t nsites(std::vector<persaf *> &pp,args *ar){
 
 
 
-int printOld(int argc,char **argv){
-
-  if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx [chrname]\n");
-    return 0; 
-  }
-  
-  args *pars = getArgs(argc,argv);
-  if(!pars)
-    return 1;
-  if(pars->saf.size()!=1){
-    fprintf(stderr,"Print only implemeted for single safs\n");
-    exit(0);
-  }
-  writesaf_header(stderr,pars->saf[0]);
-  
-  float *flt = new float[pars->saf[0]->nChr+1];
-  for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
-    if(pars->chooseChr!=NULL){
-      it = pars->saf[0]->mm.find(pars->chooseChr);
-      if(it==pars->saf[0]->mm.end()){
-	fprintf(stderr,"Problem finding chr: %s\n",pars->chooseChr);
-	break;
-      }
-    }
-    bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
-    bgzf_seek(pars->saf[0]->saf,it->second.saf,SEEK_SET);
-    int *ppos = new int[it->second.nSites];
-    bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
-    
-    int first=0;
-    if(pars->start!=-1)
-      while(ppos[first]<pars->start) 
-	first++;
-    
-    int last=it->second.nSites;
-    //    fprintf(stderr,"pars-.stop:%d ppos:%d\n",pars->stop,ppos[last-1]);
-    if(pars->stop!=-1&&pars->stop<=ppos[last-1]){
-      last=first;
-      while(ppos[last]<pars->stop) 
-	last++;
-    }
-    //fprintf(stderr,"first:%d last:%d\n",first,last);
-    int at=0;
-    for(int s=0;SIG_COND&&s<it->second.nSites;s++) {
-      bgzf_read(pars->saf[0]->saf,flt,sizeof(float)*(pars->saf[0]->nChr+1));
-      if(at>=first&&at<last){
-	fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
-	for(int is=0;is<pars->saf[0]->nChr+1;is++)
-	  fprintf(stdout,"\t%f",flt[is]);
-      }
-      at++;
-    }
-    delete [] ppos;
-    if(pars->chooseChr!=NULL)
-      break;
-  }
-  
-  delete [] flt;
-  destroy_args(pars);
-  return 0;
-}
-
 int print_header(int argc,char **argv){
 
   if(argc<1){
@@ -242,7 +179,7 @@ int print_header(int argc,char **argv){
   return 0;
 }
 
-void setGloc(std::vector<persaf *> &saf,int nSites){
+void setGloc(std::vector<persaf *> &saf,size_t nSites){
 #if 1
   posiG = new int*[saf.size()];
   for(int i=0;i<saf.size();i++)
@@ -250,7 +187,7 @@ void setGloc(std::vector<persaf *> &saf,int nSites){
 #endif
 }
 
-void delGloc(std::vector<persaf *> &saf,int nSites){
+void delGloc(std::vector<persaf *> &saf,size_t nSites){
   for(int i=0;i<saf.size();i++)
     delete [] posiG[i];
   delete [] posiG;
@@ -272,7 +209,7 @@ int printMulti(args *arg){
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
 
-  int ndim= parspace(saf);
+  int ndim=(int) parspace(saf);
   double *sfs=new double[ndim];
   
   //temp used for checking pos are in sync
@@ -284,14 +221,14 @@ int printMulti(args *arg){
   if(arg->oldout){
     oldfp = new FILE*[saf.size()];
     for(int i=0;i<saf.size();i++){
-      unsigned newlen = strlen(saf[i]->fname)+100;
+      size_t newlen = strlen(saf[i]->fname)+100;
       char *tmp =(char*) calloc(newlen,sizeof(char));
       tmp = strncpy(tmp,saf[i]->fname,strlen(saf[i]->fname)-4);
       fprintf(stderr,"\t-> Generating outputfile: %s\n",tmp);
       oldfp[i] = fopen(tmp,"wb");
       free(tmp);
     }
-    unsigned newlen = strlen(dirname(saf[0]->fname))+100;
+    size_t newlen = strlen(dirname(saf[0]->fname))+100;
     char *tmp = (char*) calloc(newlen,sizeof(char));
     snprintf(tmp,newlen,"%s/shared.pos.gz",dirname(saf[0]->fname));
     fprintf(stderr,"\t-> Generating outputfile: %s\n",tmp);
@@ -395,7 +332,7 @@ void print(int argc,char **argv){
     else
       it = iter_init(pars->saf[0],it->first,pars->start,pars->stop);
  
-    int ret;
+    size_t ret;
     int pos;
 
     while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1),&pos))){
@@ -417,8 +354,8 @@ template<typename T>
 struct emPars{
   int threadId;
   std::vector <Matrix<T> *> gls;
-  int from;
-  int to;
+  size_t from;
+  size_t to;
   double lik;
   double *sfs;//shared for all threads
   double *post;//allocated for every thread
@@ -451,54 +388,55 @@ size_t getTotalSystemMemory(){
 
 
 template <typename T>
-double lik1(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
+double lik1(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
+  assert(from >=0 && to >=0);
   //  fprintf(stderr,"[%s] from:%d to:%d\n",__FUNCTION__,from,to);
   double r =0;
-  for(int s=from;s<to;s++){
+  for(size_t s=from;s<to;s++){
     double tmp =0;
-    for(int i=0;i<gls[0]->y;i++)
-      tmp += sfs[i]* gls[0]->mat[s][i];
+    for(size_t i=0;i<gls[0]->y;i++)
+      tmp += sfs[i]* gls[0]->mat[s][i]; 
     r += log(tmp);
   }
   return r;
 }
 template <typename T>
-double lik2(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
+double lik2(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   double r =0;
-  for(int s=from;s<to;s++){
+  for(size_t s=from;s<to;s++){
     double tmp =0;
     int inc =0;
-    for(int i=0;i<gls[0]->y;i++)
-      for(int j=0;j<gls[1]->y;j++)
+    for(size_t i=0;i<gls[0]->y;i++)
+      for(size_t j=0;j<gls[1]->y;j++)
 	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j];
     r += log(tmp);
   }
   return r;
 }
 template <typename T>
-double lik3(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
+double lik3(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   double r =0;
-  for(int s=from;s<to;s++){
+  for(size_t s=from;s<to;s++){
     double tmp =0;
     int inc =0;
-    for(int i=0;i<gls[0]->y;i++)
-      for(int j=0;j<gls[1]->y;j++)
-	for(int k=0;k<gls[2]->y;k++)
+    for(size_t i=0;i<gls[0]->y;i++)
+      for(size_t j=0;j<gls[1]->y;j++)
+	for(size_t k=0;k<gls[2]->y;k++)
 	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*gls[2]->mat[s][k];
     r += log(tmp);
   }
   return r;
 }
 template <typename T>
-double lik4(double *sfs,std::vector< Matrix<T> *> &gls,int from,int to){
+double lik4(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   double r =0;
-  for(int s=from;s<to;s++){
+  for(size_t s=from;s<to;s++){
     double tmp =0;
     int inc =0;
-    for(int i=0;i<gls[0]->y;i++)
-      for(int j=0;j<gls[1]->y;j++)
-	for(int k=0;k<gls[2]->y;k++)
-	  for(int m=0;m<gls[3]->y;m++)
+    for(size_t i=0;i<gls[0]->y;i++)
+      for(size_t j=0;j<gls[1]->y;j++)
+	for(size_t k=0;k<gls[2]->y;k++)
+	  for(size_t m=0;m<gls[3]->y;m++)
 	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*gls[2]->mat[s][k]*gls[3]->mat[s][m];
     r += log(tmp);
   }
@@ -544,11 +482,11 @@ double like_master(int nThreads){
 
 
 template <typename T>
-void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,int stop,int dim,double *inner){
+void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,size_t start,size_t stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
-  for(int s=start;SIG_COND&&s<stop;s++){
+  for(size_t s=start;SIG_COND&&s<stop;s++){
     for(int x=0;x<dim;x++)
       inner[x] = pre[x]*gls[0]->mat[s][x];
   
@@ -562,14 +500,14 @@ void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,int start,
 
 
 template <typename T>
-void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
+void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start,size_t stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
-  for(int s=start;SIG_COND&&s<stop;s++){
+  for(size_t s=start;SIG_COND&&s<stop;s++){
     int inc=0;
-    for(int x=0;x<gls[0]->y;x++)
-      for(int y=0;y<gls[1]->y;y++){
+    for(size_t x=0;x<gls[0]->y;x++)
+      for(size_t y=0;y<gls[1]->y;y++){
 	inner[inc] = pre[inc]*gls[0]->mat[s][x]*gls[1]->mat[s][y];
 	inc++;
       }
@@ -582,15 +520,15 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
 }
 
 template <typename T>
-void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
+void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start,size_t stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
-  for(int s=start;SIG_COND&&s<stop;s++){
+  for(size_t s=start;SIG_COND&&s<stop;s++){
     int inc=0;
-    for(int x=0;x<gls[0]->y;x++)
-      for(int y=0;y<gls[1]->y;y++)
-	for(int i=0;i<gls[2]->y;i++){
+    for(size_t x=0;x<gls[0]->y;x++)
+      for(size_t y=0;y<gls[1]->y;y++)
+	for(size_t i=0;i<gls[2]->y;i++){
 	  inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i];
 	  inc++;
 	}
@@ -603,17 +541,17 @@ void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,in
 }
 
 template <typename T>
-void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,int start,int stop,int dim,double *inner){
+void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start,size_t stop,int dim,double *inner){
 
   for(int x=0;x<dim;x++)
     post[x] =0.0;
     
-  for(int s=start;SIG_COND&&s<stop;s++){
+  for(size_t s=start;SIG_COND&&s<stop;s++){
     int inc=0;
-    for(int x=0;x<gls[0]->y;x++)
-      for(int y=0;y<gls[1]->y;y++)
-	for(int i=0;i<gls[2]->y;i++)
-	  for(int j=0;j<gls[3]->y;j++){
+    for(size_t x=0;x<gls[0]->y;x++)
+      for(size_t y=0;y<gls[1]->y;y++)
+	for(size_t i=0;i<gls[2]->y;i++)
+	  for(size_t j=0;j<gls[3]->y;j++){
 	    inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i]* gls[3]->mat[s][j];
 	    inc++;
 	  }
@@ -673,10 +611,10 @@ void emStep_master(double *post,int nThreads){
 
 
 template<typename T>
-emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads,int dim,int nSites){
+emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads,int dim,size_t nSites){
   //  fprintf(stderr,"nSites:%d\n",nSites);
   emPars<T> *temp = new emPars<T>[nThreads];
-  int blockSize = nSites/nThreads;
+  size_t blockSize = nSites/nThreads;
   for(int i=0;i<nThreads;i++){
     temp[i].threadId = i;
     temp[i].gls=gls;
@@ -697,7 +635,7 @@ emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads
 #if 0
   fprintf(stderr,"--------------\n");
   for(int i=0;i<nThreads;i++)
-    fprintf(stderr,"threadinfo %d)=(%d,%d)=%d \n",temp[i].threadId,temp[i].from,temp[i].to,temp[i].to-temp[i].from); //
+    fprintf(stderr,"threadinfo %d)=(%lu,%lu)=%d \n",temp[i].threadId,temp[i].from,temp[i].to,temp[i].to-temp[i].from); //
   fprintf(stderr,"--------------\n");
 #endif 
   
@@ -903,7 +841,7 @@ int fst_index(int argc,char **argv){
   int inc =0;
   for(int i=0;i<saf.size();i++)
     for(int j=i+1;j<saf.size();j++){
-      int pairdim = (saf[i]->nChr+1)*(saf[j]->nChr+1);
+      size_t pairdim = (saf[i]->nChr+1)*(saf[j]->nChr+1);
       double *ddd=new double[pairdim];
       readSFS(arg->sfsfname[inc],pairdim,ddd);
       normalize(ddd,pairdim);
@@ -918,7 +856,7 @@ int fst_index(int argc,char **argv){
   inc=0;
   for(int i=0;i<saf.size();i++)
     for(int j=i+1;j<saf.size();j++){
-      calcCoef(saf[i]->nChr,saf[j]->nChr,&a1[inc],&b1[inc]);
+      calcCoef((int)saf[i]->nChr,(int)saf[j]->nChr,&a1[inc],&b1[inc]);
       //      fprintf(stderr,"a1[%d]:%p b1[%d]:%p\n",inc,&a1[inc][0],inc,&b1[inc][0]);
       inc++;
     }
@@ -1035,8 +973,8 @@ int main_opt(args *arg){
     fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
     
   fprintf(stderr,"\t-> nSites: %lu\n",nSites);
-  float bytes_req_megs = fsizes<T>(saf,nSites)/1024/1024;
-  float mem_avail_megs = getTotalSystemMemory()/1024/1024;//in percentile
+  float bytes_req_megs =(float) fsizes<T>(saf,nSites)/1024/1024;
+  float mem_avail_megs =(float) getTotalSystemMemory()/1024/1024;//in percentile
   //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
   fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is at least: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
 
@@ -1044,7 +982,7 @@ int main_opt(args *arg){
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
 
-  int ndim= parspace(saf);
+  int ndim=(int) parspace(saf);
   double *sfs=new double[ndim];
   
   //temp used for checking pos are in sync
@@ -1105,8 +1043,9 @@ int main_opt(args *arg){
     fprintf(stderr,"------------\n");
 #if 1
     //    fprintf(stdout,"#### Estimate of the sfs ####\n");
+    //all gls have the same ->x. That means the same numbe of sites.
     for(int x=0;x<ndim;x++)
-      fprintf(stdout,"%f ",gls[0]->x*sfs[x]);
+      fprintf(stdout,"%f ",((double)gls[0]->x)*sfs[x]);
     fprintf(stdout,"\n");
     fflush(stdout);
 #endif
@@ -1188,10 +1127,7 @@ int main(int argc,char **argv){
   }
   ++argv;
   --argc;
-  
-  if(!strcasecmp(*argv,"printOld"))
-    printOld(--argc,++argv);
-  else if(!strcasecmp(*argv,"print"))
+  if(!strcasecmp(*argv,"print"))
     print<float>(--argc,++argv);
   else if(!strcasecmp(*argv,"fst"))
     fst(--argc,++argv);

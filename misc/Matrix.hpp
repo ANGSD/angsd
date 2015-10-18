@@ -8,7 +8,7 @@ struct Matrix{
 
 
 template <typename T>
-void destroy(Matrix<T> *ret,int x){
+void destroy(Matrix<T> *ret,size_t x){
   for(size_t i=0;i<x;i++)
     delete [] ret->mat[i];
   delete [] ret->mat;
@@ -43,7 +43,7 @@ Matrix<T> *alloc(size_t x,size_t y){
 
 
 template <typename T>
-void destroy(std::vector< Matrix<T> * > &gls,int x){
+void destroy(std::vector< Matrix<T> * > &gls,size_t x){
   for(size_t i=0;i<gls.size();i++)
     destroy(gls[i],x);
 };

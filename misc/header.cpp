@@ -1,11 +1,11 @@
 
 #include "header.h"
 
-void normalize(double *tmp,int len){
+void normalize(double *tmp,size_t len){
   double s=0;
-  for(int i=0;i<len;i++)
+  for(size_t i=0;i<len;i++)
     s += tmp[i];
-  for(int i=0;i<len;i++)
+  for(size_t i=0;i<len;i++)
     tmp[i] /=s;
 }
 

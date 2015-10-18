@@ -2,7 +2,7 @@
 
 
 template<typename T>
-void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret,int *pp){
+void readGL(persaf *fp,size_t nSites,size_t dim,Matrix<T> *ret,int *pp){
   // ret->x=nSites;
   ret->y=dim;
   size_t i;
@@ -11,7 +11,7 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret,int *pp){
       fprintf(stderr,"\r\t-> Has read %fmio sites now at: %lu      ",howOften/1e6,i);
     //
     int pos;
-    int bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim,&pos);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
+    size_t bytes_read= iter_read(fp,ret->mat[i],sizeof(T)*dim,&pos);//bgzf_read(fp,ret->mat[i],sizeof(T)*dim);
     if(pp!=NULL)//setpos
       pp[i] =pos;//
     //    fprintf(stderr,"ppinner[%lu]:%d\n",i,pos);
@@ -42,8 +42,8 @@ void readGL(persaf *fp,size_t nSites,int dim,Matrix<T> *ret,int *pp){
 
 //returns the number of sites read
 template<typename T>
-int readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *> &ret,int **posi){
-  int pre=ret[0]->x;
+size_t readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T> *> &ret,int **posi){
+  size_t pre=ret[0]->x;
   for(int i=0;i<adolf.size();i++){
     readGL(adolf[i],nSites,adolf[i]->nChr+1,ret[i],posi!=NULL?posi[i]:NULL);
     //fprintf(stderr,"adolf:%d\t%lu posi:%d tak:%d\n",i,ret[i]->x,posi[i][0],tak);
@@ -115,7 +115,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     if(saf[i]->ppos[it->second.nSites-1] >= hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
-    for(int j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++)
+    for(size_t j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++)
       if(saf[i]->toKeep->d[j])
 	hit->d[saf[i]->ppos[j]]++;
   }
@@ -163,8 +163,8 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
 
 
 template <typename T>
-int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,int nSites,char *chooseChr,int start,int stop, int *pp,char **curChr){
-  static int lastread=0;
+int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,size_t nSites,char *chooseChr,int start,int stop, int *pp,char **curChr){
+  static size_t lastread=0;
   extern int ** posiG;
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
   if(lastread==0 ){

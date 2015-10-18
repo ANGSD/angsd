@@ -14,7 +14,7 @@ struct ltstr
 };
 
 
-void normalize(double *tmp,int len);
+void normalize(double *tmp,size_t len);
 size_t fsize(const char* fname);
 BGZF *openFileBG(const char* a,const char* b);
 FILE *openFile(const char* a,const char* b);

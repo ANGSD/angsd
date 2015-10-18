@@ -216,7 +216,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
       readError(errors,errorFname);
     errorProbs = abcError::generateErrorPointers(errors,3,4);
   }else if(GL==5){
-      phys_init();
+      phys_init(arguments->nams);
   }
   
   gzoutfile = gzoutfile2 = NULL;

@@ -4,6 +4,7 @@
 class abcTemplate:public abc{
 private:
   int doTemplate;
+  char *refName;
   FILE *outfile;
 public:
   void run(funkyPars  *pars);

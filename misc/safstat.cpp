@@ -19,7 +19,9 @@ int choose(int n,int m){
   }
   return -1;
 }
-
+int choose(size_t n,int m){
+  return choose((int)n,m);
+}
 void calcpbs(double fstW[3]){
   double p01 = -log(1.0-fstW[0]);
   double p02 = -log(1.0-fstW[1]);
@@ -69,7 +71,7 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
     //    exit(0);
     double as=0;
     double bs=0;
-    void normalize(double *,int);
+    void normalize(double *,size_t);
     normalize(tmp,inc);
     for(int i=0;i<inc;i++){
       as += a1[i]*tmp[i];
@@ -97,9 +99,9 @@ int fst_print(int argc,char **argv){
   writefst_header(stderr,pf);  
   args *pars = getArgs(--argc,++argv);  
   int *ppos = NULL;
-  fprintf(stderr,"choose:%d \n",choose(pf->names.size(),2));
-  double **ares = new double*[choose(pf->names.size(),2)];
-  double **bres = new double*[choose(pf->names.size(),2)];
+  fprintf(stderr,"choose:%d \n",choose((int)pf->names.size(),2));
+  double **ares = new double*[choose((int)pf->names.size(),2)];
+  double **bres = new double*[choose((int)pf->names.size(),2)];
   for(myFstMap::iterator it=pf->mm.begin();it!=pf->mm.end();++it){
     if(pars->chooseChr!=NULL){
       it = pf->mm.find(pars->chooseChr);
@@ -114,7 +116,7 @@ int fst_print(int argc,char **argv){
     ppos = new int[it->second.nSites];
     
     bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
-    for(int i=0;i<choose(pf->names.size(),2);i++){
+    for(int i=0;i<choose((int)pf->names.size(),2);i++){
       ares[i] = new double[it->second.nSites];
       bres[i] = new double[it->second.nSites];
       bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
@@ -123,12 +125,12 @@ int fst_print(int argc,char **argv){
     
 
 
-    int first=0;
+    size_t first=0;
     if(pars->start!=-1)
       while(ppos[first]<pars->start) 
 	first++;
     
-    int last=it->second.nSites;
+    size_t last=it->second.nSites;
 
     if(pars->stop!=-1&&pars->stop<=ppos[last-1]){
       last=first;
@@ -138,13 +140,13 @@ int fst_print(int argc,char **argv){
 
     fprintf(stderr,"pars->stop:%d ppos:%d first:%d last:%d\n",pars->stop,ppos[last-1],first,last);
 
-    for(int s=first;s<last;s++){
+    for(size_t s=first;s<last;s++){
       fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
-      for(int i=0;i<choose(pf->names.size(),2);i++)
+      for(int i=0;i<choose((int)pf->names.size(),2);i++)
 	fprintf(stdout,"\t%f\t%f",ares[i][s],bres[i][s]);
       fprintf(stdout,"\n");
     }
-    for(int i=0;i<choose(pf->names.size(),2);i++){
+    for(int i=0;i<choose((int)pf->names.size(),2);i++){
       delete [] ares[i];
       delete [] bres[i];
     }
@@ -171,7 +173,7 @@ int fst_stat2(int argc,char **argv){
   args *pars = getArgs(--argc,++argv);
   fprintf(stderr,"win:%d step:%d\n",pars->win,pars->step);
   int *ppos = NULL;
-  int chs = choose(pf->names.size(),2);
+  int chs = choose((int)pf->names.size(),2);
   // fprintf(stderr,"choose:%d \n",chs);
   double **ares = new double*[chs];
   double **bres = new double*[chs];
@@ -211,7 +213,7 @@ int fst_stat2(int argc,char **argv){
     bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
     for(int i=0;i<it->second.nSites;i++)
       ppos[i]++;
-    for(int i=0;i<choose(pf->names.size(),2);i++){
+    for(int i=0;i<choose((int)pf->names.size(),2);i++){
       ares[i] = new double[it->second.nSites];
       bres[i] = new double[it->second.nSites];
       bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
@@ -253,7 +255,7 @@ int fst_stat2(int argc,char **argv){
 	fprintf(stdout,"\t%f\t%f",ares[i][s],bres[i][s]);
       fprintf(stdout,"\n");
 #endif
-      for(int i=0;i<choose(pf->names.size(),2);i++){
+      for(int i=0;i<choose((int)pf->names.size(),2);i++){
 	unweight[i] += ares[i][s]/bres[i][s];
 	wa[i] += ares[i][s];
 	wb[i] += bres[i][s];
@@ -267,7 +269,6 @@ int fst_stat2(int argc,char **argv){
       fstW[i] = wa[i]/wb[i];
       //      fprintf(stdout,"\t%f\t%f",unweight[i]/(1.0*nObs),fstW[i]);
       fprintf(stdout,"\t%f",fstW[i]);
-       
     }
     if(nObs>0&&chs==3){
       //if chr==3 then we have 3pops and we will also calculate pbs statistics
@@ -286,7 +287,7 @@ int fst_stat2(int argc,char **argv){
     while(ppos[begI]<pS) begI++;
     while(ppos[endI]<pE) endI++;
   }
-    for(int i=0;i<choose(pf->names.size(),2);i++){
+  for(int i=0;i<choose((int)pf->names.size(),2);i++){
       delete [] ares[i];
       delete [] bres[i];
     }
@@ -313,7 +314,7 @@ int fst_stat(int argc,char **argv){
   perfst *pf = perfst_init(bname);
   args *pars = getArgs(--argc,++argv);  
   int *ppos = NULL;
-  int chs = choose(pf->names.size(),2);
+  int chs = choose((int)pf->names.size(),2);
   // fprintf(stderr,"choose:%d \n",chs);
   double **ares = new double*[chs];
   double **bres = new double*[chs];
@@ -339,7 +340,7 @@ int fst_stat(int argc,char **argv){
     ppos = new int[it->second.nSites];
     
     bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
-    for(int i=0;i<choose(pf->names.size(),2);i++){
+    for(int i=0;i<choose((int)pf->names.size(),2);i++){
       ares[i] = new double[it->second.nSites];
       bres[i] = new double[it->second.nSites];
       bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
@@ -348,12 +349,12 @@ int fst_stat(int argc,char **argv){
     
 
 
-    int first=0;
+    size_t first=0;
     if(pars->start!=-1)
       while(ppos[first]<pars->start) 
 	first++;
     
-    int last=it->second.nSites;
+    size_t last=it->second.nSites;
 
     if(pars->stop!=-1&&pars->stop<=ppos[last-1]){
       last=first;
@@ -364,14 +365,14 @@ int fst_stat(int argc,char **argv){
 
     //  fprintf(stderr,"pars->stop:%d ppos:%d first:%d last:%d\n",pars->stop,ppos[last-1],first,last);
 
-    for(int s=first;s<last;s++){
+    for(size_t s=first;s<last;s++){
 #if 0
       fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
       for(int i=0;i<choose(pf->names.size(),2);i++)
 	fprintf(stdout,"\t%f\t%f",ares[i][s],bres[i][s]);
       fprintf(stdout,"\n");
 #endif
-      for(int i=0;i<choose(pf->names.size(),2);i++){
+      for(int i=0;i<choose((int)pf->names.size(),2);i++){
 	if(bres[i][s]!=0){
 	  unweight[i] += ares[i][s]/bres[i][s];
 	  nObs[i]++;
@@ -380,7 +381,7 @@ int fst_stat(int argc,char **argv){
 	wb[i] += bres[i][s];
       }
     }
-    for(int i=0;i<choose(pf->names.size(),2);i++){
+    for(int i=0;i<choose((int)pf->names.size(),2);i++){
       delete [] ares[i];
       delete [] bres[i];
     }
@@ -393,7 +394,7 @@ int fst_stat(int argc,char **argv){
   double fstUW[chs];
   double fstW[chs];
   for(int i=0;i<chs;i++){
-    fstUW[i] = unweight[i]/(1.0*nObs[i]);
+    fstUW[i] = unweight[i]/(1.0*((double)nObs[i]));
     fstW[i] = wa[i]/wb[i];
     fprintf(stderr,"\t-> FST.Unweight[nObs:%lu]:%f Fst.Weight:%f\n",nObs[i],fstUW[i],fstW[i]);
     fprintf(stdout,"%f %f\n",fstUW[i],fstW[i]);

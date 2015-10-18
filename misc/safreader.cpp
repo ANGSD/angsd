@@ -192,10 +192,10 @@ persaf * persaf_init(char *fname){
      bgzf_seek(saf->saf,it->second.saf,SEEK_SET);
      int *ppos = new int[it->second.nSites];
      bgzf_read(saf->pos,ppos,sizeof(int)*it->second.nSites);
-     for(int s=0;s<it->second.nSites;s++){
+     for(size_t s=0;s<it->second.nSites;s++){
        bgzf_read(saf->saf,flt,sizeof(float)*(saf->nChr+1));
        fprintf(stdout,"%s\t%d",it->first,ppos[s]);
-       for(int is=0;is<saf->nChr+1;is++)
+       for(size_t is=0;is<saf->nChr+1;is++)
 	 fprintf(stdout,"\t%f",flt[is]);
        fprintf(stdout,"\n");
      }
@@ -247,7 +247,7 @@ persaf * persaf_init(char *fname){
    keep_set<char>(pp->toKeep,it->second.nSites,0);
    keep_clear(pp->toKeep);
      
-   int first=0;
+   size_t first=0;
    if(start!=-1){
      //fprintf(stderr,"ppos[%d]:%d start:%d pp<start:%d\n",first,pp->ppos[first],start,pp->ppos[first]<start);
      while(first<it->second.nSites&&pp->ppos[first]<start){
@@ -256,7 +256,7 @@ persaf * persaf_init(char *fname){
      }
    }
    //   fprintf(stderr,"first:%d\n",first);
-   int last = it->second.nSites;
+   size_t last = it->second.nSites;
    if(stop!=-1&&stop<=pp->ppos[last-1]){
      last=first;
      while(pp->ppos[last]<stop) 
@@ -264,7 +264,7 @@ persaf * persaf_init(char *fname){
    }
    // fprintf(stderr,"last:%d\n",last);
    
-   for(int s=first;s<last;s++)
+   for(size_t s=first;s<last;s++)
      keep_set<char>(pp->toKeep,s,1);
    
    if(pp->kind==0){
@@ -277,6 +277,7 @@ persaf * persaf_init(char *fname){
  }
 
  size_t iter_read(persaf *saf, void *data, size_t length,int *pos){
+   assert(data);
    //   fprintf(stderr,"[%s] kind:%d saf->ppos:%p\n",__FUNCTION__,saf->kind,saf->ppos);//exit(0);
    if(saf->dontRead==1)
      return 0;
@@ -286,7 +287,7 @@ persaf * persaf_init(char *fname){
    if(saf->toKeep && saf->at>=(int)saf->toKeep->last)
      return 0;
    
-   int ret= saf->kind!=1 ? bgzf_read(saf->saf,data,length):length;
+   size_t ret= saf->kind!=1 ? bgzf_read(saf->saf,data,length):length;
    
 
    if(ret==0)
