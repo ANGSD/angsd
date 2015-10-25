@@ -18,6 +18,7 @@ int trim = 0;
 int adjustMapQ =0;
 int baq =0;
 int checkBamHeaders = 1;
+int doCheck = 1;
 int MAX_SEQ_LEN = 250;
 char *regfile = NULL;
 char *regfiles = NULL;
@@ -145,6 +146,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders\t%d\tExit if difference in BAM headers\n",checkBamHeaders);
+  fprintf(argFile,"\t-doCheck\t%d\tKeep going even if datafile is not suffixed with .bam/.cram\n",doCheck);
   fprintf(argFile,"\t-downSample\t%f\tDownsample to the fraction of original data\n",downSample);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
   
@@ -177,6 +179,7 @@ void setArgsBam(argStruct *arguments){
   regfiles = angsd::getArg("-rf",regfiles,arguments);
   MAX_SEQ_LEN = angsd::getArg("-setMinChunkSize",MAX_SEQ_LEN,arguments);
   checkBamHeaders = angsd::getArg("-checkBamHeaders",checkBamHeaders,arguments);
+  doCheck = angsd::getArg("-doCheck",doCheck,arguments);
   arguments->show = angsd::getArg("-show",arguments->show,arguments);
   if(regfile && regfiles)
     fprintf(stderr,"\t-> WARNING both -r and -rf has been set \n");
