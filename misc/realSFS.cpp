@@ -957,6 +957,7 @@ int fst_index(int argc,char **argv){
 #endif
   bgzf_close(fstbg);
   fclose(fstfp);
+  fprintf(stderr,"\t-> fst index finished with no errors!\n");
   return 0;
 }
 
