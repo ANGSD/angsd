@@ -311,7 +311,7 @@ void call_bam(chunkyT *chk,double **lk,int trim){
 
 	extern int minQ;
 	if(q<minQ || nd->posi[j]<trim||nd->isop[j]<trim){
-	  fprintf(stderr,"skipping q=%d mapQ=%d posi=%d isop=%d ind=%d\n",q,nd->mapQ[j],nd->posi[j],nd->isop[j],i);
+	  //fprintf(stderr,"skipping q=%d mapQ=%d posi=%d isop=%d ind=%d\n",q,nd->mapQ[j],nd->posi[j],nd->isop[j],i);
 	  continue;
 	}
 
