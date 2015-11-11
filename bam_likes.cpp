@@ -303,7 +303,7 @@ void call_bam(chunkyT *chk,double **lk,int trim){
       uint16_t bases[nd->l];
       int numItems =0;
       for(int j=0;j<nd->l;j++) {
-	//	fprintf(stderr,"posi=%d isop=%d +=%d\n",nd.posi[j],nd.isop[j],nd.posi[j]+nd.isop[j]);
+	//	fprintf(stderr,"posi=%d isop=%d +=%d\n",nd->posi[j],nd->isop[j],nd->posi[j]+nd->isop[j]);
 	int q=nd->qs[j];
 	//	fprintf(stderr,"q=%c\n",q+33);
 	//fprintf(stderr,"skipping q=%d mapQ=%d posi=%d isop=%d\n",q,nd.mapQ[j],nd.posi[j],nd.isop[j]);
@@ -311,8 +311,8 @@ void call_bam(chunkyT *chk,double **lk,int trim){
 
 	extern int minQ;
 	if(q<minQ || nd->posi[j]<trim||nd->isop[j]<trim){
-	  // fprintf(stderr,"skipping q=%d mapQ=%d posi=%d isop=%d ind=%d\n",q,nd.mapQ[j],nd.posi[j],nd.isop[j],i);
-	continue;
+	  fprintf(stderr,"skipping q=%d mapQ=%d posi=%d isop=%d ind=%d\n",q,nd->mapQ[j],nd->posi[j],nd->isop[j],i);
+	  continue;
 	}
 
 

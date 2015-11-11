@@ -276,6 +276,7 @@ abcSaf::~abcSaf(){
   if(outfileGprobs)  bgzf_close(outfileGprobs);
   if(lbicoTab) delete [] lbicoTab;
   if(myComb2Tab) delete [] myComb2Tab;//not cleaned properly
+  if(tmpChr) free(tmpChr);
  }
 
 
