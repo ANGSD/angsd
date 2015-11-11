@@ -46,51 +46,30 @@ double phi(double x){
 }
 
 
+/*
+  wilcox manwhitney u test, whatever ,implementation is from wiki
+  validated with wilcox.test (qscores of major,qscores of minor,exact=T,correct=F)
+  returns Zscore, for some reason...
+ */
 
-
-double baseQbias(tNode **tn,int nInd,int maj,int min){
-  //  fprintf(stderr,"phi:%f\n",phi(3));
-  int majD[64];
-  int minD[64];
-  memset(majD,0,sizeof(int)*64);
-  memset(minD,0,sizeof(int)*64);
-
-  for(int i=0;i<nInd;i++){
-    tNode *nd = tn[i];
-    if(nd==NULL)
-      continue;
-    for(int l=0;l<nd->l;l++){
-      int obB = refToInt[nd->seq[l]];
-
-      if(obB==maj)
-	majD[nd->qs[l]]++;
-      else if(obB==min)
-	minD[nd->qs[l]]++;
-    }
-  }
-  
-  for(int i=0;0&&i<64;i++)
-    fprintf(stdout,"%d %d\n",majD[i],minD[i]);
-
-
-
-  double U[64];
+double mann(int majD[255],int minD[255]){
+  double U[255];
   double cumLess1 =0;
-  for(int i=0;i<64;i++){
+  for(int i=0;i<255;i++){
     U[i]=(double) minD[i]*(majD[i]/2.0+cumLess1);
     cumLess1 += majD[i];
   }
   double U1 =0;
-  for(int i=0;i<64;i++) 
+  for(int i=0;i<255;i++) 
     U1+= U[i];
   //below is a check
   double cumLess2 =0;
-  for(int i=0;i<64;i++){
+  for(int i=0;i<255;i++){
     U[i]=(double) majD[i]*(minD[i]/2.0+cumLess2);
     cumLess2 += minD[i];
   }
   double U2 =0;
-  for(int i=0;i<64;i++) 
+  for(int i=0;i<255;i++) 
     U2+= U[i];
   
 
@@ -102,6 +81,66 @@ double baseQbias(tNode **tn,int nInd,int maj,int min){
   //  fprintf(stderr,"U1:%f U2:%f U1+U2:%f nObs:%f Z:%f p.value:%f\n",U1,U2,U1+U2,cumLess1*cumLess2,Z,2*phi(Z));
 
   return Z;
+
+}
+
+
+
+
+double mapQbias(tNode **tn,int nInd,int maj,int min){
+  //  fprintf(stderr,"phi:%f\n",phi(3));
+  int majD[255];
+  int minD[255];
+  memset(majD,0,sizeof(int)*255);
+  memset(minD,0,sizeof(int)*255);
+
+  for(int i=0;i<nInd;i++){
+    tNode *nd = tn[i];
+    if(nd==NULL)
+      continue;
+    for(int l=0;l<nd->l;l++){
+      int obB = refToInt[nd->seq[l]];
+
+      if(obB==maj){
+	majD[nd->mapQ[l]]++;
+	//	fprintf(stdout,"maj\t%d\n",nd->qs[l]);
+      }else if(obB==min){
+	minD[nd->mapQ[l]]++;
+	//fprintf(stdout,"min\t%d\n",nd->qs[l]);
+      }
+    }
+  }
+
+  return mann(majD,minD);
+}
+
+
+
+double baseQbias(tNode **tn,int nInd,int maj,int min){
+  //  fprintf(stderr,"phi:%f\n",phi(3));
+  int majD[255];
+  int minD[255];
+  memset(majD,0,sizeof(int)*255);
+  memset(minD,0,sizeof(int)*255);
+
+  for(int i=0;i<nInd;i++){
+    tNode *nd = tn[i];
+    if(nd==NULL)
+      continue;
+    for(int l=0;l<nd->l;l++){
+      int obB = refToInt[nd->seq[l]];
+
+      if(obB==maj){
+	majD[nd->qs[l]]++;
+	//	fprintf(stdout,"maj\t%d\n",nd->qs[l]);
+      }else if(obB==min){
+	minD[nd->qs[l]]++;
+	//fprintf(stdout,"min\t%d\n",nd->qs[l]);
+      }
+    }
+  }
+
+  return mann(majD,minD);
 }
 
 Chisqdist chi(1);
@@ -184,6 +223,8 @@ void abcFilterSNP::run(funkyPars *pars){
       ksprintf(bufstr,"%f:%e\t",lrt,pval);
       
       double Z = baseQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
+      ksprintf(bufstr,"%f:%e\t",Z,2*phi(Z));
+      Z = mapQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(bufstr,"%f:%e\n",Z,2*phi(Z));
     }
     pars->extras[index] = bufstr;
@@ -256,7 +297,7 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
     const char *postfix=".snpStat.gz";
     outfileZ = aio::openFileBG(outfiles,postfix);
     kstring_t bufstr;bufstr.s=NULL;bufstr.l=bufstr.m=0;
-    ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\n");
+    ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\tmapQ_Z:mapQ_pval\n");
     aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     free(bufstr.s);
   }
