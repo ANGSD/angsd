@@ -2,7 +2,19 @@
 #include "mUpPile.h"
 #include <ctype.h>
 #include <cassert>
+#include "pooled_alloc.h"
+extern tpool_alloc_t *tnodes;
+
 mpileup::mpileup(int nInd_a,gzFile gz_a,int bpl,const aMap* revMap_a,int minQ_a){
+  fprintf(stderr,"\t-> You are using -pileup, this means:\n");
+  fprintf(stderr,"\t-> 1) Internal positions both from front and back is coded to 255\n");
+  fprintf(stderr,"\t-> 2) All mapping qualities (mapQ) are set to 30\n");
+  fprintf(stderr,"\t-> 3) Program will not represent insertions, use raw BAM/CRAM for that\n");
+
+#ifdef __WITH_POOL__
+  tnodes = tpool_create(sizeof(tNode));
+#endif
+
   nInd = nInd_a;
   gz = gz_a;
    len = bpl;
@@ -26,6 +38,8 @@ tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
     int seqDepth = atoi(tok);
     ret[i] = initNodeT(seqDepth);
     ret[i]->l = seqDepth;
+    if(line[0]=='\t')
+      continue;
     if(ret[i]->l==0){
       strtok_r(NULL,delims,&line);
       strtok_r(NULL,delims,&line);
@@ -62,6 +76,7 @@ tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
 	  inner++;
 	}else{
 	  fprintf(stderr,"This will never happen, ever...:%s sub:%s\n",tok,tok+inner);
+	  exit(0);
 	}
 
       }
@@ -72,6 +87,9 @@ tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
       tok =strtok_r(NULL,delims,&line);
       for(unsigned inner=0;inner<strlen(tok);inner++){
 	ret[i]->qs[inner] = tok[inner]-33;
+	ret[i]->posi[inner] = 255;
+	ret[i]->isop[inner] = 255;
+	ret[i]->mapQ[inner] = 30;
 	//	fprintf(stderr,"qs[%d]:%d\n",inner,ret[i].qs[inner]);
 	if(ret[i]->qs[inner]<minQ)
 	  ret[i]->seq[inner] = 'n';
