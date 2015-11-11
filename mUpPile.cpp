@@ -1319,6 +1319,9 @@ void callBack_bambi(fcb *fff);//<-angsd.cpp
 //type=0 -> callback to angsd
 #ifdef __WITH_POOL__
 void destroy_tnode_pool(){
+  if(tnodes==NULL)
+    return;
+  flush_queue();
   fprintf(stderr,"\n\t-> npools:%zu unfreed tnodes before clean:%lu \n",tnodes->npools,currentnodes);
   for(int i=0;i<tnodes->npools;i++){
     //fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
@@ -1633,10 +1636,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
   }
   void waiter(int);
   waiter(theRef);//will wait for exisiting threads and then load stuff relatin
-#ifdef __WITH_POOL__
-  flush_queue();
-  destroy_tnode_pool();
-#endif
+
   return 0;
 }
 

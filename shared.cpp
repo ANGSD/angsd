@@ -92,7 +92,7 @@ void init(argStruct *arguments){
 }
 
 
-void destroy(){
+void destroy_shared(){
   //  fprintf(stderr,"\t-> Calling destroy\n");
   while(1){
     pthread_mutex_lock(&counterMut);
@@ -108,6 +108,11 @@ void destroy(){
     delete allMethods[i];
   delete [] abc::shouldRun;
   delete [] allMethods;
+
+#ifdef __WITH_POOL__
+  void destroy_tnode_pool();
+  destroy_tnode_pool();
+#endif
 
 }
 void tnode_destroy(tNode*);

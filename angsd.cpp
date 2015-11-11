@@ -252,7 +252,7 @@ int main(int argc, char** argv){
 
   fprintf(stderr,"\t-> Done reading data waiting for calculations to finish\n");
 
-  destroy();
+  destroy_shared();
 
   
   //printout the filenames generated

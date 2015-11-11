@@ -60,7 +60,7 @@ void deallocFunkyPars(funkyPars *p);
 
 
 void init(argStruct *arguments);//intialize all needed objects
-void destroy();//destroy all initialized objects
+void destroy_shared();//destroy all initialized objects
 void selector(funkyPars *p);
 
 #define LOGMAX 20000   // pre-computed logfactorial 
