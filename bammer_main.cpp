@@ -161,7 +161,9 @@ bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,
       fprintf(stderr,"Difference in BAM headers for \'%s\' and \'%s\'\n",vec[0],vec[i]);
       fprintf(stderr,"HEADER BAM1\n");
       printHd(ret[0].hdr,stderr);
+      fprintf(stderr,"HEADER BAM2\n");
       printHd(ret[i].hdr,stderr);
+      fprintf(stderr,"Difference in BAM headers for \'%s\' and \'%s\'\n",vec[0],vec[i]);
       if(exitOnError)
 	exit(0);
     }

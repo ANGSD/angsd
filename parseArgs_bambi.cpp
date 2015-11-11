@@ -44,9 +44,8 @@ int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,c
 
    char *tok = strtok(extra,":");
    if((it =revMap->find(tok))==revMap->end()){
-       fprintf(stderr,"[%s.%s():%d] (-r) Problems finding chromosome: \'%s\'\n",__FILE__,__FUNCTION__,__LINE__,extra);
+       fprintf(stderr,"[%s.%s():%d] (-r) Problems finding chromosome: \'%s\' from header\n",__FILE__,__FUNCTION__,__LINE__,extra);
        fflush(stderr);
-       exit(0);
        return -1;
    }
    ref = it->second;
@@ -207,7 +206,7 @@ void setArgsBam(argStruct *arguments){
   for(size_t i=0;i<regionsRaw.size();i++){
     regs tmpRegs;
     if(parse_region(regionsRaw[i],arguments->hd,tmpRegs.refID,tmpRegs.start,tmpRegs.stop,arguments->revMap)<0||tmpRegs.stop<tmpRegs.start){
-      fprintf(stderr,"[%s] problems with indexing: %s\n",__FUNCTION__,regionsRaw[i]);
+      fprintf(stderr,"[%s] Problems with indexing: %s\n",__FUNCTION__,regionsRaw[i]);
       exit(0);
     }else
       arguments->regions.push_back(tmpRegs);
