@@ -10,6 +10,7 @@
 int static z_rndu=137;
 
 int simpleRand = 2;
+int pileup;
 
 
 #define LENS 100000
@@ -167,12 +168,35 @@ void calclike(int base, double errate, double *like)	{
 
 int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,gzFile resultfile){
 
-  int i, b, numreads;
-  double like[10];
 
+  int i, b, numreads;
   numreads = Poisson(meandepth);
   char res[numreads]; // char alleles for all the reads
-  //fprintf(stderr,"%d (%d,%d)\n",numreads,genotype[0],genotype[1]);
+
+  if(pileup==1){
+    for (i=0; i<numreads; i++){
+      b = pick_a_base(errate,genotype);
+      res[i] = int_to_base(b); 
+    }
+   
+    int Q = -10 * log10(errate) + 33;
+    ///  char ch=static_cast<char>(Q);
+    char ch = (char) Q;
+    //fprintf(stdout,"Q=%c,%d,%f,%f\n",Q,Q,log10(errate),errate);
+    gzprintf(resultfile,"%d\t",numreads);
+    gzwrite(resultfile, res, numreads);
+    gzprintf(resultfile,"\t");
+    for (i=0; i<numreads; i++){
+      gzprintf(resultfile,"%s","H");
+    }
+  // gzprintf(resultfile,"\t");
+    return numreads;
+
+  }
+  
+  double like[10];
+
+   //fprintf(stderr,"%d (%d,%d)\n",numreads,genotype[0],genotype[1]);
 
   for (i=0; i<10; i++)
     like[i] = -0.0;
@@ -180,6 +204,7 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
   for (i=0; i<numreads; i++){
     b = pick_a_base(errate,genotype);
     res[i] = int_to_base(b); 
+    
     calclike(b, errate, like);
   }
 
@@ -196,8 +221,9 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
 
   }
   //exit(0);
+ 
   gzwrite(glffile,like,sizeof(double)*10);
-  gzwrite(resultfile, res, numreads);
+ 
   return numreads;
 }
 
@@ -230,6 +256,8 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
   if(regLen==0){
     //only generate likes for truely variable sites
     for(int s=0;s<segsites;s++){
+      gzprintf(gzSeq,"1\t%d\tN\t",s);
+     
       for(int i=0;i<nsam/2;i++){
 	int genotypes[2] = {0,0};
 	if(res[i][s]>=1)
@@ -250,6 +278,8 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     int s =0;
     //shifted with one, to match the positions. This shouldbn't matte for correctness
     for(int i=1;i<=regLen;i++) {
+      gzprintf(gzSeq,"1\t%d\tN\t",i);
+
       if(s<segsites&&positInt[s]==i) {
 	for(int i=0;i<nsam/2;i++){
 	  int genotypes[2] = {0,0};
@@ -261,7 +291,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	    print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
 	  else
 	    print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
-	  if(i<nsam/2-1)
+	  if(i<nsam/2-1 && pileup)
 	    gzprintf(gzSeq,"\t");
 	}
 	gzprintf(gzSeq,"\n");
@@ -273,10 +303,11 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	    print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
 	  else
 	    print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
-	  if(i<nsam/2-1)
+	  if(i<nsam/2-1 && pileup)
 	    gzprintf(gzSeq,"\t");
 	}
-	gzprintf(gzSeq,"\n");
+	if(pileup)
+	  gzprintf(gzSeq,"\n");
       }
       
     }
@@ -426,6 +457,9 @@ int main(int argc,char **argv){
   int nind = 0;
   char **orig = argv;
   int seed = -1;
+  pileup=0;
+
+
   while(*argv){
     if(strcasecmp(*argv,"-in")==0) inS = *++argv;
     else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
@@ -434,6 +468,7 @@ int main(int argc,char **argv){
     else if(strcasecmp(*argv,"-depthFile")==0) depthFile=*++argv; 
     else if(strcasecmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
     else if(strcasecmp(*argv,"-regLen")==0) regLen=atoi(*++argv);
+    else if(strcasecmp(*argv,"-pileup")==0) pileup=atoi(*++argv);
     else if(strcasecmp(*argv,"-seed")==0) seed=atoi(*++argv);
     else if(strcasecmp(*argv,"-simpleRand")==0) simpleRand=atoi(*++argv); 
     else if(strcasecmp(*argv,"-nind")==0) nind=atoi(*++argv); 
@@ -449,7 +484,7 @@ int main(int argc,char **argv){
     srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
-    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen -nind -seed \n");
+    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen --nind -seed -pileup \n");
     return 0;
   }
 
@@ -520,7 +555,7 @@ int main(int argc,char **argv){
 
   if(singleOut==1){
     gz = openFileGz(prefix,".glf.gz","w");
-    gzSeq = openFileGz(prefix,".seq.gz","w");
+    gzSeq = openFileGz(prefix,".pileup.gz","w");
     vPosFP=openFile(prefix,".vPos");
   }
   FILE *pgEst = openFile(prefix,".pgEstH");
