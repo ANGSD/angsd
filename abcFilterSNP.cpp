@@ -86,6 +86,34 @@ double mann(int majD[255],int minD[255]){
 
 
 
+double edgebias(tNode **tn,int nInd,int maj,int min){
+  //  fprintf(stderr,"phi:%f\n",phi(3));
+  int majD[255];
+  int minD[255];
+  memset(majD,0,sizeof(int)*255);
+  memset(minD,0,sizeof(int)*255);
+
+  for(int i=0;i<nInd;i++){
+    tNode *nd = tn[i];
+    if(nd==NULL)
+      continue;
+    for(int l=0;l<nd->l;l++){
+      int obB = refToInt[nd->seq[l]];
+
+      if(obB==maj){
+	majD[std::min(nd->posi[l],nd->isop[l])]++;
+	//	fprintf(stdout,"maj\t%d\n",nd->qs[l]);
+      }else if(obB==min){
+	minD[std::min(nd->isop[l],nd->posi[l])]++;
+	//fprintf(stdout,"min\t%d\n",nd->qs[l]);
+      }
+    }
+  }
+
+  return mann(majD,minD);
+}
+
+
 
 double mapQbias(tNode **tn,int nInd,int maj,int min){
   //  fprintf(stderr,"phi:%f\n",phi(3));
@@ -226,7 +254,10 @@ void abcFilterSNP::run(funkyPars *pars){
       ksprintf(bufstr,"%f:%e\t",Z,2*phi(Z));
       Z = mapQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(bufstr,"%f:%e\n",Z,2*phi(Z));
-    }
+      Z = edgebias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
+      ksprintf(bufstr,"%f:%e\n",Z,2*phi(Z));
+  
+   }
     pars->extras[index] = bufstr;
   }
   
@@ -297,7 +328,7 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
     const char *postfix=".snpStat.gz";
     outfileZ = aio::openFileBG(outfiles,postfix);
     kstring_t bufstr;bufstr.s=NULL;bufstr.l=bufstr.m=0;
-    ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\tmapQ_Z:mapQ_pval\n");
+    ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\tmapQ_Z:mapQ_pval\tedge_z:edge_pval\n");
     aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     free(bufstr.s);
   }
