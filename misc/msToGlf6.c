@@ -256,7 +256,8 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
   if(regLen==0){
     //only generate likes for truely variable sites
     for(int s=0;s<segsites;s++){
-      gzprintf(gzSeq,"1\t%d\tN\t",s);
+      if(pileup)
+	gzprintf(gzSeq,"1\t%d\tN\t",s);
      
       for(int i=0;i<nsam/2;i++){
 	int genotypes[2] = {0,0};
@@ -268,17 +269,19 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
 	else
 	  print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
-	if(i<nsam/2-1)
+	if(i<nsam/2-1 && pileup)
 	  gzprintf(gzSeq,"\t");
       }
-      gzprintf(gzSeq,"\n");
+      	if(pileup)
+	  gzprintf(gzSeq,"\n");
     }
   }else{
 
     int s =0;
     //shifted with one, to match the positions. This shouldbn't matte for correctness
     for(int i=1;i<=regLen;i++) {
-      gzprintf(gzSeq,"1\t%d\tN\t",i);
+      	if(pileup)
+	  gzprintf(gzSeq,"1\t%d\tN\t",i);
 
       if(s<segsites&&positInt[s]==i) {
 	for(int i=0;i<nsam/2;i++){
@@ -294,7 +297,8 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  if(i<nsam/2-1 && pileup)
 	    gzprintf(gzSeq,"\t");
 	}
-	gzprintf(gzSeq,"\n");
+	if(pileup)
+	  gzprintf(gzSeq,"\n");
 	s++;
       }else{
 	for(int i=0;i<nsam/2;i++){
@@ -555,7 +559,8 @@ int main(int argc,char **argv){
 
   if(singleOut==1){
     gz = openFileGz(prefix,".glf.gz","w");
-    gzSeq = openFileGz(prefix,".pileup.gz","w");
+    if(pileup)
+      gzSeq = openFileGz(prefix,".pileup.gz","w");
     vPosFP=openFile(prefix,".vPos");
   }
   FILE *pgEst = openFile(prefix,".pgEstH");
@@ -610,6 +615,7 @@ int main(int argc,char **argv){
   test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq) ;
   if(singleOut==0){
     gzclose(gz);
+    if(pileup)
     gzclose(gzSeq);
     fclose(vPosFP);
   }
@@ -629,7 +635,8 @@ int main(int argc,char **argv){
   count--;
   if(singleOut==1){
     gzclose(gz);
-    gzclose(gzSeq);
+    if(pileup)
+      gzclose(gzSeq);
   }
   fclose(pgEst);
   return 0;
