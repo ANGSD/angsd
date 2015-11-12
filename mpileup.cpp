@@ -119,7 +119,7 @@ funkyPars *mpileup::fetch(int chunksize){
     //parse an entire site:
     myfunky->refId = lastRefId;
     myfunky->posi[nSites] = atoi(strtok_r(NULL,delims,&buffer))-1;
-    myfunky->ref[nSites] = strtok_r(NULL,delims,&buffer)[0];
+    myfunky->ref[nSites] = refToInt[strtok_r(NULL,delims,&buffer)[0]];
     myfunky->chk->nd[nSites++] = parseNd(buffer,nInd,delims,minQ);
     
     changed =0;
@@ -148,7 +148,7 @@ funkyPars *mpileup::fetch(int chunksize){
     myfunky->refId = lastRefId;
 
     myfunky->posi[nSites] = atoi(strtok_r(NULL,delims,&buffer))-1;
-    myfunky->ref[nSites] = strtok_r(NULL,delims,&buffer)[0];
+    myfunky->ref[nSites] = refToInt[strtok_r(NULL,delims,&buffer)[0]];
     myfunky->chk->nd[nSites++] = parseNd(buffer,nInd,delims,minQ);
     
     buffer=original;

@@ -295,7 +295,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   //print header
   
   kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
-  if(refName!=NULL)
+  if(refName!=NULL||arguments->inputtype==INPUT_PILEUP)
     kputs("ref\t",&bufstr);
   if(ancName)// inputtyp=3 is tglf, if tglf then -posi has been supplied
     kputs("anc\t",&bufstr);
