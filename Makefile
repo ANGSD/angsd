@@ -8,8 +8,7 @@ CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
-all: htshook angsd misc
-
+all: angsd misc
 
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
@@ -33,13 +32,10 @@ endif
 version.h:
 	echo '#define ANGSD_VERSION "$(PACKAGE_VERSION)"' > $@
 
-.PHONY: misc clean htshook test
+.PHONY: misc clean test
 
 misc:
 	make -C misc/ HTSDIR=$(HTS)
-
-htshook: 
-	make -C $(HTS)
 
 -include $(OBJ:.o=.d)
 
