@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <assert.h>
+#include <htslib/kstring.h>
 int static z_rndu=137;
 
 int simpleRand = 2;
@@ -166,7 +167,7 @@ void calclike(int base, double errate, double *like)	{
   
 }
 
-int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,gzFile resultfile){
+int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,kstring_t *resultfile){
 
 
   int i, b, numreads;
@@ -183,11 +184,12 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
     ///  char ch=static_cast<char>(Q);
     char ch = (char) Q;
     //fprintf(stdout,"Q=%c,%d,%f,%f\n",Q,Q,log10(errate),errate);
-    gzprintf(resultfile,"%d\t",numreads);
-    gzwrite(resultfile, res, numreads);
-    gzprintf(resultfile,"\t");
+    ksprintf(resultfile,"%d\t",numreads);
+    for(int iii=0;iii<numreads;iii++)
+      kputc(res[iii],resultfile);
+    kputc('\t',resultfile);
     for (i=0; i<numreads; i++){
-      gzprintf(resultfile,"%s","H");
+      kputc('H',resultfile);
     }
   // gzprintf(resultfile,"\t");
     return numreads;
@@ -230,7 +232,7 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
 //nsam=2*nind
 void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,gzFile gzSeq){
   //  fprintf(stderr,"segsites=%d\n",segsites,gzFile gzSeq);
-  
+  kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   int p =0;
   char ** res=malloc(nsam/2*sizeof(char*));
   if(positInt[0]==0)
@@ -257,7 +259,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     //only generate likes for truely variable sites
     for(int s=0;s<segsites;s++){
       if(pileup)
-	gzprintf(gzSeq,"1\t%d\tN\t",s);
+	ksprintf(&kpl,"1\t%d\tN\t",s);
      
       for(int i=0;i<nsam/2;i++){
 	int genotypes[2] = {0,0};
@@ -266,14 +268,21 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	if(res[i][s]==2)
 	  genotypes[0] = 1;
 	if(depths==NULL)
-	  print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
+	  print_ind_site(errate,meandepth,genotypes,gz,&kpl);
 	else
-	  print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
-	if(i<nsam/2-1 && pileup)
-	  gzprintf(gzSeq,"\t");
+	  print_ind_site(errate,depths[i],genotypes,gz,&kpl);
+	if(pileup && i<nsam/2-1)
+	  kputc('\t',&kpl);
       }
-      	if(pileup)
-	  gzprintf(gzSeq,"\n");
+      //      fprintf(stderr,"kpl:%lu\n",kpl.l);
+      if(pileup){
+	kputc('\n',&kpl);
+	if(kpl.l>4096){
+	  gzwrite(gzSeq,kpl.s,kpl.l);
+	  kpl.l=0;
+	}
+      }
+	
     }
   }else{
 
@@ -291,31 +300,49 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  if(res[i][s]==2)
 	    genotypes[0] = 1;
 	  if(depths==NULL)
-	    print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
+	    print_ind_site(errate,meandepth,genotypes,gz,&kpl);
 	  else
-	    print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
-	  if(i<nsam/2-1 && pileup)
-	    gzprintf(gzSeq,"\t");
+	    print_ind_site(errate,depths[i],genotypes,gz,&kpl);
+	  if(pileup && i<nsam/2-1)
+	    kputc('\t',&kpl);
 	}
-	if(pileup)
-	  gzprintf(gzSeq,"\n");
+	if(pileup){
+	  kputc('\n',&kpl);
+	  if(kpl.l>4096){
+	    gzwrite(gzSeq,kpl.s,kpl.l);
+	    kpl.l=0;
+	  }
+	}
 	s++;
       }else{
 	for(int i=0;i<nsam/2;i++){
 	  int genotypes[2] = {0,0};
 	  if(depths==NULL)
-	    print_ind_site(errate,meandepth,genotypes,gz,gzSeq);
+	    print_ind_site(errate,meandepth,genotypes,gz,&kpl);
 	  else
-	    print_ind_site(errate,depths[i],genotypes,gz,gzSeq);
-	  if(i<nsam/2-1 && pileup)
-	    gzprintf(gzSeq,"\t");
+	    print_ind_site(errate,depths[i],genotypes,gz,&kpl);
+	  if(pileup && i<nsam/2-1)
+	    kputc('\t',&kpl);
 	}
-	if(pileup)
-	  gzprintf(gzSeq,"\n");
+	if(pileup){
+	  kputc('\n',&kpl);
+	  if(kpl.l>4096){
+	    gzwrite(gzSeq,kpl.s,kpl.l);
+	    kpl.l=0;
+	  }
+	}
       }
       
     }
   }
+
+  if(pileup){
+    gzwrite(gzSeq,kpl.s,kpl.l);
+    kpl.l=0;free(kpl.s);
+  }
+  for(int h=0;h<nsam/2;h++)
+    free(res[h]);
+  free(res);
 }
 
 
@@ -637,8 +664,15 @@ int main(int argc,char **argv){
     gzclose(gz);
     if(pileup)
       gzclose(gzSeq);
+    fclose(vPosFP);
   }
   fclose(pgEst);
+  fclose(in);
+  for(int i=0;i<nsam;i++)
+    free(list[i]);
+  free(list);
+  free(positInt);
+  free(posit);
   return 0;
 
 }

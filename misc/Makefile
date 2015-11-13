@@ -58,7 +58,7 @@ smartCount:	smartCount.c
 thetaStat:	thetaStat.cpp stats.cpp 
 	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTSDIR)  -lz -o thetaStat -lpthread $(HTSLIB)
 msToGlf: msToGlf6.c
-	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm
+	$(CC) $(FLAGS) msToGlf6.c  -I$(HTSDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTSLIB)
 
 clean:
 	rm  -f *.o supersim emOptim emOptim2 msToGlf thetaStat smartCount realSFS printIcounts contamination spitgl NGSadmix splitgl *~
