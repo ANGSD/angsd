@@ -16,12 +16,12 @@ BDIR=$(realpath $(BAMDIR))
 # Adjust $(HTSSRC) to point to your top-level htslib directory
 ifdef HTSSRC
 $(info "HTSSRC defined")
+HTS_INCDIR=$(realpath $(HTSSRC))
+HTS_LIBDIR=$(realpath $(HTSSRC))/libhts.a
+$(info $(HTS_LIBDIR))
 else
-$(info "HTSSRC not defined")
+$(info "HTSSRC not defined, assuming systemwide installation -lhts")
 endif
-HTSSRC = ../htslib
-HTS = $(realpath $(HTSSRC))
-HTSLIB = $(HTS)/libhts.a
 
 PACKAGE_VERSION  = 0.902
 
@@ -43,18 +43,29 @@ htshook:
 
 -include $(OBJ:.o=.d)
 
-
+ifdef HTSSRC
 %.o: %.c
-	$(CC) -c  $(CFLAGS) -I$(HTS) $*.c
-	$(CC) -MM $(CFLAGS)  -I$(HTS) $*.c >$*.d
+	$(CC) -c  $(CFLAGS) -I$(HTS_INCDIR) $*.c
+	$(CC) -MM $(CFLAGS)  -I$(HTS_INCDIR) $*.c >$*.d
 
 %.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS)  -I$(HTS) $*.cpp
-	$(CXX) -MM $(CXXFLAGS)  -I$(HTS) $*.cpp >$*.d
+	$(CXX) -c  $(CXXFLAGS)  -I$(HTS_INCDIR) $*.cpp
+	$(CXX) -MM $(CXXFLAGS)  -I$(HTS_INCDIR) $*.cpp >$*.d
 
 angsd: version.h $(OBJ)
-	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread $(HTSLIB)
+	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread $(HTS_LIBDIR)
+else
+%.o: %.c
+	$(CC) -c  $(CFLAGS)  $*.c
+	$(CC) -MM $(CFLAGS)  $*.c >$*.d
 
+%.o: %.cpp
+	$(CXX) -c  $(CXXFLAGS)  $*.cpp
+	$(CXX) -MM $(CXXFLAGS)  $*.cpp >$*.d
+
+angsd: version.h $(OBJ)
+	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread -lhts
+endif
 
 testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
