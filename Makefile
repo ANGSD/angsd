@@ -8,7 +8,7 @@ CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
-all: angsd misc
+all: angsd
 
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
