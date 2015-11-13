@@ -10,11 +10,17 @@ OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
 all: htshook angsd misc
 
-# Adjust $(HTSDIR) to point to your top-level htslib directory
+
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
-HTSDIR = ../htslib
-HTS = $(realpath $(HTSDIR))
+# Adjust $(HTSSRC) to point to your top-level htslib directory
+ifdef HTSSRC
+$(info "HTSSRC defined")
+else
+$(info "HTSSRC not defined")
+endif
+HTSSRC = ../htslib
+HTS = $(realpath $(HTSSRC))
 HTSLIB = $(HTS)/libhts.a
 
 PACKAGE_VERSION  = 0.902
