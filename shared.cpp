@@ -453,9 +453,6 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
     fprintf(fp,"\n");
   }
 }
-#ifdef __WITH_POOL__
-extern int currentnodes;
-#endif
 
 //only one instance at a time is running this function
 void printFunky(funkyPars *p){
