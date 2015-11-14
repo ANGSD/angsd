@@ -463,11 +463,7 @@ void printFunky(funkyPars *p){
   if(p->killSig==0) {//don't print the empty killSig chunk
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
-#ifdef __WITH_POOL__
-	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d (%d) numSites:%d     ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,currentnodes,p->numSites);
-#else
-      fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
-#endif
+	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
       else
 	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
     }if(p->numSites!=0){
