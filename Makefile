@@ -34,7 +34,7 @@ version.h:
 .PHONY: misc clean test
 
 misc:
-	make -C misc/ HTSSRC=../$(HTSSRC)
+	make -C misc/ HTSSRC=$(realpath $(HTSSRC))
 
 -include $(OBJ:.o=.d)
 

@@ -1,0 +1,11 @@
+Program now requires htslib. You compile the program using Make.
+
+You have two options 1) Link against a local directory containing htslib 2) Link against a systemwide installation
+
+1)
+Make HTSSRC=../htsdir
+
+2)
+Make
+
+thorfinn@binf.ku.dk 14Nov2015
