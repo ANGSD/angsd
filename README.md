@@ -5,10 +5,14 @@ Program for analysing NGS data.
  
 Installation:
 =====
+1) Using a local folder containing htslib
 git clone https://github.com/samtools/htslib.git;
 git clone https://github.com/angsd/angsd.git;
 cd htsdir;make;cd ../angsd;make HTSSRC=../htslib
 
+2) Systemwide installation of htslib
+git clone https://github.com/angsd/angsd.git;
+cd angsd;make
 
 Notes
 ====
