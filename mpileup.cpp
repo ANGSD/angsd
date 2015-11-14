@@ -11,10 +11,6 @@ mpileup::mpileup(int nInd_a,gzFile gz_a,int bpl,const aMap* revMap_a,int minQ_a)
   fprintf(stderr,"\t-> 2) All mapping qualities (mapQ) are set to 30\n");
   fprintf(stderr,"\t-> 3) Program will not represent insertions, use raw BAM/CRAM for that\n");
 
-#ifdef __WITH_POOL__
-  tnodes = tpool_create(sizeof(tNode));
-#endif
-
   nInd = nInd_a;
   gz = gz_a;
    len = bpl;

@@ -31,6 +31,8 @@
 //class to keep track of chunk order when dumping results
 #include "printRes.h"
 #include "mUpPile.h"
+#include "pooled_alloc.h"
+extern tpool_alloc_t *tnodes;
 
 pthread_attr_t attr;
 int andersSux =0;
@@ -47,7 +49,6 @@ int currentChr=-1;
 int curRunning =0;
 int chunkNumber =1;
 printRes printer;
-
 
 // print nicely into files.
 int isAtty =1;
@@ -89,6 +90,11 @@ void init(argStruct *arguments){
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
+  
+#ifdef __WITH_POOL__
+  tnodes = tpool_create(sizeof(tNode));
+#endif
+  
 }
 
 

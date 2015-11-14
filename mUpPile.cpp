@@ -1354,10 +1354,6 @@ void destroy_tnode_pool(){
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
 int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
   
-#ifdef __WITH_POOL__
-  tnodes = tpool_create(sizeof(tNode));
-#endif
-
   assert(nLines&&nFiles);
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);
   fflush(stderr);
