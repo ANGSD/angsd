@@ -7,7 +7,7 @@ Installation:
 =====
 git clone https://github.com/samtools/htslib.git;
 git clone https://github.com/angsd/angsd.git;
-cd angsd;make HTSDIR=../htslib
+cd htsdir;make;cd ../angsd;make HTSSRC=../htslib
 
 
 Notes
