@@ -14,12 +14,11 @@ BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
 # Adjust $(HTSSRC) to point to your top-level htslib directory
 ifdef HTSSRC
-$(info "HTSSRC defined")
+$(info HTSSRC defined)
 HTS_INCDIR=$(realpath $(HTSSRC))
 HTS_LIBDIR=$(realpath $(HTSSRC))/libhts.a
-$(info $(HTS_LIBDIR))
 else
-$(info "HTSSRC not defined, assuming systemwide installation -lhts")
+$(info HTSSRC not defined, assuming systemwide installation -lhts)
 endif
 
 PACKAGE_VERSION  = 0.902
@@ -35,7 +34,7 @@ version.h:
 .PHONY: misc clean test
 
 misc:
-	make -C misc/ HTSDIR=$(HTS)
+	make -C misc/ HTSSRC=../$(HTSSRC)
 
 -include $(OBJ:.o=.d)
 

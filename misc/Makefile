@@ -4,7 +4,7 @@ CXX=g++
 FLAGS=-O3
 
 ifdef HTSSRC
-$(info "HTSSRC defined")
+$(info HTSSRC defined)
 HTS_INCDIR=$(realpath $(HTSSRC))
 HTS_LIBDIR=$(realpath $(HTSSRC))/libhts.a
 $(info $(HTS_LIBDIR))

@@ -107,7 +107,7 @@ fprintf(fp,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,
   fprintf(fp,"\n\tBelow are options that can be usefull\n");
   fprintf(fp,"\t-bam\t\tOptions relating to bam reading\n\t-doMajorMinor\tInfer the major/minor using different approaches\n");  
   fprintf(fp,"\t-ref/-anc\tRead reference or ancestral genome\n");
-  fprintf(fp,"\t-doSNPstat\tRead reference or ancestral genome\n");
+  fprintf(fp,"\t-doSNPstat\tCalculate various SNPstat\n");
   fprintf(fp,"\tmany others\n\n");
  
   fprintf(fp,"For information of specific options type: \n\t./angsd METHODNAME eg \n\t\t./angsd -GL\n\t\t./angsd -doMaf\n\t\t./angsd -doAsso etc\n");
