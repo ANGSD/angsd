@@ -202,8 +202,7 @@ void abcDstat::clean(funkyPars *pars){
 
 void abcDstat::printAndEmpty(){
 
-
-fprintf(outfile,"%s\t%d\t%d",header->target_name[currentChr],block*blockSize+1,block*blockSize+blockSize);
+  fprintf(outfile,"%s\t%d\t%d",header->target_name[currentChr],block*blockSize+1,block*blockSize+blockSize);
   for(int j=0;j<nComb;j++){
     fprintf(outfile,"\t%d\t%d",ABBA[j],BABA[j]);
     ABBA[j]=0;
@@ -276,32 +275,7 @@ void abcDstat::print(funkyPars *pars){
       }
     }
   }
-  /*
-  for(int p=currentPos;p<abbababaStruct->start;p++){
-    if(p % NbasesPerLine == 0)
-      fprintf(outfile,"\n");
-    
-    fprintf(outfile,"N");
-    currentPos++;
-  }
-  int c=0;
-  for(int p=currentPos;p<abbababaStruct->stop;p++){
-    if(p==pars->posi[c]){
-      if(p % NbasesPerLine == 0)
-	fprintf(outfile,"\n");
-      fprintf(outfile,"%d",abbababaStruct->seq[c]);
-      //      fprintf(stdout,"%lu%d\t%c\n",currentPos+1,pars->posi[c],abbababaStruct->seq[c]);
-      c++;
-    }
-    else{
-      if(p % NbasesPerLine == 0)
-	fprintf(outfile,"\n");
-      fprintf(outfile,"N");
-    }
-    currentPos++;
-  }
 
-  */
 }
 
 
