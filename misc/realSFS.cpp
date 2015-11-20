@@ -1101,7 +1101,7 @@ int main_opt(args *arg){
     fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
   neverusegoto:
     if(arg->bootstrap)
-      fprintf(stderr,"Will do boostrap replicate %d/%d\n",b+1,arg->bootstrap);
+      fprintf(stderr,"Will do bootstrap replicate %d/%d\n",b+1,arg->bootstrap);
     if(arg->sfsfname.size()!=0)
 	readSFS(arg->sfsfname[0],ndim,sfs);
       else{
@@ -1109,7 +1109,6 @@ int main_opt(args *arg){
 	  for(int i=0;i<ndim;i++)
 	    sfs[i] = (i+1)/((double)(ndim));
 	}else{
-
 	  for(int i=0;i<ndim;i++){
 	    double r=drand48();
 	    while(r==0.0)
@@ -1210,7 +1209,7 @@ int main(int argc,char **argv){
 
     fprintf(stderr, "\n\t-> 4) Estimate the SFS around a gene ??\n");
     fprintf(stderr,"\t-> ./realSFS afile.saf.idx -r chr2:135000000-140000000 \n");
-    fprintf(stderr, "\n\t-> Other options [-P nthreads -tole tolerence_for_breaking_EM -maxIter max_nr_iterations ]\n");
+    fprintf(stderr, "\n\t-> Other options [-P nthreads -tole tolerence_for_breaking_EM -maxIter max_nr_iterations -bootstrap number_of_replications]\n");
 
     fprintf(stderr,"\n\t-> See realSFS print for possible print options\n");
     fprintf(stderr,"\t-> Use realSFS print_header for printing the header\n");
@@ -1249,6 +1248,6 @@ int main(int argc,char **argv){
     
   }
   if(bootstrap!=NULL)
-    delete [] boostrap;
+    delete [] bootstrap;
   return 0;
 }
