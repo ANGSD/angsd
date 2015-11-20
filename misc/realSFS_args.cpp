@@ -65,7 +65,7 @@ char * get_region(char *extra,int &start,int &stop) {
 
 args * getArgs(int argc,char **argv){
   args *p = new args;
-  
+  p->bootstrap = 0;
   p->chooseChr=NULL;
   p->start=p->stop=-1;
   p->maxIter=1e2;
@@ -96,6 +96,8 @@ args * getArgs(int argc,char **argv){
       p->type = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-step"))
       p->step = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-bootstrap"))
+      p->bootstrap = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-maxIter"))
       p->maxIter = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-oldout"))
@@ -127,9 +129,10 @@ args * getArgs(int argc,char **argv){
   }
   if(p->seed==0)
     p->seed = time(NULL);
+  srand48(p->seed);
   for(int i=0;(p->saf.size()>1)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;
-  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fname:%s fstout:%s oldout:%d seed:%ld\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->fstout,p->oldout,p->seed);
+  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fname:%s fstout:%s oldout:%d seed:%ld bootstrap:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->fstout,p->oldout,p->seed,p->bootstrap);
 
   if((p->win==-1 &&p->step!=-1) || (p->win!=-1&&p->step==-1)){
     fprintf(stderr,"\t-> Both -win and -step must be supplied for sliding window analysis\n");

@@ -21,7 +21,6 @@
 #include <cstdio>
 #include <vector>
 #include <cstdlib>
-
 #include <cstring>
 #include <cmath>
 #include <cfloat>
@@ -34,7 +33,7 @@
 #include "Matrix.hpp"
 #include "safstat.h"
 #include <libgen.h>
-
+#include <algorithm>
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -51,7 +50,7 @@ double ttol = 1e-16;
 pthread_t *thd=NULL;
 
 int **posiG  = NULL;
-
+size_t *bootstrap = NULL;
 int really_kill =3;
 int VERBOSE = 1;
 void handler(int s) {
@@ -392,30 +391,51 @@ double lik1(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   assert(from >=0 && to >=0);
   //  fprintf(stderr,"[%s] from:%d to:%d\n",__FUNCTION__,from,to);
   double r =0;
-  for(size_t s=from;s<to;s++){
-    double tmp =0;
-    for(size_t i=0;i<gls[0]->y;i++)
-      tmp += sfs[i]* gls[0]->mat[s][i]; 
-    r += log(tmp);
-  }
+  if(!bootstrap)
+    for(size_t s=from;s<to;s++){
+      double tmp =0;
+      for(size_t i=0;i<gls[0]->y;i++)
+	tmp += sfs[i]* gls[0]->mat[s][i]; 
+      r += log(tmp);
+    }
+  else
+    for(size_t s=from;s<to;s++){
+      double tmp =0;
+      for(size_t i=0;i<gls[0]->y;i++)
+	tmp += sfs[i]* gls[0]->mat[bootstrap[s]][i]; 
+      r += log(tmp);
+    }
   return r;
 }
 template <typename T>
 double lik2(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   double r =0;
-  for(size_t s=from;s<to;s++){
-    double tmp =0;
-    int inc =0;
-    for(size_t i=0;i<gls[0]->y;i++)
-      for(size_t j=0;j<gls[1]->y;j++)
-	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j];
-    r += log(tmp);
+  if(bootstrap==NULL){
+    for(size_t s=from;s<to;s++){
+      double tmp =0;
+      int inc =0;
+      for(size_t i=0;i<gls[0]->y;i++)
+	for(size_t j=0;j<gls[1]->y;j++)
+	  tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j];
+      r += log(tmp);
+    }
   }
+  else
+    for(size_t s=from;s<to;s++){
+      double tmp =0;
+      int inc =0;
+      for(size_t i=0;i<gls[0]->y;i++)
+	for(size_t j=0;j<gls[1]->y;j++)
+	  tmp += sfs[inc++]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j];
+      r += log(tmp);
+    }
   return r;
 }
+
 template <typename T>
 double lik3(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   double r =0;
+  if(bootstrap==NULL)
   for(size_t s=from;s<to;s++){
     double tmp =0;
     int inc =0;
@@ -425,12 +445,23 @@ double lik3(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
 	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*gls[2]->mat[s][k];
     r += log(tmp);
   }
+  else
+  for(size_t s=from;s<to;s++){
+    double tmp =0;
+    int inc =0;
+    for(size_t i=0;i<gls[0]->y;i++)
+      for(size_t j=0;j<gls[1]->y;j++)
+	for(size_t k=0;k<gls[2]->y;k++)
+	tmp += sfs[inc++]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j]*gls[2]->mat[bootstrap[s]][k];
+    r += log(tmp);
+  }
   return r;
 }
 template <typename T>
 double lik4(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   double r =0;
-  for(size_t s=from;s<to;s++){
+  if(bootstrap==NULL)
+   for(size_t s=from;s<to;s++){
     double tmp =0;
     int inc =0;
     for(size_t i=0;i<gls[0]->y;i++)
@@ -438,6 +469,17 @@ double lik4(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
 	for(size_t k=0;k<gls[2]->y;k++)
 	  for(size_t m=0;m<gls[3]->y;m++)
 	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*gls[2]->mat[s][k]*gls[3]->mat[s][m];
+    r += log(tmp);
+  }
+  else
+  for(size_t s=from;s<to;s++){
+    double tmp =0;
+    int inc =0;
+    for(size_t i=0;i<gls[0]->y;i++)
+      for(size_t j=0;j<gls[1]->y;j++)
+	for(size_t k=0;k<gls[2]->y;k++)
+	  for(size_t m=0;m<gls[3]->y;m++)
+	tmp += sfs[inc++]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j]*gls[2]->mat[bootstrap[s]][k]*gls[3]->mat[bootstrap[s]][m];
     r += log(tmp);
   }
   return r;
@@ -487,9 +529,12 @@ void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,size_t sta
     post[x] =0.0;
     
   for(size_t s=start;SIG_COND&&s<stop;s++){
-    for(int x=0;x<dim;x++)
-      inner[x] = pre[x]*gls[0]->mat[s][x];
-  
+    if(bootstrap==NULL)
+      for(int x=0;x<dim;x++)
+	inner[x] = pre[x]*gls[0]->mat[s][x];
+    else
+      for(int x=0;x<dim;x++)
+	inner[x] = pre[x]*gls[0]->mat[bootstrap[s]][x];
    normalize(inner,dim);
    for(int x=0;x<dim;x++)
      post[x] += inner[x];
@@ -503,18 +548,32 @@ template <typename T>
 void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start,size_t stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
-    
-  for(size_t s=start;SIG_COND&&s<stop;s++){
-    int inc=0;
-    for(size_t x=0;x<gls[0]->y;x++)
-      for(size_t y=0;y<gls[1]->y;y++){
-	inner[inc] = pre[inc]*gls[0]->mat[s][x]*gls[1]->mat[s][y];
-	inc++;
-      }
-   normalize(inner,dim);
-   for(int x=0;x<dim;x++)
-     post[x] += inner[x];
-  }
+   
+  if(bootstrap==NULL)
+    for(size_t s=start;SIG_COND&&s<stop;s++){
+      int inc=0;
+      for(size_t x=0;x<gls[0]->y;x++)
+	for(size_t y=0;y<gls[1]->y;y++){
+	  inner[inc] = pre[inc]*gls[0]->mat[s][x]*gls[1]->mat[s][y];
+	  inc++;
+	}
+      normalize(inner,dim);
+      for(int x=0;x<dim;x++)
+	post[x] += inner[x];
+    }
+  else
+    for(size_t s=start;SIG_COND&&s<stop;s++){
+      int inc=0;
+      for(size_t x=0;x<gls[0]->y;x++)
+	for(size_t y=0;y<gls[1]->y;y++){
+	  inner[inc] = pre[inc]*gls[0]->mat[s][x]*gls[1]->mat[bootstrap[s]][y];
+	  inc++;
+	}
+      normalize(inner,dim);
+      for(int x=0;x<dim;x++)
+	post[x] += inner[x];
+    }
+
   normalize(post,dim);
  
 }
@@ -523,13 +582,26 @@ template <typename T>
 void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start,size_t stop,int dim,double *inner){
   for(int x=0;x<dim;x++)
     post[x] =0.0;
-    
+  if(bootstrap==NULL)
   for(size_t s=start;SIG_COND&&s<stop;s++){
     int inc=0;
     for(size_t x=0;x<gls[0]->y;x++)
       for(size_t y=0;y<gls[1]->y;y++)
 	for(size_t i=0;i<gls[2]->y;i++){
 	  inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i];
+	  inc++;
+	}
+   normalize(inner,dim);
+   for(int x=0;x<dim;x++)
+     post[x] += inner[x];
+  }
+  else
+  for(size_t s=start;SIG_COND&&s<stop;s++){
+    int inc=0;
+    for(size_t x=0;x<gls[0]->y;x++)
+      for(size_t y=0;y<gls[1]->y;y++)
+	for(size_t i=0;i<gls[2]->y;i++){
+	  inner[inc] = pre[inc]*gls[0]->mat[bootstrap[s]][x] * gls[1]->mat[bootstrap[s]][y] * gls[2]->mat[bootstrap[s]][i];
 	  inc++;
 	}
    normalize(inner,dim);
@@ -545,7 +617,7 @@ void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
 
   for(int x=0;x<dim;x++)
     post[x] =0.0;
-    
+  if(bootstrap==NULL)
   for(size_t s=start;SIG_COND&&s<stop;s++){
     int inc=0;
     for(size_t x=0;x<gls[0]->y;x++)
@@ -553,6 +625,17 @@ void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
 	for(size_t i=0;i<gls[2]->y;i++)
 	  for(size_t j=0;j<gls[3]->y;j++){
 	    inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i]* gls[3]->mat[s][j];
+	    inc++;
+	  }
+
+  }
+  for(size_t s=start;SIG_COND&&s<stop;s++){
+    int inc=0;
+    for(size_t x=0;x<gls[0]->y;x++)
+      for(size_t y=0;y<gls[1]->y;y++)
+	for(size_t i=0;i<gls[2]->y;i++)
+	  for(size_t j=0;j<gls[3]->y;j++){
+	    inner[inc] = pre[inc]*gls[0]->mat[bootstrap[s]][x] * gls[1]->mat[bootstrap[s]][y] * gls[2]->mat[bootstrap[s]][i]* gls[3]->mat[bootstrap[s]][j];
 	    inc++;
 	  }
 
@@ -963,6 +1046,7 @@ int fst_index(int argc,char **argv){
 
 template <typename T>
 int main_opt(args *arg){
+
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
     assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
@@ -985,11 +1069,12 @@ int main_opt(args *arg){
 
   int ndim=(int) parspace(saf);
   double *sfs=new double[ndim];
-  
+
   //temp used for checking pos are in sync
   setGloc(saf,nSites);
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL);//read nsites from data
+    int b=0;  
     //fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
     if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
@@ -1014,43 +1099,53 @@ int main_opt(args *arg){
       continue;
     
     fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
-    
+  neverusegoto:
+    if(arg->bootstrap)
+      fprintf(stderr,"Will do boostrap replicate %d/%d\n",b+1,arg->bootstrap);
     if(arg->sfsfname.size()!=0)
-      readSFS(arg->sfsfname[0],ndim,sfs);
-    else{
-      if(arg->seed==-1){
-	for(int i=0;i<ndim;i++)
-	  sfs[i] = (i+1)/((double)(ndim));
-      }else{
-	srand48(arg->seed);
-	for(int i=0;i<ndim;i++){
-	  double r=drand48();
-	  while(r==0.0)
-	    r = drand48();
-	  sfs[i] = r;
-	}
-      }
-      
-    }
-    normalize(sfs,ndim);
+	readSFS(arg->sfsfname[0],ndim,sfs);
+      else{
+	if(arg->seed==-1){
+	  for(int i=0;i<ndim;i++)
+	    sfs[i] = (i+1)/((double)(ndim));
+	}else{
 
-    
-    double lik;
-    if(arg->emAccl==0)
-      lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
-    else
-      lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl);
-    fprintf(stderr,"likelihood: %f\n",lik);
-    fprintf(stderr,"------------\n");
+	  for(int i=0;i<ndim;i++){
+	    double r=drand48();
+	    while(r==0.0)
+	      r = drand48();
+	    sfs[i] = r;
+	  }
+	}
+	
+      }
+      normalize(sfs,ndim);
+      
+      if(bootstrap==NULL &&arg->bootstrap)
+	bootstrap = new size_t[gls[0]->x];
+      
+      if(bootstrap){
+	for(size_t i=0;i<gls[0]->x;i++)
+	  bootstrap[i] = lrand48() % gls[0]->x;
+	std::sort(bootstrap,bootstrap+gls[0]->x);
+      }
+      double lik;
+      if(arg->emAccl==0)
+	lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
+      else
+	lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl);
+      fprintf(stderr,"likelihood: %f\n",lik);
+      fprintf(stderr,"------------\n");
 #if 1
-    //    fprintf(stdout,"#### Estimate of the sfs ####\n");
-    //all gls have the same ->x. That means the same numbe of sites.
-    for(int x=0;x<ndim;x++)
-      fprintf(stdout,"%f ",((double)gls[0]->x)*sfs[x]);
-    fprintf(stdout,"\n");
-    fflush(stdout);
+      //    fprintf(stdout,"#### Estimate of the sfs ####\n");
+      //all gls have the same ->x. That means the same numbe of sites.
+      for(int x=0;x<ndim;x++)
+	fprintf(stdout,"%f ",((double)gls[0]->x)*sfs[x]);
+      fprintf(stdout,"\n");
+      fflush(stdout);
 #endif
-    
+      if(++b<arg->bootstrap)
+	goto neverusegoto;
     for(int i=0;i<gls.size();i++)
       gls[i]->x =0;
     
@@ -1153,6 +1248,7 @@ int main(int argc,char **argv){
     main_opt<float>(arg);
     
   }
-
+  if(bootstrap!=NULL)
+    delete [] boostrap;
   return 0;
 }
