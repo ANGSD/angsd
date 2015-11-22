@@ -118,8 +118,11 @@ void abcHWE::print(funkyPars *pars){
       continue;
     freqStruct *freq = (freqStruct *) pars->extras[6];
     float lrt= 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
+    //DRAGON lrt is sometimes nan
     float pval;
-    if(lrt<0)
+    if(std::isnan(lrt))
+      pval=lrt;
+    else if(lrt<0)
       pval=1;
     else
       pval=1-chisq->cdf(lrt);
