@@ -253,7 +253,7 @@ void abcFilterSNP::run(funkyPars *pars){
       double Z = baseQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(bufstr,"%f:%e\t",Z,2*phi(Z));
       Z = mapQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
-      ksprintf(bufstr,"%f:%e\n",Z,2*phi(Z));
+      ksprintf(bufstr,"%f:%e\t",Z,2*phi(Z));
       Z = edgebias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(bufstr,"%f:%e\n",Z,2*phi(Z));
    }
