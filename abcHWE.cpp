@@ -124,7 +124,7 @@ void abcHWE::print(funkyPars *pars){
       pval=lrt;
     else if(lrt<0)
       pval=1;
-    else
+    else			
       pval=1-chisq->cdf(lrt);
     //    fprintf(stderr,"lrt:%f\n",lrt);
     ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],hweStruct->freq[s],hweStruct->F[s],lrt,pval);
