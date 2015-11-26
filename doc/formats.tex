@@ -64,7 +64,7 @@ First 8bytes is a magic number determining which binary version.
 \end{itemize}
 \subsubsection{PREFIX.fst.idx}
 The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{size\_t} containing the number of samples for which we have generated fst results.
-\begin{table}
+\begin{table}[h]
 \begin{tabular}{rllll}
   \hline
   {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
@@ -77,7 +77,7 @@ The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{si
 \end{tabular}\label{tab2}
 \end{table}
 \subsubsection{PREFIX.fst.gz}
-\begin{table}
+\begin{table}[h]
 \begin{tabular}{rllll}
   \hline
   {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
@@ -98,7 +98,7 @@ The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{si
 \item[PREFIX.fst.gz] bgzf compressed binary file.
 \end{itemize}
 \subsubsection{PREFIX.fst.idx}
-\begin{table}
+\begin{table}[h]
 \begin{tabular}{rllll}
   \hline
   {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
@@ -112,7 +112,9 @@ The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{si
   5 & {\sf NDIM\_j} & size\_t & number of categories for pair $j$   \\
   6 & {\sf PRIOR\_j} & double[NDIM\_j] &  prior for pair $j$\\
   \hline\hline
-  \hline
+  6 & {\sf AS\_j} & double[NDIM\_j] &  alfa for pair $j$\\
+  6 & {\sf BS\_j} & double[NDIM\_j] &  beta for pair $j$\\
+  \hline\hline
   7 & {\sf CLEN} & size\_t &  Length of CHR (not including terminating null)\\
   8 & {\sf CHR} & char* & Reference sequence name. Length is CLEN\\
   9 & {\sf NSITES} & size\_t & Number of sites with coverage from reference CHR\\
@@ -122,7 +124,7 @@ The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{si
 \caption{Format of saf.idx file. $i$ loops over number of populations. $j$ loops over number of combinations, in this order pop1/pop2,pop1/pop3,pop1/pop4,pop2/pop3,$\ldots$.}
 \end{table}
 \subsubsection{PREFIX.fst.gz}
-\begin{table}
+\begin{table}[h]
 \begin{tabular}{rllll}
   \hline
   {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
