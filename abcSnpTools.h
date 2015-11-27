@@ -3,6 +3,7 @@ class abcSnpTools:public abc{
 private:
   uint16_t *ebd;
   int curChr;
+  double *phred;
 public:
   int doSnpTools;
   

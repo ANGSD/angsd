@@ -16,11 +16,25 @@ void abcSnpTools::run(funkyPars *pars){
     return;
   if(curChr!=pars->refId){
     save_chr(ebd);
+  }
+  double **ebds = new double*[pars->numSites];
+  for(int s=0;s<pars->numSites;s++){
+    double *ebd=new double[6*pars->nInd];
+    for(int i=0;i<pars->nInd;i++){
+      tNode *nd = pars->chk->nd[s][i];
+      for (int l=0;nd&&l<nd->l;l++){
 
+
+      }
+
+
+    }
+    ebds[s]=ebd;
   }
   
     
 }
+
 
 void abcSnpTools::clean(funkyPars *fp){
   if(!doSnpTools)
@@ -58,11 +72,15 @@ void abcSnpTools::getOptions(argStruct *arguments){
 abcSnpTools::abcSnpTools(const char *outfiles,argStruct *arguments,int inputtype){
   curChr =-1;
   getOptions(arguments);
-  if(doSnpTools)
+  if(doSnpTools){
     fprintf(stderr,"running doSnpTools=%d\n",doSnpTools);
-  else{
+    phred=new double[256];
+    for(uint i=0; i<256; i++)	
+      phred[i]=1-exp(-0.1*i);
+  }else{
     shouldRun[index] = 0;
   }
+
 }
 
 abcSnpTools::~abcSnpTools(){
