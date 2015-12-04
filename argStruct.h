@@ -38,5 +38,6 @@ typedef struct{
   std::vector<char *> nams;//contains either the above or the contents of -bam;
   std::vector<regs> regions;//regions to use -r/-rf when using bamfiles
   int nLines;//nLines;
+  int nReads;//number of reads to pop from each BAM/CRAM
   int show;
 }argStruct;
