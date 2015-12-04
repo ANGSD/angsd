@@ -149,6 +149,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-checkBamHeaders %d\tExit if difference in BAM headers\n",checkBamHeaders);
   fprintf(argFile,"\t-doCheck\t%d\tKeep going even if datafile is not suffixed with .bam/.cram\n",doCheck);
   fprintf(argFile,"\t-downSample\t%f\tDownsample to the fraction of original data\n",downSample);
+  fprintf(argFile,"\t-nReads\t\t%d\tNumber of reads to pop from each BAM/CRAMs\n",ret->nReads);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
   
   fprintf(argFile,"\n");
@@ -181,6 +182,7 @@ void setArgsBam(argStruct *arguments){
   MAX_SEQ_LEN = angsd::getArg("-setMinChunkSize",MAX_SEQ_LEN,arguments);
   checkBamHeaders = angsd::getArg("-checkBamHeaders",checkBamHeaders,arguments);
   doCheck = angsd::getArg("-doCheck",doCheck,arguments);
+  arguments->nReads = angsd::getArg("-nReads",arguments->nReads,arguments);
   arguments->show = angsd::getArg("-show",arguments->show,arguments);
   if(regfile && regfiles)
     fprintf(stderr,"\t-> WARNING both -r and -rf has been set \n");

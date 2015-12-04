@@ -172,6 +172,7 @@ argStruct *setArgStruct(int argc,char **argv) {
   arguments->revMap= NULL;
   arguments->argc=argc;
   arguments->argv=argv;
+  arguments->nReads = 50;
   arguments->usedArgs= new int[argc+1];//well here we allocate one more than needed, this is only used in the ./angsd -beagle version
   for(int i=0;i<argc;i++)
     arguments->usedArgs[i]=0;

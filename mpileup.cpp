@@ -13,7 +13,7 @@ mpileup::mpileup(int nInd_a,gzFile gz_a,int bpl,const aMap* revMap_a,int minQ_a)
 
   nInd = nInd_a;
   gz = gz_a;
-   len = bpl;
+  len = bpl;
   revMap = revMap_a;
   minQ = minQ_a;
   buffer=original = new char [bpl];

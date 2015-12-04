@@ -221,7 +221,7 @@ int bammer_main(argStruct *args){
 
   extern int maxThreads;
   
-  uppile(args->show,maxThreads,rd,args->nLines,args->nams.size(),args->regions,gf);
+  uppile(args->show,maxThreads,rd,args->nReads,args->nams.size(),args->regions,gf);
 
   //cleanup stuff
   for(unsigned i=0;i<args->nams.size();i++)
