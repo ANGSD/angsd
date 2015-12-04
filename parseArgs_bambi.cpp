@@ -142,8 +142,8 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-only_proper_pairs\t%d\tOnly use reads where the mate could be mapped\n",only_proper_pairs);
   fprintf(argFile,"\t-C\t\t%d\tadjust mapQ for excessive mismatches (as SAMtools), supply -ref\n",adjustMapQ);
   fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (as SAMtools), supply -ref\n",baq);
-  fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
-  fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
+  //  fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
+  // fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders\t%d\tExit if difference in BAM headers\n",checkBamHeaders);
   fprintf(argFile,"\t-doCheck\t%d\tKeep going even if datafile is not suffixed with .bam/.cram\n",doCheck);
   fprintf(argFile,"\t-downSample\t%f\tDownsample to the fraction of original data\n",downSample);
