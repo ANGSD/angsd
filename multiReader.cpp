@@ -31,6 +31,11 @@ bam_hdr_t *getHeadFromFai(const char *fname){
     //fprintf(stderr,"tok: %s\n",tok);
     chrs.push_back(strdup(tok));//<-strdup so don't clean here
     tok = strtok(NULL,"\t \n");
+    if(!tok){
+      fprintf(stderr,"\t-> fai file looks malformed? last reference: %s\n",chrs.back());
+      fclose(fp);
+      return NULL;
+    }
     // fprintf(stderr,"tok: %s\n",tok);
     lengths.push_back(atoi(tok));
   }
@@ -325,7 +330,8 @@ multiReader::multiReader(int argc,char**argv){
   getOptions(args);
 
   if(fai){
-    hd=getHeadFromFai(fai);
+    if(!(hd=getHeadFromFai(fai)))
+      exit(0);
   }else{
     if(args->nams.size()==0){
       fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp/-vcf-pl filename\n");
