@@ -309,6 +309,9 @@ multiReader::multiReader(int argc,char**argv){
       case INPUT_BEAGLE:
 	printAndExit=1;
 	break;
+      case INPUT_PILEUP:
+	printAndExit=1;
+	break;
       }
     if(printAndExit){
       fprintf(stderr,"\t-> Must supply -fai file\n");

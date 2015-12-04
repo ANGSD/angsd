@@ -19,8 +19,7 @@ mpileup::mpileup(int nInd_a,gzFile gz_a,int bpl,const aMap* revMap_a,int minQ_a)
   buffer=original = new char [bpl];
 }
 mpileup::~mpileup(){
-  fprintf(stderr,"mpileup:\n");
- delete [] original;
+  delete [] original;
 }
 
 tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
@@ -130,7 +129,7 @@ funkyPars *mpileup::fetch(int chunksize){
     char *tok = strtok_r(buffer,delims,&buffer);
     it=revMap->find(tok);
     if(it==revMap->end()){
-      fprintf(stderr,"Probleme finding chr \'%s\' in fai file\n",tok);
+      fprintf(stderr,"\t-> Problems finding reference \'%s\' in fai file\n",tok);
       exit(0);
     }
     if(lastRefId==-1)

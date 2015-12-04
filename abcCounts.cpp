@@ -91,42 +91,42 @@ void abcCounts::getOptions(argStruct *arguments){
     exit(0);
   }
   if(dumpCounts&&doCounts==0){
-    fprintf(stderr,"You must supply -doCounts if you want to dumpcounts\n");
+    fprintf(stderr,"\t-> You must supply -doCounts if you want to dumpcounts\n");
     exit(0);
   }
 
   if(doDepth!=0&&doCounts==0){
-    fprintf(stderr,"Must supply -doCounts 1 if you want depth distribution\n");
+    fprintf(stderr,"\t-> Must supply -doCounts 1 if you want depth distribution\n");
     exit(0);
   }
 
  if(doQsDist!=0&&doCounts==0){
-    fprintf(stderr,"Must supply -doCounts 1 if you want qscore distribution\n");
+    fprintf(stderr,"\t-> Must supply -doCounts 1 if you want qscore distribution\n");
     exit(0);
   }
  if(iCounts!=0&&doCounts==0){
-   fprintf(stderr,"Must supply -doCounts 1 if you want to write iCounts\n");
+   fprintf(stderr,"\t-> Must supply -doCounts 1 if you want to write iCounts\n");
    exit(0);
  }
  if(iCounts!=0&&arguments->nInd!=1){
-   fprintf(stderr,"iCounts only for single chromosomes and single samples\n");
+   fprintf(stderr,"\t-> iCounts only for single chromosomes and single samples\n");
    exit(0);
  }
  ffileFname = angsd::getArg("-ffile",ffileFname,arguments);
  qfileFname = angsd::getArg("-qfile",qfileFname,arguments);
  
  if(ffileFname&&iCounts!=2){
-   fprintf(stderr,"-ffile is only used for -iCounts 2\n");
+   fprintf(stderr,"\t-> -ffile is only used for -iCounts 2\n");
    exit(0);
  }
  if(qfileFname&&iCounts!=2){
-   fprintf(stderr,"-qfile is only used for -iCounts 2\n");
+   fprintf(stderr,"\t-> -qfile is only used for -iCounts 2\n");
    exit(0);
  }
  int tmp=-1;
  tmp = angsd::getArg("-minQ",tmp,arguments);
  if(iCounts==2 && qfileFname && tmp==-1){
-   fprintf(stderr,"Must fix -minQ 0 when using -qfile \n");
+   fprintf(stderr,"\t-> Must fix -minQ 0 when using -qfile \n");
    exit(0);
  }
 
@@ -594,6 +594,16 @@ void abcCounts::run(funkyPars *pars){
   assert(pars->chk!=NULL&&pars->counts==NULL);
   pars->counts = countNucs(pars->chk,pars->keepSites);
   // fprintf(stderr,"%d\n",pars->keepSites[0]);
+  for(int s=0;s<pars->numSites;s++){
+    size_t ss=0;
+    for(int i=0;i<4*pars->nInd;i++)
+      if(pars->counts[s][ss]){
+	ss++;
+	break;
+      }
+    if(ss==0)
+      pars->keepSites[s]=0;
+  }
   //modify keepsites;
   if(minInd!=0) {
     for(int i=0;i<pars->numSites;i++){
