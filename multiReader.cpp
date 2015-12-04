@@ -75,7 +75,8 @@ void setInputType(argStruct *args){
   fprintf(stderr,"glf3:%d\n",INPUT_GLF3);
   fprintf(stderr,"blg:%d\n",INPUT_BEAGLE);
   fprintf(stderr,"plp:%d\n",INPUT_PILEUP);
-  fprintf(stderr,"vcf:%d\n",INPUT_VCF);
+  fprintf(stderr,"vcf_gp:%d\n",INPUT_VCF_GP);
+  fprintf(stderr,"vcf_gl:%d\n",INPUT_VCF_GL);
 #endif
 
 
@@ -85,12 +86,6 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_GLF;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-    char *tmp_fai = NULL;
-    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
-    if(tmp_fai==NULL){
-      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -glf input\n");
-      exit(0);
-    }
     return;
   }
   tmp = NULL;
@@ -99,12 +94,6 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_GLF3;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-    char *tmp_fai = NULL;
-    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
-    if(tmp_fai==NULL){
-      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -glf3 input\n");
-      exit(0);
-    }
     return;
   }
   tmp=NULL;
@@ -115,12 +104,6 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     char *tmp_fai = NULL;
     tmp_fai = angsd::getArg("-fai",tmp_fai,args);
-    if(tmp_fai==NULL){
-      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using VCF input\n");
-      exit(0);
-
-    }
-    free(tmp_fai);
     return;
   }
   tmp=NULL;
@@ -129,14 +112,6 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_VCF_GL;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-    char *tmp_fai = NULL;
-    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
-    if(tmp_fai==NULL){
-      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using VCF input\n");
-      exit(0);
-
-    }
-    free(tmp_fai);
     return;
   }
   tmp=NULL;
@@ -145,14 +120,6 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_VCF_GL;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-    char *tmp_fai = NULL;
-    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
-    if(tmp_fai==NULL){
-      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using VCF input\n");
-      exit(0);
-
-    }
-    free(tmp_fai);
     return;
   }
   tmp=NULL;
@@ -166,17 +133,9 @@ void setInputType(argStruct *args){
   tmp=NULL;
   tmp = angsd::getArg("-beagle",tmp,args);
   if(tmp!=NULL){
-    char *tmp_fai = NULL;
-    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
-    if(tmp_fai==NULL){
-      fprintf(stderr,"\t-> You must supply a fai file (-fai) when using -beagle input\n");
-      exit(0);
-
-    }
     args->inputtype=INPUT_BEAGLE;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-    free(tmp_fai);
     return;
   }
   tmp=NULL;
@@ -243,17 +202,17 @@ argStruct *setArgStruct(int argc,char **argv) {
 
 void multiReader::printArg(FILE *argFile){
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
-  fprintf(argFile,"-nLines=%d\n",nLines);
-  fprintf(argFile,"-bytesPerLine=%d\n",bytesPerLine);
+  fprintf(argFile,"\t-nLines\t%d\t(Number of lines to read)\n",nLines);
+  fprintf(argFile,"\t-bpl\t%d (bytesPerLine)\n",bytesPerLine);
   fprintf(argFile,"\t-beagle\t%s\t(Beagle Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-vcf-GL\t%s\t(vcf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-vcf-GP\t%s\t(vcf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-glf\t%s\t(glf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-pileup\t%s\t(pileup Filename (can be .gz))\n",fname);
-  fprintf(argFile,"\t-intName=%d\t(Assume First column is chr_position)\n",intName);
-  fprintf(argFile,"\t-isSim=%d\t(Simulated data assumes ancestral is A)\n",isSim);
-  fprintf(argFile,"\t-nInd=%d\t(Number of individuals)\n",nInd);
-  fprintf(argFile,"\t-minQ=%d\t(minimum base quality; only used in pileupreader)\n",minQ);
+  fprintf(argFile,"\t-intName %d\t(Assume First column is chr_position)\n",intName);
+  fprintf(argFile,"\t-isSim\t%d\t(Simulated data assumes ancestral is A)\n",isSim);
+  fprintf(argFile,"\t-nInd\t%d\t\t(Number of individuals)\n",nInd);
+  fprintf(argFile,"\t-minQ\t%d\t(minimum base quality; only used in pileupreader)\n",minQ);
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
 }
 
@@ -262,7 +221,7 @@ void multiReader::getOptions(argStruct *arguments){
 
   nLines=angsd::getArg("-nLines",nLines,arguments);
   arguments->nLines = nLines;
-  bytesPerLine=angsd::getArg("-bytesPerLine",bytesPerLine,arguments);
+  bytesPerLine=angsd::getArg("-bpl",bytesPerLine,arguments);
   fname=angsd::getArg("-beagle",fname,arguments);
   fname=angsd::getArg("-pileup",fname,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
@@ -310,7 +269,7 @@ multiReader::multiReader(int argc,char**argv){
 
   type = args->inputtype;
 
-  if(args->argc==2){
+  if(args->argc==2) {
     if((!strcasecmp(args->argv[1],"-beagle")) ||
        (!strcasecmp(args->argv[1],"-glf")) ||
        (!strcasecmp(args->argv[1],"-glf3")) ||
@@ -327,8 +286,36 @@ multiReader::multiReader(int argc,char**argv){
     }else
       return;
   }
+  
   getOptions(args);
+  if(fai==NULL){
+    int printAndExit =0;
+    switch(args->inputtype)
+      {
+      case INPUT_GLF:
+	printAndExit=1;
+	break;
+      case INPUT_GLF3:
+	printAndExit=1;
+	break;
+      case INPUT_VCF_GP:
+	printAndExit=1;
+	break;
+      case INPUT_VCF_GL:
+	printAndExit=1;
+	break;
+      case INPUT_BEAGLE:
+	printAndExit=1;
+	break;
+      }
+    if(printAndExit){
+      fprintf(stderr,"\t-> Must supply -fai file\n");
+      exit(0);
 
+    }
+  }
+
+  
   if(fai){
     if(!(hd=getHeadFromFai(fai)))
       exit(0);

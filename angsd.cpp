@@ -84,7 +84,7 @@ void catchkill(){
 
 //print nice info
 void printProgInfo(FILE *fp){
-fprintf(fp,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
+  fprintf(fp,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
   fprintf(fp,"\t-> Please use the website \"http://www.popgen.dk/angsd\" as reference\n");
   fprintf(fp,"\t-> Use -nThreads or -P for number of threads allocated to the program\n"); 
   fprintf(fp,"Overview of methods:\n");
@@ -182,7 +182,7 @@ int main(int argc, char** argv){
     fprintf(stderr,"\t-> ZLIB_VERSION: %s zlibversion: %s \n",ZLIB_VERSION,zlib_version);
     //return 0; 
   }
-
+  fprintf(stderr,"\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
   //no arguments supplied -> print info
   if(argc==1||(argc==2&&(strcasecmp(argv[1],"--version")==0||strcasecmp(argv[1],"--help")==0))){//if haven't been supplied with arguments, load default,print, and exit
     printProgInfo(stderr);
