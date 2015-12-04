@@ -10,7 +10,6 @@
 
 class multiReader{
 private:
-  char *fai;
   int bytesPerLine;
   int nLines;
   glfReader *myglf;

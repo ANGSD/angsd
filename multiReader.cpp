@@ -250,7 +250,7 @@ void multiReader::getOptions(argStruct *arguments){
 multiReader::multiReader(int argc,char**argv){
   gz=Z_NULL;
   myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;
-  fai = NULL;
+  
   bytesPerLine = 33554432 ;//2^15 about 33 megs perline/persites should be enough
   nLines=50;
   
@@ -293,7 +293,7 @@ multiReader::multiReader(int argc,char**argv){
   }
   
   getOptions(args);
-  if(fai==NULL){
+  if(args->fai==NULL){
     int printAndExit =0;
     switch(args->inputtype)
       {
@@ -324,8 +324,8 @@ multiReader::multiReader(int argc,char**argv){
   }
 
   
-  if(fai){
-    if(!(hd=getHeadFromFai(fai)))
+  if(args->fai){
+    if(!(hd=getHeadFromFai(args->fai)))
       exit(0);
   }else{
     if(args->nams.size()==0){
@@ -421,11 +421,7 @@ multiReader::~multiReader(){
  
   delete revMap;
 
-  
-
-  free(fai);
-
-  switch(type){
+    switch(type){
   case INPUT_PILEUP:{
     delete mpil;
     break;
