@@ -87,9 +87,6 @@ void printProgInfo(FILE *fp){
 fprintf(fp,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
   fprintf(fp,"\t-> Please use the website \"http://www.popgen.dk/angsd\" as reference\n");
   fprintf(fp,"\t-> Use -nThreads or -P for number of threads allocated to the program\n"); 
-  fprintf(fp,"\t-> This is the fancy nodepooled version of angsd which I made the new master/develop\n"); 
-  fprintf(fp,"\t-> If you encounter problems please use the old nonpooled version\n"); 
-  fprintf(fp,"\t-> a) git checkout dbb2d3f7\n"); 
   fprintf(fp,"Overview of methods:\n");
   fprintf(fp,"\t-GL\t\tEstimate genotype likelihoods\n");
   fprintf(fp,"\t-doCounts\tCalculate various counts statistics\n");
