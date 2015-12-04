@@ -130,6 +130,8 @@ void printFlagInfo(FILE *fp,unsigned int f){
 
 void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"---------------\n%s: bam reader:\n",__FILE__);
+  fprintf(argFile,"\t-bam/-b\t\t%s\t(list of BAM/CRAM files)\n",ret->infile);
+  fprintf(argFile,"\t-i\t\t%s\t(Single BAM/CRAM file)\n",ret->infile);
   fprintf(argFile,"\t-r\t\t%s\tSupply a single region in commandline (see examples below)\n",regfile);
   fprintf(argFile,"\t-rf\t\t%s\tSupply multiple regions in a file (see examples below)\n",regfiles);
   fprintf(argFile,"\t-remove_bads\t%d\tDiscard \'bad\' reads, (flag >=256) \n",remove_bads);
@@ -139,12 +141,12 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-minMapQ\t%d\tDiscard reads with mapping quality below\n",minMapQ);
   fprintf(argFile,"\t-minQ\t\t%d\tDiscard bases with base quality below\n",minQ);
   fprintf(argFile,"\t-trim\t\t%d\tNumber of based to discard at both ends of the reads\n",trim);
-  fprintf(argFile,"\t-only_proper_pairs\t%d\tOnly use reads where the mate could be mapped\n",only_proper_pairs);
+  fprintf(argFile,"\t-only_proper_pairs %d\tOnly use reads where the mate could be mapped\n",only_proper_pairs);
   fprintf(argFile,"\t-C\t\t%d\tadjust mapQ for excessive mismatches (as SAMtools), supply -ref\n",adjustMapQ);
   fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (as SAMtools), supply -ref\n",baq);
   //  fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   // fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
-  fprintf(argFile,"\t-checkBamHeaders\t%d\tExit if difference in BAM headers\n",checkBamHeaders);
+  fprintf(argFile,"\t-checkBamHeaders %d\tExit if difference in BAM headers\n",checkBamHeaders);
   fprintf(argFile,"\t-doCheck\t%d\tKeep going even if datafile is not suffixed with .bam/.cram\n",doCheck);
   fprintf(argFile,"\t-downSample\t%f\tDownsample to the fraction of original data\n",downSample);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
@@ -156,10 +158,10 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t\tchr:-stop\tUse region from beginning of chromosome: chr to stop\n");
   fprintf(argFile,"\t\tchr:start-stop\tUse region from start to stop from chromosome: chr\n");
   fprintf(argFile,"\t\tchr:site\tUse single site on chromosome: chr\n");
-  fprintf(argFile,"Will include read if:\n\tincludeflag:[%d] (beta)",includeflags);
-  printFlagInfo(argFile,includeflags);
-  fprintf(argFile,"Will discard read if:\n\tdiscardflag:[%d] (beta)",discardflags);
-  printFlagInfo(argFile,discardflags);
+  //fprintf(argFile,"Will include read if:\n\tincludeflag:[%d] (beta)",includeflags);
+  //printFlagInfo(argFile,includeflags);
+  //fprintf(argFile,"Will discard read if:\n\tdiscardflag:[%d] (beta)",discardflags);
+  //printFlagInfo(argFile,discardflags);
   
 }
 
