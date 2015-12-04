@@ -24,7 +24,7 @@ int angsd::getArg(const char* argName,int type,argStruct *arguments){
       arguments->usedArgs[argPos]=1;
       arguments->usedArgs[argPos+1]=1;
       if(argPos==arguments->argc-1){
-	fprintf(stderr,"Must supply a parameter for: %s\n",argName);
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
 	exit(0);
       }
       return(atoi(arguments->argv[argPos+1]));  
@@ -45,7 +45,7 @@ char* angsd::getArg(const char* argName,char* type,argStruct *arguments){
       arguments->usedArgs[argPos]=1;
       arguments->usedArgs[argPos+1]=1;
       if(argPos==arguments->argc-1){
-	fprintf(stderr,"Must supply a parameter for: %s\n",argName);
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
 	exit(0);
       }
       return(strdup(arguments->argv[argPos+1]));  //VALGRIND says leak. don't care very small DRAGON
@@ -69,7 +69,7 @@ char* angsd::getArg(const char* argName, const char* type,argStruct *arguments){
       arguments->usedArgs[argPos]=1;
       arguments->usedArgs[argPos+1]=1;
       if(argPos==arguments->argc-1){
-	fprintf(stderr,"Must supply a parameter for: %s\n",argName);
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
 	exit(0);
       }
       return(strdup(arguments->argv[argPos+1]));  //VALGRIND says leak. don't care very small DRAGON
@@ -93,7 +93,7 @@ float angsd::getArg(const char* argName,float type,argStruct *arguments){
       arguments->usedArgs[argPos]=1;
       arguments->usedArgs[argPos+1]=1;
  if(argPos==arguments->argc-1){
-	fprintf(stderr,"Must supply a parameter for: %s\n",argName);
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
 	exit(0);
       }
       return(atof(arguments->argv[argPos+1]));  
@@ -112,7 +112,7 @@ double angsd::getArg(const char* argName,double type,argStruct *arguments){
       arguments->usedArgs[argPos]=1;
       arguments->usedArgs[argPos+1]=1;
  if(argPos==arguments->argc-1){
-	fprintf(stderr,"Must supply a parameter for: %s\n",argName);
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
 	exit(0);
       }
       return(atof(arguments->argv[argPos+1]));  
