@@ -211,8 +211,9 @@ int fst_stat2(int argc,char **argv){
     ppos = new int[it->second.nSites];
     
     bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
-    for(int i=0;i<it->second.nSites;i++)
+    for(int i=0;i<it->second.nSites;i++)//what? why? dragon!
       ppos[i]++;
+
     for(int i=0;i<choose((int)pf->names.size(),2);i++){
       ares[i] = new double[it->second.nSites];
       bres[i] = new double[it->second.nSites];
@@ -230,7 +231,7 @@ int fst_stat2(int argc,char **argv){
     pE = pS+pars->win;
     begI=endI=0;
 
-    //    fprintf(stderr,"ps:%d\n",pS);exit(0);
+    //fprintf(stderr,"ps:%d\n",pS);exit(0);
     if(pE>(pars->stop!=-1?pars->stop:ppos[it->second.nSites-1])){
     fprintf(stderr,"end of dataset is before end of window: end of window:%d last position in chr:%d\n",pE,ppos[it->second.nSites-1]);
     //    return str;
@@ -239,7 +240,7 @@ int fst_stat2(int argc,char **argv){
   while(ppos[begI]<pS) begI++;
   
   endI=begI;
-  while(ppos[endI]<pE) endI++;
+  while(endI<it->second.nSites &&ppos[endI]<pE) endI++;
 
   //fprintf(stderr,"begI:%d endI:%d\n",begI,endI);
 
