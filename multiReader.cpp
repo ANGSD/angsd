@@ -262,7 +262,8 @@ multiReader::multiReader(int argc,char**argv){
   for(int i=0;i<argc;i++)
     fprintf(args->argumentFile,"%s ",argv[i]);
   //  fprintf(args->argumentFile,"\n\n");
-  fprintf(args->argumentFile,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
+  if(args->argumentFile!=stderr)
+    fprintf(args->argumentFile,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
   void printTime(FILE *fp);
   printTime(args->argumentFile); 
 
