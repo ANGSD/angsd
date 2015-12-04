@@ -79,7 +79,7 @@ void setInputType(argStruct *args){
   fprintf(stderr,"vcf_gl:%d\n",INPUT_VCF_GL);
 #endif
 
-
+  args->fai = angsd::getArg("-fai",args->fai,args);
   char *tmp =NULL;
   tmp = angsd::getArg("-glf",tmp,args);
   if(tmp!=NULL){
@@ -102,8 +102,7 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_VCF_GP;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-    char *tmp_fai = NULL;
-    tmp_fai = angsd::getArg("-fai",tmp_fai,args);
+   
     return;
   }
   tmp=NULL;
@@ -180,7 +179,7 @@ argStruct *setArgStruct(int argc,char **argv) {
   arguments->inputtype=-1;
   arguments->infile = NULL;
   arguments->show =0;
-
+  arguments->fai = NULL;
   //check output filename
   arguments->outfiles = angsd::getArg("-out",arguments->outfiles,arguments);
   if(arguments->outfiles==NULL){
@@ -201,7 +200,7 @@ argStruct *setArgStruct(int argc,char **argv) {
 }
 
 
-void multiReader::printArg(FILE *argFile){
+void multiReader::printArg(FILE *argFile,argStruct *args){
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
   fprintf(argFile,"\t-nLines\t%d\t(Number of lines to read)\n",nLines);
   fprintf(argFile,"\t-bpl\t%d (bytesPerLine)\n",bytesPerLine);
@@ -214,6 +213,10 @@ void multiReader::printArg(FILE *argFile){
   fprintf(argFile,"\t-isSim\t%d\t(Simulated data assumes ancestral is A)\n",isSim);
   fprintf(argFile,"\t-nInd\t%d\t\t(Number of individuals)\n",nInd);
   fprintf(argFile,"\t-minQ\t%d\t(minimum base quality; only used in pileupreader)\n",minQ);
+  fprintf(argFile,"\t-fai\t%s\t(fai file)\n",args->fai);
+  fprintf(argFile,"\t-minQ\t%d\t(minimum base quality; only used in pileupreader)\n",minQ);
+
+  
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
 }
 
@@ -238,9 +241,9 @@ void multiReader::getOptions(argStruct *arguments){
 
   //read fai if suppplied (used by other than native bam readers)
   
-  fai=angsd::getArg("-fai",fai,arguments);
+  arguments->fai=angsd::getArg("-fai",arguments->fai,arguments);
   
-  printArg(arguments->argumentFile);
+  printArg(arguments->argumentFile,arguments);
 }
 
 
@@ -279,7 +282,7 @@ multiReader::multiReader(int argc,char**argv){
        (!strcasecmp(args->argv[1],"-vcf-GL")) ||
        (!strcasecmp(args->argv[1],"-vcf-pl")) ||
        (!strcasecmp(args->argv[1],"-vcf-GP"))) {
-      printArg(stdout);
+      printArg(stdout,args);
       exit(0);
     }else if ((!strcasecmp(args->argv[1],"-bam")) ||
 	      (!strcasecmp(args->argv[1],"-b"))){

@@ -22,7 +22,7 @@ private:
   gzFile gz;
   int type;//0=soap;1=glf;2=glfclean,3=tglf,4=simfiles
   void getOptions(argStruct *arguments);
-  void printArg( FILE *fp);
+  void printArg( FILE *fp,argStruct *);
   std::map<char*,int> mMap;
   int isSim;
   int nInd;

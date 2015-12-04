@@ -40,4 +40,5 @@ typedef struct{
   int nLines;//nLines;
   int nReads;//number of reads to pop from each BAM/CRAM
   int show;
+  char *fai;
 }argStruct;
