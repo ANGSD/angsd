@@ -10,7 +10,6 @@
 
 class multiReader{
 private:
-  int bytesPerLine;
   int nLines;
   glfReader *myglf;
   vcfReader *myvcf;

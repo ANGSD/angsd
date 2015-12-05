@@ -5,12 +5,12 @@ class mpileup{
   gzFile gz;
   char *original;
   char *buffer;
-  unsigned len;
+  int l;
   const aMap *revMap;
   int minQ;
 public:
   funkyPars *fetch(int chunkSize);
-  mpileup(int nInd_a,gzFile gz,int bpl,const aMap *revMap,int minQ_a);
+  mpileup(int nInd_a,gzFile gz,const aMap *revMap,int minQ_a);
   ~mpileup();
 };
 

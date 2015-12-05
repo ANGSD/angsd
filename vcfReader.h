@@ -14,6 +14,6 @@ private:
   int curChr;
 public:
   funkyPars *fetch(int chunkSize);
-  vcfReader(int &nInd_a,gzFile gz_a,int bytesPerLine,  const aMap *revMap);
+  vcfReader(int &nInd_a,gzFile gz_a, const aMap *revMap);
   ~vcfReader();
 };

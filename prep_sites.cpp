@@ -314,14 +314,15 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   char *last=NULL;
   int nCols = -1;
   int hasMajMin=0;
-  char buf[LENS];
+  int l = 128;
+  char *buf =(char *) calloc(l,sizeof(char));
 
   extern int SIG_COND;
   const char *delims="\t \n";
   char **parsed = new char*[4];
   
   //read a line
-  while(SIG_COND && gzgets(gz,buf,LENS)) {
+  while(SIG_COND && aio::tgets(gz,&buf,&l)) {
     if(buf[0]=='#'||buf[0]=='\n')//skip if empty or starts with #
       continue;
     
@@ -442,6 +443,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     dalloc(major);
   if(minor)
     dalloc(minor);
+  free(buf);
 }
 
 

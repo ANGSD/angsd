@@ -8,16 +8,16 @@ vcfReader::~vcfReader(){
     free(buf);
 };
 
-vcfReader::vcfReader(int &nInd_a,gzFile gz_a,int bytesPerLine,const aMap *revMap_a){
+vcfReader::vcfReader(int &nInd_a,gzFile gz_a,const aMap *revMap_a){
 
   curChr=-1;
   nInd = nInd_a;
   gz=gz_a;
-  len=bytesPerLine;
+  len=128;
   buf=NULL;
-  buf=(char*)malloc(len);
+  buf=(char*)calloc(len,sizeof(char));
   revMap=revMap_a;
-  while(gzgets(gz,buf,len)){
+  while(aio::tgets(gz,&buf,&len)){
     saveptr=buf;
     if(!strncmp(saveptr,"#CHROM",5)) {
       int i=0;
@@ -205,7 +205,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
 
   for(;i<chunkSize;i++){
     //    fprintf(stderr,"in for loop\n");
-    if(Z_NULL==gzgets(gz,buf,len)){
+    if(0==aio::tgets(gz,&buf,&len)){
       fprintf(stderr,"\t-> Done reading vcffile\n");fflush(stderr);
       eof=1;
       break;

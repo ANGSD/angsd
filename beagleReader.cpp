@@ -1,6 +1,7 @@
 
 #include <zlib.h>
 #include <cassert>
+#include "analysisFunction.h"
 #include "beagleReader.h"
 
 beagle_reader::~beagle_reader(){
@@ -8,22 +9,18 @@ beagle_reader::~beagle_reader(){
 }
 
 
-beagle_reader::beagle_reader(int bytesPerLine_a,gzFile gz_a,const aMap *revMap_a,int intName_a,int &nInd_a){
+beagle_reader::beagle_reader(gzFile gz_a,const aMap *revMap_a,int intName_a,int &nInd_a){
   gz=gz_a;
   revMap=revMap_a;
-  bytesPerLine = bytesPerLine_a;
+  l=128;
   intName = intName_a;
   
-  original=buffer =(char *) malloc(bytesPerLine);
+  original=buffer =(char *) calloc(l,sizeof(char));
   const char *delims = "\t \n";
 
   int nCol=1;
 
-  gzgets(gz,buffer,bytesPerLine); 
-  if(strlen(buffer)==bytesPerLine-1){
-    fprintf(stderr,"\t-> Increase -bytesPerLine value\n");
-    exit(0);
-  }
+  aio::tgets(gz,&buffer,&l); 
   strtok_r(buffer,delims,&buffer);
   while(strtok_r(NULL,delims,&buffer))
     nCol++;
@@ -99,11 +96,8 @@ funkyPars *beagle_reader::fetch(int chunksize){
     changed =0;
   }
   buffer=original;
-  while(gzgets(gz,buffer,bytesPerLine)) {
-    if(strlen(buffer)==bytesPerLine-1){
-      fprintf(stderr,"\t-> Increase -bytesPerLine value\n");
-      exit(0);
-    }
+  while(aio::tgets(gz,&buffer,&l)) {
+ 
     if(intName){
 
       char *tok = strtok_r(buffer,delims2,&buffer);

@@ -5,7 +5,7 @@
 #include "pooled_alloc.h"
 extern tpool_alloc_t *tnodes;
 
-mpileup::mpileup(int nInd_a,gzFile gz_a,int bpl,const aMap* revMap_a,int minQ_a){
+mpileup::mpileup(int nInd_a,gzFile gz_a,const aMap* revMap_a,int minQ_a){
   fprintf(stderr,"\t-> You are using -pileup, this means:\n");
   fprintf(stderr,"\t-> 1) Internal positions both from front and back is coded to 255\n");
   fprintf(stderr,"\t-> 2) All mapping qualities (mapQ) are set to 30\n");
@@ -13,13 +13,13 @@ mpileup::mpileup(int nInd_a,gzFile gz_a,int bpl,const aMap* revMap_a,int minQ_a)
 
   nInd = nInd_a;
   gz = gz_a;
-  len = bpl;
+  l = 128;
   revMap = revMap_a;
   minQ = minQ_a;
-  buffer=original = new char [bpl];
+  buffer=original = (char*) calloc(l,sizeof(char));
 }
 mpileup::~mpileup(){
-  delete [] original;
+  free(original);
 }
 
 tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
@@ -120,12 +120,8 @@ funkyPars *mpileup::fetch(int chunksize){
     changed =0;
   }
   buffer=original;
-  while(gzgets(gz,buffer,len)) {
+  while(aio::tgets(gz,&buffer,&l)) {
     //    fprintf(stderr,"buf:%s strlen:%zu\n",buffer,strlen(buffer));
-    if(strlen(buffer)==len-1){
-      fprintf(stderr,"\t-> Increase -bytesPerLine value\n");
-      exit(0);
-    }
     char *tok = strtok_r(buffer,delims,&buffer);
     it=revMap->find(tok);
     if(it==revMap->end()){

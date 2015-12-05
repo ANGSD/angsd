@@ -203,7 +203,6 @@ argStruct *setArgStruct(int argc,char **argv) {
 void multiReader::printArg(FILE *argFile,argStruct *args){
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
   fprintf(argFile,"\t-nLines\t%d\t(Number of lines to read)\n",nLines);
-  fprintf(argFile,"\t-bpl\t%d (bytesPerLine)\n",bytesPerLine);
   fprintf(argFile,"\t-beagle\t%s\t(Beagle Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-vcf-GL\t%s\t(vcf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-vcf-GP\t%s\t(vcf Filename (can be .gz))\n",fname);
@@ -225,7 +224,6 @@ void multiReader::getOptions(argStruct *arguments){
 
   nLines=angsd::getArg("-nLines",nLines,arguments);
   arguments->nLines = nLines;
-  bytesPerLine=angsd::getArg("-bpl",bytesPerLine,arguments);
   fname=angsd::getArg("-beagle",fname,arguments);
   fname=angsd::getArg("-pileup",fname,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
@@ -251,7 +249,6 @@ multiReader::multiReader(int argc,char**argv){
   gz=Z_NULL;
   myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;
   
-  bytesPerLine = 33554432 ;//2^15 about 33 megs perline/persites should be enough
   nLines=50;
   
   fname=NULL;
@@ -370,7 +367,7 @@ multiReader::multiReader(int argc,char**argv){
   }
   switch(type){
   case INPUT_PILEUP:{
-    mpil = new mpileup(args->nInd,gz,bytesPerLine,args->revMap,minQ);
+    mpil = new mpileup(args->nInd,gz,args->revMap,minQ);
     break;
   }
   case INPUT_GLF:{
@@ -383,16 +380,16 @@ multiReader::multiReader(int argc,char**argv){
     break;
   }
   case INPUT_VCF_GP:{
-    myvcf = new vcfReader(args->nInd,gz,bytesPerLine,args->revMap);
+    myvcf = new vcfReader(args->nInd,gz,args->revMap);
     break;
   }
   case INPUT_VCF_GL:{
     fprintf(stderr,"input_vcf\n");
-    myvcf = new vcfReader(args->nInd,gz,bytesPerLine,args->revMap);
+    myvcf = new vcfReader(args->nInd,gz,args->revMap);
     break;
   }
   case INPUT_BEAGLE:{
-    bglObj = new beagle_reader(bytesPerLine,gz,args->revMap,intName,args->nInd);
+    bglObj = new beagle_reader(gz,args->revMap,intName,args->nInd);
     break;
   }
     
