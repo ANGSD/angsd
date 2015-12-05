@@ -812,3 +812,20 @@ void angsd::norm(double *d,size_t len){
     d[i] /= ts;
 
 }
+
+int aio::tgets(gzFile gz,char**buf,int *l){
+  int rlen = 0;
+ neverUseGoto:
+  char *tok = gzgets(gz,*buf+rlen,*l-rlen);
+  if(!tok)
+    return rlen;
+  int tmp = tok?strlen(tok):0;
+  if(tmp==*l-rlen-1){
+    rlen += tmp;
+    *l *= 2;
+    *buf = (char*) realloc(*buf,*l);
+    goto neverUseGoto;
+  }
+  rlen += tmp;
+  return rlen;
+}

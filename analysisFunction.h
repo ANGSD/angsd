@@ -101,6 +101,7 @@ namespace aio{
   BGZF *openFileBG(const char* a,const char* b);
   int isNewer(const char *newer,const char *older);
   ssize_t bgzf_write(BGZF *fp, const void *data, size_t length);
+  int tgets(gzFile gz,char**buf,int *l);
 }
 
 #endif
