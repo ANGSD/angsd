@@ -820,7 +820,7 @@ int aio::tgets(gzFile gz,char**buf,int *l){
   if(!tok)
     return rlen;
   int tmp = tok?strlen(tok):0;
-  if(tmp==*l-rlen-1){
+  if(tok[tmp-1]!='\n'){
     rlen += tmp;
     *l *= 2;
     *buf = (char*) realloc(*buf,*l);
