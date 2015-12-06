@@ -13,7 +13,7 @@ mpileup::mpileup(int nInd_a,gzFile gz_a,const aMap* revMap_a,int minQ_a){
 
   nInd = nInd_a;
   gz = gz_a;
-  l = 128;
+  l = 8;
   revMap = revMap_a;
   minQ = minQ_a;
   buffer=original = (char*) calloc(l,sizeof(char));
@@ -121,7 +121,8 @@ funkyPars *mpileup::fetch(int chunksize){
   }
   buffer=original;
   while(aio::tgets(gz,&buffer,&l)) {
-    //    fprintf(stderr,"buf:%s strlen:%zu\n",buffer,strlen(buffer));
+    if(buffer!=original)
+      original=buffer;
     char *tok = strtok_r(buffer,delims,&buffer);
     it=revMap->find(tok);
     if(it==revMap->end()){
