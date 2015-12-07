@@ -15,7 +15,7 @@ vcfReader::vcfReader(int &nInd_a,gzFile gz_a,const aMap *revMap_a){
   gz=gz_a;
   len=128;
   buf=NULL;
-  buf=(char*)calloc(len,sizeof(char));
+  buf=original=saveptr=(char*)calloc(len,sizeof(char));
   revMap=revMap_a;
   while(aio::tgets(gz,&buf,&len)){
     saveptr=buf;
@@ -202,7 +202,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
 
   changed=0;
   int cnt=i;//counter for the in-array position.
-
+  buf=original;
   for(;i<chunkSize;i++){
     //    fprintf(stderr,"in for loop\n");
     if(0==aio::tgets(gz,&buf,&len)){
@@ -210,6 +210,8 @@ funkyPars *vcfReader::fetch(int chunkSize){
       eof=1;
       break;
     }
+    if(buf!=original)
+      original=buf;
     //    fprintf(stderr,"in for loop2\n");
     buf[strlen(buf)-1] = '\0';
     saveptr=buf;
@@ -238,6 +240,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
     //  fprintf(stderr,"in for loop3\n");
     int p = parseline(r->likes+cnt,r->post+cnt,r->major[cnt],r->minor[cnt]);
     //  fprintf(stderr,"in for loop4\n");
+    buf=original;
     if(p==0)
       continue;
     else{

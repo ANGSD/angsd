@@ -20,7 +20,9 @@ beagle_reader::beagle_reader(gzFile gz_a,const aMap *revMap_a,int intName_a,int 
 
   int nCol=1;
 
-  aio::tgets(gz,&buffer,&l); 
+  aio::tgets(gz,&buffer,&l);
+  if(buffer!=original)
+      original=buffer;
   strtok_r(buffer,delims,&buffer);
   while(strtok_r(NULL,delims,&buffer))
     nCol++;
@@ -97,7 +99,8 @@ funkyPars *beagle_reader::fetch(int chunksize){
   }
   buffer=original;
   while(aio::tgets(gz,&buffer,&l)) {
- 
+    if(buffer!=original)
+      original=buffer;
     if(intName){
 
       char *tok = strtok_r(buffer,delims2,&buffer);

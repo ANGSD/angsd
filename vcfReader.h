@@ -8,7 +8,7 @@ private:
   int nInd;
   gzFile gz;
   int len;
-  char *buf,*saveptr;
+  char *buf,*saveptr,*original;
   const aMap *revMap;
   int parseline(double **lk,double **gp,char &major,char &minor);
   int curChr;
