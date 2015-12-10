@@ -90,7 +90,7 @@ void abcSaf::getOptions(argStruct *arguments){
   anc = angsd::getArg("-anc",anc,arguments);
   if(doSaf && (anc==NULL&&isSim==0)){
     if(doSaf!=3){
-      fprintf(stderr,"Must supply -anc for polarizing the spectrum\n");
+      fprintf(stderr,"\t-> Must supply -anc for polarizing the spectrum\n");
       exit(0);
     }
   }
@@ -110,7 +110,7 @@ void abcSaf::getOptions(argStruct *arguments){
       prior[i] = log(prior[i]/tts);
   }
   if(GL==0 &&(arguments->inputtype!=INPUT_GLF && arguments->inputtype!=INPUT_GLF3 && arguments->inputtype!=INPUT_VCF_GL)){
-    fprintf(stderr,"Must supply genotype likelihoods (-GL [INT])\n");
+    fprintf(stderr,"\t-> Must supply genotype likelihoods (-GL [INT])\n");
     printArg(arguments->argumentFile);
     exit(0);
   }
@@ -121,7 +121,7 @@ void abcSaf::getOptions(argStruct *arguments){
     int doMaf =0;
     doMaf = angsd::getArg("-doMaf",doMaf,arguments);
     if(doMajorMinor==0||doMaf==0){
-      fprintf(stderr,"Must have major/minor and MAF for using the inbreeding version of realSFS\n");
+      fprintf(stderr,"\t-> Must have major/minor and MAF for using the inbreeding version of realSFS\n");
       exit(0);
     }
     char *indF_name = NULL;
