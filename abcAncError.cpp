@@ -107,12 +107,11 @@ abcAncError::~abcAncError(){
     return; 
   fprintf(stderr,"\t-> To generate nice plots type in \'Rscript ANGSDDIR/R/estError.R file=\"%s\"\'\n",tsk_outname);
   fprintf(stderr,"\t-> Remember to surround the filename with \"\"\n");
-  if(doAncError==1){
-    for(int i=0;i<nInd;i++){
-      for(int j=0;j<125;j++)
-	fprintf(outfile,"%lu\t",alleleCounts[i][j]);
-      fprintf(outfile,"\n");
-    }
+  
+  for(int i=0;i<nInd;i++){
+    for(int j=0;j<125;j++)
+      fprintf(outfile,"%lu\t",alleleCounts[i][j]);
+    fprintf(outfile,"\n");
   }
   if(currentChr!=-1){
     fprintf(outfile2,"Chr: \t %s\n",header->target_name[currentChr]);
@@ -203,8 +202,6 @@ void abcAncError::model1(funkyPars *pars){
 	}
       }
     }
-
-
 }
 
 
@@ -214,25 +211,28 @@ void abcAncError::print(funkyPars *pars){
   if(doAncError==0)
     return;
 
-  if(doAncError==2){
-    model2(pars);
-  } else if(doAncError==1) {
-    model1(pars);
-    if(currentChr==-1)
-      currentChr=pars->refId;
-    if(currentChr!=pars->refId){
-      fprintf(outfile2,"Chr: \t %s\n",header->target_name[currentChr]);
-      for(int i=0;i<nInd;i++){
-	for(int j=0;j<125;j++)
-	  fprintf(outfile2,"%lu\t",alleleCountsChr[i][j]);
-	fprintf(outfile2,"\n");
-      }
-      for(int i=0;i<nInd;i++)
-	for(int j=0;j<256;j++)
-	  alleleCountsChr[i][j]=0;
-      currentChr=pars->refId;
+  ///  if(doAncError==2){
+  // model2(pars);
+  //} else if(doAncError==1) {
+    
+
+
+  model1(pars);
+  if(currentChr==-1)
+    currentChr=pars->refId;
+  if(currentChr!=pars->refId){
+    fprintf(outfile2,"Chr: \t %s\n",header->target_name[currentChr]);
+    for(int i=0;i<nInd;i++){
+      for(int j=0;j<125;j++)
+	fprintf(outfile2,"%lu\t",alleleCountsChr[i][j]);
+      fprintf(outfile2,"\n");
     }
+    for(int i=0;i<nInd;i++)
+      for(int j=0;j<256;j++)
+	alleleCountsChr[i][j]=0;
+    currentChr=pars->refId;
   }
+    //}
    
 }
 
