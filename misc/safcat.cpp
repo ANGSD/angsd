@@ -71,6 +71,7 @@ int saf_cat(int argc,char **argv){
   offs[1] = bgzf_tell(outfileSAF);
   
   for(uint i=0;i<saf.size();i++){
+    fprintf(stderr,"\r\t-> Merging %d/%lu ",i,saf.size());fflush(stderr);
     if(i==0)
       fwrite(&saf[0]->nChr,sizeof(size_t),1,outfileSAFIDX);
     if(i>0 && saf[0]->nChr!=saf[i]->nChr){
@@ -82,7 +83,7 @@ int saf_cat(int argc,char **argv){
       bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
       bgzf_seek(saf[i]->saf,it->second.saf,SEEK_SET);
       bgzf_read(saf[i]->pos,ppos,sizeof(int)*it->second.nSites);
-
+      bgzf_write(outfileSAFPOS,ppos,sizeof(int)*it->second.nSites);
       float flt[saf[0]->nChr+1];
       for(uint s=0;s<it->second.nSites;s++){
 	bgzf_read(saf[i]->saf,flt,sizeof(float)*(saf[0]->nChr+1));
@@ -99,7 +100,7 @@ int saf_cat(int argc,char **argv){
       offs[0] = bgzf_tell(outfileSAFPOS);
       offs[1] = bgzf_tell(outfileSAF);
     }
-    
+    fprintf(stderr,"\n");
   }
 
   for(int i=0;i<saf.size();i++)
