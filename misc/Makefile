@@ -49,6 +49,9 @@ safstat: safstat.cpp safstat.h
 realSFS_args: realSFS_args.cpp realSFS_args.h
 	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTS_INCDIR)
 
+safcat: safcat.cpp safcat.h
+	$(CXX) $(FLAGS) -c safcat.cpp -I $(HTS_INCDIR)
+
 header: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp -I $(HTS_INCDIR)
 
@@ -62,8 +65,8 @@ msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
 
 
-realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
+realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.osafcat.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
 else
 safreader: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp 
@@ -76,6 +79,9 @@ safstat: safstat.cpp safstat.h
 
 realSFS_args: realSFS_args.cpp realSFS_args.h
 	$(CXX) $(FLAGS) -c realSFS_args.cpp 
+
+safcat: safcat.cpp safcat.h
+	$(CXX) $(FLAGS) -c safcat.cpp
 
 header: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp 
@@ -90,8 +96,8 @@ msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm  -lhts
 
 
-realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o -lhts -lz -lpthread
+realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o -lhts -lz -lpthread
 
 endif
 

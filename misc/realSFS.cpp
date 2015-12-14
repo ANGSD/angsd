@@ -42,6 +42,8 @@
 #include "safreader.h"
 #include "keep.hpp"
 #include "header.h"
+#include "safcat.h"
+
 int SIG_COND =1;
 int howOften =5e6;//how often should we print out (just to make sure something is happening)
 #include "multisafreader.hpp"
@@ -1224,6 +1226,8 @@ int main(int argc,char **argv){
   --argc;
   if(!strcasecmp(*argv,"print"))
     print<float>(--argc,++argv);
+  else if(!strcasecmp(*argv,"cat"))
+    saf_cat(--argc,++argv);
   else if(!strcasecmp(*argv,"fst"))
     fst(--argc,++argv);
   else if(!strcasecmp(*argv,"print_header"))
