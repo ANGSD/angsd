@@ -387,7 +387,7 @@ FILE *getFILE(const char*fname,const char* mode){
 
 FILE *openFile(const char* a,const char* b){
   if(1)
-    fprintf(stderr,"[%s] %s %s",__FUNCTION__,a,b);
+    fprintf(stderr,"[%s] %s %s\n",__FUNCTION__,a,b);
   //  char *c = new char[strlen(a)+strlen(b)+1];
   char *c = malloc(strlen(a)+strlen(b)+1);
   strcpy(c,a);
@@ -491,6 +491,7 @@ int main(int argc,char **argv){
   int nind = 0;
   char **orig = argv;
   int seed = -1;
+  int Nsites=0;
   pileup=0;
 
 
@@ -499,6 +500,7 @@ int main(int argc,char **argv){
     else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
     else if(strcasecmp(*argv,"-err")==0) errate=atof(*++argv); 
     else if(strcasecmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
+    else if(strcasecmp(*argv,"-Nsites")==0) Nsites=atof(*++argv); 
     else if(strcasecmp(*argv,"-depthFile")==0) depthFile=*++argv; 
     else if(strcasecmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
     else if(strcasecmp(*argv,"-regLen")==0) regLen=atoi(*++argv);
@@ -510,15 +512,15 @@ int main(int argc,char **argv){
       fprintf(stderr,"Unknown arg:%s\n",*argv);
       return 0;
     }
-    ++argv;
-  }
+    ++argv; 
+  } 
   if(seed==-1)
     srand48(time(NULL));
   else
     srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
-    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen --nind -seed -pileup \n");
+    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen --nind -seed -pileup -Nsites\n");
     return 0;
   }
 
@@ -550,6 +552,7 @@ int main(int argc,char **argv){
   int   segsites, count  , nadv, probflag  ;
   double pi , h, th  ,prob ;
   char dum[20], astr[100] ;
+  char dum2[100], dum3[100] ;
   int  nsegsub, segsub( int nsam, int segsites, char **list ) ;
 	
 
@@ -560,7 +563,15 @@ int main(int argc,char **argv){
   pfin = in;
   if(NULL==fgets( line, 1000, pfin))
     fprintf(stderr,"Problem reading from file:\n");
-  sscanf(line," %s  %d %d", dum,  &nsam, &howmany);
+  if(Nsites)
+    sscanf(line," %s %s %s  %d %d", dum,dum2,dum3,  &nsam, &howmany);
+  else
+    sscanf(line," %s  %d %d", dum,  &nsam, &howmany);
+
+  fprintf(stderr,"Number of samples:%d\n",nsam);
+  fprintf(stderr,"Number of replications:%d\n",howmany);
+  
+
   double ttt=0;
   if(nsam % 2 ){
     fprintf(stderr,"\nGL calculation is based on diploid samples, you need to supply an even number of haplotypes\n");
@@ -597,7 +608,8 @@ int main(int argc,char **argv){
   FILE *pgEst = openFile(prefix,".pgEstH");
 
   double res[3]={0,0,0};//phi_t,phi_w,D',Dt
-  while( howmany-count++ ) {
+   fprintf(stderr,"\n");
+   while( howmany-count++ ) {
 
         fprintf(stderr,"count %d\r",count);
 
