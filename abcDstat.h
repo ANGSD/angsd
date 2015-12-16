@@ -17,6 +17,7 @@ public:
   int doCount;
   int nComb;
   int rmTrans;
+  int Aanc;
   abcDstat(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcDstat();
   void getOptions(argStruct *arguments);

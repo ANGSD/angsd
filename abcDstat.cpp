@@ -40,6 +40,7 @@ void abcDstat::getOptions(argStruct *arguments){
   blockSize=angsd::getArg("-blockSize",blockSize,arguments);
   ancName = angsd::getArg("-anc",ancName,arguments);
   rmTrans = angsd::getArg("-rmTrans",rmTrans,arguments);
+  Aanc = angsd::getArg("-Aanc",Aanc,arguments);
     
   if(doAbbababa){
     if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
@@ -54,7 +55,7 @@ void abcDstat::getOptions(argStruct *arguments){
       fprintf(stderr,"Error: -doAbbababa needs allele counts (use -doCounts 1)\n");
       exit(0);
     }
-    if(ancName==NULL){
+    if(ancName==NULL & Aanc==0){
       fprintf(stderr,"Error: -doAbbababa needs an outgroup in fasta format (use -anc fastaFileName )\n");
       exit(0);
     }
@@ -69,7 +70,7 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
   ancName=NULL;
   doAbbababa=0;
   doCount=0;
-  
+  Aanc = 0;
   currentChr=-1;
   NbasesPerLine=50;
   blockSize=5000000;
@@ -340,26 +341,35 @@ void abcDstat::run(funkyPars *pars){
 	  continue;
 	if(rmTrans){
 	  for(int s=0;s<pars->numSites;s++){
+	    int theAnc=0;
+	    if(Aanc==0)
+	      theAnc =pars->anc[s];
+	   
+
 	    if(pars->keepSites[s]==0)
 	      continue;
  
-	    if(pars->anc[s]==0 && pattern[s][h3]==2)
+	    if(theAnc==0 && pattern[s][h3]==2)
 	      ABCD[s][comp]=0;
-	    else if(pars->anc[s]==2 && pattern[s][h3]==0)
+	    else if(theAnc==2 && pattern[s][h3]==0)
 	      ABCD[s][comp]=0;
-	    else if(pars->anc[s]==1 && pattern[s][h3]==3)
+	    else if(theAnc==1 && pattern[s][h3]==3)
 	      ABCD[s][comp]=0;
-	    else if(pars->anc[s]==3 && pattern[s][h3]==1)
+	    else if(theAnc==3 && pattern[s][h3]==1)
 	      ABCD[s][comp]=0;
 	    else 
-	      ABCD[s][comp] = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [pars->anc[s]];
+	      ABCD[s][comp] = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [theAnc];
 	  }  
 	}
 	else
 	  for(int s=0;s<pars->numSites;s++){
+	      int theAnc=0;
+	    if(Aanc==0)
+	      theAnc =pars->anc[s];
+	   
 	    if(pars->keepSites[s]==0)
 	      continue;
-  	    ABCD[s][comp] = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [pars->anc[s]];
+  	    ABCD[s][comp] = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [theAnc];
 	    //  	    ABCD[s][comp] = matcat[2] [3] [2] [3];
 	    //	    if(ABCD[s][comp]!=1)
 	    //	      fprintf(stdout,"%d \n",ABCD[s][comp]);
