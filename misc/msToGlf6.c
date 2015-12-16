@@ -224,13 +224,14 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
   }
   //exit(0);
  
-  gzwrite(glffile,like,sizeof(double)*10);
+  if(pileup==0)  
+    gzwrite(glffile,like,sizeof(double)*10);
  
   return numreads;
 }
 
 //nsam=2*nind
-void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,gzFile gzSeq){
+void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,gzFile gzSeq,int count){
   //  fprintf(stderr,"segsites=%d\n",segsites,gzFile gzSeq);
   kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   int p =0;
@@ -242,9 +243,11 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
       positInt[i] = positInt[i-1]+1;
   }
   //write the positions that are variable to file. First element in length of posit.
-  fwrite(&segsites,sizeof(int),1,vSitesFP);
+  if(pileup==0)
+    fwrite(&segsites,sizeof(int),1,vSitesFP);
 
-  fwrite(positInt,sizeof(int),segsites,vSitesFP);
+  if(pileup==0)
+    fwrite(positInt,sizeof(int),segsites,vSitesFP);
   fflush(vSitesFP);
   //make genotypes
   for(int h=0;h<nsam;h+=2){
@@ -259,7 +262,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     //only generate likes for truely variable sites
     for(int s=0;s<segsites;s++){
       if(pileup)
-	ksprintf(&kpl,"1\t%d\tN\t",s);
+	ksprintf(&kpl,"%d\t%d\tN\t",count,s);
      
       for(int i=0;i<nsam/2;i++){
 	int genotypes[2] = {0,0};
@@ -290,7 +293,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     //shifted with one, to match the positions. This shouldbn't matte for correctness
     for(int i=1;i<=regLen;i++) {
       	if(pileup)
-	  gzprintf(gzSeq,"1\t%d\tN\t",i);
+	  gzprintf(gzSeq,"%d\t%d\tN\t",count,i);
 
       if(s<segsites&&positInt[s]==i) {
 	for(int i=0;i<nsam/2;i++){
@@ -583,17 +586,20 @@ int main(int argc,char **argv){
   gzFile gzSeq = Z_NULL;
   FILE *vPosFP = NULL;
   //  infoFp = openFile(prefix,".info");
-
+  if(pileup)
+    gzSeq = openFileGz(prefix,".pileup.gz","w");
+  
   if(singleOut==1){
     gz = openFileGz(prefix,".glf.gz","w");
-    if(pileup)
-      gzSeq = openFileGz(prefix,".pileup.gz","w");
+
     vPosFP=openFile(prefix,".vPos");
   }
   FILE *pgEst = openFile(prefix,".pgEstH");
 
   double res[3]={0,0,0};//phi_t,phi_w,D',Dt
   while( howmany-count++ ) {
+
+        fprintf(stderr,"count %d\r",count);
 
 /* read in a sample */
   do {
@@ -634,17 +640,19 @@ int main(int argc,char **argv){
     nsegsub = segsub( nadv, segsites, list) ;
 
   if(singleOut==0){
-    gz = openFileGzI(prefix,".glf",count,"w");
-    gzSeq = openFileGzI(prefix,".seq",count,"w");
-    vPosFP = openFileI(prefix,".vPos",count);
+    if(pileup==0){
+      gz = openFileGzI(prefix,".glf",count,"w");
+      vPosFP = openFileI(prefix,".vPos",count);
+    }
   }
   //  if(1||count==58)
-  test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq) ;
+  test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count) ;
   if(singleOut==0){
-    gzclose(gz);
-    if(pileup)
-    gzclose(gzSeq);
-    fclose(vPosFP);
+
+    if(pileup==0){
+      gzclose(gz);
+      fclose(vPosFP);
+    }
   }
   pi = nucdiv(nsam, segsites, list) ;
   h = hfay(nsam, segsites, list) ;
@@ -660,10 +668,10 @@ int main(int argc,char **argv){
 
   }
   count--;
-  if(singleOut==1){
-    gzclose(gz);
-    if(pileup)
+   if(pileup)
       gzclose(gzSeq);
+   if(singleOut==1){
+    gzclose(gz);
     fclose(vPosFP);
   }
   fclose(pgEst);
