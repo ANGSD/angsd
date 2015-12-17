@@ -63,7 +63,7 @@ void abcWriteFasta::getOptions(argStruct *arguments){
 
 }
 void writeChr(kstring_t *bufstr,size_t len,char *nam,char*d,int nbpl){
-  fprintf(stderr,"\t[%s] writing chr:%s\n",__FUNCTION__,nam);
+  fprintf(stderr,"\t-> [%s] writing chr:%s\n",__FUNCTION__,nam);
   ksprintf(bufstr,">%s",nam);
   for(size_t i=0;i<len;i++){
     if(i % nbpl == 0)
