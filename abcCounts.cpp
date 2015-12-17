@@ -598,7 +598,7 @@ void abcCounts::run(funkyPars *pars){
     size_t ss=0;
     for(int i=0;i<4*pars->nInd;i++)
       if(pars->keepSites[s]) 
-	if(pars->counts[s][ss]){
+	if(pars->counts[s][i]){
 	  ss++;
 	  break;
 	}
