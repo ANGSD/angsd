@@ -179,45 +179,7 @@ void abcWriteFasta::run(funkyPars *pars){
       if(pars->keepSites[s]==0)
 	continue;
 
-      int max=0;
-      for( int b = 0; b < 4; b++ ){
-	if( pars->counts[s][b] >= max){
-	  max=pars->counts[s][b];
-	}
-      }
-      if(max==0)
-	continue;
-
-      int nmax=0;
-      int w=-1;
-      for( int b = 0; b < 4; b++ ){
-	if( pars->counts[s][b] == max ){
-	  w=b;
-	  nmax++;
-	}
-      }
-
-      if(nmax==1)
-	myFasta[pars->posi[s]] = intToRef[w];
-      else{
-	int cumsum[4] = {-1,-1,-1,-1};
-	int i=0;
-	for( int b = 0; b < 4; b++ ){
-	  if( pars->counts[s][b] == max ){
-	    cumsum[b] = i;
-	    i++;
-	  }
- 	}
-
-	int j = std::rand() % i;
-
-	for( int b = 0; b < 4; b++ ){
-	  if( cumsum[b] ==j ){
-	    myFasta[pars->posi[s]] = intToRef[b];
-	    break;
-	  }
-	}
-      }
+      myFasta[pars->posi[s]] = intToRef[ angsd::getRandomCount(pars->counts[s]) ];
     }
   }else if(doFasta==3){
     for(int i=0;i<pars->nInd;i++){

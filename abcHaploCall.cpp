@@ -199,20 +199,20 @@ void abcHaploCall::getHaplo(funkyPars *pars){
     // call major
     haplo->major[s]=4;
     int whichMax=0;
-    int sum=siteCounts[0];//number of A C G T for a site (non missing)
+    int NnonMis=siteCounts[0];//number of A C G T for a site (non missing)
     for(int b=1;b<4;b++){
       if(siteCounts[b]>siteCounts[whichMax])
 	whichMax=b;
-      sum += siteCounts[b];
+      NnonMis += siteCounts[b];
     }
     haplo->major[s]=whichMax;
     
     //remove non polymorphic
-    if( minMinor > 0 && minMinor > sum - siteCounts[whichMax] )
+    if( minMinor > 0 && minMinor > NnonMis - siteCounts[whichMax] )
       pars->keepSites[s] = 0;
     
     //remove sites with more than maxMis
-    if(maxMis>=0 && maxMis < pars->nInd - sum)
+    if(maxMis>=0 && maxMis < pars->nInd - NnonMis)
       pars->keepSites[s] = 0;
      
   }
