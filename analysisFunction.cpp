@@ -556,6 +556,52 @@ int angsd::whichMax(double *d,int len){
     return r;
 }
 
+//count is 5 long, A C G T N
+int angsd::getRandomCount(suint *counts,int depth=-1){
+
+  if(depth==-1){
+    depth=0;
+    for( int b = 0; b < 4; b++ )
+      depth+=counts[b];
+  }
+
+  int j = std::rand() % depth;
+  int cumSum=0;
+  int res=4;
+  for( int b = 0; b < 4; b++ ){
+    cumSum+=counts[b];
+    if( cumSum > j ){
+      res = b;
+      break;
+    }
+  }
+  return res;
+}
+
+// get the most frequent base, use random for tie
+int angsd::getMaxCount(suint *counts,int depth=-1){
+
+  if(depth==-1){
+    depth=0;
+    for( int b = 0; b < 4; b++ )
+      depth+=counts[b];
+  }
+
+  if(depth<=0)
+    return 4;
+
+  int max = 0;
+    
+  for(int b=1;b<4;b++)
+    if (counts[b]>=counts[max]){
+      if(counts[b]==counts[max])//random for ties
+	if(int j = std::rand()%1 == 0)
+	  continue;
+      max = b;
+    }
+
+  return max;
+}
 
 void ludcmp(double **a, int *indx, double &d,int n)
 {

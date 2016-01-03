@@ -59,6 +59,10 @@ namespace angsd {
   void svd_inverse(double mat[],int xLen, int yLen);
   std::vector<char*> getFilenames(const char * name,int nInd);
   char *strpop(char **str,char split);
+  int getRandomCount(suint *d, int depth);
+  int getMaxCount(suint *d, int depth);
+
+
 
   template <typename T>
   T * allocArray(size_t len,T defval){
