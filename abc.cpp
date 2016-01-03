@@ -10,6 +10,7 @@
 #include "abcAsso.h"
 #include "abcHWE.h"
 #include "abcAncError.h"
+#include "abcHaploCall.h"
 #include "abcDstat.h"
 #include "abcWriteFasta.h"
 #include "abcCallGenotypes.h"
@@ -63,6 +64,7 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcSmartCounts(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcTemplate(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcWriteVcf(outfiles,arguments,inputtype);
+  tskStuff[nit++] = new abcHaploCall(outfiles,arguments,inputtype);
 
   //don't touch below
   nItem = nit;
