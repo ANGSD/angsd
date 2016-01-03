@@ -21,10 +21,15 @@ void abcHaploCall::printArg(FILE *argFile){
   fprintf(argFile,"\t 0:\t no haploid calling \n"); 
   fprintf(argFile,"\t 1:\t (Sample single base)\n");
   fprintf(argFile,"\t 2:\t (Concensus base)\n");
-  fprintf(argFile,"\t-minMinor\t%d\tMinimum observed minor alleles\n",minMinor);
   fprintf(argFile,"\t-doCounts\t%d\tMust choose -doCount 1\n",doCount);
+  fprintf(argFile,"Optional\n");
+  fprintf(argFile,"\t-minMinor\t%d\tMinimum observed minor alleles\n",minMinor);
+  fprintf(argFile,"\t-maxMis\t%d\tMaximum missing bases (per site)\n",maxMis);
 
  }
+
+
+
 
 void abcHaploCall::getOptions(argStruct *arguments){
 
@@ -32,11 +37,10 @@ void abcHaploCall::getOptions(argStruct *arguments){
   doHaploCall=angsd::getArg("-doHaploCall",doHaploCall,arguments);
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   minMinor=angsd::getArg("-minMinor",minMinor,arguments);
-
+  maxMis=angsd::getArg("-maxMis",maxMis,arguments);
 
   if(doHaploCall==0)
     return;
-
 
   if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
     fprintf(stderr,"Error: bam or soap input needed for -doHaploCall \n");
@@ -52,7 +56,7 @@ void abcHaploCall::getOptions(argStruct *arguments){
 abcHaploCall::abcHaploCall(const char *outfiles,argStruct *arguments,int inputtype){
  
   doHaploCall=0;
-  maxMis=0;
+  maxMis=-1;
   minMinor=0;
   doCount=0;
 
@@ -82,7 +86,20 @@ abcHaploCall::abcHaploCall(const char *outfiles,argStruct *arguments,int inputty
   outfileZ = aio::openFileBG(outfiles,postfix);
 
  
+
+  //write header
+  bufstr.l=0;
  
+  ksprintf(&bufstr,"chr\tpos\tmajor");
+
+  for(int i=0;i<arguments->nInd;i++)
+      ksprintf(&bufstr,"\tind%d",i);
+  
+  
+  ksprintf(&bufstr,"\n");
+  aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
+  bufstr.l=0;
+
 }
 
 
@@ -124,6 +141,7 @@ void abcHaploCall::printHaplo(funkyPars *pars){
       continue;
 
     ksprintf(&bufstr,"%s\t%d\t%c\t",header->target_name[pars->refId],pars->posi[s]+1,intToRef[haplo->major[s]]);
+ 
     for(int i=0;i<pars->nInd;i++){
       ksprintf(&bufstr,"%c\t",intToRef[haplo->dat[s][i]]);
     }
@@ -141,75 +159,64 @@ void abcHaploCall::print(funkyPars *pars){
 
   if(doHaploCall==0)
     return;
-   
-
+  
   printHaplo(pars);
-
-
 }
 
 void abcHaploCall::getHaplo(funkyPars *pars){
   
   haploCalls *haplo =(haploCalls *) pars->extras[index];
 
-  if(doHaploCall==1){//random base
-    for(int s=0;s<pars->numSites;s++){
-      if(pars->keepSites[s]==0)
-	continue;      
+  for(int s=0;s<pars->numSites;s++){
+    if(pars->keepSites[s]==0)
+      continue;      
 
-      int siteCounts[5] = { 0 , 0 , 0 , 0 , 0 };
+    int siteCounts[5] = { 0 , 0 , 0 , 0 , 0 };
 
-
-      for(int i=0;i<pars->nInd;i++){
-
-	int dep=0;
-	for( int b = 0; b < 4; b++ ){
-	  dep+=pars->counts[s][i*4+b];
-	}
-
-	if(dep==0){
-	  haplo->dat[s][i]=4;
-	  continue;
-	}
-	else{
-	  int j = std::rand() % dep;
-	  int cumSum=0;
-	  for( int b = 0; b < 4; b++ ){
-	    cumSum+=pars->counts[s][i*4+b];
-	    if( cumSum > j ){
-	      haplo->dat[s][i] = b;
-	      break;
-	    }
-	  }
-	}
-	siteCounts[haplo->dat[s][i]]++;
+    //get random or most frequent base per individual
+    for(int i=0;i<pars->nInd;i++){
+      
+      int dep=0;
+      for( int b = 0; b < 4; b++ ){
+	dep+=pars->counts[s][i*4+b];
       }
+
+      if(dep==0){
+	haplo->dat[s][i]=4;
+	continue;
+      }
+
+	
+      if(doHaploCall==1)//random base
+	haplo->dat[s][i] = angsd::getRandomCount(pars->counts[s],dep);
+      else if(doHaploCall==2)//most frequent base, random tie
+	haplo->dat[s][i] = angsd::getMaxCount(pars->counts[s],dep);
+      
+      siteCounts[haplo->dat[s][i]]++;
+    }
 
       
-
-      haplo->major[s]=4;
-      int whichMax=0;
-      int sum=siteCounts[0];
-      for(int b=1;b<4;b++){
-	if(siteCounts[b]>siteCounts[whichMax])
-	  whichMax=b;
-	sum += siteCounts[b];
-      }
-      haplo->major[s]=whichMax;
-      if( minMinor > 0 && minMinor > sum - siteCounts[whichMax] )
-      	pars->keepSites[s] = 0;
-
-
+    // call major
+    haplo->major[s]=4;
+    int whichMax=0;
+    int sum=siteCounts[0];//number of A C G T for a site (non missing)
+    for(int b=1;b<4;b++){
+      if(siteCounts[b]>siteCounts[whichMax])
+	whichMax=b;
+      sum += siteCounts[b];
     }
+    haplo->major[s]=whichMax;
+    
+    //remove non polymorphic
+    if( minMinor > 0 && minMinor > sum - siteCounts[whichMax] )
+      pars->keepSites[s] = 0;
+    
+    //remove sites with more than maxMis
+    if(maxMis>=0 && maxMis < pars->nInd - sum)
+      pars->keepSites[s] = 0;
+     
   }
-
-
- 
-
-
-  //  bufstr.l=0;
- 
-
+  
 }
 
 void abcHaploCall::run(funkyPars *pars){

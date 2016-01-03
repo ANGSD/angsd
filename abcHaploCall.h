@@ -6,28 +6,23 @@ typedef struct{
 
 class abcHaploCall:public abc{
 private:
-  char *refName;
-  char *ancName;
+
+  //non optional arguments
   int doHaploCall;
-  int nInd;
-  int sample;
   int doCount;
 
+  //optional arguments
   int maxMis;
   int minMinor;
 
-  FILE *outfile;
-  FILE *outfile2;
+  //out file
   BGZF* outfileZ;
 
-  size_t **alleleCounts; //[ind][125]; 
-  size_t **alleleCountsChr; //[ind][125]; 
-
-  void model1(funkyPars *pars);
+  //functions
   void printHaplo(funkyPars *pars);
   void getHaplo(funkyPars *pars);
-  char *tsk_outname;
 
+  //print buffer
   kstring_t bufstr;
 
 public:
