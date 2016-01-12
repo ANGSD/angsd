@@ -35,7 +35,7 @@ double uniform_rasmus()
   r = x_rndu/30269.0 + y_rndu/30307.0 + z_rndu/30323.0;
   return (r-(int)r);
 }
-
+ 
 //I think this one is fine, tsk 5/7 july
 double uniform_thorfinn(){
   return((double)rand() / (double)RAND_MAX);
@@ -292,10 +292,10 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     int s =0;
     //shifted with one, to match the positions. This shouldbn't matte for correctness
     for(int i=1;i<=regLen;i++) {
-      	if(pileup)
-	  gzprintf(gzSeq,"%d\t%d\tN\t",count,i);
+      if(pileup)
+	ksprintf(&kpl,"%d\t%d\tN\t",count,i);
 
-      if(s<segsites&&positInt[s]==i) {
+        if(s<segsites && positInt[s]==i) {
 	for(int i=0;i<nsam/2;i++){
 	  int genotypes[2] = {0,0};
 	  if(res[i][s]>=1)
@@ -611,89 +611,89 @@ int main(int argc,char **argv){
    fprintf(stderr,"\n");
    while( howmany-count++ ) {
 
-        fprintf(stderr,"count %d\r",count);
+     fprintf(stderr,"count %d\r",count);
 
-/* read in a sample */
-  do {
-    if( fgets( line, 1000, pfin) == NULL ){
-      exit(0);
-    }
-    if( line[0] == '/' )  strcpy(slashline,line+2);
-  }while ( (line[0] != 's') && (line[0] != 'p' ) ) ;
-  
-  if( line[0] == 'p'){
-    sscanf( line, "  prob: %lf", &prob );
-    probflag = 1 ;
-    if( fgets( line, 1000, pfin) == NULL ){
-      exit(0);
-    }
-  }
-  sscanf( line, "  segsites: %d", &segsites );
-  if( segsites >= maxsites){
-    maxsites = segsites + 10 ;
-    posit = (double *)realloc( posit, maxsites*sizeof( double) ) ;
-    positInt = (int *)realloc( positInt, maxsites*sizeof( int) ) ;
-    biggerlist(nsam,maxsites, list) ;
-  }
-  if( segsites > 0) {
-    if(0==fscanf(pfin," %s", astr))
-      fprintf(stderr,"Problem reading stuff:\n");
-    for( i=0; i<segsites ; i++){ 
-      if(0==fscanf(pfin," %lf",posit+i))
-	fprintf(stderr,"Problem reading stuff:\n");
-      positInt[i] = posit[i]*regLen;
-    }
-    for( i=0; i<nsam;i++) 
-      if(0==fscanf(pfin," %s", list[i] ))
+     /* read in a sample */
+     do {
+       if( fgets( line, 1000, pfin) == NULL ){
+	 exit(0);
+       }
+       if( line[0] == '/' )  strcpy(slashline,line+2);
+     }while ( (line[0] != 's') && (line[0] != 'p' ) ) ;
+     
+     if( line[0] == 'p'){
+       sscanf( line, "  prob: %lf", &prob );
+       probflag = 1 ;
+       if( fgets( line, 1000, pfin) == NULL ){
+	 exit(0);
+       }
+     }
+     sscanf( line, "  segsites: %d", &segsites );
+     if( segsites >= maxsites){
+       maxsites = segsites + 10 ;
+       posit = (double *)realloc( posit, maxsites*sizeof( double) ) ;
+       positInt = (int *)realloc( positInt, maxsites*sizeof( int) ) ;
+       biggerlist(nsam,maxsites, list) ;
+     }
+     if( segsites > 0) {
+       if(0==fscanf(pfin," %s", astr))
 	 fprintf(stderr,"Problem reading stuff:\n");
-  }
-  /* analyse sample ( do stuff with segsites and list) */
-  if( argc > 1 ) 
-    nsegsub = segsub( nadv, segsites, list) ;
-
-  if(singleOut==0){
-    if(pileup==0){
-      gz = openFileGzI(prefix,".glf",count,"w");
-      vPosFP = openFileI(prefix,".vPos",count);
-    }
-  }
-  //  if(1||count==58)
-  test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count) ;
-  if(singleOut==0){
-
-    if(pileup==0){
-      gzclose(gz);
-      fclose(vPosFP);
-    }
-  }
-  pi = nucdiv(nsam, segsites, list) ;
-  h = hfay(nsam, segsites, list) ;
-  th = thetah(nsam, segsites, list) ;
-  
-  //  fprintf(pgEst,"pi:\t%lf\tss:\t%d\tD:\t%lf\tthetaH:\t%lf\tH:\t%lf%s", pi,segsites, tajd(nsam,segsites,pi) , th , h,slashline  ) ;
-  fprintf(pgEst,"%d\t%f\t%f\t%f\t%f\n",segsites, pi, tajd(nsam,segsites,pi) , th , h) ;
-  
-  res[0] += pi;
-  //  fprintf(stderr,"%d %f \n",segsites,ttt);
-  res[1] += segsites/ttt;
-  res[2] +=  tajd(nsam,segsites,pi);
-
-  }
-  count--;
+       for( i=0; i<segsites ; i++){ 
+	 if(0==fscanf(pfin," %lf",posit+i))
+	   fprintf(stderr,"Problem reading stuff:\n");
+	 positInt[i] = posit[i]*regLen;
+       }
+       for( i=0; i<nsam;i++) 
+	 if(0==fscanf(pfin," %s", list[i] ))
+	   fprintf(stderr,"Problem reading stuff:\n");
+     }
+     /* analyse sample ( do stuff with segsites and list) */
+     if( argc > 1 ) 
+       nsegsub = segsub( nadv, segsites, list) ;
+     
+     if(singleOut==0){
+       if(pileup==0){
+	 gz = openFileGzI(prefix,".glf",count,"w");
+	 vPosFP = openFileI(prefix,".vPos",count);
+       }
+     }
+     //  if(1||count==58)
+     test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count) ;
+     if(singleOut==0){
+       
+       if(pileup==0){
+	 gzclose(gz);
+	 fclose(vPosFP);
+       }
+     }
+     pi = nucdiv(nsam, segsites, list) ;
+     h = hfay(nsam, segsites, list) ;
+     th = thetah(nsam, segsites, list) ;
+     
+     //  fprintf(pgEst,"pi:\t%lf\tss:\t%d\tD:\t%lf\tthetaH:\t%lf\tH:\t%lf%s", pi,segsites, tajd(nsam,segsites,pi) , th , h,slashline  ) ;
+     fprintf(pgEst,"%d\t%f\t%f\t%f\t%f\n",segsites, pi, tajd(nsam,segsites,pi) , th , h) ;
+     
+     res[0] += pi;
+     //  fprintf(stderr,"%d %f \n",segsites,ttt);
+     res[1] += segsites/ttt;
+     res[2] +=  tajd(nsam,segsites,pi);
+     
+   }
+   count--;
    if(pileup)
-      gzclose(gzSeq);
+     gzclose(gzSeq);
    if(singleOut==1){
-    gzclose(gz);
-    fclose(vPosFP);
-  }
-  fclose(pgEst);
-  fclose(in);
-  for(int i=0;i<nsam;i++)
-    free(list[i]);
-  free(list);
-  free(positInt);
-  free(posit);
-  return 0;
+     gzclose(gz);
+     fclose(vPosFP);
+   }
+   fclose(pgEst);
+   fclose(in);
+   for(int i=0;i<nsam;i++)
+     free(list[i]);
+   free(list);
+   free(positInt);
+   free(posit);
+   return 0;
 
 }
 
