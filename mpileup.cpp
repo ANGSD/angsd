@@ -134,6 +134,7 @@ funkyPars *mpileup::fetch(int chunksize){
     if(lastRefId!=it->second){
       changed =1;
       lastRefId = it->second; 
+      myfunky->refId = lastRefId;
       break;
     }
     lastRefId = it->second;
@@ -150,9 +151,9 @@ funkyPars *mpileup::fetch(int chunksize){
   //  fprintf(stderr,"afterloop\n");
   myfunky->nInd=myfunky->chk->nSamples= nInd;
   myfunky->numSites = myfunky->chk->nSites=nSites;
-
-  if(nSites==0){
-
+  //fprintf(stderr,"\nchange2 %d\tnSites %d\tlastRefId\t%d %d %d\n",lastRefId,nSites,lastRefId,myfunky->refId,it->second);
+  //  fflush(stderr);
+  if(nSites==0 && changed == 0){
     deallocFunkyPars(myfunky);
     return(NULL);
 
