@@ -561,15 +561,27 @@ int main(int argc,char **argv){
   /* read in first two lines of output  (parameters and seed) */
   //  pfin = stdin ;
   pfin = in;
+
+  int ss;
   if(NULL==fgets( line, 1000, pfin))
     fprintf(stderr,"Problem reading from file:\n");
   if(Nsites)
-    sscanf(line," %s %s %s  %d %d", dum,dum2,dum3,  &nsam, &howmany);
+    ss=sscanf(line," %s %s %s  %d %d", dum,dum2,dum3,  &nsam, &howmany);
   else
-    sscanf(line," %s  %d %d", dum,  &nsam, &howmany);
+    ss=sscanf(line," %s  %d %d", dum,  &nsam, &howmany);
 
   fprintf(stderr,"Number of samples:%d\n",nsam);
   fprintf(stderr,"Number of replications:%d\n",howmany);
+  if(ss < 3+2*Nsites){
+     fprintf(stderr,"Error -> wrong header for input \n ss=%d\n",ss);
+    exit(0);
+
+  }
+  if(nsam>1000){
+    fprintf(stderr,"Error -> Number of samples:%d , is too high. exit\n Maybe you need -Nsites 1?\n ",nsam);
+    exit(0);
+
+  }
   
 
   double ttt=0;
@@ -608,12 +620,13 @@ int main(int argc,char **argv){
   FILE *pgEst = openFile(prefix,".pgEstH");
 
   double res[3]={0,0,0};//phi_t,phi_w,D',Dt
-   fprintf(stderr,"\n");
-   while( howmany-count++ ) {
+  fprintf(stderr,"\n");
+ 
+  while( howmany-count++ > 0 ) {
+    // fprintf(stderr,"2nSam %d count %d %d\n",howmany,count,howmany-count);
 
      fprintf(stderr,"count %d\r",count);
-
-     /* read in a sample */
+      /* read in a sample */
      do {
        if( fgets( line, 1000, pfin) == NULL ){
 	 exit(0);
@@ -629,6 +642,7 @@ int main(int argc,char **argv){
        }
      }
      sscanf( line, "  segsites: %d", &segsites );
+   
      if( segsites >= maxsites){
        maxsites = segsites + 10 ;
        posit = (double *)realloc( posit, maxsites*sizeof( double) ) ;
@@ -658,6 +672,7 @@ int main(int argc,char **argv){
        }
      }
      //  if(1||count==58)
+     // fprintf(stderr,"nsam %d, segsites %d\n",nsam, segsites);
      test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count) ;
      if(singleOut==0){
        
