@@ -12,6 +12,7 @@
 #include "abcAncError.h"
 #include "abcHaploCall.h"
 #include "abcDstat.h"
+#include "abcDstat2.h"
 #include "abcWriteFasta.h"
 #include "abcCallGenotypes.h"
 #include "abcGetFasta.h"//for reading fasta; ancestral and refernce
@@ -65,6 +66,7 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcTemplate(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcWriteVcf(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcHaploCall(outfiles,arguments,inputtype);
+  tskStuff[nit++] = new abcDstat2(outfiles,arguments,inputtype);
 
   //don't touch below
   nItem = nit;
