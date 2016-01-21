@@ -15,6 +15,8 @@ int minMapQ =0;
 int minQ = MINQ;
 float downSample = 0;
 int trim = 0;
+int trim5 = 0;
+int trim3 = 0;
 int adjustMapQ =0;
 int baq =0;
 int checkBamHeaders = 1;
@@ -141,6 +143,8 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-minMapQ\t%d\tDiscard reads with mapping quality below\n",minMapQ);
   fprintf(argFile,"\t-minQ\t\t%d\tDiscard bases with base quality below\n",minQ);
   fprintf(argFile,"\t-trim\t\t%d\tNumber of based to discard at both ends of the reads\n",trim);
+  fprintf(argFile,"\t-trim\t\t%d\tNumber of based to discard at 5' ends of the reads\n",trim5);
+  fprintf(argFile,"\t-trim\t\t%d\tNumber of based to discard at 3' ends of the reads\n",trim3);
   fprintf(argFile,"\t-only_proper_pairs %d\tOnly use reads where the mate could be mapped\n",only_proper_pairs);
   fprintf(argFile,"\t-C\t\t%d\tadjust mapQ for excessive mismatches (as SAMtools), supply -ref\n",adjustMapQ);
   fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (as SAMtools), supply -ref\n",baq);
@@ -175,6 +179,8 @@ void setArgsBam(argStruct *arguments){
   minQ = angsd::getArg("-minQ",minQ,arguments);
   downSample = angsd::getArg("-downSample",downSample,arguments);
   trim = angsd::getArg("-trim",trim,arguments);
+  trim5 = angsd::getArg("-trim5",trim5,arguments);
+  trim3 = angsd::getArg("-trim3",trim3,arguments);
   adjustMapQ = angsd::getArg("-C",adjustMapQ,arguments);
   baq = angsd::getArg("-baq",baq,arguments);
   regfile =angsd::getArg("-r",regfile,arguments);

@@ -29,6 +29,8 @@ pthread_mutex_t mUpPile_mutex = PTHREAD_MUTEX_INITIALIZER;
 extern int SIG_COND;
 extern int minQ;
 extern int trim;
+extern int trim5;
+extern int trim3;
 #define bam_nt16_rev_table seq_nt16_str
 #define __NEW__
 //#define MAX_SEQ_LEN 200 //this is used for getting some secure value for when a site is securely covered for sample
@@ -725,6 +727,11 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	    tmpNode->insert[tmpNode->l2]->posi[ii] = seq_pos + 1;
 	    tmpNode->insert[tmpNode->l2]->isop[ii] =rd->core.l_qseq- seq_pos - 1;
 	    tmpNode->insert[tmpNode->l2]->qs[ii] = quals[seq_pos];
+	    if(trim5&& (!bam_is_rev(rd))&&tmpNode->insert[tmpNode->l2]->posi[ii]<trim5)
+	      tmpNode->insert[tmpNode->l2]->seq[ii] ='N';
+	    if(trim3&& (bam_is_rev(rd))&&tmpNode->insert[tmpNode->l2]->isop[ii]<trim3)
+	      tmpNode->insert[tmpNode->l2]->seq[ii] ='n';
+
 	    if( quals[seq_pos]<minQ || seq_pos + 1 < trim || rd->core.l_qseq- seq_pos - 1 < trim)  
 	      tmpNode->insert[tmpNode->l2]->seq[ii] =  bam_is_rev(rd)? tolower('n') : toupper('N');
 	    tmpNode->insert[tmpNode->l2]->mapQ[ii] = mapQ;
@@ -775,6 +782,11 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	  tmpNode->posi[tmpNode->l] = seq_pos;
 	  tmpNode->isop[tmpNode->l] =rd->core.l_qseq- seq_pos-1;
 	  tmpNode->mapQ[tmpNode->l] = mapQ;
+	  if(trim5&& (!bam_is_rev(rd))&&tmpNode->posi[tmpNode->l]<trim5)
+	    tmpNode->seq[tmpNode->l] ='N';
+	  if(trim3&& (bam_is_rev(rd))&&tmpNode->isop[tmpNode->l]<trim3)
+	    tmpNode->seq[tmpNode->l] ='n';
+	  
 	  if( quals[seq_pos]<minQ || seq_pos  < trim || rd->core.l_qseq - seq_pos - 1 < trim )
 	    tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower('n') : toupper('N');
 	  
