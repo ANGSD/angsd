@@ -28,38 +28,49 @@ void abcDstat::printArg(FILE *argFile){
   //  fprintf(argFile,"\t2: use the most common base (needs -doCounts 1)\n");
   fprintf(argFile,"\t-rmTrans\t\t%d\tremove transitions\n",rmTrans);
   fprintf(argFile,"\t-blockSize\t\t%d\tsize of each block in bases\n",blockSize);
+  fprintf(argFile,"\t-enhance\t\t%d\toutgroup must have same base for all reads\n",enhance);
   fprintf(argFile,"\t-ans\t\t\t%s\tfasta file with outgroup\n",ancName);
+  fprintf(argFile,"\t-useLast\t\t%d\tuse the last individuals as outgroup instead of -anc\n",useLast);
   fprintf(argFile,"\n");
 }
 
 void abcDstat::getOptions(argStruct *arguments){
     //from command line
   doAbbababa=angsd::getArg("-doAbbababa",doAbbababa,arguments);
- 
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   blockSize=angsd::getArg("-blockSize",blockSize,arguments);
   ancName = angsd::getArg("-anc",ancName,arguments);
   rmTrans = angsd::getArg("-rmTrans",rmTrans,arguments);
   Aanc = angsd::getArg("-Aanc",Aanc,arguments);
-    
-  if(doAbbababa){
-    if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
-      fprintf(stderr,"Error: bam or soap input needed for -doAbbababa \n");
-      exit(0);
-    }
-    if(arguments->nInd<3){
-      fprintf(stderr,"Error: -doAbbababa needs atleast 3 individual\n");
-      exit(0);
-    }
-    if( doCount==0){
-      fprintf(stderr,"Error: -doAbbababa needs allele counts (use -doCounts 1)\n");
-      exit(0);
-    }
-    if(ancName==NULL & Aanc==0){
-      fprintf(stderr,"Error: -doAbbababa needs an outgroup in fasta format (use -anc fastaFileName )\n");
-      exit(0);
-    }
+  useLast =  angsd::getArg("-useLast",useLast,arguments);
+  enhance =  angsd::getArg("-enhance",enhance,arguments);
+  if(useLast != 0)
+    useLast = 1;
+
+  if(doAbbababa==0)
+    return;
+
+  if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
+    fprintf(stderr,"Error: bam or soap input needed for -doAbbababa \n");
+    exit(0);
   }
+  if(arguments->nInd<3+useLast){
+    fprintf(stderr,"Error: -doAbbababa needs atleast 3 individual\n");
+    exit(0);
+  }
+  if( useLast == 0 && enhance == 1){
+    fprintf(stderr,"Error: -enhance only works with -useLast 1\n");
+    exit(0);
+  }
+  if( doCount==0){
+    fprintf(stderr,"Error: -doAbbababa needs allele counts (use -doCounts 1)\n");
+    exit(0);
+  }
+  if(ancName==NULL & Aanc==0 & useLast == 0){
+    fprintf(stderr,"Error: -doAbbababa needs an outgroup in fasta format (use -anc fastaFileName )\n");
+    exit(0);
+    }
+  
 
 
 }
@@ -71,9 +82,12 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
   doAbbababa=0;
   doCount=0;
   Aanc = 0;
+  useLast = 0;
   currentChr=-1;
   NbasesPerLine=50;
   blockSize=5000000;
+  enhance=0;
+
   block=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doAbbababa")){
@@ -104,7 +118,7 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
 
 
   //the number of combinations
-  nComb=arguments->nInd*(arguments->nInd-1)*(arguments->nInd-2)/2;
+  nComb=(arguments->nInd -useLast)*(arguments->nInd -1 -useLast)*(arguments->nInd -2 -useLast)/2;
   ABBA = new int[nComb];
   BABA = new int[nComb];
 
@@ -171,6 +185,8 @@ void abcDstat::calcMatCat(){
 
 
 abcDstat::~abcDstat(){
+
+
   free(ancName);
   if(doAbbababa==0)
     return;
@@ -259,8 +275,8 @@ void abcDstat::print(funkyPars *pars){
 
     if(pars->keepSites[s]==0)
 	continue;
-    for(int h3=0; h3<(pars->nInd); h3++){
-      for(int h2=0; h2<(pars->nInd); h2++){
+    for(int h3=0; h3<(pars->nInd -useLast); h3++){
+      for(int h2=0; h2<(pars->nInd-useLast); h2++){
 	if(h2==h3)
 	  continue;
 	for(int h1=0; h1<h2; h1++){
@@ -315,14 +331,28 @@ void abcDstat::run(funkyPars *pars){
 	}
 	if(dep==0)
 	  continue;
-	
-	int j = std::rand() % dep;
-	int cumSum=0;
-	for( int b = 0; b < 4; b++ ){
-	  cumSum+=pars->counts[s][i*4+b];
-	  if( cumSum > j ){
-	    pattern[s][i] = b;
-	    break;
+
+	if( enhance == 1 && useLast == 1 && i == pars->nInd -1 ){ //only use outgroup if all bases are the same
+	  pattern[s][i] = 4;
+	  
+	  for( int b = 0; b < 4; b++ )
+	    if(dep == pars->counts[s][i*4+b]){
+	      pattern[s][i] = b;
+	      //fprintf(stdout,"s \n");
+	      break;
+	    }
+	  
+	 
+	}
+	else{
+	  int j = std::rand() % dep;
+	  int cumSum=0;
+	  for( int b = 0; b < 4; b++ ){
+	    cumSum+=pars->counts[s][i*4+b];
+	    if( cumSum > j ){
+	      pattern[s][i] = b;
+	      break;
+	    }
 	  }
 	}
       }     
@@ -332,8 +362,8 @@ void abcDstat::run(funkyPars *pars){
 
   //get pattern
   int comp=0;
-  for(int h3=0; h3<(pars->nInd); h3++){
-    for(int h2=0; h2<(pars->nInd); h2++){
+  for(int h3=0; h3<(pars->nInd-useLast); h3++){
+    for(int h2=0; h2<(pars->nInd-useLast); h2++){
       if(h2==h3)
 	continue;
       for(int h1=0; h1<h2; h1++){
@@ -341,10 +371,12 @@ void abcDstat::run(funkyPars *pars){
 	  continue;
 	if(rmTrans){
 	  for(int s=0;s<pars->numSites;s++){
-	    int theAnc=0;
-	    if(Aanc==0)
+	    int theAnc=4;
+	    if(Aanc==0 & useLast==0)
 	      theAnc =pars->anc[s];
-	   
+	    else if(useLast == 1){
+	      theAnc=pattern[s][pars->nInd-1];
+	    }
 
 	    if(pars->keepSites[s]==0)
 	      continue;
@@ -363,10 +395,13 @@ void abcDstat::run(funkyPars *pars){
 	}
 	else
 	  for(int s=0;s<pars->numSites;s++){
-	      int theAnc=0;
-	    if(Aanc==0)
+	      int theAnc=4;
+	    if(Aanc==0 & useLast==0)
 	      theAnc =pars->anc[s];
-	   
+	    else if(useLast){
+	      theAnc=pattern[s][pars->nInd-1];
+	    }
+
 	    if(pars->keepSites[s]==0)
 	      continue;
   	    ABCD[s][comp] = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [theAnc];

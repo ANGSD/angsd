@@ -1,4 +1,9 @@
 
+
+
+
+
+//hello - delete me
 class abcDstat:public abc{
 private:
   kstring_t bufstr;
@@ -11,6 +16,7 @@ private:
   char *ancName;
   int *ABBA;
   int *BABA;
+  
 public:
   int doAbbababa;
   FILE *outfile;
@@ -18,6 +24,8 @@ public:
   int nComb;
   int rmTrans;
   int Aanc;
+  int useLast;
+  int enhance;
   abcDstat(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcDstat();
   void getOptions(argStruct *arguments);
