@@ -81,6 +81,7 @@ args * getArgs(int argc,char **argv){
   p->type =0;
   p->oldout =0;
   p->seed =0;
+  p->fl = NULL;
   if(argc==0)
     return p;
 
@@ -120,7 +121,10 @@ args * getArgs(int argc,char **argv){
     }
     else  if(!strcasecmp(*argv,"-fstout")){
       p->fstout = strdup(*(++argv));
-    }else{
+    }else  if(!strcasecmp(*argv,"-sites")){
+      p->fl = filt_read(*(++argv));
+    }
+    else{
       p->saf.push_back(persaf_init<float>(*argv));
       p->fname = *argv;
       //   fprintf(stderr,"toKeep:%p\n",p->saf[p->saf.size()-1]->toKeep);

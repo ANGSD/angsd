@@ -66,7 +66,7 @@ msToGlf: msToGlf6.c
 
 
 realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
 else
 safreader: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp 
@@ -97,7 +97,7 @@ msToGlf: msToGlf6.c
 
 
 realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o -lhts -lz -lpthread
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -lhts -lz -lpthread
 
 endif
 

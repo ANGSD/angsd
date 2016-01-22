@@ -1,3 +1,5 @@
+#include "../prep_sites.h"
+
 #include "safreader.h"
 #include <vector>
 typedef struct {
@@ -20,6 +22,7 @@ typedef struct {
   int oldout;
   long seed;//<-seed=-1 old version;seed=0 means time; othervise it will be used as seed
   int bootstrap;
+  filt *fl;
 }args;
 args * getArgs(int argc,char **argv);
 void destroy_args(args *p);
