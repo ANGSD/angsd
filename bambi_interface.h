@@ -1,5 +1,5 @@
 #pragma once
-
+typedef unsigned int suint;
 
 typedef struct  tNode_t{//order is important. First 8 bytes will be modified by pool_alloc structure (James Bonfield)
   int l;//4
@@ -9,8 +9,8 @@ typedef struct  tNode_t{//order is important. First 8 bytes will be modified by 
   int m2;//4//possible length of insert before realloc
   char *seq;//8
   char *qs;//8
-  unsigned char *posi;//8
-  unsigned char *isop;//8
+  suint *posi;//16
+  suint *isop;//16
   unsigned char *mapQ;//8
   tNode_t **insert;//8 an insertion 8bytes;
   int deletion;//4 //counter 

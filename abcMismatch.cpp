@@ -6,7 +6,7 @@
 #include "abcMismatch.h"
 
 
-#define rlen 150
+#define rlen 400
 #define qslen 64
 
 size_t ******mat=NULL;//[rlen][rlen][qslen][2][4][4];
@@ -126,7 +126,7 @@ abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
     shouldRun[index]=0;
     return;
   }
-  fprintf(stderr,"Estimating calibration matrix: %s\n",outfiles);
+  fprintf(stderr,"\t-> Estimating calibration matrix: %s\n",outfiles);
   //make output files
   const char* postfix;
   postfix=".mismatch.gz";

@@ -13,7 +13,7 @@ extern int SIG_COND;
 
 #ifndef _types_t
 #define _types_t
-typedef unsigned int suint;
+
 
 #define LENS 10000
 #define GZOPT "w6h"

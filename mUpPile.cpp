@@ -254,43 +254,6 @@ node initNode(int l,int refPos,int arypos){
   return nd;
 }
 
-
-tNode *initNodeT_old(int l){
-  tNode *d=(tNode*)calloc(1,sizeof(tNode));
-  d->l = d->l2 = d->m2 = 0;
-  d->m = l;
-  kroundup32(d->m);
-  if(d->m==0){
-    d->seq=d->qs=NULL;
-    d->posi=d->isop=d->mapQ=NULL;
-  }else{
-    d->seq=(char *)malloc(d->m);
-    d->qs=(char *)malloc(d->m);
-    d->posi=(unsigned char *)malloc(d->m);
-    d->isop=(unsigned char *)malloc(d->m);
-    d->mapQ=(unsigned char *)malloc(d->m);
-  }
-  d->refPos= -999;
-  d->insert = NULL;
-  return d;
-}
-
-
-void realloc(char **c,int l,int m){
-  char *tmp =(char *) malloc(m);
-  memcpy(tmp,*c,l);
-  free(*c);
-  *c= tmp;
-}
-
-void realloc(unsigned char **c,int l,int m){
-  unsigned char *tmp =(unsigned char *) malloc(m);
-  memcpy(tmp,*c,l);
-  free(*c);
-  *c= tmp;
-}
-
-
 void realloc(tNode *d,int newsize){
 
   kroundup32(newsize);
@@ -300,11 +263,12 @@ void realloc(tNode *d,int newsize){
 
   d->seq=(char*)realloc(d->seq,d->m*sizeof(char));
   d->qs =(char*) realloc(d->qs,d->m*sizeof(char));
-  d->posi = (unsigned char*)realloc(d->posi,d->m*sizeof(unsigned char));
-  d->isop = (unsigned char*)realloc(d->isop,d->m*sizeof(unsigned char));
+  d->posi = (suint*)realloc(d->posi,d->m*sizeof(suint));
+  d->isop = (suint*)realloc(d->isop,d->m*sizeof(suint));
   d->mapQ = (unsigned char*)realloc(d->mapQ,d->m*sizeof(unsigned char));
  
 }
+
 
 //this is called from a threadsafe context
 #ifdef __WITH_POOL__
@@ -341,8 +305,8 @@ tNode *initNodeT(int l){
     kroundup32(d->m);
     d->seq=(char *)malloc(d->m);
     d->qs=(char *)malloc(d->m);
-    d->posi=(unsigned char *)malloc(d->m);
-    d->isop=(unsigned char *)malloc(d->m);
+    d->posi=(suint *)malloc(sizeof(suint)*d->m);
+    d->isop=(suint *)malloc(sizeof(suint)*d->m);
     d->mapQ=(unsigned char *)malloc(d->m);
     d->m2=0;
   }else if(l>d->m){
@@ -765,12 +729,12 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
 	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN)); 
 	  // tmpNode =  dn.nds[wpos];
 	  tmpNode->refPos=wpos+offs;
-	  if(tmpNode->l>=tmpNode->m){
+	  if(tmpNode->l>=tmpNode->m){//shouldnt need to realloc each member in struct
 	    tmpNode->m = tmpNode->m*2;
 	    tmpNode->seq =(char *) realloc(tmpNode->seq,tmpNode->m);
 	    tmpNode->qs =(char *) realloc(tmpNode->qs,tmpNode->m);
-	    tmpNode->posi =(unsigned char *) realloc(tmpNode->posi,tmpNode->m);
-	    tmpNode->isop =(unsigned char *) realloc(tmpNode->isop,tmpNode->m);
+	    tmpNode->posi =(suint *) realloc(tmpNode->posi,sizeof(suint)*tmpNode->m);
+	    tmpNode->isop =(suint *) realloc(tmpNode->isop,sizeof(suint)*tmpNode->m);
 	    tmpNode->mapQ = (unsigned char *) realloc(tmpNode->mapQ,tmpNode->m);
 	  }
 	  
