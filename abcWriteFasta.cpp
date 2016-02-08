@@ -1,10 +1,3 @@
-/*
-thorfinn 31oct 2014
-refactored. Should be simpler now
-*/
-
-
-
 #include <cmath>
 #include <cstdlib>
 #include <htslib/bgzf.h>
@@ -24,9 +17,9 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t2: use the most common base (needs -doCounts 1)\n");
   fprintf(argFile,"\t3: use the base with highest ebd (under development) \n");
   fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases perline in output file)\n",NbasesPerLine);
-  fprintf(argFile,"\t-explode\t%d\t(Should we include chrs with no data?)",explode);
-  fprintf(argFile,"\t-rmTrans\t%d\t(remove transitions (as different from -ref bases)?)",rmTrans);
-  fprintf(argFile,"\t-ref\t%s\t(reference fasta, only used with -rmTrans 1)",ref);
+  fprintf(argFile,"\t-explode\t%d\t(Should we include chrs with no data?)\n",explode);
+  fprintf(argFile,"\t-rmTrans\t%d\t(remove transitions (as different from -ref bases)?)\n",rmTrans);
+  fprintf(argFile,"\t-ref\t%s\t(reference fasta, only used with -rmTrans 1)\n",ref);
   fprintf(argFile,"\n");
 }
 
@@ -127,6 +120,7 @@ abcWriteFasta::~abcWriteFasta(){
 void abcWriteFasta::changeChr(int refId) {
   if(doFasta==0)
     return;
+ 
   if(myFasta!=NULL){//proper case we have data
     if(explode||hasData){
       writeChr(&bufstr,header->target_len[currentChr],header->target_name[currentChr],myFasta,NbasesPerLine);
@@ -136,6 +130,8 @@ void abcWriteFasta::changeChr(int refId) {
   
   //ANDERS FILL IN MISSING CHRS IF YOU WANT HERE
   //ANDERS IS APPRANTLY LAZY SO NOW I'VE DONE IT FOR HIM
+  //THORFINN THANK YOU FOR FIXING YOUR OWN MISTAKE
+
 
   if(refId!=-1){//-1 = destructor
     for(int i=currentChr+1;explode&&i<refId;i++){
