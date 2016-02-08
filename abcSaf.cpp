@@ -209,7 +209,12 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   }
 
   newDim = 2*arguments->nInd+1;
-  if(fold)
+  if(fold && isHap){
+    fprintf(stderr,"\t-> folding for haploid hasn't been defined and implemented\n");
+    exit(0);
+  }
+
+  if(fold||isHap)
     newDim = arguments->nInd+1;
   if(doSaf==3){
     outfileGprobs = aio::openFileBG(outfiles,GENO);
@@ -225,6 +230,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     offs[1] = bgzf_tell(outfileSAF);
 
     size_t tt = newDim-1;
+    fprintf(stderr,"tt:%lu\n",tt);
     fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
   }else {
     theta_fp = aio::openFileBG(outfiles,THETAS);
@@ -1096,10 +1102,11 @@ void abcSaf::print(funkyPars *p){
     }
  
     if(doThetas==0){
+      //fprintf(stderr,"\t-> newdi:%d\n",newDim);
       if(isHap==0)
 	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
       else
-	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],(newDim-1)/2+1,nnnSites);
+	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
       }
     else 
       calcThetas(p,index,prior,theta_fp);
