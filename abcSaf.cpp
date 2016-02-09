@@ -22,7 +22,7 @@ namespace filipe{
 void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doSaf\t\t%d\n",doSaf);
-  fprintf(argFile,"\t1: perform multisample GL estimation\n\t2: use an inbreeding version\n\t3: calculate genotype probabilities\n\t4: Assume genotype posteriors as input (still beta) \n");
+  fprintf(argFile,"\t1: perform multisample GL estimation\n\t2: use an inbreeding version\n\t3: calculate genotype probabilities (use -doPost 3 instead)\n\t4: Assume genotype posteriors as input (still beta) \n");
   fprintf(argFile,"\t-doThetas\t\t%d (calculate thetas)\n",noTrans);
   fprintf(argFile,"\t-underFlowProtect\t%d\n",underFlowProtect); 
   fprintf(argFile,"\t-fold\t\t\t%d (deprecated)\n",fold);
@@ -30,29 +30,57 @@ void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"\t-noTrans\t\t%d (remove transitions)\n",noTrans);
   fprintf(argFile,"\t-pest\t\t\t%s (prior SFS)\n",pest);
   fprintf(argFile,"\t-isHap\t\t\t%d (is haploid beta!)\n",isHap);
+  fprintf(argFile,"\t-doPost\t\t\t%d (doPost 3,used for accesing saf based variables)\n",doPost);
   fprintf(argFile,"NB:\n\t  If -pest is supplied in addition to -doSaf then the output will then be posterior probability of the sample allelefrequency for each site\n");
 
 }
 
 void abcSaf::getOptions(argStruct *arguments){
   doSaf=angsd::getArg("-doSaf",doSaf,arguments);
+  doPost=angsd::getArg("-doPost",doPost,arguments);
   isHap=angsd::getArg("-isHap",isHap,arguments);
-
-  int tmp=0;
-  tmp=angsd::getArg("-doRealSFS",tmp,arguments);
-  if(tmp){
-    fprintf(stderr,"-doRealSFS is now called -doSaf (do sample allele frequency)\n");
-    doSaf=tmp;
+  pest = angsd::getArg("-pest",pest,arguments);
+  if(doSaf>0||doPost==3){
+    if(pest!=NULL){
+      if(fold==0)
+	prior=angsd::readDouble(pest,arguments->nInd*2+1);
+      else
+	prior=angsd::readDouble(pest,arguments->nInd+1);
+      int nd=arguments->nInd*2+1;
+      if(fold)
+	nd=arguments->nInd+1;
+      
+      int tts=0;
+      for(int i=0;i<nd;i++)
+	tts += prior[i];
+      for(int i=0;i<nd;i++)
+	prior[i] = log(prior[i]/tts);
+    }
+    lbicoTab = new double[2*arguments->nInd+1];
+    myComb2Tab = new double*[2*arguments->nInd+1];
+    for(int i=0;i<2*arguments->nInd+1;i++){
+      lbicoTab[i] = angsd::lbico(2*arguments->nInd,i);
+      myComb2Tab[i] = new double[3];
+      for(int j=0;j<3;j++)
+	if(j<=i)
+	  myComb2Tab[i][j] = angsd::myComb2(arguments->nInd,i,j);
+    }
+    if(isHap){
+      for(int i=0;i<arguments->nInd+1;i++)
+	lbicoTab[i] = angsd::lbico(arguments->nInd,i);
+    }
+    
   }
 
+
   noTrans = angsd::getArg("-noTrans",noTrans,arguments);
-  pest = angsd::getArg("-pest",pest,arguments);
+
   int GL = 0;
   GL = angsd::getArg("-GL",GL,arguments);
   doThetas= angsd::getArg("-doThetas",doThetas,arguments);
 
 
-  if(doSaf==0&&doThetas==0)
+  if(doSaf==0&&doThetas==0&doPost!=3)
     return;
   if(doThetas!=0&& doSaf==0){
     fprintf(stderr,"\t Must estimate joint llh (-doSaf) when estimating thetas\n");
@@ -80,21 +108,7 @@ void abcSaf::getOptions(argStruct *arguments){
       exit(0);
     }
   }
-  if(pest!=NULL){
-    if(fold==0)
-      prior=angsd::readDouble(pest,arguments->nInd*2+1);
-    else
-      prior=angsd::readDouble(pest,arguments->nInd+1);
-    int nd=arguments->nInd*2+1;
-    if(fold)
-      nd=arguments->nInd+1;
-    
-    int tts=0;
-    for(int i=0;i<nd;i++)
-      tts += prior[i];
-    for(int i=0;i<nd;i++)
-      prior[i] = log(prior[i]/tts);
-  }
+ 
   if(GL==0 &&(arguments->inputtype!=INPUT_GLF && arguments->inputtype!=INPUT_GLF3 && arguments->inputtype!=INPUT_VCF_GL)){
     fprintf(stderr,"\t-> Must supply genotype likelihoods (-GL [INT])\n");
     printArg(arguments->argumentFile);
@@ -139,7 +153,7 @@ void abcSaf::getOptions(argStruct *arguments){
 
 double *abcSaf::lbicoTab = NULL;
 double **abcSaf::myComb2Tab=NULL;
-
+double *abcSaf::prior = NULL;
 
 abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   tmpChr = NULL;
@@ -159,6 +173,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   noTrans = 0;
   prior = NULL;
   doSaf=0;
+  doPost =0;
   doThetas = 0;
   outfileSAF = NULL;
   outfileSAFPOS = NULL;
@@ -181,19 +196,6 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   if(doSaf==0){
     shouldRun[index] =0;
     return;
-  }
-  lbicoTab = new double[2*arguments->nInd+1];
-  myComb2Tab = new double*[2*arguments->nInd+1];
-  for(int i=0;i<2*arguments->nInd+1;i++){
-    lbicoTab[i] = angsd::lbico(2*arguments->nInd,i);
-    myComb2Tab[i] = new double[3];
-    for(int j=0;j<3;j++)
-      if(j<=i)
-	myComb2Tab[i][j] = angsd::myComb2(arguments->nInd,i,j);
-  }
-  if(isHap){
-    for(int i=0;i<arguments->nInd+1;i++)
-      lbicoTab[i] = angsd::lbico(arguments->nInd,i);
   }
 
   newDim = 2*arguments->nInd+1;

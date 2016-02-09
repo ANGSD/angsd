@@ -78,6 +78,7 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"-doPost\t%d\t(Calculate posterior prob 3xgprob)\n",doPost);
   fprintf(argFile,"\t1: Using frequency as prior\n");
   fprintf(argFile,"\t2: Using uniform prior\n");
+  fprintf(argFile,"\t3: Using SFS as prior (still in development)\n");
   fprintf(argFile,"Filters:\n");
   fprintf(argFile,"\t-minMaf  \t%f\t(Remove sites with MAF below)\n",minMaf);
   fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",SNP_pval);
@@ -562,7 +563,9 @@ void abcFreq::run(funkyPars *pars) {
       if(pars->keepSites[s]==0){
 	delete [] like[s];
 	continue;
-      }if(doPost==1)  //maf prior
+      }
+
+      if(doPost==1)  //maf prior
 	 make_post(like[s],post[s],freq->freq[s],pars->nInd);
       else if(doPost==2){//uniform prior
 	for(int i=0;i<pars->nInd;i++){
@@ -570,6 +573,10 @@ void abcFreq::run(funkyPars *pars) {
 	  for(int g=0;g<3;g++)
 	    post[s][i*3+g]=exp(like[s][i*3+g]-norm);
 	}
+      }
+      else if(doPost==3){//uniform prior
+	if(algoGeno(pars->likes[s],refToInt[pars->major[s]],refToInt[pars->minor[s]],pars->nInd,0,abcSaf::prior,post[s]))
+	   fprintf(stderr,"\t-> Problem calling genotypes at: (%s,%d)\n",header->target_name[pars->refId],pars->posi[s]+1);	   
       }
       else{
 	fprintf(stderr,"[%s] doPost must be 1 or 2 \n",__FUNCTION__);

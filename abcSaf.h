@@ -18,7 +18,7 @@ class abcSaf : public abc{
   int noTrans;
   char *anc;
   char *pest;
-  double *prior; //<- outputfile form pest;
+  int doPost;
   int doThetas;
   void calcThetas(funkyPars *p,int index,double *prior,BGZF* fpgz);
 
@@ -41,6 +41,7 @@ class abcSaf : public abc{
 
   void writeAll();
 public:
+  static double *prior; //<- outputfile form pest;
   static double *lbicoTab; //dim = [2*numInds+1]
   static double **myComb2Tab;
   //none optional stuff

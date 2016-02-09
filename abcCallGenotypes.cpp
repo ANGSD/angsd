@@ -29,8 +29,8 @@ void abcCallGenotypes::printArg(FILE *argFile){
   fprintf(argFile,"\t2: write the called genotype encoded as -1,0,1,2, -1=not called\n");
   fprintf(argFile,"\t4: write the called genotype directly: eg AA,AC etc \n");
   fprintf(argFile,"\t8: write the posterior probability of all possible genotypes\n");
-  fprintf(argFile,"\t16: write the posterior probability of called gentype\n");
-  fprintf(argFile,"\t32: write the posterior probability of called gentype as binary\n");
+  fprintf(argFile,"\t16: write the posterior probability of called genotype\n");
+  fprintf(argFile,"\t32: write the posterior probabilities of the 3 gentypes as binary\n");
   //  fprintf(argFile,"\t64: write the three posterior probability (Beagle style)\n");
   fprintf(argFile,"\t-> A combination of the above can be choosen by summing the values, EG write 0,1,2 types with majorminor as -doGeno 3\n");
   fprintf(argFile,"\t-postCutoff=%f (Only genotype to missing if below this threshold)\n",postCutoff);
