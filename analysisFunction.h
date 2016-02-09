@@ -17,6 +17,9 @@ extern char intToRef[5];
 
 namespace angsd {
 
+  double lbico(double n, double k);
+  double myComb2(int k,int r, int j);
+  
   //assuming samtools ordering
  
   static int majorminor[4][4] = 

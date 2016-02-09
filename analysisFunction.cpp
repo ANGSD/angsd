@@ -507,6 +507,23 @@ double angsd::sigm(double x){
   return(1/(1+exp(-x)));
 }
 
+
+double angsd::lbico(double n, double k){
+  return lgamma(n+1)-lgamma(k+1)-lgamma(n-k+1);
+}
+
+double angsd::myComb2(int k,int r, int j){
+  if(j>r)
+    fprintf(stderr,"%s error in k=%d r=%d j=%d\n",__FUNCTION__,k,r,j);
+
+  double fac1= lbico(r,j)+lbico(2*k-r,2-j);
+  double fac2=lbico(2*k,2);
+  
+  return exp(fac1-fac2);
+}
+
+
+
 double *angsd::readDouble(const char*fname,int hint){
   FILE *fp = NULL;
   fp = aio::getFILE(fname,"r");

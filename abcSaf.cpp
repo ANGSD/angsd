@@ -34,20 +34,6 @@ void abcSaf::printArg(FILE *argFile){
 
 }
 
-double lbico(double n, double k){
-  return lgamma(n+1)-lgamma(k+1)-lgamma(n-k+1);
-}
-
-double myComb2(int k,int r, int j){
-  if(j>r)
-    fprintf(stderr,"%s error in k=%d r=%d j=%d\n",__FUNCTION__,k,r,j);
-
-  double fac1= lbico(r,j)+lbico(2*k-r,2-j);
-  double fac2=lbico(2*k,2);
-  
-  return exp(fac1-fac2);
-}
-
 void abcSaf::getOptions(argStruct *arguments){
   doSaf=angsd::getArg("-doSaf",doSaf,arguments);
   isHap=angsd::getArg("-isHap",isHap,arguments);
@@ -151,11 +137,13 @@ void abcSaf::getOptions(argStruct *arguments){
 
 }
 
+double *abcSaf::lbicoTab = NULL;
+double **abcSaf::myComb2Tab=NULL;
+
+
 abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   tmpChr = NULL;
   isHap =0;
-  lbicoTab = NULL;
-  myComb2Tab=NULL;
   const char *SAF = ".saf.gz";
   const char *SAFPOS =".saf.pos.gz";
   const char *SAFIDX =".saf.idx";
@@ -197,15 +185,15 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   lbicoTab = new double[2*arguments->nInd+1];
   myComb2Tab = new double*[2*arguments->nInd+1];
   for(int i=0;i<2*arguments->nInd+1;i++){
-    lbicoTab[i] = lbico(2*arguments->nInd,i);
+    lbicoTab[i] = angsd::lbico(2*arguments->nInd,i);
     myComb2Tab[i] = new double[3];
     for(int j=0;j<3;j++)
       if(j<=i)
-	myComb2Tab[i][j] = myComb2(arguments->nInd,i,j);
+	myComb2Tab[i][j] = angsd::myComb2(arguments->nInd,i,j);
   }
   if(isHap){
     for(int i=0;i<arguments->nInd+1;i++)
-      lbicoTab[i] = lbico(arguments->nInd,i);
+      lbicoTab[i] = angsd::lbico(arguments->nInd,i);
   }
 
   newDim = 2*arguments->nInd+1;
@@ -1326,9 +1314,9 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
       for(int i=0;i<(2*(numInds-1)+1);i++){
 	//fprintf(stdout,"BICO: %f\n",log(bico(2*numInds,i)));
 	if(underFlowProtect)
-	  hj[i] =  (hj[i]-lbico(2*(numInds-1),i));
+	  hj[i] =  (hj[i]-angsd::lbico(2*(numInds-1),i));
 	else
-	  hj[i] =  exp(log(hj[i])-lbico(2*(numInds-1),i));
+	  hj[i] =  exp(log(hj[i])-angsd::lbico(2*(numInds-1),i));
 	
       }
        
