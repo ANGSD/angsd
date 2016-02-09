@@ -57,7 +57,7 @@ size_t readGLS(std::vector<persaf *> &adolf,size_t nSites,std::vector< Matrix<T>
 // 1) set the chooseChr and populate toKeep
 // 2) find over lap between different positions
 // this is run once for each chromsome
-int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr){
+int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr,filt *fl){
   //fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
 
   if(0&&saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
@@ -86,11 +86,9 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       *curChr=it_outer->first;
     fprintf(stderr,"\t-> Is in multi sfs, will now read data from chr:%s\n",chooseChr);
   }
-  
   fprintf(stderr,"\t-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect \n");
-  fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop\n");
+  fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites\n");
   assert(chooseChr!=NULL);
-
  //hit will contain the depth across different populations
   keep<char> *hit =NULL;
 
@@ -101,8 +99,9 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   //this loop will populate a 'hit' array containing the effective (differnt pops) depth
   //if we only have one population, then just return after iter_init
   int killbreak =0;
-  for(int i=0;i<saf.size();i++){
+  for(int i=0;i<saf.size();i++) {
     myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
+
     //    fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
     //    assert(it!=saf[i]->mm.end());  
     if(it==saf[i]->mm.end()){
@@ -119,6 +118,10 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       if(saf[i]->toKeep->d[j])
 	hit->d[saf[i]->ppos[j]]++;
   }
+  if(fl!=NULL){
+    filt_readSites(fl,chooseChr,saf[0]->ppos[saf[0]->nSites-1]);
+    //    for(int s=0;s)
+  }
 
   if(killbreak){
     for(int i=0;i<saf.size();i++)
@@ -134,10 +137,10 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   exit(0);
 #endif
   //hit now contains the genomic position (that is the index).
-  
+ 
   //let us now modify the the persaf toKeep char vector
   int tsk[saf.size()];
-  for(int i=0;i<saf.size();i++){
+  for(int i=0;i<saf.size();i++) {
     tsk[i] =0;
     for(int j=0;j<=saf[i]->toKeep->last;j++)
       if(hit->d[saf[i]->ppos[j]]!=saf.size())
@@ -169,7 +172,7 @@ int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,size_t nSi
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
   if(lastread==0 ){
     fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
-    int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr); 
+    int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr,fl); 
     //    fprintf(stderr,"[%s] ret:%d\n",__FUNCTION__,ret);
     //    exit(0);
     if(ret==-3)
