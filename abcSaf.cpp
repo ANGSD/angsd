@@ -1125,7 +1125,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
   assert(pest!=NULL);
   //void algGeno(aMap &asso,int numInds,FILE *sfsfile,int underFlowProtect, double *pest) {
   //  fprintf(stderr,"UNDERFLOWPROTECT: %d\n",underFlowProtect);
-  
+  double *postp = new double[3*numInds];
 #if 0
   for(int r=0;r<(2*numInds-1);r++)
     for(int j=0;j<std::min(3,r);j++){
@@ -1337,7 +1337,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
       double *asdf = hj;
 
       //print_array(stdout,asdf,2*numInds-1,!underFlowProtect);
-      double res[3]; //is always logged
+      double *res = postp+3*select; //is always logged
 
 
       for (int j=0;j<3;j++) {//loop through 3 genotypes
@@ -1473,8 +1473,8 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
     for(int i=0;i<numInds;i++)
       ksprintf(sfsfile,"%d ",whichGeno[i]);
     //ksprintf(sfsfile,"%d\t",whichGeno[numInds]);
-    for(int i=0;i<numInds;i++)
-      ksprintf(sfsfile,"%f ",whichProb[i]);
+    for(int i=0;i<numInds*3;i++)
+      ksprintf(sfsfile,"%f ",postp[i]);
     ksprintf(sfsfile,"\n");
     //    fprintf(sfsfile,"%f\t%f\n",whichProb[numInds-1],it->second.emPhat);
   }//after all sites
