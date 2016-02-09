@@ -40,6 +40,8 @@ void abcSaf::getOptions(argStruct *arguments){
   doPost=angsd::getArg("-doPost",doPost,arguments);
   isHap=angsd::getArg("-isHap",isHap,arguments);
   pest = angsd::getArg("-pest",pest,arguments);
+  fold=angsd::getArg("-fold",fold,arguments);
+
   if(doSaf>0||doPost==3){
     if(pest!=NULL){
       if(fold==0)
@@ -94,7 +96,7 @@ void abcSaf::getOptions(argStruct *arguments){
   }
 
   underFlowProtect=angsd::getArg("-underFlowProtect",underFlowProtect,arguments);
-  fold=angsd::getArg("-fold",fold,arguments);
+
 
   int isSim =0;
   isSim=angsd::getArg("-isSim",isSim,arguments);

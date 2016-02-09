@@ -42,6 +42,6 @@ md5sum  -c mlRes.md5sum &>>${LOG} ||exit 7
 
 #echo do GC test
 cd ..
-$PROGGY -glf  $GLFINPUT -isSim 1 -nInd 10  -out output/sfstestGC -doSaf 3 -underFlowProtect 0 -fai ../hg19.fa.fai -doMajorMinor 1 -pest output/em.log  &>>${LOG} ||exit 8
+$PROGGY -glf  $GLFINPUT -nInd 10  -out output/sfstestGC -doPost 3 -underFlowProtect 0 -fai ../hg19.fa.fai -doMajorMinor 1 -pest output/em.log -domaf 1 -dogeno 8  &>>${LOG} ||exit 8
 cd output
 md5sum  -c sfsgc.md5sum &>>${LOG} ||exit 9
