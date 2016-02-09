@@ -163,7 +163,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
 
 
 template <typename T>
-int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,size_t nSites,char *chooseChr,int start,int stop, int *pp,char **curChr){
+int readdata(std::vector<persaf *> &saf,std::vector<Matrix<T> *> &gls,size_t nSites,char *chooseChr,int start,int stop, int *pp,char **curChr,filt *fl){
   static size_t lastread=0;
   extern int ** posiG;
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
