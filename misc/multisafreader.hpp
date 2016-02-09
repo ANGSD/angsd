@@ -92,7 +92,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
  //hit will contain the depth across different populations
   keep<char> *hit =NULL;
 
-  if(saf.size()>1)
+  //  if(saf.size()>1)
     hit =keep_alloc<char>();//
   
   
@@ -101,26 +101,31 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   int killbreak =0;
   for(int i=0;i<saf.size();i++) {
     myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
-
+    if(fl!=NULL&&i==0){
+      filt_readSites(fl,chooseChr,saf[0]->ppos[saf[0]->nSites-1]);
+      //      fprintf(stderr,"read_sites\n");
+    }
+    
     //    fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
     //    assert(it!=saf[i]->mm.end());  
     if(it==saf[i]->mm.end()){
       killbreak =1;
       break;
     }
-    if(saf.size()==1)
+    if(saf.size()==1 &&fl==NULL)
       return 0;
-    
     if(saf[i]->ppos[it->second.nSites-1] >= hit->m)
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
-    for(size_t j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++)
-      if(saf[i]->toKeep->d[j])
+    for(size_t j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++){
+      //      fprintf(stderr,"fl:%p fl->keeps:%p\n",fl,fl->keeps);
+      if(i==0&&fl!=NULL&&fl->keeps!=NULL){//we only check for -sites for the first saf. 
+	//	fprintf(stderr,"IN the saf\n");
+	if(saf[i]->toKeep->d[j] && fl->keeps[saf[i]->ppos[j]])
+	  hit->d[saf[i]->ppos[j]]++;
+      }else if(saf[i]->toKeep->d[j])
 	hit->d[saf[i]->ppos[j]]++;
-  }
-  if(fl!=NULL){
-    filt_readSites(fl,chooseChr,saf[0]->ppos[saf[0]->nSites-1]);
-    //    for(int s=0;s)
+    }
   }
 
   if(killbreak){
