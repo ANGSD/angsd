@@ -17,6 +17,9 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"\t-minQfile\t%s\t file with individual quality score thresholds)\n",minQfile);
   fprintf(argFile,"\t-setMaxDepth\t%d\t(If total depth is larger then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMaxDepth);
   fprintf(argFile,"\t-setMinDepth\t%d\t(If total depth is smaller then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMinDepth);
+  fprintf(argFile,"\t-setMaxDepthInd\t%d\t(If depth persample is larger then individual is removed from analysis (from site).\n\t\t\t\t -1 indicates no filtering)\n",setMaxDepthInd);
+  fprintf(argFile,"\t-setMinDepthInd\t%d\t(If depth persample is smaller then individual is removed from analysis (from site).\n\t\t\t\t -1 indicates no filtering)\n",setMinDepthInd);
+
   fprintf(argFile,"\t-minInd\t\t%d\t(Discard site if effective sample size below value.\n\t\t\t\t 0 indicates no filtering)\n",minInd);
   fprintf(argFile,"\t-setMaxDiffObs\t%d\t(Discard sites where we observe to many different alleles.\n\t\t\t\t 0 indicates no filtering)\n",setMaxObs);
   fprintf(argFile,"Filedumping:\n");
@@ -78,9 +81,13 @@ void abcCounts::getOptions(argStruct *arguments){
   dumpCounts=angsd::getArg("-dumpCounts",dumpCounts,arguments);
   doQsDist=angsd::getArg("-doQsDist",doQsDist,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
-  setMaxDepth = angsd::getArg("-setMaxDepth",setMaxDepth,arguments);
+
   setMaxObs = angsd::getArg("-setMaxDiffObs",setMaxObs,arguments);
-  setMinDepth=angsd::getArg("-setMinDepth",setMinDepth,arguments);
+  setMaxDepth = angsd::getArg("-setMaxDepth",setMaxDepth,arguments);
+  setMinDepth = angsd::getArg("-setMinDepth",setMinDepth,arguments);
+  setMaxDepthInd = angsd::getArg("-setMaxDepthInd",setMaxDepthInd,arguments);
+  setMinDepthInd = angsd::getArg("-setMinDepthInd",setMinDepthInd,arguments);
+
   doDepth=angsd::getArg("-doDepth",doDepth,arguments);
   maxDepth=angsd::getArg("-maxDepth",maxDepth,arguments);
   iCounts=angsd::getArg("-iCounts",iCounts,arguments);
@@ -153,14 +160,18 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   iCounts =0;
   nInd=arguments->nInd;
   minInd = 0;
-  setMinDepth =-1;
+  setMinDepth = -1;
+  setMaxDepth = -1;
+  setMinDepthInd = -1;
+  setMaxDepthInd = -1;
+
   dumpCounts =0;
   doCounts = 0;
   doQsDist = 0;
   setMaxObs = 0;
   doDepth = 0;
   maxDepth = 100;
-  setMaxDepth = -1;
+
   minQfile=NULL;
 
   //make output files
@@ -515,7 +526,7 @@ void abcCounts::clean(funkyPars *pars){
 
 
 //dragon update with keeplist so we only count necessary sites
-suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites){
+suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites,int mmin,int mmax){
   //  fprintf(stderr,"nsamples:%d\n",chk->nSamples);
   suint **cnts = new suint*[chk->nSites];
   if(minQfile==NULL) {
@@ -535,6 +546,21 @@ suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites){
 	    continue;
 	  }
 	  cnts[s][4*n+allele]++;
+	}
+	if(chk->nd[s][n]&&(mmin!=-1||mmax!=-1)){
+	  int ndep=0;
+	  for(int jj=0;jj<4;jj++) 
+	    ndep += cnts[s][4*n+jj];
+	  if(mmin!=-1&&ndep<mmin){
+	    for(int jj=0;jj<4;jj++)
+	      cnts[s][4*n+jj] = 0;
+	    chk->nd[s][n]->l=0;
+	  }
+	  if(mmax!=-1&&ndep>mmax){
+	    for(int jj=0;jj<4;jj++)
+	      cnts[s][4*n+jj] = 0;
+	    chk->nd[s][n]->l=0;
+	  }    
 	}
       }
     }
@@ -592,9 +618,9 @@ void abcCounts::run(funkyPars *pars){
   if(doCounts==0)
     return;
   assert(pars->chk!=NULL&&pars->counts==NULL);
-  pars->counts = countNucs(pars->chk,pars->keepSites);
+  pars->counts = countNucs(pars->chk,pars->keepSites,setMinDepthInd,setMaxDepthInd);
   // fprintf(stderr,"%d\n",pars->keepSites[0]);
-  for(int s=0;s<pars->numSites;s++){
+  for(int s=0;s<pars->numSites;s++){// Why is this loop needed? is it to remove sites with no data above minQ filters?
     size_t ss=0;
     for(int i=0;i<4*pars->nInd;i++)
       if(pars->keepSites[s]) 

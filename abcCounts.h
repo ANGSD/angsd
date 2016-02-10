@@ -32,6 +32,9 @@ private:
 
   int setMaxDepth;
   int setMinDepth;
+  int setMaxDepthInd;
+  int setMinDepthInd;
+
   //from depth class
   int doDepth;
   int maxDepth;
@@ -45,7 +48,7 @@ public:
 
   
   //none optional stuff
-  suint **countNucs(const chunkyT *chk,int *keepSites);  
+  suint **countNucs(const chunkyT *chk,int *keepSites,int mmin,int mmax);  
   abcCounts(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcCounts();
   void getOptions(argStruct *arguments);
