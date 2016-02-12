@@ -296,29 +296,46 @@ result1 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBA,BABAname=BABA)
 
 fileOut = paste(out,"ErrorCorr",".txt",sep="")
 
-if(file.exists(fileOut))
-    write(c(result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv),fileOut,sep="\t",append=T)
-if(!file.exists(fileOut)){
-    file.create(fileOut, showWarnings = FALSE)
-    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
-    write(str,fileOut,append=T)
-    write(c(result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv),fileOut,sep="\t",append=T)
-}
+#if(file.exists(fileOut))
+#    write(c(result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv),fileOut,sep="\t",append=T)
+#if(!file.exists(fileOut)){
+#    file.create(fileOut, showWarnings = FALSE)
+#    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
+#    write(str,fileOut,append=T)
+#    write(c(result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv),fileOut,sep="\t",append=T)
+#}
+
+str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
+str2 = sprintf("%f\t%f\t%f\t%f\t%f",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv)
+cat(str,str2,file=fileOut,sep="\n")
+
+
+
 
 print("-----------------------------------------------")
 print("Error correction and removal of ancient transition")
 result2 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBAtr,BABAname=BABAtr)
 
 fileOut = paste(out,"ErrorCorrNoTrans",".txt",sep="")
-if(!file.exists(fileOut)){
-    file.create(fileOut, showWarnings = FALSE)
-    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
-    write(str,fileOut,append=T)
-    write(c(result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv),fileOut,sep="\t",append=T,ncolumns=5)
+#if(!file.exists(fileOut)){
+#    file.create(fileOut, showWarnings = FALSE)
+#    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
+#    write(str,fileOut,append=T)
+#    write(c(result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv),fileOut,sep="\t",append=T,ncolumns=5)
+#}
+#if(file.exists(fileOut))
+#    write(c(result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv),fileOut,sep="\t",append=T,ncolumns=5)
+
+str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
+str2 = sprintf("%f\t%f\t%f\t%f\t%f",result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv)
+cat(str,str2,file=fileOut,sep="\n")
+
+
 }
-if(file.exists(fileOut))
-    write(c(result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv),fileOut,sep="\t",append=T,ncolumns=5)
-}
+
+
+
+
 
 
 ### write in files the effect of added error to transition FROM --> TO
@@ -352,6 +369,10 @@ for(FROM in 1:4){
                         write(str,fileOut,append=T)
                         write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv),fileOut,sep="\t",append=T,ncolumns=7)
                     }
+
+#str = sprintf("NumInd\taddErr\tmean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
+#str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f",id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv)
+#cat(str,str2,file=fileOut,sep="\n")
                     
                 }    
             }
@@ -378,13 +399,19 @@ for(FROM in 1:4){
                     result = getJackKnife(outData,newInv,printData=0,ABBAname=ABBAtr,BABAname=BABAtr)
                     
                     if(file.exists(fileOut))
-                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv),fileOut,sep="\t",append=T,ncolumns=7)
+                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv),fileOut,sep="\t",append=F,ncolumns=7)
                     if(!file.exists(fileOut)){
                         file.create(fileOut, showWarnings = FALSE)
                         str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue")
                         write(str,fileOut,append=T)
                         write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv),fileOut,sep="\t",append=T,ncolumns=7)
-                    }
+                   }
+
+
+#str = sprintf("NumInd\taddErr\tmean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
+#str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f",id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv)
+#cat(str,str2,file=fileOut,sep="\n")
+                    
                     
                 }
             }
@@ -401,14 +428,19 @@ fileOut=paste(out,"Std",".txt",sep="",collapse="")
 outData <- read.table(angsdFile,header=T,as.is=T,sep="")
 result5 = getJackKnife(outData,diag(rep(1,256)),printData=1,ABBAname=ABBA,BABAname=BABA)
 
-if(file.exists(fileOut))
-    write(c(result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv),fileOut,sep="\t",append=T)
-if(!file.exists(fileOut)){
-    file.create(fileOut, showWarnings = FALSE)
-    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
-    write(str,fileOut,append=T)
-    write(c(result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv),fileOut,sep="\t",append=T)
-}
+#if(file.exists(fileOut))
+#    write(c(result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv),fileOut,sep="\t",append=T)
+#if(!file.exists(fileOut)){
+#    file.create(fileOut, showWarnings = FALSE)
+#    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
+#    write(str,fileOut,append=T)
+#    write(c(result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv),fileOut,sep="\t",append=T)
+#}
+
+
+str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
+str2 = sprintf("%f\t%f\t%f\t%f\t%f",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv)
+cat(str,str2,file=fileOut,sep="\n")
 
 print("-----------------------------------------------")
 print("D-statistic calculated w/o Error correction and transitions")
@@ -418,11 +450,15 @@ fileOut=paste(out,"NoErrorNoTrans",".txt",sep="",collapse="")
 outData <- read.table(angsdFile,header=T,as.is=T,sep="")
 result6 = getJackKnife(outData,diag(rep(1,256)),printData=1,ABBAname=ABBAtr,BABAname=BABAtr)
 
-if(file.exists(fileOut))
-    write(c(result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv),fileOut,sep="\t",append=T)
-if(!file.exists(fileOut)){
-    file.create(fileOut, showWarnings = FALSE)
-    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
-    write(str,fileOut,append=T)
-    write(c(result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv),fileOut,sep="\t",append=T)
-}
+#if(file.exists(fileOut))
+#    write(c(result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv),fileOut,sep="\t",append=T)
+#if(!file.exists(fileOut)){
+#    file.create(fileOut, showWarnings = FALSE)
+#    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
+#    write(str,fileOut,append=T)
+#    write(c(result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv),fileOut,sep="\t",append=T)
+#}
+
+str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
+str2 = sprintf("%f\t%f\t%f\t%f\t%f",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv)
+cat(str,str2,file=fileOut,sep="\n")
