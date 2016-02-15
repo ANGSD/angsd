@@ -55,7 +55,7 @@ void abcDstat::getOptions(argStruct *arguments){
     exit(0);
   }
   if(arguments->nInd<3+useLast){
-    fprintf(stderr,"Error: -doAbbababa needs atleast 3 individual\n");
+    fprintf(stderr,"Error: -doAbbababa needs atleast 3 individual + outgroup\n");
     exit(0);
   }
   if( useLast == 0 && enhance == 1){
@@ -67,7 +67,7 @@ void abcDstat::getOptions(argStruct *arguments){
     exit(0);
   }
   if(ancName==NULL & Aanc==0 & useLast == 0){
-    fprintf(stderr,"Error: -doAbbababa needs an outgroup in fasta format (use -anc fastaFileName )\n");
+    fprintf(stderr,"Error: -doAbbababa needs an outgroup in fasta format (use -anc fastaFileName ) or (-useLast 1)\n");
     exit(0);
     }
   
