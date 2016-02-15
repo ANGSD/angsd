@@ -374,13 +374,13 @@ void abcMajorMinor::run(funkyPars *pars){
 
     if(rmTrans){
       for(int s=0;s<pars->numSites;s++){
-	if(pars->keepSites[s]==0)
+	if(pars->keepSites[s] == 0)
 	  continue;
 
-	if(pars->minor[s]==0 && pars->major[s]==2 || pars->minor[s]==2 && pars->major[s]==0|| pars->minor[s]==1 && pars->major[s]==3 || pars->minor[s]==3 && pars->major[s]==1 )
-	  pars->keepSites=0;
+	if((pars->minor[s]==0 && pars->major[s]==2) || (pars->minor[s]==2 && pars->major[s]==0 ) || (pars->minor[s]==1 && pars->major[s]==3) || (pars->minor[s]==3 && pars->major[s]==1) )
+	  pars->keepSites[s]=0;
 	
-      }
+      } 
     }
     
     if(doSaf!=0&&pest!=NULL&&skipTriallelic==1){
