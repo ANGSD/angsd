@@ -18,11 +18,11 @@ typedef struct{
   char *major;
   char *minor;
   int hasMajMin;
-  size_t curLen;//<-length of the char arrays;
+  size_t curLen;//<-length of the char arrays;NOT the last position filtersite
   char *curNam;
 }filt;
 
 
 filt *filt_read(const char *fname);
 void dalloc(filt *f);
-void filt_readSites(filt*fl,char *chr,size_t hint) ;
+void filt_readSites(filt*fl,char *chr,size_t hint);

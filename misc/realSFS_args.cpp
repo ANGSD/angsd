@@ -134,7 +134,7 @@ args * getArgs(int argc,char **argv){
   if(p->seed==0)
     p->seed = time(NULL);
   srand48(p->seed);
-  for(int i=0;(p->saf.size()>1)&&(i<p->saf.size());i++)
+  for(int i=0;(p->saf.size()>1||p->fl!=NULL)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;
   fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fname:%s fstout:%s oldout:%d seed:%ld bootstrap:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->fstout,p->oldout,p->seed,p->bootstrap);
 

@@ -63,7 +63,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
   bgzf_seek(fl->bg,it->second.offs,SEEK_SET);
 
   size_t nsize = std::max(fl->curLen,hint);
-  nsize = std::max(nsize,it->second.len);
+  nsize = std::max(nsize,it->second.len)+1;//not sure if '+1' this is needed, but it doesnt hurt...
   if(nsize>fl->curLen) 
     fl->keeps=(char*) realloc(fl->keeps,nsize);
   memset(fl->keeps,0,nsize);

@@ -102,8 +102,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   for(int i=0;i<saf.size();i++) {
     myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
     if(fl!=NULL&&i==0){
-      filt_readSites(fl,chooseChr,saf[0]->ppos[saf[0]->nSites-1]);
-      //      fprintf(stderr,"read_sites\n");
+      filt_readSites(fl,chooseChr,saf[0]->ppos[it->second.nSites-1]);
     }
     
     //    fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
@@ -120,8 +119,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     for(size_t j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++){
       //      fprintf(stderr,"fl:%p fl->keeps:%p\n",fl,fl->keeps);
       if(i==0&&fl!=NULL&&fl->keeps!=NULL){//we only check for -sites for the first saf. 
-	//	fprintf(stderr,"IN the saf\n");
-	if(saf[i]->toKeep->d[j] && fl->keeps[saf[i]->ppos[j]])
+	if( saf[i]->toKeep->d[j] && fl->keeps[saf[i]->ppos[j]])
 	  hit->d[saf[i]->ppos[j]]++;
       }else if(saf[i]->toKeep->d[j])
 	hit->d[saf[i]->ppos[j]]++;
@@ -142,7 +140,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   exit(0);
 #endif
   //hit now contains the genomic position (that is the index).
- 
+
   //let us now modify the the persaf toKeep char vector
   int tsk[saf.size()];
   for(int i=0;i<saf.size();i++) {

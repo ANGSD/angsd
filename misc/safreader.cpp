@@ -214,21 +214,16 @@ persaf * persaf_init(char *fname){
    //  fprintf(stderr,"kind:%d start:%d stop:%d dontread:%d\n",pp->kind,start,stop,pp->dontRead);
    pp->dontRead = 0;
    assert(chr!=NULL);
-
    myMap::iterator it = pp->mm.find(chr);
-
    if(it==pp->mm.end()){
      fprintf(stderr,"\t-> [%s] Problem finding chr: %s\n",__FUNCTION__,chr);
      return it;
    }
-   
    bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
 
    if(pp->toKeep==NULL)
      pp->toKeep = keep_alloc<char>();
-   
    pp->at =-1;
-
    if(start==-1&&stop==-1&&pp->kind==0){
      keep_set<char>(pp->toKeep,it->second.nSites,0);
      memset(pp->toKeep->d,1,it->second.nSites);
@@ -241,9 +236,9 @@ persaf * persaf_init(char *fname){
    if(pp->ppos){
      delete [] pp->ppos;
    }
-
    pp->ppos = new int[it->second.nSites];
-   bgzf_read(pp->pos,pp->ppos,sizeof(int)*it->second.nSites);
+   assert((sizeof(int)*it->second.nSites)==bgzf_read(pp->pos,pp->ppos,sizeof(int)*it->second.nSites));
+
    keep_set<char>(pp->toKeep,it->second.nSites,0);
    keep_clear(pp->toKeep);
      
@@ -273,7 +268,6 @@ persaf * persaf_init(char *fname){
      fprintf(stderr,"yoyoyooyoyoyoyoyppos:\n");
    }
    return it;
-   
  }
 
  size_t iter_read(persaf *saf, void *data, size_t length,int *pos){
