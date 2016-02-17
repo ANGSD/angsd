@@ -69,9 +69,10 @@ void keep_set(keep<T> *k,size_t pos,T val){
 
 template<typename T>
 void keep_destroy(keep<T> *k){
-  if(k&&k->d)//<- for some reason valgrind complains about
+  if(k&&k->d){//<- for some reason valgrind complains about
     free(k->d);
-  k->d=NULL;
+    k->d=NULL;
+  }
   free(k);
   k=NULL;
 }
