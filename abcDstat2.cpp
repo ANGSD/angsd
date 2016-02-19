@@ -1,3 +1,4 @@
+
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
@@ -13,7 +14,8 @@ typedef struct {
   double **ABCD; //counts
   double *NUM;
   double *DEN;
-  double *COMB;  //alleles combinations
+  double *COMB;  //alleles combinations in weighted individuals
+  double *ALLCOMB;  //alleles combinations in unweighted individuals
  }funkyAbbababa2;
 
 // shows up when you run ./angsd -doAbbababa2
@@ -24,13 +26,14 @@ void abcDstat2::printArg(FILE *argFile){
   fprintf(argFile,"\t-blockSize\t\t%d\tsize of each block in bases\n",blockSize);
   fprintf(argFile,"\t-ans\t\t\t%s\tfasta file with outgroup\n",ancName);
   fprintf(argFile,"\t-sample\t\t\t%d\tsample a single base\n",sample);
-  fprintf(argFile,"\t-maxDepth\t\t\t%d\tsample a single base\n",maxDepth);
+  fprintf(argFile,"\t-maxDepth\t\t\t%d\tmax depth of each site allowed\n",maxDepth);
   fprintf(argFile,"\t-sizeH1\t\t\t%d\tnum of individuals in group H1",sizeH1);
   fprintf(argFile,"\t-sizeH2\t\t\t%d\tnum of individuals in group H2",sizeH2);
   fprintf(argFile,"\t-sizeH3\t\t\t%d\tnum of individuals in group H3",sizeH3);
   fprintf(argFile,"\t-sizeH4\t\t\t%d\tnum of individuals in group H4",sizeH4);
-  fprintf(argFile,"\t-enhance\t\t\t%d\tonly analyze sites where outgroup H4 is non poly. Put 2 if the order of populations is reverted.",enhance);
+  fprintf(argFile,"\t-enhance\t\t\t%d\tonly analyze sites where outgroup H4 is non poly.",enhance);
   fprintf(argFile,"\t-Aanc\t\t\t%d\tset H4 outgroup allele as A in each site",Aanc);
+  fprintf(argFile,"\t-combFile\t\t\t%d\tcreate a .abbababa2counts file where are printed the numbers of alleles combinations without having weighted the individuals",combFile);
   fprintf(argFile,"\n");
 }
 
@@ -38,9 +41,9 @@ void abcDstat2::printArg(FILE *argFile){
 void abcDstat2::getOptions(argStruct *arguments){
   //from command line
   // 0: ignore this class, non zero: run this class
-  doAbbababa2=angsd::getArg("-doAbbababa2",doAbbababa2,arguments); 
-  doCount=angsd::getArg("-doCounts",doCount,arguments);
-  blockSize=angsd::getArg("-blockSize",blockSize,arguments);
+  doAbbababa2 = angsd::getArg("-doAbbababa2",doAbbababa2,arguments); 
+  doCount = angsd::getArg("-doCounts",doCount,arguments);
+  blockSize = angsd::getArg("-blockSize",blockSize,arguments);
   ancName = angsd::getArg("-anc",ancName,arguments);
   rmTrans = angsd::getArg("-rmTrans",rmTrans,arguments);
   sample = angsd::getArg("-sample",sample,arguments);
@@ -51,6 +54,7 @@ void abcDstat2::getOptions(argStruct *arguments){
   sizeH4 = angsd::getArg("-sizeH4",sizeH4,arguments);
   enhance = angsd::getArg("-enhance",enhance,arguments);
   Aanc = angsd::getArg("-Aanc",Aanc,arguments);
+  combFile = angsd::getArg("-combFile",combFile,arguments);
   
   if(doAbbababa2){
     if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
@@ -89,6 +93,7 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   sizeH3 = 1;
   sizeH4 = 1;
   enhance = 1;
+  combFile = 0;
   DENprint=0;
   NUMprint=0;
   maxDepth=100;
@@ -119,10 +124,12 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   const char* postfix;
   postfix=".abbababa2";
   outfile = aio::openFile(outfiles,postfix);
-
-  //const char* postfix2; //new
-  //postfix2=".abbababa"; //new
-  //outfile2 = aio::openFile(outfiles,postfix2); //new
+  
+  
+  //if(combFile == 1){// unweighted combinations count file
+  const char* postfix2; 
+  postfix2=".abbababa2counts"; 
+  outfile2 = aio::openFile(outfiles,postfix2); //}
 
   // store large amounts of data for printing fast
   bufstr.s=NULL;
@@ -137,6 +144,7 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   //calcMatCat(); //new //pre calc all possible combinations
 
   COMBprint = new double[256];
+  ALLCOMBprint = new double[256];
   
   fprintf(outfile,"CHR\tBLOCKstart\tBLOCKend\tNumer\tDenom\tnumSites");
   for(int a=0;a<4;a++)
@@ -145,6 +153,16 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
 	for(int d=0;d<4;d++)
 	  fprintf(outfile,"\t%d%d%d%d",a,b,c,d);
   fprintf(outfile,"\n");
+
+  //if(combFile == 1){
+    fprintf(outfile2,"CHR\tBLOCKstart\tBLOCKend\tnumSites");
+    for(int a=0;a<4;a++)
+      for(int b=0;b<4;b++)
+	for(int c=0;c<4;c++)
+	  for(int d=0;d<4;d++)
+	    fprintf(outfile2,"\t%d%d%d%d",a,b,c,d);
+    fprintf(outfile2,"\n");
+    //}
 }//---end of abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype)
 
 
@@ -152,10 +170,11 @@ abcDstat2::~abcDstat2(){
   free(ancName);
   if(doAbbababa2==0)
     return;
-
+  
   printAndEmpty(block*blockSize,currentChr);
-
+  
   if(outfile) fclose(outfile);
+  if(outfile2) fclose(outfile2);
   if(bufstr.s!=NULL)
     free(bufstr.s);
 }
@@ -168,6 +187,7 @@ void abcDstat2::clean(funkyPars *pars){
   delete[] abbababaStruct->NUM;
   delete[] abbababaStruct->DEN;
   delete[] abbababaStruct->COMB;
+  delete[] abbababaStruct->ALLCOMB;
   for(int s=0;s<pars->numSites;s++)
     delete[] abbababaStruct->ABCD[s];
   delete[] abbababaStruct->ABCD;
@@ -178,19 +198,31 @@ void abcDstat2::printAndEmpty(int blockStart,int theChr){
 
   if(NUMprint!=0){ //avoid to print 0s in the first line of the output file
     fprintf(outfile,"%s\t%d\t%d\t%f\t%f\t%d",header->target_name[theChr],blockStart,blockStart+blockSize,NUMprint,DENprint,NSITEprint);
-    for(int i=0;i<256;i++)
+    fprintf(outfile2,"%s\t%d\t%d\t%d",header->target_name[theChr],blockStart,blockStart+blockSize,NSITEprint);
+    for(int i=0;i<256;i++){
       fprintf(outfile,"\t%f",COMBprint[i]);
+      //if(combFile==1)
+	fprintf(outfile2,"\t%.0f",ALLCOMBprint[i]);
+	}
     fprintf(outfile,"\n");
+    //if(combFile == 1)
+    fprintf(outfile2,"\n");
+      //}
   }
 
   DENprint=0;
   NUMprint=0;
   NSITEprint = 0;
-  Eprint = 0; //overflow errors (for debugging - not printed anymore in the final version)
-  
+  Eprint = 0; //overflow errors (for debugging - not printed anymore in the final version) 
   for(int i=0;i<256;i++)
     COMBprint[i]=0;
-  fflush(outfile);   
+  fflush(outfile);
+  //if(combFile == 1){
+    for(int i=0;i<256;i++)
+      ALLCOMBprint[i]=0;
+    fflush(outfile2);
+    //}
+  
 }//---end of abcDstat2::printAndEmpty(int blockStart,int theChr)
 
 
@@ -211,6 +243,10 @@ void abcDstat2::print(funkyPars *pars){
     Eprint = 0;
     for(int i=0;i<256;i++)
       COMBprint[i]=0; 
+    //if(combFile == 1){
+    for(int i=0;i<256;i++)
+      ALLCOMBprint[i]=0;
+      //}
     //start new block
     getBlockNum(pars->posi[0]);
     currentChr=0;
@@ -225,7 +261,10 @@ void abcDstat2::print(funkyPars *pars){
  
   for(int i=0;i<256;i++)
     COMBprint[i] += abbababaStruct->COMB[i]; //?????
-  
+  //if(combFile == 1){
+  for(int i=0;i<256;i++)
+    ALLCOMBprint[i] += abbababaStruct->ALLCOMB[i];
+    //}
   for(int s=0;s<pars->numSites;s++){
     //int comp=0; //new
     if(pars->posi[s]>=block*blockSize+blockSize){
@@ -259,6 +298,12 @@ void abcDstat2::run(funkyPars *pars){
     for(int b = 0; b < 4*pars->nInd; b++)
       ABCD[s][b] = 0;   
   }
+
+  
+  double *ALLCOMB = new double[256];
+  for(int j=0;j<256;j++)
+    ALLCOMB[j] = 0;
+    
 
   double *NUM = new double[pars->numSites];
   double *DEN = new double[pars->numSites];
@@ -334,7 +379,7 @@ void abcDstat2::run(funkyPars *pars){
 	if(normc!=0)
 	  w1[i] = w1[i]/normc;
       }
-          
+                
       //---------------building weighted individual 2. written in ABCD2.
 
       somma = 0;
@@ -399,12 +444,9 @@ void abcDstat2::run(funkyPars *pars){
 	  ABCD2[12+j] += w4[i]*ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+i*4+j];
 	}
       }
-      
+
       //---------------count alleles combination of 4 pseudoindividials
 
-
-      int posiz = 0;
-      
       somma = 0;
 
       //normalizing observation vector
@@ -418,8 +460,35 @@ void abcDstat2::run(funkyPars *pars){
 	}	 
       }
    
+      // count allele combinations without weighting individuals
+      int posiz = 0;
+      if(combFile == 1){
+	int allele1 = 0;
+	int allele2 = 0;
+	int allele3 = 0;
+	int allele4 = 0;	
+	for(int i=0;i<4;i++){
+	  for(int j=0;j<4;j++){
+	    for(int k=0;k<4;k++){
+	      for(int l=0;l<4;l++){
+		for(int h1=0;h1<sizeH1;h1++)
+		  allele1 += ABCD[s][h1*4+i];
+		for(int h2=0;h2<sizeH2;h2++)
+		  allele2 += ABCD[s][sizeH1*4+h2*4+j];
+		for(int h3=0;h3<sizeH3;h3++)
+		  allele3 += ABCD[s][sizeH1*4+sizeH2*4+h3*4+k];
+		for(int h4=0;h4<sizeH4;h4++)
+		  allele4 += ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+l];
+		ALLCOMB[posiz] += allele1 * allele2 * allele3 * allele4;
+		posiz++;
+	      }
+	    }
+	  }
+	}
+      }
 
-      // allele counts
+      // allele counts of the 4 weighted individuals
+      posiz = 0;
       for(int i=0;i<4;i++){
 	for(int j=0;j<4;j++){
 	  for(int k=0;k<4;k++){
@@ -465,6 +534,7 @@ void abcDstat2::run(funkyPars *pars){
   abbababaStruct -> DEN=DEN;
   abbababaStruct -> NUM=NUM;
   abbababaStruct -> COMB=ALLELES;
+  abbababaStruct -> ALLCOMB=ALLCOMB;
   delete[] w1;
   delete[] w2;
   delete[] w3;

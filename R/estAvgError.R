@@ -1,8 +1,8 @@
-
 options(warn=1)
 bases<-c("A","C","G","T")
 b <- c(bases,"N")
-########### do not change ################3
+
+########### do not change ################
 l<-commandArgs(TRUE)
 getArgs<-function(x,l)
   unlist(strsplit(grep(paste("^",x,"=",sep=""),l,val=T),"="))[2]
@@ -51,6 +51,7 @@ args<-list(angsdFile = NULL,
            main="Error rate using an outgroup and a high quality genome",
            maxErr=0.02
            )
+
 #if no argument aree given prints the need arguments and the optional ones with default
 des<-list(angsdFile="output angsdFile (w extension) from 'angsd -doAbbababa2 1' command",
           file1="the ancError File of population H1",
@@ -74,9 +75,6 @@ if(length(args)==0){
 }
 
 ###################################
-#angsdFile="errortest01WG";doError=0;file1="/ricco/genomes/humanAnalysis/errorRates/output/Clovis.flt.sort.rmdup.realign.mdQ20q30V1.ancError";file2="/ricco/genomes/humanAnalysis/errorRates/output/HGDP00877.hg19.flt.sort.rmdup.realign.mdQ20q30V1.ancError";file3="/ricco/genomes/humanAnalysis/errorRates/output/HGDP00521.hg19.flt.sort.rmdup.realign.mdQ20q30V1.ancError"; out="errortest01";nIter=100;main="dfsf";maxErr=0.02;
-
-
 
 cat("----------\nangsdFile: ",angsdFile,"  file1:",file1," file2:",file2," file3:",file3," out:",out," addErrors:"," erCor",erCor, addErrors," nIter:",nIter,"\nmaxErr:",maxErr,"\n-----------\n")
 
@@ -138,8 +136,6 @@ getFromErrFile <- function(r,res,maxErr,nInd,logLike){
     }
 }
 
-
-
 buildMat <- function(res){
     cont=1;
     resMat=matrix(nrow=4,ncol=4)
@@ -190,8 +186,9 @@ ABBA<-c("X0110","X0220","X0330","X1001","X1221","X1331","X2002","X2112","X2332",
 BABA<-c("X0101","X0202","X0303","X1010","X1212","X1313","X2020","X2121","X2323","X3030","X3131","X3232")
 ABBAtr<-c("X0110","X0330","X1001","X1221","X2112","X2332","X3003","X3223")
 BABAtr<-c("X0101","X0303","X1010","X1212","X2121","X2323","X3030","X3232")
+BBAA<-c("X0011","X0022","X0033","X1100","X1122","X1133","X2200","X2211","X2233","X3300","X3311","X3322")
 
-getJackKnife <- function(outData,finalInv,printData=0,ABBAname,BABAname){
+getJackKnife <- function(outData,finalInv,printData=0,ABBAname,BABAname,BBAAname){
     
     seenSites = sum(as.numeric(outData[,6]))
     weigth = as.numeric(outData[,6])
@@ -200,8 +197,9 @@ getJackKnife <- function(outData,finalInv,printData=0,ABBAname,BABAname){
     Edata <- numeric(prod(dim(outData)))
     dim(Edata)<- dim(outData)
     L = nrow(outData)
-    totAbba = rep(0,L)
-    totBaba = rep(0,L)
+    totAbba = 0
+    totBaba = 0
+    totBbaa = 0
     num = rep(0,L)
     den = rep(0,L)
                                             
@@ -213,7 +211,9 @@ getJackKnife <- function(outData,finalInv,printData=0,ABBAname,BABAname){
         names(x) = colnames(outData)
         num[blk] = sum(as.numeric(x[ABBAname])) - sum(as.numeric(x[BABAname]))
         den[blk] = sum(as.numeric(x[ABBAname])) + sum(as.numeric(x[BABAname]))
-        
+        totAbba = totAbba + sum(as.numeric(x[ABBAname]))
+        totBaba = totAbba + sum(as.numeric(x[BABAname]))
+        totBbaa = totBbaa + sum(as.numeric(x[BBAAname]))
     }
     
     #block jack knife estimation
@@ -222,26 +222,25 @@ getJackKnife <- function(outData,finalInv,printData=0,ABBAname,BABAname){
     num = num[!remIdx]
     den = den[!remIdx]
     
-    weigth = weigth[!remIdx]/sum(weigth[!remIdx])
+    weigth = weigth[!remIdx]/sum(weigth[!remIdx]) #block weights
     L = length(num)
-    thetaN = sum(num)/sum(den)
+    thetaN = sum(num)/sum(den) #D statistics calculated without jackknife
     errorCount = 0
     
     for(i in 1:L)
         if(num[i]>den[i])
             errorCount = errorCount + 1
-    
-    
+      
     thetaJStar <- rep(0,L) #partial estimators
     thetaJack <- rep(0,L)  #Block Jack knife estimator
     pseudo <- 1/weigth
-    thetaJStar <- sapply( 1:L, function(x) sum(as.numeric(num[-x]))/sum(as.numeric(den[-x])) )
-    thetaJack <- L*thetaN - sum((1-weigth) * thetaJStar)        
-    meanJack <- mean(thetaJStar)
-    thetaTilde <- pseudo*thetaN-(pseudo-1) * thetaJStar
-    varJack <- 1/L * sum( 1/(pseudo-1) * (thetaTilde - thetaJack)^2 )       
-    Z <- thetaN / sqrt(varJack)
-    pv = 2*min(pnorm(Z,0,1),1-pnorm(Z,0,1))
+    thetaJStar <- sapply( 1:L, function(x) sum(as.numeric(num[-x]))/sum(as.numeric(den[-x])) )  #D statistic in each block
+    thetaJack <- L*thetaN - sum((1-weigth) * thetaJStar) #jackknife D statistic       
+    meanJack <- mean(thetaJStar)# average D statistics in blocks
+    thetaTilde <- pseudo*thetaN-(pseudo-1) * thetaJStar #intermediate quantity for the variance of the jackknife D statistic
+    varJack <- 1/L * sum( 1/(pseudo-1) * (thetaTilde - thetaJack)^2 ) #variance of the jackknife D     
+    Z <- thetaN / sqrt(varJack) #Z value for standard normal
+    pv = 2*min(pnorm(Z,0,1),1-pnorm(Z,0,1)) #pvalue for standard normal
     if(printData){
         print(c("thetaN",thetaN))
         print(c("theta JF",thetaJack))
@@ -252,12 +251,8 @@ getJackKnife <- function(outData,finalInv,printData=0,ABBAname,BABAname){
         if(errorCount > 0)
             print(sprintf("Warning: you got %d times that Num>Den. This can  happen when you apply error correction on alleles combination with low probability. If this happen too many times, may be error correction is unnecessary.",errorCount))
     }
-    return(list(thetaN=thetaN,thetaJack=thetaJack,varJack=varJack,Z=Z,pv=pv))
+    return(list(thetaN=thetaN,thetaJack=thetaJack,varJack=varJack,Z=Z,pv=pv,nABBA=totAbba,nBABA=totBaba,nBBAA=totBbaa))
 }
-
-
-
-
 
 angsdFile = paste(angsdFile,".abbababa2",sep="")
 outData <- read.table(angsdFile,header=T,as.is=T,sep="")
@@ -292,21 +287,12 @@ errMat = getErrMat(resMat)
 
 finalInv = buildInv(errMat)
 
-result1 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBA,BABAname=BABA)
+result1 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
 
 fileOut = paste(out,"ErrorCorr",".txt",sep="")
 
-#if(file.exists(fileOut))
-#    write(c(result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv),fileOut,sep="\t",append=T)
-#if(!file.exists(fileOut)){
-#    file.create(fileOut, showWarnings = FALSE)
-#    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
-#    write(str,fileOut,append=T)
-#    write(c(result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv),fileOut,sep="\t",append=T)
-#}
-
-str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
-str2 = sprintf("%f\t%f\t%f\t%f\t%f",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv)
+str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
+str2 = sprintf("%f\t%f\t%f\t%f\t%f",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,result1$nBBAA)
 cat(str,str2,file=fileOut,sep="\n")
 
 
@@ -314,29 +300,15 @@ cat(str,str2,file=fileOut,sep="\n")
 
 print("-----------------------------------------------")
 print("Error correction and removal of ancient transition")
-result2 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBAtr,BABAname=BABAtr)
+result2 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
 
 fileOut = paste(out,"ErrorCorrNoTrans",".txt",sep="")
-#if(!file.exists(fileOut)){
-#    file.create(fileOut, showWarnings = FALSE)
-#    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
-#    write(str,fileOut,append=T)
-#    write(c(result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv),fileOut,sep="\t",append=T,ncolumns=5)
-#}
-#if(file.exists(fileOut))
-#    write(c(result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv),fileOut,sep="\t",append=T,ncolumns=5)
 
-str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
-str2 = sprintf("%f\t%f\t%f\t%f\t%f",result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv)
+str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
+str2 = sprintf("%f\t%f\t%f\t%f\t%f",result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv,result2$nABBA,result2$nBABA,result2$nBBAA)
 cat(str,str2,file=fileOut,sep="\n")
 
-
 }
-
-
-
-
-
 
 ### write in files the effect of added error to transition FROM --> TO
 
@@ -359,21 +331,16 @@ for(FROM in 1:4){
                     newMat[[id]][FROM,FROM] = newMat[[id]][FROM,FROM] - addErr[er]
                     newErrMat = getErrMat(newMat)
                     newInv = buildInv(newErrMat)
-                    result = getJackKnife(outData,newInv,printData=0,ABBAname=ABBA,BABAname=BABA)
+                    result = getJackKnife(outData,newInv,printData=0,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
                     
                     if(file.exists(fileOut))
-                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv),fileOut,sep="\t",append=T,ncolumns=7)
+                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result2$nABBA,result2$nBABA,result2$nBBAA),fileOut,sep="\t",append=T,ncolumns=10)
                     if(!file.exists(fileOut)){
                         file.create(fileOut, showWarnings = FALSE)
-                        str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue")
+                        str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
                         write(str,fileOut,append=T)
-                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv),fileOut,sep="\t",append=T,ncolumns=7)
+                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,result$nBBAA),fileOut,sep="\t",append=T,ncolumns=10)
                     }
-
-#str = sprintf("NumInd\taddErr\tmean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
-#str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f",id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv)
-#cat(str,str2,file=fileOut,sep="\n")
-                    
                 }    
             }
         }
@@ -396,23 +363,16 @@ for(FROM in 1:4){
                     newMat[[id]][FROM,FROM] = newMat[[id]][FROM,FROM] - addErr[er]
                     newErrMat = getErrMat(newMat)
                     newInv = buildInv(newErrMat)
-                    result = getJackKnife(outData,newInv,printData=0,ABBAname=ABBAtr,BABAname=BABAtr)
+                    result = getJackKnife(outData,newInv,printData=0,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
                     
                     if(file.exists(fileOut))
-                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv),fileOut,sep="\t",append=F,ncolumns=7)
+                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,result$nBBAA),fileOut,sep="\t",append=F,ncolumns=10)
                     if(!file.exists(fileOut)){
                         file.create(fileOut, showWarnings = FALSE)
-                        str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue")
+                        str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
                         write(str,fileOut,append=T)
-                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv),fileOut,sep="\t",append=T,ncolumns=7)
+                        write(c(id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,result$nBBAA),fileOut,sep="\t",append=T,ncolumns=10)
                    }
-
-
-#str = sprintf("NumInd\taddErr\tmean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
-#str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f",id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv)
-#cat(str,str2,file=fileOut,sep="\n")
-                    
-                    
                 }
             }
         }
@@ -426,20 +386,10 @@ print("D-statistic calculated without Error correction")
 fileOut=paste(out,"Std",".txt",sep="",collapse="")
 
 outData <- read.table(angsdFile,header=T,as.is=T,sep="")
-result5 = getJackKnife(outData,diag(rep(1,256)),printData=1,ABBAname=ABBA,BABAname=BABA)
+result5 = getJackKnife(outData,diag(rep(1,256)),printData=1,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
 
-#if(file.exists(fileOut))
-#    write(c(result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv),fileOut,sep="\t",append=T)
-#if(!file.exists(fileOut)){
-#    file.create(fileOut, showWarnings = FALSE)
-#    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
-#    write(str,fileOut,append=T)
-#    write(c(result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv),fileOut,sep="\t",append=T)
-#}
-
-
-str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
-str2 = sprintf("%f\t%f\t%f\t%f\t%f",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv)
+str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
+str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv,result5$nABBA,result5$nBABA,result5$nBBAA)
 cat(str,str2,file=fileOut,sep="\n")
 
 print("-----------------------------------------------")
@@ -447,18 +397,10 @@ print("D-statistic calculated w/o Error correction and transitions")
 
 fileOut=paste(out,"NoErrorNoTrans",".txt",sep="",collapse="")
 
+
 outData <- read.table(angsdFile,header=T,as.is=T,sep="")
-result6 = getJackKnife(outData,diag(rep(1,256)),printData=1,ABBAname=ABBAtr,BABAname=BABAtr)
+result6 = getJackKnife(outData,diag(rep(1,256)),printData=1,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
 
-#if(file.exists(fileOut))
-#    write(c(result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv),fileOut,sep="\t",append=T)
-#if(!file.exists(fileOut)){
-#    file.create(fileOut, showWarnings = FALSE)
-#    str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue")
-#    write(str,fileOut,append=T)
-#    write(c(result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv),fileOut,sep="\t",append=T)
-#}
-
-str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue")
-str2 = sprintf("%f\t%f\t%f\t%f\t%f",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv)
+str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
+str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv,result6$nABBA,result6$nBABA,result6$nBBAA)
 cat(str,str2,file=fileOut,sep="\n")

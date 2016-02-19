@@ -12,9 +12,11 @@ private:
   int Eprint;
   char *ancName;
   double *COMBprint;
+  double *ALLCOMBprint;
 public:
   int doAbbababa2;
   FILE *outfile;
+  FILE *outfile2;
   int sample;
   int doCount;
   int maxDepth;
@@ -26,6 +28,7 @@ public:
   //int nComb;
   int rmTrans;
   int Aanc;
+  int combFile;
   abcDstat2(const char *outfiles, argStruct *arguments,int inputtype);
   ~abcDstat2();
   void getOptions(argStruct *arguments);
