@@ -18,7 +18,7 @@ class abcSaf : public abc{
   int noTrans;
   char *anc;
   char *pest;
-  double *prior; //<- outputfile form pest;
+  int doPost;
   int doThetas;
   void calcThetas(funkyPars *p,int index,double *prior,BGZF* fpgz);
 
@@ -38,10 +38,12 @@ class abcSaf : public abc{
   void algoGeno(int refId,double **liks,char *major,char *minor,int nsites,int numInds,kstring_t *sfsfile,int underFlowProtect, int *posi,int *keepSites,double *pest);
   void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans);
   void algoJointHap(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans);
-  double *lbicoTab; //dim = [2*numInds+1]
-  double **myComb2Tab;
+
   void writeAll();
 public:
+  static double *prior; //<- outputfile form pest;
+  static double *lbicoTab; //dim = [2*numInds+1]
+  static double **myComb2Tab;
   //none optional stuff
   FILE *outfile;
   abcSaf(const char *outfiles,argStruct *arguments,int inputtype);

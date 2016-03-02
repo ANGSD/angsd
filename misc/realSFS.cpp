@@ -238,7 +238,7 @@ int printMulti(args *arg){
   }
   while(1) {
     static char *curChr=NULL;
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr);//read nsites from data
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl);//read nsites from data
     //    fprintf(stderr,"ret:%d gls->x:%lu\n",ret,gls[0]->x);
     if(arg->oldout==0){
       for(int s=0;s<gls[0]->x;s++){
@@ -988,7 +988,7 @@ int fst_index(int argc,char **argv){
     }
     posi.clear();
     while(1) {
-      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL);//read nsites from data
+      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL,arg->fl);//read nsites from data
       //  fprintf(stderr,"ret:%d glsx:%lu\n",ret,gls[0]->x);
       //if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
 	//fprintf(stderr,"continue continue\n");
@@ -1075,7 +1075,7 @@ int main_opt(args *arg){
   //temp used for checking pos are in sync
   setGloc(saf,nSites);
   while(1) {
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL);//read nsites from data
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL,arg->fl);//read nsites from data
     int b=0;  
     //fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
     if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;

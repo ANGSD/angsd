@@ -48,6 +48,7 @@ private:
 
   int inputIsBeagle;
 public:
+  int algoGeno(double *liks,int major_offset,int minor_offset,int numInds,int underFlowProtect,double *pest,double *postp);
   static double *indF;
   void run(funkyPars  *pars);
   void likeFreq(funkyPars *pars,freqStruct *freq);

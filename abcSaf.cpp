@@ -22,7 +22,7 @@ namespace filipe{
 void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doSaf\t\t%d\n",doSaf);
-  fprintf(argFile,"\t1: perform multisample GL estimation\n\t2: use an inbreeding version\n\t3: calculate genotype probabilities\n\t4: Assume genotype posteriors as input (still beta) \n");
+  fprintf(argFile,"\t1: perform multisample GL estimation\n\t2: use an inbreeding version\n\t3: calculate genotype probabilities (use -doPost 3 instead)\n\t4: Assume genotype posteriors as input (still beta) \n");
   fprintf(argFile,"\t-doThetas\t\t%d (calculate thetas)\n",noTrans);
   fprintf(argFile,"\t-underFlowProtect\t%d\n",underFlowProtect); 
   fprintf(argFile,"\t-fold\t\t\t%d (deprecated)\n",fold);
@@ -30,43 +30,59 @@ void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"\t-noTrans\t\t%d (remove transitions)\n",noTrans);
   fprintf(argFile,"\t-pest\t\t\t%s (prior SFS)\n",pest);
   fprintf(argFile,"\t-isHap\t\t\t%d (is haploid beta!)\n",isHap);
+  fprintf(argFile,"\t-doPost\t\t\t%d (doPost 3,used for accesing saf based variables)\n",doPost);
   fprintf(argFile,"NB:\n\t  If -pest is supplied in addition to -doSaf then the output will then be posterior probability of the sample allelefrequency for each site\n");
 
 }
 
-double lbico(double n, double k){
-  return lgamma(n+1)-lgamma(k+1)-lgamma(n-k+1);
-}
-
-double myComb2(int k,int r, int j){
-  if(j>r)
-    fprintf(stderr,"%s error in k=%d r=%d j=%d\n",__FUNCTION__,k,r,j);
-
-  double fac1= lbico(r,j)+lbico(2*k-r,2-j);
-  double fac2=lbico(2*k,2);
-  
-  return exp(fac1-fac2);
-}
-
 void abcSaf::getOptions(argStruct *arguments){
   doSaf=angsd::getArg("-doSaf",doSaf,arguments);
+  doPost=angsd::getArg("-doPost",doPost,arguments);
   isHap=angsd::getArg("-isHap",isHap,arguments);
+  pest = angsd::getArg("-pest",pest,arguments);
+  fold=angsd::getArg("-fold",fold,arguments);
 
-  int tmp=0;
-  tmp=angsd::getArg("-doRealSFS",tmp,arguments);
-  if(tmp){
-    fprintf(stderr,"-doRealSFS is now called -doSaf (do sample allele frequency)\n");
-    doSaf=tmp;
+  if(doSaf>0||doPost==3){
+    if(pest!=NULL){
+      if(fold==0)
+	prior=angsd::readDouble(pest,arguments->nInd*2+1);
+      else
+	prior=angsd::readDouble(pest,arguments->nInd+1);
+      int nd=arguments->nInd*2+1;
+      if(fold)
+	nd=arguments->nInd+1;
+      
+      int tts=0;
+      for(int i=0;i<nd;i++)
+	tts += prior[i];
+      for(int i=0;i<nd;i++)
+	prior[i] = log(prior[i]/tts);
+    }
+    lbicoTab = new double[2*arguments->nInd+1];
+    myComb2Tab = new double*[2*arguments->nInd+1];
+    for(int i=0;i<2*arguments->nInd+1;i++){
+      lbicoTab[i] = angsd::lbico(2*arguments->nInd,i);
+      myComb2Tab[i] = new double[3];
+      for(int j=0;j<3;j++)
+	if(j<=i)
+	  myComb2Tab[i][j] = angsd::myComb2(arguments->nInd,i,j);
+    }
+    if(isHap){
+      for(int i=0;i<arguments->nInd+1;i++)
+	lbicoTab[i] = angsd::lbico(arguments->nInd,i);
+    }
+    
   }
 
+
   noTrans = angsd::getArg("-noTrans",noTrans,arguments);
-  pest = angsd::getArg("-pest",pest,arguments);
+
   int GL = 0;
   GL = angsd::getArg("-GL",GL,arguments);
   doThetas= angsd::getArg("-doThetas",doThetas,arguments);
 
 
-  if(doSaf==0&&doThetas==0)
+  if(doSaf==0&&doThetas==0&doPost!=3)
     return;
   if(doThetas!=0&& doSaf==0){
     fprintf(stderr,"\t Must estimate joint llh (-doSaf) when estimating thetas\n");
@@ -80,7 +96,7 @@ void abcSaf::getOptions(argStruct *arguments){
   }
 
   underFlowProtect=angsd::getArg("-underFlowProtect",underFlowProtect,arguments);
-  fold=angsd::getArg("-fold",fold,arguments);
+
 
   int isSim =0;
   isSim=angsd::getArg("-isSim",isSim,arguments);
@@ -94,21 +110,7 @@ void abcSaf::getOptions(argStruct *arguments){
       exit(0);
     }
   }
-  if(pest!=NULL){
-    if(fold==0)
-      prior=angsd::readDouble(pest,arguments->nInd*2+1);
-    else
-      prior=angsd::readDouble(pest,arguments->nInd+1);
-    int nd=arguments->nInd*2+1;
-    if(fold)
-      nd=arguments->nInd+1;
-    
-    int tts=0;
-    for(int i=0;i<nd;i++)
-      tts += prior[i];
-    for(int i=0;i<nd;i++)
-      prior[i] = log(prior[i]/tts);
-  }
+ 
   if(GL==0 &&(arguments->inputtype!=INPUT_GLF && arguments->inputtype!=INPUT_GLF3 && arguments->inputtype!=INPUT_VCF_GL)){
     fprintf(stderr,"\t-> Must supply genotype likelihoods (-GL [INT])\n");
     printArg(arguments->argumentFile);
@@ -151,11 +153,13 @@ void abcSaf::getOptions(argStruct *arguments){
 
 }
 
+double *abcSaf::lbicoTab = NULL;
+double **abcSaf::myComb2Tab=NULL;
+double *abcSaf::prior = NULL;
+
 abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   tmpChr = NULL;
   isHap =0;
-  lbicoTab = NULL;
-  myComb2Tab=NULL;
   const char *SAF = ".saf.gz";
   const char *SAFPOS =".saf.pos.gz";
   const char *SAFIDX =".saf.idx";
@@ -171,6 +175,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   noTrans = 0;
   prior = NULL;
   doSaf=0;
+  doPost =0;
   doThetas = 0;
   outfileSAF = NULL;
   outfileSAFPOS = NULL;
@@ -193,19 +198,6 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   if(doSaf==0){
     shouldRun[index] =0;
     return;
-  }
-  lbicoTab = new double[2*arguments->nInd+1];
-  myComb2Tab = new double*[2*arguments->nInd+1];
-  for(int i=0;i<2*arguments->nInd+1;i++){
-    lbicoTab[i] = lbico(2*arguments->nInd,i);
-    myComb2Tab[i] = new double[3];
-    for(int j=0;j<3;j++)
-      if(j<=i)
-	myComb2Tab[i][j] = myComb2(arguments->nInd,i,j);
-  }
-  if(isHap){
-    for(int i=0;i<arguments->nInd+1;i++)
-      lbicoTab[i] = lbico(arguments->nInd,i);
   }
 
   newDim = 2*arguments->nInd+1;
@@ -1125,7 +1117,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
   assert(pest!=NULL);
   //void algGeno(aMap &asso,int numInds,FILE *sfsfile,int underFlowProtect, double *pest) {
   //  fprintf(stderr,"UNDERFLOWPROTECT: %d\n",underFlowProtect);
-  
+  double *postp = new double[3*numInds];
 #if 0
   for(int r=0;r<(2*numInds-1);r++)
     for(int j=0;j<std::min(3,r);j++){
@@ -1326,9 +1318,9 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
       for(int i=0;i<(2*(numInds-1)+1);i++){
 	//fprintf(stdout,"BICO: %f\n",log(bico(2*numInds,i)));
 	if(underFlowProtect)
-	  hj[i] =  (hj[i]-lbico(2*(numInds-1),i));
+	  hj[i] =  (hj[i]-angsd::lbico(2*(numInds-1),i));
 	else
-	  hj[i] =  exp(log(hj[i])-lbico(2*(numInds-1),i));
+	  hj[i] =  exp(log(hj[i])-angsd::lbico(2*(numInds-1),i));
 	
       }
        
@@ -1337,7 +1329,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
       double *asdf = hj;
 
       //print_array(stdout,asdf,2*numInds-1,!underFlowProtect);
-      double res[3]; //is always logged
+      double *res = postp+3*select; //is always logged
 
 
       for (int j=0;j<3;j++) {//loop through 3 genotypes
@@ -1473,8 +1465,8 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
     for(int i=0;i<numInds;i++)
       ksprintf(sfsfile,"%d ",whichGeno[i]);
     //ksprintf(sfsfile,"%d\t",whichGeno[numInds]);
-    for(int i=0;i<numInds;i++)
-      ksprintf(sfsfile,"%f ",whichProb[i]);
+    for(int i=0;i<numInds*3;i++)
+      ksprintf(sfsfile,"%f ",postp[i]);
     ksprintf(sfsfile,"\n");
     //    fprintf(sfsfile,"%f\t%f\n",whichProb[numInds-1],it->second.emPhat);
   }//after all sites
