@@ -86,7 +86,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
 
 template <typename T>
 void set(tary<T> *ta,size_t pos,T val){
-  if(pos>ta->m){
+  if(pos>=ta->m){
     size_t ndim = std::max(ta->m,pos)+1;
     kv_roundup32(ndim);
     T *tmp = new T[ndim];
