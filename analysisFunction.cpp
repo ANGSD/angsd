@@ -310,6 +310,46 @@ double **angsd::get3likesRescale(funkyPars *pars){
 }
 
 
+double **angsd::get3likesRMlow(funkyPars *pars,int *keepInd){
+ 
+  int nKeep=0;
+  for(int i=0;i<pars->nInd;i++){
+    if(keepInd[i])
+      nKeep++;
+  }
+ 
+  double **loglike = NULL;
+  loglike = new double*[pars->numSites]; 
+ 
+  for(int s=0;s<pars->numSites;s++){
+     loglike[s] = new double[3*nKeep];
+  }
+
+
+  for(int s=0;s<pars->numSites;s++){
+    if(pars->keepSites[s]==0)//always extract this, to avoid problems in multitrheading
+      continue;
+    int count=0;
+    
+
+    for(int i=0;i<pars->nInd;i++){
+      if(keepInd[i]==0)
+	continue;
+      loglike[s][count*3+0]=pars->likes[s][i*10+angsd::majorminor[pars->major[s]][pars->major[s]]];
+      loglike[s][count*3+1]=pars->likes[s][i*10+angsd::majorminor[pars->major[s]][pars->minor[s]]];
+      loglike[s][count*3+2]=pars->likes[s][i*10+angsd::majorminor[pars->minor[s]][pars->minor[s]]];
+      count++;
+  
+      if(loglike[s][i*3+0] < -20 && loglike[s][i*3+1] < -20 && loglike[s][i*3+2] < -20){
+	loglike[s][i*3+0] = 0;
+	loglike[s][i*3+1] = 0;
+	loglike[s][i*3+2] = 0;
+      }
+    }
+  }
+  return loglike;
+}
+
 double **angsd::get3likes(funkyPars *pars,int *keepInd){
  
   int nKeep=0;

@@ -53,6 +53,7 @@ namespace angsd {
   double **get3likes(funkyPars *pars);
   double **get3likesRescale(funkyPars *pars);
   double **get3likes(funkyPars *pars,int *keepInd);
+  double **get3likesRMlow(funkyPars *pars,int *keepInd);
   double **getlikes(funkyPars *pars,int *keepInd);
   void swapDouble (double& first, double& second);
   int matinv( double x[], int n, int m, double space[]);

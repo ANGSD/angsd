@@ -400,9 +400,9 @@ void abcAsso::frequencyAsso(funkyPars  *pars,assoStruct *assoc){
 
 
   if(doAsso==1){
-    like0=angsd::get3likes(pars,controls);
-    like1=angsd::get3likes(pars,cases);
-    likeAll=angsd::get3likes(pars,all);
+    like0=angsd::get3likesRMlow(pars,controls);
+    like1=angsd::get3likesRMlow(pars,cases);
+    likeAll=angsd::get3likesRMlow(pars,all);
   }
 
  if(doPrint)
