@@ -37,9 +37,9 @@ print.args<-function(args,des){
 ###### ####### ###### ###### ###### #######
 # choose your parameters and defaults
 # NULL is an non-optional argument, NA is an optional argument with no default, others are the default arguments
-args<-list(file=NULL,indNames=NULL,outfile="out")
+args<-list(file=NULL,indNames=NULL,outfile="out",boot=0)
 #if no argument are given prints the need arguments and the optional ones with default
-des<-list(file="the filename with out chr",indNames="list of individual names",outfile="name of output file")
+des<-list(file="the .abbababa filename",indNames="list of individual names (you can use the bam.filelist)",outfile="name of output file",boot="print results for each bootstrap(jackknife), 0=NO")
 ######################################
 #######get arguments and add to workspace
 ### do not change
@@ -51,13 +51,14 @@ if(length(args)==0){
   q("no")
 }
 ###################################
-#file<-"../../test/tmpDir/tmp.abbababa"
-#indNames="../../test/tmpDir/files"
+#file<-"out.abbababa"
+#indNames="smallBam.filelist"
 #outfile<-"out"
-
+#boot="0"
 ab<-read.table(file)
 ind<-basename(scan(indNames,what="TheFck"))
 N<-length(ind)
+boot <- boot!=0
 
 if(N*(N-1)*(N-2)!=ncol(ab)-3){
     cat("The length",N," of indNames does not match the number of individuals in",file,"\n")
@@ -107,11 +108,16 @@ for(h3 in 1:N){
       if(sum(keep)<3){
           cat("h1 h2 h3 =",h1,h2,h3," has less than 3 blocks. skipping\n")
           jackRes<-c(NA,NA,NA)
-          
+          eachD <- c(NA)
       }
       else{
+
           dat<-dat[keep,]
           jackRes<-blockJackUneven(dat)
+          if(boot){
+              cc <-colSums(dat)
+              eachD <- ((cc[1]-dat[,1]) - (cc[2] - dat[,2]))/ (cc[1]+cc[2] - dat[,1] - dat[,2])
+          }              
          
       }
       est<-jackRes[3]
@@ -121,6 +127,15 @@ for(h3 in 1:N){
 
       # - print out all estimates
       cat(ind[h1],ind[h2],ind[h3],colSums(dat),c(est,jack,sd,Z), '\n', file=paste(outfile,".txt",sep=""), append=TRUE ,sep="\t")
-
+      if(boot){
+          cat(ind[h1],ind[h2],ind[h3],eachD, '\n', file=paste(outfile,".boot",sep=""), append=TRUE ,sep="\t")
+      }
       comp<-comp+1
   }}}
+
+
+
+cat("output files:\n")
+cat("\t",paste(outfile,".txt",sep=""),"\n")
+if(boot)
+    cat("\t",paste(outfile,".boot",sep=""),"\n")
