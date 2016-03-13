@@ -175,7 +175,7 @@ void abcWriteFasta::run(funkyPars *pars){
       if(pars->keepSites[s]==0)
 	continue;
 
-      myFasta[pars->posi[s]] = intToRef[ angsd::getMaxCount(pars->counts[s]) ];
+      myFasta[pars->posi[s]] = intToRef[ angsd::getMaxCount(pars->counts[s],0) ];
     }
   }else if(doFasta==3){
     for(int i=0;i<pars->nInd;i++){

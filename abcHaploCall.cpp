@@ -188,9 +188,9 @@ void abcHaploCall::getHaplo(funkyPars *pars){
 
 	
       if(doHaploCall==1)//random base
-	haplo->dat[s][i] = angsd::getRandomCount(pars->counts[s],dep);
+	haplo->dat[s][i] = angsd::getRandomCount(pars->counts[s],i,dep);
       else if(doHaploCall==2)//most frequent base, random tie
-	haplo->dat[s][i] = angsd::getMaxCount(pars->counts[s],dep);
+	haplo->dat[s][i] = angsd::getMaxCount(pars->counts[s],i,dep);
       
       siteCounts[haplo->dat[s][i]]++;
     }

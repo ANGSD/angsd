@@ -613,20 +613,25 @@ int angsd::whichMax(double *d,int len){
     return r;
 }
 
+
 //count is 5 long, A C G T N
-int angsd::getRandomCount(suint *counts,int depth){
+int angsd::getRandomCount(suint *counts, int i,int depth){
 
   if(depth==-1){
     depth=0;
     for( int b = 0; b < 4; b++ )
-      depth+=counts[b];
+      depth+=counts[b+4*i];
   }
+
+  if(depth==0)
+    return 4;
 
   int j = std::rand() % depth;
   int cumSum=0;
   int res=4;
+
   for( int b = 0; b < 4; b++ ){
-    cumSum+=counts[b];
+    cumSum+=counts[b+4*i];
     if( cumSum > j ){
       res = b;
       break;
@@ -637,12 +642,12 @@ int angsd::getRandomCount(suint *counts,int depth){
 
 // get the most frequent base, use random for tie
 // depth is without N
-int angsd::getMaxCount(suint *counts,int depth){
+int angsd::getMaxCount(suint *counts,int i, int depth){
 
   if(depth==-1){
     depth=0;
     for( int b = 0; b < 4; b++ )
-      depth+=counts[b];
+      depth+=counts[b+4*i];
   }
 
   if(depth<=0)
@@ -651,11 +656,11 @@ int angsd::getMaxCount(suint *counts,int depth){
   int whichMax = 0;
   int nMax=1;  
   for(int b=1;b<4;b++){
-    if (counts[b]>counts[whichMax]){
+    if (counts[b+4*i]>counts[whichMax+4*i]){
       whichMax = b;
       nMax = 1;
     }
-    else if(counts[b]==counts[whichMax]){
+    else if(counts[b+4*i]==counts[whichMax+4*i]){
       nMax++;
     }
   }
@@ -664,7 +669,7 @@ int angsd::getMaxCount(suint *counts,int depth){
     int i=0;
     int r = std::rand() % nMax;
      for(int b=1;b<4;b++){
-       if(counts[b]==counts[whichMax]){
+       if(counts[b+4*i]==counts[whichMax+4*i]){
 	 if(r==i){
 	   whichMax=b;
 	   break;
