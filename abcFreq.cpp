@@ -1228,7 +1228,7 @@ double abcFreq::emFrequency(double *loglike,int numInds, int iter,double start,i
       fprintf(stderr,"p=%f W %f\t%f\t%f sum=%f loglike: %f\n",p,W0,W1,W2,sum,exp(loglike[i*3+2])*pow(1-p,2));
     }
     p=-999;
-    exit(0);
+    //exit(0);
   }
   
   return(p);
