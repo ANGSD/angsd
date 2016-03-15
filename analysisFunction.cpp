@@ -340,10 +340,11 @@ double **angsd::get3likesRMlow(funkyPars *pars,int *keepInd){
       loglike[s][count*3+2]=pars->likes[s][i*10+angsd::majorminor[pars->minor[s]][pars->minor[s]]];
       count++;
   
-      if(loglike[s][i*3+0] < -20 && loglike[s][i*3+1] < -20 && loglike[s][i*3+2] < -20){
-	loglike[s][i*3+0] = 0;
-	loglike[s][i*3+1] = 0;
-	loglike[s][i*3+2] = 0;
+      if(loglike[s][count*3+0] < -20 && loglike[s][count*3+1] < -20 && loglike[s][count*3+2] < -20){
+	loglike[s][count*3+0] = 0;
+	loglike[s][count*3+1] = 0;
+	loglike[s][count*3+2] = 0;
+
       }
     }
   }
