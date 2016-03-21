@@ -212,7 +212,7 @@ getJackKnife <- function(outData,finalInv,printData=0,ABBAname,BABAname,BBAAname
         num[blk] = sum(as.numeric(x[ABBAname])) - sum(as.numeric(x[BABAname]))
         den[blk] = sum(as.numeric(x[ABBAname])) + sum(as.numeric(x[BABAname]))
         totAbba = totAbba + sum(as.numeric(x[ABBAname]))
-        totBaba = totAbba + sum(as.numeric(x[BABAname]))
+        totBaba = totBaba + sum(as.numeric(x[BABAname]))
         totBbaa = totBbaa + sum(as.numeric(x[BBAAname]))
     }
     
