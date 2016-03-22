@@ -1540,7 +1540,7 @@ int abcFreq::algoGeno(double *liks,int major_offset,int minor_offset,int numInds
 	res[i] =exp(res[i])/mySum;
       
       //print_array(sfsfile,res,3,0);      
-
+      delete [] hj;
     }//after select loop
     return 0;
 }

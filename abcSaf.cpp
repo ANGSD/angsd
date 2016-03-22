@@ -41,7 +41,10 @@ void abcSaf::getOptions(argStruct *arguments){
   isHap=angsd::getArg("-isHap",isHap,arguments);
   pest = angsd::getArg("-pest",pest,arguments);
   fold=angsd::getArg("-fold",fold,arguments);
-
+  if(doSaf==3){
+    fprintf(stderr,"\t-> Please use -doPost 3 instead for -doSaf 3\n");
+    exit(0);
+  }
   if(doSaf>0||doPost==3){
     if(pest!=NULL){
       if(fold==0)
@@ -146,7 +149,7 @@ void abcSaf::getOptions(argStruct *arguments){
       exit(0);
     }
     if(pest==NULL){
-      fprintf(stderr,"\t-> You need to supply a sfs as prior (emOptim2 output, -pest) to do genotypecalling with saf\n");
+      fprintf(stderr,"\t-> You need to supply a sfs as prior (./realSFS output, -pest) to do genotypecalling with saf\n");
       exit(0);
     }
   }
@@ -222,7 +225,6 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     offs[1] = bgzf_tell(outfileSAF);
 
     size_t tt = newDim-1;
-    fprintf(stderr,"tt:%lu\n",tt);
     fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
   }else {
     theta_fp = aio::openFileBG(outfiles,THETAS);
