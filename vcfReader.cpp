@@ -35,11 +35,11 @@ vcfReader::vcfReader(int &nInd_a,gzFile gz_a,const aMap *revMap_a){
     
 
   }
+  original=saveptr=buf;
 }
 
 //return value is pos. If this is zero means dont use site
 int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
-  // fprintf(stderr,"aprseline\n");
   int pos = atoi(angsd::strpop(&saveptr,'\t'));
   angsd::strpop(&saveptr,'\t');//ID
   char *ref = angsd::strpop(&saveptr,'\t');
@@ -52,24 +52,24 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
   // fprintf(stderr,"\npos:%d ref:%s alt:%s qual:%s flt:%s info:%s format:%s strlen(ref):%zu strlen(alt):%zu\n",pos,ref,alt,qual,filter,info,format,strlen(ref),strlen(alt)); exit(0);
 
  if(strlen(ref)!=1||strlen(alt)!=1){
-    fprintf(stderr,"skipping site:%d multiref/multialt (indel)\n",pos+1);
-    return 0;
+   fprintf(stderr,"skipping site:%d multiref/multialt (indel) ref:%s alt:%s\n",pos,ref,alt);
+   return 0;
   }
   if(0&&strcmp(filter,"PASS")){
-    fprintf(stderr,"skipping site:%d (non PASS)\n",pos+1);
+    fprintf(stderr,"skipping site:%d (non PASS)\n",pos);
     return 0;
     
   }
     
   if(strlen(ref)!=1||strlen(alt)!=1){
-    fprintf(stderr,"skipping site:%d (indel)\n",pos+1);
+    fprintf(stderr,"skipping site:%d (indel)\n",pos);
     return 0;
   }
 
   ref[0]=refToInt[ref[0]];
   alt[0]=refToInt[alt[0]];
   if(ref[0]==4|| alt[0]==4){
-    fprintf(stderr,"REF/ALT is 'N' will discard site: %d \n",pos+1);
+    fprintf(stderr,"REF/ALT is 'N' will discard site: %d \n",pos);
     return 0;
   }
   if(ref[0]==4||alt[0]==4){
@@ -204,7 +204,6 @@ funkyPars *vcfReader::fetch(int chunkSize){
   int cnt=i;//counter for the in-array position.
   buf=original;
   for(;i<chunkSize;i++){
-    //    fprintf(stderr,"in for loop\n");
     if(0==aio::tgets(gz,&buf,&len)){
       fprintf(stderr,"\t-> Done reading vcffile\n");fflush(stderr);
       eof=1;

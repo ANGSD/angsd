@@ -16,7 +16,6 @@ int angsd::getArg(const char* argName,int type,argStruct *arguments){
 
   int argPos = 1;
   while(argPos <arguments->argc){
-    //    fprintf(stderr,"%s vs %s\n",argName,arguments->argv[argPos]);
     if (strcasecmp(arguments->argv[argPos],argName)==0){
       if(arguments->argc==2)
         return(-999);
