@@ -166,6 +166,105 @@ void calclike(int base, double errate, double *like)	{
     like[offsets[base][o]] += homFalse;
   
 }
+int sim_invar_site(double errate,int nsam,double *depths,double meandepth,gzFile glffile,kstring_t *resultfile,int chr, int pos,int onlyPoly){
+  //int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,kstring_t *resultfile){
+  int genotype[2];
+  int i,b, numreads;
+  int nInd = (int)(nsam/2);
+  int numreadsInd[nInd];
+  int totalReads=0;
+  int totalBases[4];
+  for(int j=0;j<4;j++)
+    totalBases[j]=0;
+
+  
+  for(int ii=0;ii<nInd;ii++){
+    if(depths!=NULL)
+      meandepth=depths[ii];
+    
+    // int tmp =  Poisson(4.0);
+      numreadsInd[ii] = Poisson(meandepth);
+      totalReads += numreadsInd[ii];
+  }
+
+  int bases[totalReads];
+  int Qscores[totalReads];
+ 
+  for (i=0; i<totalReads; i++){
+    b = basepick_with_errors(errate, 0);
+    bases[i] = b; 
+    Qscores[i] = -10 * log10(errate) + 33;
+    totalBases[b]++;
+
+  }
+
+  //do not print  sites with less than onlyPoly alternative bases accross samples
+  if(onlyPoly){
+    if(totalReads - totalBases[0] < onlyPoly)
+      return numreads;
+    
+  }
+
+
+ 
+
+
+  if(pileup==1){
+
+    ksprintf(resultfile,"%d\t%d\tN",chr,pos);
+ 
+
+    int counter=0;
+    for(int ii=0;ii<nInd;ii++){
+      kputc('\t',resultfile);
+      char ch = (char) Qscores[counter];
+      ksprintf(resultfile,"%d\t",numreadsInd[ii]);
+      for(int iii=0;iii<numreadsInd[ii];iii++)
+	kputc(int_to_base(bases[counter + iii]),resultfile);
+      kputc('\t',resultfile);
+      for (int iii=0; iii<numreadsInd[ii]; iii++){
+	kputc(ch,resultfile);
+	//	kputc('H',resultfile);
+      }
+     
+ 
+      counter += numreadsInd[ii];
+    }
+     
+    kputc('\n',resultfile);
+    return numreads;
+  }
+  
+  double like[10*nInd];
+  for(int ii=0;ii<nInd;ii++){
+    for (i=0; i<10; i++)
+      like[i] = -0.0;
+    
+    for (i=0; i<numreads; i++){
+      b = pick_a_base(errate,genotype);
+    
+    
+      calclike(b, errate, like);
+    }
+
+    //rescale to likeratios
+    double mx = like[0];
+    for(int i=1;i<10;i++)
+      if(like[i]>mx)
+	mx=like[i];
+    
+    for(int i=0;i<10;i++)
+      like[i] -= mx;
+    if(pileup==0)  
+      gzwrite(glffile,like,sizeof(double)*10);
+    
+  }
+  return numreads;
+}
+
+
+
+
 
 int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,kstring_t *resultfile){
 
@@ -189,7 +288,8 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
       kputc(res[iii],resultfile);
     kputc('\t',resultfile);
     for (i=0; i<numreads; i++){
-      kputc('H',resultfile);
+      kputc(ch,resultfile);
+      //kputc('H',resultfile);
     }
   // gzprintf(resultfile,"\t");
     return numreads;
@@ -231,7 +331,7 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
 }
 
 //nsam=2*nind
-void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,gzFile gzSeq,int count){
+void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,gzFile gzSeq,int count,int onlyPoly){
   //  fprintf(stderr,"segsites=%d\n",segsites,gzFile gzSeq);
   kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   int p =0;
@@ -292,10 +392,11 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     int s =0;
     //shifted with one, to match the positions. This shouldbn't matte for correctness
     for(int i=1;i<=regLen;i++) {
-      if(pileup)
-	ksprintf(&kpl,"%d\t%d\tN\t",count,i);
-
-        if(s<segsites && positInt[s]==i) {
+      
+      if(s<segsites && positInt[s]==i) {
+	if(pileup)
+	  ksprintf(&kpl,"%d\t%d\tN\t",count,i);
+  
 	for(int i=0;i<nsam/2;i++){
 	  int genotypes[2] = {0,0};
 	  if(res[i][s]>=1)
@@ -318,7 +419,12 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	}
 	s++;
       }else{
-	for(int i=0;i<nsam/2;i++){
+	if(pileup)
+	
+	  sim_invar_site(errate,nsam,depths,meandepth,gz,&kpl,count,i,onlyPoly);
+
+
+	/*	for(int i=0;i<nsam/2;i++){
 	  int genotypes[2] = {0,0};
 	  if(depths==NULL)
 	    print_ind_site(errate,meandepth,genotypes,gz,&kpl);
@@ -327,18 +433,18 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  if(pileup && i<nsam/2-1)
 	    kputc('\t',&kpl);
 	}
+	*/
 	if(pileup){
-	  kputc('\n',&kpl);
+	 
 	  if(kpl.l>4096){
 	    gzwrite(gzSeq,kpl.s,kpl.l);
 	    kpl.l=0;
 	  }
 	}
       }
-      
     }
   }
-
+  
   if(pileup){
     gzwrite(gzSeq,kpl.s,kpl.l);
     kpl.l=0;free(kpl.s);
@@ -488,6 +594,7 @@ int main(int argc,char **argv){
   argv++;
   char *depthFile = NULL;
   double *depths = NULL;
+  int onlyPoly = 0;
   int nind = 0;
   char **orig = argv;
   int seed = -1;
@@ -504,6 +611,7 @@ int main(int argc,char **argv){
     else if(strcasecmp(*argv,"-depthFile")==0) depthFile=*++argv; 
     else if(strcasecmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
     else if(strcasecmp(*argv,"-regLen")==0) regLen=atoi(*++argv);
+    else if(strcasecmp(*argv,"-onlyPoly")==0) onlyPoly=atoi(*++argv);
     else if(strcasecmp(*argv,"-pileup")==0) pileup=atoi(*++argv);
     else if(strcasecmp(*argv,"-seed")==0) seed=atoi(*++argv);
     else if(strcasecmp(*argv,"-simpleRand")==0) simpleRand=atoi(*++argv); 
@@ -673,7 +781,7 @@ int main(int argc,char **argv){
      }
      //  if(1||count==58)
      // fprintf(stderr,"nsam %d, segsites %d\n",nsam, segsites);
-     test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count) ;
+     test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count,onlyPoly) ;
      if(singleOut==0){
        
        if(pileup==0){
