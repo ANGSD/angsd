@@ -4,6 +4,7 @@
 
 typedef struct {
   double *freq;
+  double *freqHWE;
   double *like0;
   double *likeF;
   double *F;
@@ -24,6 +25,7 @@ private:
   int testMe;
   double tolStop;
   double differ(double *x,double *y);
+
 public:
   abcHWE(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcHWE();
