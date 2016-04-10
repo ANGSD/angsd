@@ -958,3 +958,86 @@ int aio::tgets(gzFile gz,char**buf,int *l){
   rlen += tmp;
   return rlen;
 }
+
+
+
+
+
+
+// em freqeuncy assuming HWE
+double angsd::estFreq(double *loglike,int numInds){
+
+  float W0;
+  float W1;
+  float W2;
+  // fprintf(stderr,"start=%f\n",start);
+  float p= 0.1;
+  float temp_p=p;
+  double accu=0.00001;
+  double accu2=0;
+  float sum;
+  int iter=100;
+
+  int it=0;
+  
+  for(it=0;it<iter;it++){
+    sum=0;
+    for(int i=0;i<numInds;i++){
+     
+      W0=exp(loglike[i*3+0])*pow(1-p,2);
+      W1=exp(loglike[i*3+1])*2*p*(1-p);
+      W2=exp(loglike[i*3+2])*(pow(p,2));
+      sum+=(W1+2*W2)/(2*(W0+W1+W2));
+      //  fprintf(stderr,"%f %f %f\n",W0,W1,W2);
+      if(0&&std::isnan(sum)){
+	//fprintf(stderr,"PRE[%d]: W %f\t%f\t%f sum=%f\n",i,W0,W1,W2,sum);
+	exit(0);
+      }
+    }
+
+    p=sum/numInds;
+    // fprintf(stderr,"it=%d\tp=%f\tsum=%f\tkeepInd=%d\n",it,p,log(sum),keepInd);
+    if((p-temp_p<accu&&temp_p-p<accu)||(p/temp_p<1+accu2&&p/temp_p>1-accu2))
+      break;
+    temp_p=p;
+  }
+
+  if(std::isnan(p)){
+    fprintf(stderr,"[%s] caught nan will not exit\n",__FUNCTION__);
+    fprintf(stderr,"logLike (3*nInd). nInd=%d\n",numInds);
+    //print_array(stderr,loglike,3*numInds);
+    fprintf(stderr,"keepList (nInd)\n");
+    //print_array(stderr,keep,numInds);
+    fprintf(stderr,"used logLike (3*length(keep))=%d\n",numInds);
+
+    for(int ii=0;1&&ii<numInds;ii++){
+    
+      fprintf(stderr,"1\t");
+      for(int gg=0;gg<3;gg++)
+	fprintf(stderr,"%f\t",loglike[ii*3+gg]);
+      fprintf(stderr,"\n");
+    }
+    sum=0;
+    for(int i=0;i<numInds;i++){
+     
+      W0=exp(loglike[i*3+0])*pow(1-p,2);
+      W1=exp(loglike[i*3+1])*2*p*(1-p);
+      W2=exp(loglike[i*3+2])*(pow(p,2));
+      sum+=(W1+2*W2)/(2*(W0+W1+W2));
+      fprintf(stderr,"p=%f W %f\t%f\t%f sum=%f loglike: %f\n",p,W0,W1,W2,sum,exp(loglike[i*3+2])*pow(1-p,2));
+    }
+    p=-999;
+    //exit(0);
+  }
+  
+  return(p);
+}
+
+
+
+
+
+
+
+
+

@@ -65,7 +65,7 @@ namespace angsd {
   char *strpop(char **str,char split);
   int getRandomCount(suint *d, int i,  int depth = -1);
   int getMaxCount(suint *d, int i, int depth = -1);
-
+  double estFreq(double *loglike,int numInds);
 
 
   template <typename T>
