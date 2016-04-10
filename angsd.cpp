@@ -94,7 +94,7 @@ void printProgInfo(FILE *fp){
   fprintf(fp,"\t-doMaf\t\tEstimate allele frequencies\n");
   fprintf(fp,"\t-doError\tEstimate the type specific error rates\n");
   fprintf(fp,"\t-doAncError\tEstimate the errorrate based on perfect fastas\n");
-  fprintf(fp,"\t-doHWE\t\tEst inbreedning per site\n");
+  fprintf(fp,"\t-HWE_pval\t\tEst inbreedning per site or use as filter\n");
   fprintf(fp,"\t-doGeno\t\tCall genotypes\n");
   fprintf(fp,"\t-doFasta\tGenerate a fasta for a BAM file\n");
   fprintf(fp,"\t-doAbbababa\tPerform an ABBA-BABA test\n");
