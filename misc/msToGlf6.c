@@ -189,11 +189,15 @@ int sim_invar_site(double errate,int nsam,double *depths,double meandepth,gzFile
 
   int bases[totalReads];
   int Qscores[totalReads];
- 
+  double newError = errate;
+  if(newError<0.00001)
+      newError=0.00001;
   for (i=0; i<totalReads; i++){
     b = basepick_with_errors(errate, 0);
     bases[i] = b; 
-    Qscores[i] = -10 * log10(errate) + 33;
+   
+    Qscores[i] = -10 * log10(newError) + 33; // use 0.00001 instead of 0
+    
     totalBases[b]++;
 
   }
@@ -273,13 +277,19 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
   numreads = Poisson(meandepth);
   char res[numreads]; // char alleles for all the reads
 
+
+  double newError = errate;
+  if(newError<0.00001)
+    newError=0.00001;
+  
+
   if(pileup==1){
     for (i=0; i<numreads; i++){
       b = pick_a_base(errate,genotype);
       res[i] = int_to_base(b); 
     }
    
-    int Q = -10 * log10(errate) + 33;
+    int Q = -10 * log10(newError) + 33; //use 0.00001 instead of 0
     ///  char ch=static_cast<char>(Q);
     char ch = (char) Q;
     //fprintf(stdout,"Q=%c,%d,%f,%f\n",Q,Q,log10(errate),errate);
