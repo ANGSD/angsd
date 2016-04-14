@@ -19,7 +19,7 @@ Maybe there are some memleaks. This will have to be fixed later.
 
 abcFilter::~abcFilter(){
   if(fl!=NULL){
-    dalloc(fl);
+    filt_dalloc(fl);
   }
   free(fname);
 }
@@ -74,10 +74,10 @@ void abcFilter::getOptions(argStruct *arguments){
 
   //1=bim 2=keep
   doMajorMinor = angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
-  if(doMajorMinor==3 && fl!=NULL&& fl->hasMajMin!=1){
+  if(doMajorMinor==3 && fl!=NULL&& fl->hasExtra!=1){
     fprintf(stderr,"\t-> Must supply -sites with a file containing major and minor if -doMajorMinor 3\n");
   }
-  if(doMajorMinor!=3 && fl!=NULL&& fl->hasMajMin==1){
+  if(doMajorMinor!=3 && fl!=NULL&& fl->hasExtra==1){
     fprintf(stderr,"\t-> Filter file contains major/minor information to use these in analysis supper \'-doMajorMinor 3\'\n");
   }
   capDepth = angsd::getArg("-capDepth",capDepth,arguments);
@@ -103,7 +103,7 @@ void abcFilter::run(funkyPars *p){
 	  p->chk->nd[s][i]->l=capDepth;
   }
 
-  if(fl!=NULL && fl->hasMajMin==1 && doMajorMinor==3){
+  if(fl!=NULL && fl->hasExtra==1 && doMajorMinor==3){
     p->major = new char [p->numSites];
     p->minor = new char [p->numSites];
     for(int i=0;i<p->numSites;i++){
@@ -121,7 +121,7 @@ void abcFilter::run(funkyPars *p){
 	if(fl->keeps[p->posi[s]]==0){
 	  p->keepSites[s] =0;
 	}
-	if(p->keepSites[s] && fl->hasMajMin==1 &&doMajorMinor==3){
+	if(p->keepSites[s] && fl->hasExtra==1 &&doMajorMinor==3){
 	  p->major[s] = fl->major[p->posi[s]];
 	  p->minor[s] = fl->minor[p->posi[s]];
 	}

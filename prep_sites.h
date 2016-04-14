@@ -17,12 +17,15 @@ typedef struct{
   char *keeps;
   char *major;
   char *minor;
-  int hasMajMin;
+  double *af;
+  int *an;
+  int *ac;
+  int hasExtra;// 0=only sites,1=majorminor,2=also an ac af
   size_t curLen;//<-length of the char arrays;NOT the last position filtersite
   char *curNam;
 }filt;
 
 
 filt *filt_read(const char *fname);
-void dalloc(filt *f);
+void filt_dalloc(filt *f);
 void filt_readSites(filt*fl,char *chr,size_t hint);

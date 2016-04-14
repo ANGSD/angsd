@@ -37,7 +37,8 @@ tary<T> *init(){
   return r;
 }
 
-void dalloc(tary<char> *ta){
+template<typename T>
+void dalloc(tary<T> *ta){
   delete [] ta->d;
   delete ta;
 }
@@ -55,22 +56,28 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     free(fl->keeps);
     free(fl->minor);
     free(fl->major);
+    free(fl->an);
+    free(fl->ac);
+    free(fl->af);
     fl->keeps=fl->minor=fl->major=NULL;
+    fl->af=NULL;
+    fl->an=fl->ac=NULL;
     fl->curLen =0;
     return;
   }
 
   bgzf_seek(fl->bg,it->second.offs,SEEK_SET);
 
-  size_t nsize = std::max(fl->curLen,hint);
+  size_t nsize = std::max(fl->curLen,hint);//this is not the number of elements, but the last position on the reference
   nsize = std::max(nsize,it->second.len)+1;//not sure if '+1' this is needed, but it doesnt hurt...
+  fprintf(stderr,"nsize:%lu\n",nsize);
   if(nsize>fl->curLen) 
     fl->keeps=(char*) realloc(fl->keeps,nsize);
   memset(fl->keeps,0,nsize);
   //fprintf(stderr,"it->second.len:%lu fl->curLen:%lu fl->keeps:%p\n",it->second.len,fl->curLen,fl->keeps);
   bgzf_read(fl->bg,fl->keeps,it->second.len);
 
-  if(fl->hasMajMin==1){
+  if(fl->hasExtra>0){
     if(nsize>fl->curLen) {
       fl->major = (char*) realloc(fl->major,nsize);
       fl->minor = (char*) realloc(fl->minor,nsize);
@@ -80,6 +87,20 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     bgzf_read(fl->bg,fl->major,it->second.len);
     bgzf_read(fl->bg,fl->minor,it->second.len);
   }
+  if(fl->hasExtra>1){
+    if(nsize>fl->curLen) {
+      fl->af = (double*) realloc(fl->af,nsize*sizeof(double));
+      fl->an = (int*) realloc(fl->an,nsize*sizeof(int));
+      fl->ac = (int*) realloc(fl->ac,nsize*sizeof(int));
+      memset(fl->af,0,nsize*sizeof(double));
+      memset(fl->an,0,nsize*sizeof(int));
+      memset(fl->ac,0,nsize*sizeof(int));
+    }
+    bgzf_read(fl->bg,fl->af,it->second.len*sizeof(double));
+    bgzf_read(fl->bg,fl->ac,it->second.len*sizeof(int));
+    bgzf_read(fl->bg,fl->an,it->second.len*sizeof(int));
+  }
+
   fl->curNam=chr;
   fl->curLen = nsize;
 }
@@ -104,7 +125,7 @@ void set(tary<T> *ta,size_t pos,T val){
 }
 
 void filt_print(FILE *fp,filt*f,char *chr){
-  fprintf(stderr,"\n---------------\nfp:%p\nbg:%p\nhasMajMin:%d nchr:%lu\n",f->fp,f->bg,f->hasMajMin,f->offs.size());
+  fprintf(stderr,"\n---------------\nfp:%p\nbg:%p\nhasExtra:%d nchr:%lu\n",f->fp,f->bg,f->hasExtra,f->offs.size());
   for(std::map<char*,asdf_dats,ltstr>::const_iterator it=f->offs.begin();it!=f->offs.end();++it){
     fprintf(stderr,"chr:\t\'%s\'\t",it->first);
     fprintf(stderr,"last:\t\'%lu\'\t",it->second.len);
@@ -121,8 +142,10 @@ void filt_print(FILE *fp,filt*f,char *chr){
     for(size_t s=0;s<f->curLen;s++)
       if(f->keeps[s]){
 	fprintf(fp,"%s\t%lu",f->curNam,s+1);
-	if(f->hasMajMin)
+	if(f->hasExtra>0)
 	  fprintf(fp,"\t%d\t%d",f->major[s],f->minor[s]);
+	if(f->hasExtra>1)
+	  fprintf(fp,"\t%f\t%d\t%d",f->af[s],f->ac[s],f->an[s]);
 	
 	fprintf(fp,"\n");
       }
@@ -143,7 +166,7 @@ char *append(const char *one,const char*two){
   return ret;
 }
 
-void dalloc(filt *f){
+void filt_dalloc(filt *f){
   for(pMap::iterator it=f->offs.begin();it!=f->offs.end();++it)
     free(it->first);
   f->offs.clear();
@@ -168,7 +191,9 @@ filt *filt_read(const char *fname){
   ret->bg =NULL;
   ret->fp =NULL;
   ret->keeps = ret->major = ret->minor=NULL;
-  ret->hasMajMin =0;
+  ret->af = NULL;
+  ret->ac=ret->an=NULL;
+  ret->hasExtra =0;
   ret->curLen =0;
   char *bin_name=append(fname,BIN);
   char *idx_name=append(fname,IDX);
@@ -211,7 +236,7 @@ filt *filt_read(const char *fname){
 #if 0
     fprintf(stderr,"tmp.len:%lu\n",tmp.len); 
 #endif
-    if(1!=fread(&ret->hasMajMin,sizeof(int),1,ret->fp)){
+    if(1!=fread(&ret->hasExtra,sizeof(int),1,ret->fp)){
       fprintf(stderr,"Problem reading chunk from binary file:\n");
       exit(0);
     }
@@ -223,8 +248,10 @@ filt *filt_read(const char *fname){
   }
   
   fprintf(stderr,"\t-> [%s] nChr: %lu loaded from binary filter file\n",__FILE__,ret->offs.size());
-  if(ret->hasMajMin==1)
+  if(ret->hasExtra>0)
     fprintf(stderr,"\t-> Filterfile contains major/minor information\n");
+  if(ret->hasExtra>1)
+    fprintf(stderr,"\t-> Filterfile contains af ac an tags\n");
   
   delete [] bin_name;
   delete [] idx_name;
@@ -245,13 +272,13 @@ char *trealloc(char *ptr,size_t i,size_t j){
   1) 2columns: assume chr pos
   2) 3columns: assume chr regionStart regionStop
   3) 4columns: assume chr pos major minor 
-
+  4) 7columsn: assume chr pos major minor af ac an
  */
 
 typedef std::map<char *,int,ltstr> mmap;
 
 //return zero if fine.
-int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *minor,BGZF *BFP,FILE *fp,int doCompl){
+int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *minor,BGZF *BFP,FILE *fp,int doCompl,tary<double> *af,tary<int> *ac,tary<int> *an){
   assert(last!=NULL);
   if((major!=NULL) ^ (minor!=NULL)){
     fprintf(stderr,"major and minor should be the same\n");
@@ -260,6 +287,8 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
   int hasMajMin =0;
   if(major!=NULL)
     hasMajMin =1;
+  if(af!=NULL)
+    hasMajMin =2;
   fprintf(stderr,"\t-> Writing chr:\'%s\' \n",last);
   mmap::iterator it=mm.find(last);
   if(it!=mm.end()){
@@ -285,10 +314,19 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
   fwrite(&keep->l,sizeof(size_t),1,fp);//write len of chr
   fwrite(&hasMajMin,1,sizeof(int),fp);
   aio::bgzf_write(BFP,keep->d,keep->l);//write keep
-  if(hasMajMin){
+  if(hasMajMin>0){
     aio::bgzf_write(BFP,major->d,major->l);//write maj
     aio::bgzf_write(BFP,minor->d,minor->l);//write min
   }
+  if(hasMajMin>1){
+    aio::bgzf_write(BFP,af->d,af->l*sizeof(double));//write maj
+    aio::bgzf_write(BFP,ac->d,ac->l*sizeof(int));//write min
+    aio::bgzf_write(BFP,an->d,an->l*sizeof(int));//write min
+  }
+  for(int i=0;0&&i<keep->l;i++)//this is check printout loop can be removed
+    if(keep->d[i])
+      fprintf(stderr,"i:%d af:%f\n",i,af->d[i]);
+
   return 0;
 }
 
@@ -311,21 +349,23 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   tary<char> *keep =init<char>();
   tary<char> *major = NULL;
   tary<char> *minor = NULL;
+  tary<double> *af = NULL;
+  tary<int> *ac = NULL;
+  tary<int> *an = NULL;
   char *last=NULL;
   int nCols = -1;
-  int hasMajMin=0;
+  int hasExtra=0;
   int l = 128;
   char *buf =(char *) calloc(l,sizeof(char));
 
   extern int SIG_COND;
   const char *delims="\t \n";
-  char **parsed = new char*[4];
+  char **parsed = new char*[7];
   
   //read a line
   while(SIG_COND && aio::tgets(gz,&buf,&l)) {
     if(buf[0]=='#'||buf[0]=='\n')//skip if empty or starts with #
       continue;
-    
     int nRead=0;
     parsed[nRead++]=strtok(buf,delims);
 
@@ -344,10 +384,17 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     //check that we have the same number of columsn acroos all lines
     if(nCols==-1){
       nCols=nRead;
-      if(nRead==4){
-	hasMajMin =1;
+      if(nRead==4||nRead==7){
+	hasExtra =1;
 	major= init<char>();
 	minor= init<char>();
+      }
+      if(nRead==7){
+	hasExtra=2;
+	af=init<double>();
+	ac=init<int>();
+	an=init<int>();
+	
       }
     }else if(nCols!=nRead){
       fprintf(stderr,"\t-> Problem with number of columns in file. Should be 2,3,4 for entire file (%d vs %d)\n",nCols,nRead);
@@ -358,7 +405,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     //dump
     if(last!=NULL && strcmp(last,parsed[0])){
       //situation:= we have a change of chr, so we DUMP the data
-      if(writeDat(last,mm,keep,major,minor,cfpD,fp,doCompl)){
+      if(writeDat(last,mm,keep,major,minor,cfpD,fp,doCompl,af,ac,an)){
 	SIG_COND=0;
 	goto cleanup;
       }
@@ -370,11 +417,13 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       last=strdup(parsed[0]);
       memset(keep->d,0,keep->m);
       keep->l=0;
-      if(hasMajMin){
+      if(hasExtra>0){
 	memset(major->d,4,keep->m);
 	memset(minor->d,4,keep->m);
 	major->l=minor->l=0;
       }
+      if(hasExtra>1)
+	assert(1);
     }
     char *position_in_sites_file = parsed[1];
     assert(atol(position_in_sites_file)>=0);
@@ -394,8 +443,14 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       for(size_t ii=posS;ii<posE;ii++)
 	set<char>(keep,ii,1);
     }
-    if(nCols==4){
+    if(nCols==4||nCols==7){
       //      fprintf(stderr,"This is the maj/min style\n");
+      if(strlen(parsed[2])>1||strlen(parsed[3])>1){
+	fprintf(stderr,"\t-> major and major are not allowed to be insertions chr:%s posS+1\n",last,posS+1);
+	SIG_COND=0;
+	goto cleanup;
+      }
+	
       int al1 = refToInt[parsed[2][0]];
       int al2 = refToInt[parsed[3][0]];
       //      fprintf(stderr,"al1:%d al2:%d\n",al1,al2);
@@ -407,10 +462,24 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       set<char>(major,posS,al1);
       set<char>(minor,posS,al2);
     }
+    if(nCols==7){
+      //fprintf(stderr,"This is the vcf af ac an tag style\n");
+	
+      double freq = atof(parsed[4]);
+      int acl = atoi(parsed[5]);
+      int anl = atoi(parsed[6]);
+      //      fprintf(stderr,"freq:%f acl:%d anl:%d\n",freq,acl,anl);
+      set<double>(af,posS,freq);
+      set<int>(ac,posS,acl);
+      set<int>(an,posS,anl);
+
+    }
+
+
   }
   //now after parsing all files
   if(last!=NULL){
-    if(writeDat(last,mm,keep,major,minor,cfpD,fp,doCompl)){
+    if(writeDat(last,mm,keep,major,minor,cfpD,fp,doCompl,af,ac,an)){
 	SIG_COND=0;
 	goto cleanup;
     }
@@ -443,6 +512,12 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     dalloc(major);
   if(minor)
     dalloc(minor);
+  if(af)
+    dalloc(af);
+  if(ac)
+    dalloc(ac);
+  if(an)
+    dalloc(an);
   free(buf);
 }
 
@@ -497,7 +572,7 @@ int main_sites(int argc,char **argv){
   }else if(!strcasecmp(*argv,"print")){
     filt *f = filt_read(*++argv);
     filt_print(stdout,f,NULL);
-    dalloc(f);
+    filt_dalloc(f);
   }else
     fprintf(stderr,"Unknown option: \'%s\'\n",*argv);
 
