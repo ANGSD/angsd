@@ -106,6 +106,8 @@ void abcSaf::getOptions(argStruct *arguments){
 
   if(doSaf==0)
     return;
+  if(arguments->regions.size()>1)
+    fprintf(stderr,"\t-> !! You are doing -dosaf incombination with -rf, please make sure that your -rf file is sorted !!\n");
   anc = angsd::getArg("-anc",anc,arguments);
   if(doSaf && (anc==NULL&&isSim==0)){
     if(doSaf!=3){

@@ -126,7 +126,7 @@ persaf * persaf_init(char *fname){
     if(it==ret->mm.end())
       ret->mm[chr] =d ;
     else{
-      fprintf(stderr,"Problem with chr: %s, key already exists\n",chr);
+      fprintf(stderr,"Problem with chr: %s, key already exists, saffile needs to be sorted. (sort your -rf that you used for input)\n",chr);
       exit(0);
     }
   }
