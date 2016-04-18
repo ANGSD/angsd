@@ -13,7 +13,7 @@
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "abcIBS.h"
- 
+
 void abcIBS::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doIBS\t%d\n",doIBS);
@@ -27,6 +27,7 @@ void abcIBS::printArg(FILE *argFile){
   fprintf(argFile,"\t-output01\t%d\toutput 0 and 1s instead of based\n",output01);
   fprintf(argFile,"\t-maxMis\t%d\tMaximum missing bases (per site)\n",maxMis);
   fprintf(argFile,"\t-doMajorMinor\t%d\tuse input files or data to select major and minor alleles\n",majorminor);
+ fprintf(argFile,"\t-makeMatrix\t%d\tprint out the ibs matrix \n",makeMatrix);
 
  }
 
@@ -42,6 +43,8 @@ void abcIBS::getOptions(argStruct *arguments){
   maxMis=angsd::getArg("-maxMis",maxMis,arguments);
   majorminor=angsd::getArg("-doMajorMinor",majorminor,arguments);
   output01=angsd::getArg("-output01",majorminor,arguments);
+  makeMatrix=angsd::getArg("-makeMatrix",makeMatrix,arguments);
+  
 
   if(doIBS==0)
     return;
@@ -65,7 +68,8 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
   doCount=0;
   majorminor=0;
   output01=0;
-  
+  outfileMat=NULL;
+
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doIBS")){
       printArg(stdout);
@@ -91,10 +95,27 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
 
   outfileZ = aio::openFileBG(outfiles,postfix);
 
- 
+  const char* postfix2;
+  postfix2=".ibsMat";
 
+  if(makeMatrix)
+    outfileMat =  aio::openFile(outfiles,postfix2);
+ 
+  nInd = arguments->nInd;
+  
   //write header
   bufstr.l=0;
+ 
+
+
+  if(makeMatrix){
+    ibsMatrixAll = new int[arguments->nInd*arguments->nInd];
+    nonMisAll = new int[arguments->nInd*arguments->nInd];
+    for(int i=0;i < arguments->nInd*arguments->nInd;i++){
+      ibsMatrixAll[i] = 0;
+      nonMisAll[i] = 0;
+    }
+  }  
  
 
   /// 
@@ -118,8 +139,21 @@ abcIBS::~abcIBS(){
 
   if(doIBS==0)
     return; 
-   
+
+  if(makeMatrix){
+    for(int i=0;i<nInd;i++){
+      for(int j=0;j<nInd;j++){
+	fprintf(outfileMat,"%f\t",ibsMatrixAll[i*nInd + j]*1.0/nonMisAll[i*nInd + j]);
+      }
+      fprintf(outfileMat,"\n");
+    }
+    delete [] ibsMatrixAll;
+    delete [] nonMisAll;
+  }
+
+
   if(outfileZ!=NULL) bgzf_close(outfileZ);
+  if(outfileMat!=NULL) fclose(outfileMat);
 }
 
 
@@ -135,7 +169,13 @@ void abcIBS::clean(funkyPars *pars){
   delete[] haplo->dat;
   delete[] haplo->major;
 
+  if(makeMatrix){
+    delete[] haplo->ibsMatrix;
+    delete[] haplo->nonMis;
+  }
+
   delete haplo;
+
 }
 
 
@@ -180,6 +220,16 @@ void abcIBS::printHaplo(funkyPars *pars){
   if(bufstr.l>0)
     aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
   bufstr.l=0;
+
+
+  if(makeMatrix){
+    for(int i=0;i<pars->nInd;i++){
+      for(int j=0;j<pars->nInd;j++){
+	ibsMatrixAll[i*pars->nInd+j] += haplo->ibsMatrix[i*pars->nInd+j];
+	nonMisAll[i*pars->nInd+j] += haplo->nonMis[i*pars->nInd+j];
+      }
+    }
+  }
 
 }
 
@@ -270,6 +320,34 @@ void abcIBS::getHaplo(funkyPars *pars){
   
 }
 
+
+
+void abcIBS::makeIBSmatrix(funkyPars *pars){
+  
+  IBSstruct *haplo =(IBSstruct *) pars->extras[index];
+
+  for(int s=0;s<pars->numSites;s++){
+    if(pars->keepSites[s]==0)
+      continue;      
+
+    
+    for(int i=0;i<pars->nInd;i++){
+      for(int j=0;j<pars->nInd;j++){
+	if( haplo->dat[s][i]==4 || haplo->dat[s][j]==4 )
+	  continue;
+
+	haplo->nonMis[i*pars->nInd+j]++;
+	if( haplo->dat[s][i] != haplo->dat[s][j] )
+	  haplo->ibsMatrix[i*pars->nInd+j]++;
+      }
+    }
+
+  }
+ 
+
+}
+
+
 void abcIBS::run(funkyPars *pars){
 
   if(doIBS==0)
@@ -282,10 +360,26 @@ void abcIBS::run(funkyPars *pars){
     haplo->dat[s] = new int[pars->nInd];
   haplo->major = new int[pars->numSites];
 
+  if(makeMatrix){
+    haplo->ibsMatrix = new int[pars->nInd*pars->nInd];
+    haplo->nonMis = new int[pars->nInd*pars->nInd];
+  }
+
   //haploCall struct to pars
   pars->extras[index] = haplo;
 
   //get haplotypes
   getHaplo(pars);
+
+
+  if(makeMatrix){
+
+    for(int i=0;i<pars->nInd*pars->nInd;i++){
+      haplo->ibsMatrix[i] = 0;
+      haplo->nonMis[i] = 0;
+    }
+    makeIBSmatrix(pars);
+
+  }
 
 }

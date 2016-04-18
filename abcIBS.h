@@ -2,6 +2,10 @@
 typedef struct{
   int **dat;
   int *major;
+  int *minor;
+  int *ibsMatrix;
+  int *nonMis;
+
 }IBSstruct;
 
 class abcIBS:public abc{
@@ -16,13 +20,18 @@ private:
   //optional arguments
   int maxMis;
   int minMinor;
-
+  int makeMatrix;
+  int *ibsMatrixAll;
+  int *nonMisAll;
   //out file
   BGZF* outfileZ;
+  FILE* outfileMat;
+  int nInd;
 
   //functions
   void printHaplo(funkyPars *pars);
   void getHaplo(funkyPars *pars);
+  void makeIBSmatrix(funkyPars *pars);
 
   //print buffer
   kstring_t bufstr;
