@@ -289,10 +289,10 @@ double **angsd::get3likesRescale(funkyPars *pars){
     if(pars->keepSites[s]==0)
       continue;
     for(int i=0;i<pars->nInd;i++){
-      
+      //      fprintf(stderr,"refid: %d posi:%d pars->major:%p\n",pars->refId,pars->posi[s]+1,pars->major);
       //fprintf(stderr,"mm: %d\t%d\n",pars->major[s],pars->major[s]);
-      //fprintf(stderr,"%s\t%d\t%c\t%c\t",pars->sites[s].chromo,pars->sites[s].position+1,intToRef[pars->major[s]],intToRef[pars->minor[s]]);
-
+      //   fprintf(stderr,"%d\t%d\t%c\t%c\t",pars->refId,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]]);
+      
       loglike[s][i*3+0]=pars->likes[s][i*10+angsd::majorminor[pars->major[s]][pars->major[s]]];
       loglike[s][i*3+1]=pars->likes[s][i*10+angsd::majorminor[pars->major[s]][pars->minor[s]]];
       loglike[s][i*3+2]=pars->likes[s][i*10+angsd::majorminor[pars->minor[s]][pars->minor[s]]];

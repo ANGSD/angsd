@@ -70,7 +70,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
 
   size_t nsize = std::max(fl->curLen,hint);//this is not the number of elements, but the last position on the reference
   nsize = std::max(nsize,it->second.len)+1;//not sure if '+1' this is needed, but it doesnt hurt...
-  fprintf(stderr,"nsize:%lu\n",nsize);
+  //fprintf(stderr,"nsize:%lu\n",nsize);
   if(nsize>fl->curLen) 
     fl->keeps=(char*) realloc(fl->keeps,nsize);
   memset(fl->keeps,0,nsize);
@@ -89,14 +89,14 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
   }
   if(fl->hasExtra>1){
     if(nsize>fl->curLen) {
-      fl->af = (double*) realloc(fl->af,nsize*sizeof(double));
+      fl->af = (float*) realloc(fl->af,nsize*sizeof(float));
       fl->an = (int*) realloc(fl->an,nsize*sizeof(int));
       fl->ac = (int*) realloc(fl->ac,nsize*sizeof(int));
-      memset(fl->af,0,nsize*sizeof(double));
+      memset(fl->af,0,nsize*sizeof(float));
       memset(fl->an,0,nsize*sizeof(int));
       memset(fl->ac,0,nsize*sizeof(int));
     }
-    bgzf_read(fl->bg,fl->af,it->second.len*sizeof(double));
+    bgzf_read(fl->bg,fl->af,it->second.len*sizeof(float));
     bgzf_read(fl->bg,fl->ac,it->second.len*sizeof(int));
     bgzf_read(fl->bg,fl->an,it->second.len*sizeof(int));
   }
@@ -278,7 +278,7 @@ char *trealloc(char *ptr,size_t i,size_t j){
 typedef std::map<char *,int,ltstr> mmap;
 
 //return zero if fine.
-int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *minor,BGZF *BFP,FILE *fp,int doCompl,tary<double> *af,tary<int> *ac,tary<int> *an){
+int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *minor,BGZF *BFP,FILE *fp,int doCompl,tary<float> *af,tary<int> *ac,tary<int> *an){
   assert(last!=NULL);
   if((major!=NULL) ^ (minor!=NULL)){
     fprintf(stderr,"major and minor should be the same\n");
@@ -319,7 +319,7 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
     aio::bgzf_write(BFP,minor->d,minor->l);//write min
   }
   if(hasMajMin>1){
-    aio::bgzf_write(BFP,af->d,af->l*sizeof(double));//write maj
+    aio::bgzf_write(BFP,af->d,af->l*sizeof(float));//write maj
     aio::bgzf_write(BFP,ac->d,ac->l*sizeof(int));//write min
     aio::bgzf_write(BFP,an->d,an->l*sizeof(int));//write min
   }
@@ -349,7 +349,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   tary<char> *keep =init<char>();
   tary<char> *major = NULL;
   tary<char> *minor = NULL;
-  tary<double> *af = NULL;
+  tary<float> *af = NULL;
   tary<int> *ac = NULL;
   tary<int> *an = NULL;
   char *last=NULL;
@@ -391,7 +391,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       }
       if(nRead==7){
 	hasExtra=2;
-	af=init<double>();
+	af=init<float>();
 	ac=init<int>();
 	an=init<int>();
 	
@@ -431,9 +431,10 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     assert(posS>0);
     posS--;
     posS += posi_off;
-    set<char>(keep,posS,1);
+
     //fprintf(stderr,"keep->l:%lu val:%d\n",keep->l,keep->d[posS]);
     if(nCols==3){
+      set<char>(keep,posS,1);
       size_t posE=atol(parsed[2]);
       //posE += posE;
       if(posS>posE){
@@ -461,17 +462,18 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
 	SIG_COND=0;
 	goto cleanup;
       }
+      set<char>(keep,posS,1);
       set<char>(major,posS,al1);
       set<char>(minor,posS,al2);
     }
     if(nCols==7){
       //fprintf(stderr,"This is the vcf af ac an tag style\n");
 	
-      double freq = atof(parsed[4]);
+      float freq = atof(parsed[4]);
       int acl = atoi(parsed[5]);
       int anl = atoi(parsed[6]);
       //      fprintf(stderr,"freq:%f acl:%d anl:%d\n",freq,acl,anl);
-      set<double>(af,posS,freq);
+      set<float>(af,posS,freq);
       set<int>(ac,posS,acl);
       set<int>(an,posS,anl);
 

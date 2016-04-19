@@ -29,7 +29,7 @@
 #include "abcTemplate.h"
 #include "abcAncestry.h"
 #include "abcWriteVcf.h" //<- dump plink files.
-#include "abcGPP.h" //<- panel information for calculating genotype post prob
+
 //below we set some variables that are shared between all the analysis classes
 #define MAX_CLASS 28
 int abc::tot_index =0;
@@ -70,7 +70,7 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcHaploCall(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcDstat2(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcHWE_F(outfiles,arguments,inputtype); // 
-  tskStuff[nit++] = new abcGPP(outfiles,arguments,inputtype); // 
+
   //don't touch below
   nItem = nit;
   return tskStuff;

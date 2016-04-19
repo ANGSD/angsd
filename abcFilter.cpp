@@ -59,6 +59,7 @@ void abcFilter::printArg(FILE *argFile){
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos))\n",fname);
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr regStart regStop))\n",fname);
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos major minor))\n",fname);
+  fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos major minor af ac an))\n",fname);
   fprintf(argFile,"\t-minInd\t\t%d\tOnly use site if atleast minInd of samples has data\n",minInd);
   fprintf(argFile,"\t-capDepth\t%d\tOnly use the first capDepth bases\n",capDepth);
   fprintf(argFile,"\t1) You can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");
@@ -103,7 +104,7 @@ void abcFilter::run(funkyPars *p){
 	  p->chk->nd[s][i]->l=capDepth;
   }
 
-  if(fl!=NULL && fl->hasExtra==1 && doMajorMinor==3){
+  if(fl!=NULL && fl->hasExtra>0 && doMajorMinor==3){
     p->major = new char [p->numSites];
     p->minor = new char [p->numSites];
     for(int i=0;i<p->numSites;i++){
@@ -121,7 +122,7 @@ void abcFilter::run(funkyPars *p){
 	if(fl->keeps[p->posi[s]]==0){
 	  p->keepSites[s] =0;
 	}
-	if(p->keepSites[s] && fl->hasExtra==1 &&doMajorMinor==3){
+	if(p->keepSites[s] && fl->hasExtra>0 &&doMajorMinor==3){
 	  p->major[s] = fl->major[p->posi[s]];
 	  p->minor[s] = fl->minor[p->posi[s]];
 	}

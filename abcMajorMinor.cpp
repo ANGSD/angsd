@@ -74,7 +74,13 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   char *anc = NULL;
   ref=angsd::getArg("-ref",ref,arguments);
   anc=angsd::getArg("-anc",anc,arguments);
-
+  char *sites = NULL;
+  sites = angsd::getArg("-sites",sites,arguments);
+  if(sites==NULL&&doMajorMinor==3){
+    fprintf(stderr,"\t-> You need to supply -sites for -domajorminor 3 to work. These has to have either 4 og 6columns");
+    exit(0);
+  }
+  
   if(doMajorMinor==4&&ref==NULL){
     fprintf(stderr,"Must supply reference (-ref) when -doMajorMinor 4");
     exit(0);

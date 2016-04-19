@@ -17,7 +17,7 @@ typedef struct{
   char *keeps;
   char *major;
   char *minor;
-  double *af;
+  float *af;
   int *an;
   int *ac;
   int hasExtra;// 0=only sites,1=majorminor,2=also an ac af

@@ -16,6 +16,8 @@
 #include <htslib/bgzf.h>
 #include "abcFreq.h"
 #include "abcSaf.h"
+#include "abcFilter.h"
+
 
 int abcFreq::emIter = EM_NITER;
 double abcFreq::EM_start = EM_START;
@@ -24,6 +26,7 @@ double *abcFreq::indF = NULL;
 double abcFreq::to_pval(Chisqdist *chisq,double f){
   return f<0?1:1-chisq->cdf(f);
 }
+
 
 //simple phat estimator from the 200danes article, one site function
 double phatFun(suint *counts,int nFiles,double eps,char major,char minor) {
@@ -79,11 +82,12 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"\t1: Using frequency as prior\n");
   fprintf(argFile,"\t2: Using uniform prior\n");
   fprintf(argFile,"\t3: Using SFS as prior (still in development)\n");
+  fprintf(argFile,"\t4: Using reference panel as prior (still in development), requires a site file with chr pos major minor af ac an\n");
   fprintf(argFile,"Filters:\n");
   fprintf(argFile,"\t-minMaf  \t%f\t(Remove sites with MAF below)\n",minMaf);
   fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",SNP_pval);
   fprintf(argFile,"\t-rmTriallelic\t%f\t(Remove sites with a pvalue lower)\n",rmTriallelic);
- fprintf(argFile,"Extras:\n");
+  fprintf(argFile,"Extras:\n");
   fprintf(argFile,"\t-ref\t%s\t(Filename for fasta reference)\n",refName);
   fprintf(argFile,"\t-anc\t%s\t(Filename for fasta ancestral)\n",ancName);
   fprintf(argFile,"\t-eps\t%f [Only used for -doMaf &8]\n",eps);
@@ -524,6 +528,10 @@ void abcFreq::run(funkyPars *pars) {
     return;
   freqStruct *freq = allocFreqStruct();
   pars->extras[index] = freq;
+  extern abc **allMethods;
+  
+  //  abcFilter *abcf=(abcFilter *) allMethods[0];
+  filt *fl = ((abcFilter *) allMethods[0])->fl;
 
   if(doMaf!=0) {
 
@@ -567,7 +575,7 @@ void abcFreq::run(funkyPars *pars) {
 
       if(doPost==1)  //maf prior
 	 make_post(like[s],post[s],freq->freq[s],pars->nInd);
-      else if(doPost==2){//uniform prior
+      else if(doPost==2) {//uniform prior
 	for(int i=0;i<pars->nInd;i++){
 	  double norm = angsd::addProtect3(like[s][i*3+0],like[s][i*3+1],like[s][i*3+2]);
 	  for(int g=0;g<3;g++)
@@ -577,6 +585,14 @@ void abcFreq::run(funkyPars *pars) {
       else if(doPost==3){//uniform prior
 	if(algoGeno(pars->likes[s],refToInt[pars->major[s]],refToInt[pars->minor[s]],pars->nInd,0,abcSaf::prior,post[s]))
 	   fprintf(stderr,"\t-> Problem calling genotypes at: (%s,%d)\n",header->target_name[pars->refId],pars->posi[s]+1);	   
+      }
+      else if(doPost==4){
+	//af for this pos: fl->af[pars->posi[s]]
+	//an for this pos: fl->an[pars->posi[s]]
+	//ac for this pos: fl->ac[pars->posi[s]]
+	//	fprintf(stderr,"chr: %s pos: %d freq:%f\n",header->target_name[pars->refId],pars->posi[s]+1,fl->af[pars->posi[s]]);
+	make_post(like[s],post[s],fl->af[pars->posi[s]],pars->nInd);
+
       }
       else{
 	fprintf(stderr,"[%s] doPost must be 1 or 2 \n",__FUNCTION__);

@@ -1,6 +1,6 @@
 #include "prep_sites.h"
 class abcFilter : public abc{
-  filt *fl;
+
   int doMajorMinor;
   char *fname;
   FILE *fp;
@@ -11,6 +11,7 @@ class abcFilter : public abc{
   int curChr;
   int capDepth;
 public:
+  filt *fl;//<-DRAGON this is being used in abcFreq.cpp for pop freq posts
   void readSites(int refId);
   //none optional stuff
   FILE *outfile;
