@@ -332,7 +332,7 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
 
 void filt_gen(const char *fname,int posi_off,int doCompl) {
   fprintf(stderr,"\t-> Filterfile: %s supplied will generate binary representations... \n",fname);
-
+  int printInfo = 3;
   gzFile gz = Z_NULL;
   if((gz = gzopen(fname,"r"))==Z_NULL){
     fprintf(stderr,"Problem opening file:%s\n",fname);
@@ -446,9 +446,11 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     if(nCols==4||nCols==7){
       //      fprintf(stderr,"This is the maj/min style\n");
       if(strlen(parsed[2])>1||strlen(parsed[3])>1){
-	fprintf(stderr,"\t-> major and major are not allowed to be insertions chr:%s posS+1\n",last,posS+1);
-	SIG_COND=0;
-	goto cleanup;
+	if(printInfo>0){
+	  fprintf(stderr,"\t-> major and major are not allowed to be insertions chr:%s posS+1:%d will only print this msg three times\n",last,posS+1);
+	  printInfo--;
+	}
+	continue;
       }
 	
       int al1 = refToInt[parsed[2][0]];
