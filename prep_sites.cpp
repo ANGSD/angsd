@@ -433,7 +433,9 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     posS += posi_off;
 
     //fprintf(stderr,"keep->l:%lu val:%d\n",keep->l,keep->d[posS]);
-    if(nCols==3){
+    if(nCols==2)
+      set<char>(keep,posS,1);
+    else if(nCols==3){
       set<char>(keep,posS,1);
       size_t posE=atol(parsed[2]);
       //posE += posE;
@@ -443,8 +445,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       }
       for(size_t ii=posS;ii<posE;ii++)
 	set<char>(keep,ii,1);
-    }
-    if(nCols==4||nCols==7){
+    }else if(nCols==4||nCols==7){
       //      fprintf(stderr,"This is the maj/min style\n");
       if(strlen(parsed[2])>1||strlen(parsed[3])>1){
 	if(printInfo>0){
@@ -465,18 +466,17 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       set<char>(keep,posS,1);
       set<char>(major,posS,al1);
       set<char>(minor,posS,al2);
-    }
-    if(nCols==7){
-      //fprintf(stderr,"This is the vcf af ac an tag style\n");
+      if(nCols==7){
+	//fprintf(stderr,"This is the vcf af ac an tag style\n");
 	
-      float freq = atof(parsed[4]);
-      int acl = atoi(parsed[5]);
-      int anl = atoi(parsed[6]);
-      //      fprintf(stderr,"freq:%f acl:%d anl:%d\n",freq,acl,anl);
-      set<float>(af,posS,freq);
-      set<int>(ac,posS,acl);
-      set<int>(an,posS,anl);
-
+	float freq = atof(parsed[4]);
+	int acl = atoi(parsed[5]);
+	int anl = atoi(parsed[6]);
+	//      fprintf(stderr,"freq:%f acl:%d anl:%d\n",freq,acl,anl);
+	set<float>(af,posS,freq);
+	set<int>(ac,posS,acl);
+	set<int>(an,posS,anl);
+      }
     }
 
 
