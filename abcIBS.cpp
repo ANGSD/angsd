@@ -69,6 +69,7 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
   majorminor=0;
   output01=0;
   outfileMat=NULL;
+  makeMatrix=1;
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doIBS")){
@@ -248,9 +249,9 @@ void abcIBS::getHaplo(funkyPars *pars){
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
       continue;      
-
+    
     int siteCounts[5] = { 0 , 0 , 0 , 0 , 0 };
-
+    
     //get random or most frequent base per individual
     for(int i=0;i<pars->nInd;i++){
       
@@ -258,13 +259,13 @@ void abcIBS::getHaplo(funkyPars *pars){
       for( int b = 0; b < 4; b++ ){
 	dep+=pars->counts[s][i*4+b];
       }
-
+      
       if(dep==0){
 	haplo->dat[s][i]=4;
 	continue;
       }
-
-	
+      
+      
       if(doIBS==1)//random base
 	haplo->dat[s][i] = angsd::getRandomCount(pars->counts[s],i,dep);
       else if(doIBS==2)//most frequent base, random tie
@@ -272,7 +273,7 @@ void abcIBS::getHaplo(funkyPars *pars){
       
       siteCounts[haplo->dat[s][i]]++;
     }
-
+    
     //  fprintf(stdout,"%d sfsdfsdf\n",majorminor);      
     // call major
     if(majorminor!=0)
@@ -296,21 +297,16 @@ void abcIBS::getHaplo(funkyPars *pars){
     
     //set to missing haplotypes that are not major or minor
     if(majorminor!=0){
-      for(int s=0;s<pars->numSites;s++){
-	if(pars->keepSites[s]==0)
-	  continue;      
-
-  
-	//get random or most frequent base per individual
-	for(int i=0;i<pars->nInd;i++)
-	  if(haplo->dat[s][i]!=pars->major[s] && haplo->dat[s][i]!=pars->minor[s] )
-	    haplo->dat[s][i] = 4;
-
-
+      if(pars->keepSites[s]==0)
+	continue;      
+      //get random or most frequent base per individual
+      for(int i=0;i<pars->nInd;i++){
+	if(haplo->dat[s][i]!=pars->major[s] && haplo->dat[s][i]!=pars->minor[s] )
+	  haplo->dat[s][i] = 4;
       }
     }
-
-
+    
+    
 
     //remove sites with more than maxMis
     if(maxMis>=0 && maxMis < pars->nInd - NnonMis)
