@@ -3,8 +3,10 @@ typedef struct{
   int **dat;
   int *major;
   int *minor;
-  int *ibsMatrix;
-  int *nonMis;
+  int *ibsMatrix; 
+  int *nonMis;// N x N matrix of non missing comparisons for ibs matrix
+  double *covMatrix;
+  int *covMis; // N x N matrix of non missing comparisons for covariance matrix
 
 }IBSstruct;
 
@@ -16,22 +18,28 @@ private:
   int majorminor;
   int doCount;
   int output01;
-  int intToMajorMinor[5];
+  int doCov;
+  int intToMajorMinorAA[5];
   //optional arguments
   int maxMis;
   int minMinor;
+  double minFreq;
   int makeMatrix;
   int *ibsMatrixAll;
   int *nonMisAll;
+  double *covMatrixAll;
+  int *nonMisCov;
   //out file
   BGZF* outfileZ;
   FILE* outfileMat;
+  FILE* outfileCov;
   int nInd;
 
   //functions
   void printHaplo(funkyPars *pars);
   void getHaplo(funkyPars *pars);
   void makeIBSmatrix(funkyPars *pars);
+  void makeCovMatrix(funkyPars *pars);
 
   //print buffer
   kstring_t bufstr;

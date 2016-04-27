@@ -1,11 +1,10 @@
 /*
-  thorfinn thorfinn@binf.ku.dk dec17 2012
- 
+
     
   anders albrecht@binf.ku.dk made this.
 
   part of angsd
-  ans -> anc dec 7 2013, added -ref -anc
+  NB for cov. maf > 0.001 is hardcoded (don't want the world to explode)
 */
 
 #include <cmath>
@@ -24,12 +23,13 @@ void abcIBS::printArg(FILE *argFile){
   fprintf(argFile,"\t-doCounts\t%d\tMust choose -doCount 1\n",doCount);
   fprintf(argFile,"Optional\n");
   fprintf(argFile,"\t-minMinor\t%d\tMinimum observed minor alleles\n",minMinor);
-  fprintf(argFile,"\t-output01\t%d\toutput 0 and 1s instead of based\n",output01);
-  fprintf(argFile,"\t-maxMis\t%d\tMaximum missing bases (per site)\n",maxMis);
+  fprintf(argFile,"\t-minFreq\t%.3f\tMinimum minor allele frequency\n",minFreq);
+  fprintf(argFile,"\t-output01\t%d\toutput 0 and 1s instead of bases\n",output01);
+  fprintf(argFile,"\t-maxMis\t\t%d\tMaximum missing bases (per site)\n",maxMis);
   fprintf(argFile,"\t-doMajorMinor\t%d\tuse input files or data to select major and minor alleles\n",majorminor);
- fprintf(argFile,"\t-makeMatrix\t%d\tprint out the ibs matrix \n",makeMatrix);
-
- }
+  fprintf(argFile,"\t-makeMatrix\t%d\tprint out the ibs matrix \n",makeMatrix);
+  fprintf(argFile,"\t-doCov\t\t%d\tprint out the cov matrix \n",doCov);
+}
 
 
 
@@ -40,12 +40,13 @@ void abcIBS::getOptions(argStruct *arguments){
   doIBS=angsd::getArg("-doIBS",doIBS,arguments);
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   minMinor=angsd::getArg("-minMinor",minMinor,arguments);
+  minFreq=angsd::getArg("-minFreq",minFreq,arguments);
   maxMis=angsd::getArg("-maxMis",maxMis,arguments);
   majorminor=angsd::getArg("-doMajorMinor",majorminor,arguments);
   output01=angsd::getArg("-output01",majorminor,arguments);
   makeMatrix=angsd::getArg("-makeMatrix",makeMatrix,arguments);
+  doCov=angsd::getArg("-doCov",doCov,arguments);
   
-
   if(doIBS==0)
     return;
 
@@ -57,6 +58,10 @@ void abcIBS::getOptions(argStruct *arguments){
     fprintf(stderr,"Error: -doIBSs needs allele counts (use -doCounts 1)\n");
     exit(0);
   }
+  if(doCov && majorminor==0){
+    fprintf(stderr,"Error: needs majorminor for covariance matrix (use -doMajorMinor 1)\n");
+    exit(0);
+  }
 
 }
 
@@ -65,11 +70,14 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
   doIBS=0;
   maxMis=-1;
   minMinor=0;
+  minFreq=0;
   doCount=0;
   majorminor=0;
   output01=0;
   outfileMat=NULL;
-  makeMatrix=1;
+  outfileCov=NULL;
+  makeMatrix=0;
+  doCov=0;
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doIBS")){
@@ -99,8 +107,8 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
   const char* postfix2;
   postfix2=".ibsMat";
 
-  if(makeMatrix)
-    outfileMat =  aio::openFile(outfiles,postfix2);
+  const char* postfix3;
+  postfix3=".covMat";
  
   nInd = arguments->nInd;
   
@@ -110,6 +118,7 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
 
 
   if(makeMatrix){
+    outfileMat =  aio::openFile(outfiles,postfix2);
     ibsMatrixAll = new int[arguments->nInd*arguments->nInd];
     nonMisAll = new int[arguments->nInd*arguments->nInd];
     for(int i=0;i < arguments->nInd*arguments->nInd;i++){
@@ -118,6 +127,15 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
     }
   }  
  
+  if(doCov){
+    outfileCov =  aio::openFile(outfiles,postfix3);
+    covMatrixAll = new double[arguments->nInd*arguments->nInd];
+    nonMisCov = new int[arguments->nInd*arguments->nInd];
+    for(int i=0;i < arguments->nInd*arguments->nInd;i++){
+      covMatrixAll[i] = 0;
+      nonMisCov[i] = 0;
+    }
+  }  
 
   /// 
   if(majorminor)
@@ -152,9 +170,21 @@ abcIBS::~abcIBS(){
     delete [] nonMisAll;
   }
 
+  if(doCov){
+    for(int i=0;i<nInd;i++){
+      for(int j=0;j<nInd;j++){
+	fprintf(outfileCov,"%f\t",covMatrixAll[i*nInd + j]*1.0/nonMisCov[i*nInd + j]);
+      }
+      fprintf(outfileCov,"\n");
+    }
+    delete [] covMatrixAll;
+    delete [] nonMisCov;
+  }
+
 
   if(outfileZ!=NULL) bgzf_close(outfileZ);
   if(outfileMat!=NULL) fclose(outfileMat);
+  if(outfileCov!=NULL) fclose(outfileCov);
 }
 
 
@@ -169,10 +199,15 @@ void abcIBS::clean(funkyPars *pars){
     delete[] haplo->dat[s];
   delete[] haplo->dat;
   delete[] haplo->major;
+  delete[] haplo->minor;
 
   if(makeMatrix){
     delete[] haplo->ibsMatrix;
     delete[] haplo->nonMis;
+  }
+  if(doCov){
+    delete[] haplo->covMatrix;
+    delete[] haplo->covMis;
   }
 
   delete haplo;
@@ -195,9 +230,9 @@ void abcIBS::printHaplo(funkyPars *pars){
     
     if(majorminor){
       for(int i=0;i<5;i++)
-	intToMajorMinor[i] = -1 ;
-      intToMajorMinor[pars->major[s]]=0;
-      intToMajorMinor[pars->minor[s]]=1;
+	intToMajorMinorAA[i] = -1 ;
+      intToMajorMinorAA[pars->major[s]]=0;
+      intToMajorMinorAA[pars->minor[s]]=1;
       ksprintf(&bufstr,"%s\t%d\t%c\t%c\t",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]]);
     }
     else
@@ -205,7 +240,7 @@ void abcIBS::printHaplo(funkyPars *pars){
  
     if(output01){
      for(int i=0;i<pars->nInd;i++){
-      	ksprintf(&bufstr,"%d\t",intToMajorMinor[haplo->dat[s][i]]);
+      	ksprintf(&bufstr,"%d\t",intToMajorMinorAA[haplo->dat[s][i]]);
 	// ksprintf(&bufstr,"%c\t",haplo->dat[s][i]);
       }
 
@@ -228,6 +263,14 @@ void abcIBS::printHaplo(funkyPars *pars){
       for(int j=0;j<pars->nInd;j++){
 	ibsMatrixAll[i*pars->nInd+j] += haplo->ibsMatrix[i*pars->nInd+j];
 	nonMisAll[i*pars->nInd+j] += haplo->nonMis[i*pars->nInd+j];
+      }
+    }
+  }
+  if(doCov){
+    for(int i=0;i<pars->nInd;i++){
+      for(int j=0;j<pars->nInd;j++){
+	covMatrixAll[i*pars->nInd+j] += haplo->covMatrix[i*pars->nInd+j];
+	nonMisCov[i*pars->nInd+j] += haplo->covMis[i*pars->nInd+j];
       }
     }
   }
@@ -276,8 +319,10 @@ void abcIBS::getHaplo(funkyPars *pars){
     
     //  fprintf(stdout,"%d sfsdfsdf\n",majorminor);      
     // call major
-    if(majorminor!=0)
+    if(majorminor!=0){
       haplo->major[s]=pars->major[s];
+      haplo->minor[s]=pars->minor[s];
+    }
 
 
 
@@ -295,10 +340,26 @@ void abcIBS::getHaplo(funkyPars *pars){
     if( minMinor > 0 && minMinor > NnonMis - siteCounts[whichMax] )
       pars->keepSites[s] = 0;
     
+    //remove low freq (freq = major/total)
+    if( minFreq  >  siteCounts[whichMax] * 1.0/NnonMis || 1-minFreq < siteCounts[whichMax] * 1.0/NnonMis )
+      pars->keepSites[s] = 0;
+     
+
     //set to missing haplotypes that are not major or minor
     if(majorminor!=0){
       if(pars->keepSites[s]==0)
-	continue;      
+	continue;     
+
+      // freq = major/(major + minor)
+      double freq = siteCounts[haplo->minor[s]] * 1.0/(siteCounts[haplo->major[s]] + siteCounts[haplo->minor[s]]);
+      if( minFreq  >  freq || 1-minFreq < freq )
+	pars->keepSites[s] = 0;
+  
+
+      if( minMinor > 0 && ( siteCounts[haplo->minor[s]] < minMinor || siteCounts[haplo->major[s]] < minMinor ) )
+	pars->keepSites[s] = 0;
+     
+ 
       //get random or most frequent base per individual
       for(int i=0;i<pars->nInd;i++){
 	if(haplo->dat[s][i]!=pars->major[s] && haplo->dat[s][i]!=pars->minor[s] )
@@ -343,6 +404,46 @@ void abcIBS::makeIBSmatrix(funkyPars *pars){
 
 }
 
+void abcIBS::makeCovMatrix(funkyPars *pars){
+  
+  IBSstruct *haplo =(IBSstruct *) pars->extras[index];
+
+  for(int s=0;s<pars->numSites;s++){
+    if(pars->keepSites[s]==0)
+      continue;      
+
+
+    int Nmajor=0;
+    int Nminor=0;
+    int G[pars->nInd];
+    for(int i=0;i<pars->nInd;i++){
+      G[i]=4;
+      if( haplo->dat[s][i] == pars->major[s]){
+	Nmajor++;
+	G[i]=0;
+      }
+      if( haplo->dat[s][i] == pars->minor[s]){
+	Nminor++;
+	G[i]=1;
+      }
+    }
+
+    double freq = Nminor*1.0/(Nmajor+Nminor);
+    for(int i=0;i<pars->nInd;i++){
+      for(int j=0;j<pars->nInd;j++){
+	if( G[i]==4 || G[j]==4 || freq <0.001 || freq > 0.999)
+	  continue;
+
+	haplo->covMis[i*pars->nInd+j]++;
+	haplo->covMatrix[i*pars->nInd+j] += (G[i]-freq) * (G[j]-freq) / (freq * (1-freq));
+      }
+    }
+
+  }
+ 
+
+}
+
 
 void abcIBS::run(funkyPars *pars){
 
@@ -355,10 +456,15 @@ void abcIBS::run(funkyPars *pars){
   for(int s=0;s<pars->numSites;s++)
     haplo->dat[s] = new int[pars->nInd];
   haplo->major = new int[pars->numSites];
+  haplo->minor= new int[pars->numSites];
 
   if(makeMatrix){
     haplo->ibsMatrix = new int[pars->nInd*pars->nInd];
     haplo->nonMis = new int[pars->nInd*pars->nInd];
+  }
+  if(doCov){
+    haplo->covMatrix = new double[pars->nInd*pars->nInd];
+    haplo->covMis = new int[pars->nInd*pars->nInd];
   }
 
   //haploCall struct to pars
@@ -369,13 +475,19 @@ void abcIBS::run(funkyPars *pars){
 
 
   if(makeMatrix){
-
     for(int i=0;i<pars->nInd*pars->nInd;i++){
       haplo->ibsMatrix[i] = 0;
       haplo->nonMis[i] = 0;
     }
     makeIBSmatrix(pars);
+  }
 
+  if(doCov){
+    for(int i=0;i<pars->nInd*pars->nInd;i++){
+      haplo->covMatrix[i] = 0;
+      haplo->covMis[i] = 0;
+    }
+    makeCovMatrix(pars);
   }
 
 }
