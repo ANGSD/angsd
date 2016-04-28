@@ -129,7 +129,7 @@ void abcGL::getOptions(argStruct *arguments){
     exit(0);
   }
   if(GL==4&&(doCounts==0)){
-    fprintf(stderr,"\t-> Must supply -doCounts for SYK model\n");
+    fprintf(stderr,"\t-> Must supply -doCounts 1 for SYK model\n");
     exit(0);
   }
   /*
