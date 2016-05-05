@@ -31,7 +31,7 @@
 #include "analysisFunction.h"
 #include "abc.h"
 #include "abcMajorMinor.h"
-
+#include "abcFilter.h"
 static int isnaninf(double *d,int l){
   for(int i=0;i<l;i++)
     if(std::isnan(d[i])||std::isinf(d[i]))
@@ -77,7 +77,7 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   char *sites = NULL;
   sites = angsd::getArg("-sites",sites,arguments);
   if(sites==NULL&&doMajorMinor==3){
-    fprintf(stderr,"\t-> You need to supply -sites for -domajorminor 3 to work. These has to have either 4 og 6columns");
+    fprintf(stderr,"\t-> You need to supply -sites for -domajorminor 3 to work. These has to have either 4 og 6 columns\n");
     exit(0);
   }
   
@@ -362,21 +362,32 @@ void abcMajorMinor::run(funkyPars *pars){
     fprintf(stderr,"[%s.%s():%d] Problem here:\n",__FILE__,__FUNCTION__,__LINE__);
     exit(0);
   }
+  extern abc **allMethods;
+  filt *fl = ((abcFilter *) allMethods[0])->fl;
+  pars->major = new char[pars->numSites];
+  pars->minor = new char[pars->numSites];
+
+  for(int i=0;i<pars->numSites;i++)
+    pars->major[i]=pars->minor[i] = 4;
+
 
   if(doMajorMinor!=3){
   //allocate and initialize
-    pars->major = new char [pars->numSites];
-    pars->minor = new char [pars->numSites];
-    memset(pars->major,4,pars->numSites);
-    memset(pars->minor,4,pars->numSites);
     
+    //unless we want to base the majominor on counts we always use the gls
     if(doMajorMinor!=2)
       majorMinorGL(pars,doMajorMinor);
     else if(doMajorMinor==2)
       majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
     else
       fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
-    
+    if(doMajorMinor==3){
+      for(int s=0;s<pars->numSites;s++)
+	if(pars->keepSites[s] && fl->hasExtra>0 &&doMajorMinor==3){
+	  pars->major[s] = fl->major[pars->posi[s]];
+	  pars->minor[s] = fl->minor[pars->posi[s]];
+	}
+    }
 
     if(rmTrans){
       for(int s=0;s<pars->numSites;s++){

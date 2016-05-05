@@ -104,15 +104,6 @@ void abcFilter::run(funkyPars *p){
 	  p->chk->nd[s][i]->l=capDepth;
   }
 
-  if(fl!=NULL && fl->hasExtra>0 && doMajorMinor==3){
-    p->major = new char [p->numSites];
-    p->minor = new char [p->numSites];
-    for(int i=0;i<p->numSites;i++){
-      p->major[i] = 4;
-      p->minor[i] = 4;
-    }
-  }
-  
   if(fl!=NULL) {
     if(fl->keeps==NULL){
       for(int s=0;s<p->numSites;s++)
@@ -122,10 +113,7 @@ void abcFilter::run(funkyPars *p){
 	if(fl->keeps[p->posi[s]]==0){
 	  p->keepSites[s] =0;
 	}
-	if(p->keepSites[s] && fl->hasExtra>0 &&doMajorMinor==3){
-	  p->major[s] = fl->major[p->posi[s]];
-	  p->minor[s] = fl->minor[p->posi[s]];
-	}
+
       }
     }
   }
