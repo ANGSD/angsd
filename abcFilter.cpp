@@ -110,10 +110,12 @@ void abcFilter::run(funkyPars *p){
 	p->keepSites[s] =0;
     }else{
       for(int s=0;s<p->numSites;s++){
-	if(fl->keeps[p->posi[s]]==0){
+	//	fprintf(stderr,"p->posi:%d keeppre:%d\n",p->posi[s]+1,p->keepSites[s]);
+	if(0&&fl->keeps[p->posi[s]]==0){
+	  fprintf(stderr,"never here\n");
 	  p->keepSites[s] =0;
 	}
-
+	//fprintf(stderr,"p->posi:%d keeppost:%d\n",p->posi[s]+1,p->keepSites[s]);
       }
     }
   }
@@ -136,7 +138,7 @@ void abcFilter::run(funkyPars *p){
 	  if(minInd>nInfo)
 	    p->keepSites[s] =0;
 	}
-    
+	//	fprintf(stderr,"p->posi:%d keeppost2:%d\n",p->posi[s]+1,p->keepSites[s]);
     }
   }
 }

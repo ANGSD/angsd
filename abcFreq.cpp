@@ -587,11 +587,22 @@ void abcFreq::run(funkyPars *pars) {
 	   fprintf(stderr,"\t-> Problem calling genotypes at: (%s,%d)\n",header->target_name[pars->refId],pars->posi[s]+1);	   
       }
       else if(doPost==4){
+	assert(fl!=NULL);
 	//af for this pos: fl->af[pars->posi[s]]
 	//an for this pos: fl->an[pars->posi[s]]
 	//ac for this pos: fl->ac[pars->posi[s]]
 	//	fprintf(stderr,"chr: %s pos: %d freq:%f\n",header->target_name[pars->refId],pars->posi[s]+1,fl->af[pars->posi[s]]);
-	make_post(like[s],post[s],fl->af[pars->posi[s]],pars->nInd);
+	if(fl->keeps[pars->posi[s]]==0)
+	  make_post(like[s],post[s],freq->freq[s],pars->nInd);
+	else{
+	  double exp_obs_allels_in_ngs= freq->freq[s]*pars->keepSites[s];
+	  //	  fprintf(stderr,"pars->keepSite:%d\n",pars->k)
+	  double aac = fl->ac[pars->posi[s]];
+	  double aan = fl->an[pars->posi[s]];
+	  double af = (aac+exp_obs_allels_in_ngs)/(1.0*(aan+pars->keepSites[s]));
+	  fprintf(stderr,"aac:%f aan:%f nal_in_ngs:%f af:%f\n",aac,aan,exp_obs_allels_in_ngs,af);
+	  make_post(like[s],post[s],af,pars->nInd);
+	}
 
       }
       else{
@@ -627,7 +638,7 @@ void abcFreq::postFreq(funkyPars  *pars,freqStruct *freq){
 
 
 void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known ;method=2 em;method=4 bfgs_unknown
-
+  
   //here only the likelihoods for the three genotypes are used. 
   double **loglike = NULL;
   if(inputIsBeagle==1)
@@ -660,6 +671,7 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
   //loop though all sites and check if we have data.
   //fprintf(stderr,"keepSites[0] %d\n",pars->keepSites[0]);
   for(int s=0;s<pars->numSites;s++) {
+    //    fprintf(stderr,"posi:%d keep:%d maj:%d min:%d\n",pars->posi[s]+1,pars->keepSites[s],pars->major[s],pars->minor[s]);
     if(keepInd[s]==0)//if we dont have any information
       continue;
     keepInd[s]=0;//
@@ -667,14 +679,17 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
       //fprintf(stderr,"size %d\nind %d\t loglike:%f\t%f\t%f\n",s,i,loglike[s][i*3+0],loglike[s][i*3+1],loglike[s][i*3+2]);
       keepList[i]=1;
       if(loglike[s][i*3+0]+loglike[s][i*3+1]+loglike[s][i*3+2]>-0.0001){
-	//	fprintf(stderr,"size %d\nind %d\t loglike:%f\t%f\t%f\n",s,i,loglike[s][i*3+0],loglike[s][i*3+1],loglike[s][i*3+2]);
+	//	fprintf(stderr,"size %d nind %d\t loglike:%f\t%f\t%f\n",s,i,loglike[s][i*3+0],loglike[s][i*3+1],loglike[s][i*3+2]);
 	keepList[i]=0;
-      }
+      }      
       else{
 	keepInd[s]++;
       }
 
     }
+
+    //    fprintf(stderr,"posi2:%d keep:%d\n",pars->posi[s]+1,pars->keepSites[s]);
+    //exit(0);
     if(keepInd[s]==0)//if we dont have any information
       continue;
 
@@ -713,7 +728,7 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
     }
 
 
-   
+
   }
 
   if(inputIsBeagle!=1){

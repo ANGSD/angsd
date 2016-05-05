@@ -332,15 +332,16 @@ void abcGL::run(funkyPars *pars){
   */
   if(1){
     for(int s=0;s<pars->numSites;s++){
-      //     fprintf(stderr,"keepSites[%d]=%d\n",s,pars->keepSites[s]);
+      
       if(pars->keepSites[s]==0)
 	continue;
       int efSize=0;
       for(int i=0;i<pars->nInd;i++){
+
 	for(int ii=1;ii<10;ii++){
 	  if(pars->likes[s][i*10+ii]!=pars->likes[s][i*10+0]){
 	    efSize++;
-	    //	    break;
+	    break;
 	  }
 	}
       }
@@ -348,6 +349,7 @@ void abcGL::run(funkyPars *pars){
  
       if(minInd!=0&&minInd>efSize)
 	pars->keepSites[s] = 0;
+      //      fprintf(stderr,"posi:%d keepSites2[%d]=%d\n",pars->posi[s]+1,s,pars->keepSites[s]);
     }
   }
 

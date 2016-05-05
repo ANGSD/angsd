@@ -223,6 +223,7 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
   int choiceMajor=-1;
   int choiceMinor=-1;
   for(int s=0;s<pars->numSites;s++)  {
+
     if(pars->keepSites[s]==0){
       pars->major[s] = 4;
       pars->minor[s] = 4;
@@ -301,7 +302,7 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
       pars->minor[s]=choiceMinor;
 
     }
-    
+    //    fprintf(stderr,"AApos: %d maj:%d min:%d\n",pars->posi[s]+1,pars->major[s],pars->minor[s]);  
   }
 }
 
@@ -381,11 +382,14 @@ void abcMajorMinor::run(funkyPars *pars){
   else
     fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
   if(doMajorMinor==3){
-    for(int s=0;s<pars->numSites;s++)
-      if(pars->keepSites[s] && fl->hasExtra>0 &&doMajorMinor==3){
+    for(int s=0;s<pars->numSites;s++){
+      //      fprintf(stderr,"MMposi:%d keeps:%d\n",pars->posi[s]+1,pars->keepSites[s]);
+      if(pars->keepSites[s]&&fl!=NULL&&fl->keeps[pars->posi[s]] && fl->hasExtra>0 &&doMajorMinor==3){
 	pars->major[s] = fl->major[pars->posi[s]];
 	pars->minor[s] = fl->minor[pars->posi[s]];
       }
+      //fprintf(stderr,"MMposi2:%d keeps:%d maj:%d min:%d\n",pars->posi[s]+1,pars->keepSites[s],pars->major[s],pars->minor[s]);
+    }
   }
   
   if(rmTrans){
