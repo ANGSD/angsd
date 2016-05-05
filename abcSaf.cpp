@@ -106,6 +106,8 @@ void abcSaf::getOptions(argStruct *arguments){
 
   if(doSaf==0)
     return;
+  if(arguments->regions.size()>1)
+    fprintf(stderr,"\t-> !! You are doing -dosaf incombination with -rf, please make sure that your -rf file is sorted !!\n");
   anc = angsd::getArg("-anc",anc,arguments);
   if(doSaf && (anc==NULL&&isSim==0)){
     if(doSaf!=3){
@@ -113,8 +115,8 @@ void abcSaf::getOptions(argStruct *arguments){
       exit(0);
     }
   }
- 
-  if(GL==0 &&(arguments->inputtype!=INPUT_GLF && arguments->inputtype!=INPUT_GLF3 && arguments->inputtype!=INPUT_VCF_GL)){
+  int ai = arguments->inputtype;
+  if(GL==0 &&(ai!=INPUT_GLF && ai !=INPUT_GLF3 && ai !=INPUT_VCF_GL &&ai !=INPUT_BEAGLE)){
     fprintf(stderr,"\t-> Must supply genotype likelihoods (-GL [INT])\n");
     printArg(arguments->argumentFile);
     exit(0);
@@ -521,7 +523,7 @@ void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
 }
 
 void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r,int doFold){
-  // fprintf(stderr,"[%s]\n",__FUNCTION__);
+  // fprintf(stderr,"[%s] nsites:%d r:%p r->pLikes:%p\n",__FUNCTION__,nSites,r,r->pLikes);
   int myCounter =0;
   for(int s=0;s<nSites;s++){
     if(keepSites[s]==0)
@@ -557,10 +559,11 @@ void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,real
       r->oklist[s] = 2;
     else{
       r->oklist[s] = 1;
-      //      r->pLikes[myCounter] =hj;
+      r->pLikes[myCounter]= new float[2*nInd+1];
       for(int iii=0;iii<2*nInd+1;iii++)
 	r->pLikes[myCounter][iii] = hj[iii];
       myCounter++;
+
     }
   }
 }

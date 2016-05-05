@@ -12,7 +12,7 @@
 #include <cassert>
 #include "ctype.h"
 #include <htslib/ksort.h>
-#include <htslib/hts.h>
+//#include <htslib/hts.h>
 #include "mUpPile.h"
 
 
@@ -22,7 +22,7 @@ KSORT_INIT_GENERIC(uint16_t)
 
 extern int refToInt[256];
 
-
+#if 0
 typedef struct __errmod_coef_t {
   
 
@@ -266,6 +266,7 @@ int errmod_cal(const errmod_t *em, int n, int m, uint16_t *bases, float *q)
   //  exit(0);
   return 0;
 }
+#endif
 //this is global this is nasty
 errmod_t *mod = NULL;
 
