@@ -371,53 +371,52 @@ void abcMajorMinor::run(funkyPars *pars){
     pars->major[i]=pars->minor[i] = 4;
 
 
-  if(doMajorMinor!=3){
   //allocate and initialize
     
-    //unless we want to base the majominor on counts we always use the gls
-    if(doMajorMinor!=2)
-      majorMinorGL(pars,doMajorMinor);
-    else if(doMajorMinor==2)
-      majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
-    else
-      fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
-    if(doMajorMinor==3){
-      for(int s=0;s<pars->numSites;s++)
-	if(pars->keepSites[s] && fl->hasExtra>0 &&doMajorMinor==3){
-	  pars->major[s] = fl->major[pars->posi[s]];
-	  pars->minor[s] = fl->minor[pars->posi[s]];
-	}
-    }
-
-    if(rmTrans){
-      for(int s=0;s<pars->numSites;s++){
-	if(pars->keepSites[s] == 0)
-	  continue;
-
-	if((pars->minor[s]==0 && pars->major[s]==2) || (pars->minor[s]==2 && pars->major[s]==0 ) || (pars->minor[s]==1 && pars->major[s]==3) || (pars->minor[s]==3 && pars->major[s]==1) )
-	  pars->keepSites[s]=0;
-	
-      } 
-    }
-    
-    if(doSaf!=0&&pest!=NULL&&skipTriallelic==1){
-      //fix case of triallelic site in pest output when doing pest
-      for(int s=0;s<pars->numSites;s++){
-	if(pars->keepSites[s]==0)
-	  continue;
-	int a=refToInt[pars->anc[s]];
-	int b=refToInt[pars->major[s]];
-	int c=refToInt[pars->minor[s]];
-	if(a!=b&&a!=c)
-	  pars->keepSites[s]=0;
-
+  //unless we want to base the majominor on counts we always use the gls
+  if(doMajorMinor!=2)
+    majorMinorGL(pars,doMajorMinor);
+  else if(doMajorMinor==2)
+    majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
+  else
+    fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
+  if(doMajorMinor==3){
+    for(int s=0;s<pars->numSites;s++)
+      if(pars->keepSites[s] && fl->hasExtra>0 &&doMajorMinor==3){
+	pars->major[s] = fl->major[pars->posi[s]];
+	pars->minor[s] = fl->minor[pars->posi[s]];
       }
+  }
+  
+  if(rmTrans){
+    for(int s=0;s<pars->numSites;s++){
+      if(pars->keepSites[s] == 0)
+	continue;
+      
+      if((pars->minor[s]==0 && pars->major[s]==2) || (pars->minor[s]==2 && pars->major[s]==0 ) || (pars->minor[s]==1 && pars->major[s]==3) || (pars->minor[s]==3 && pars->major[s]==1) )
+	pars->keepSites[s]=0;
+      
+    } 
+  }
+  
+  if(doSaf!=0&&pest!=NULL&&skipTriallelic==1){
+    //fix case of triallelic site in pest output when doing pest
+    for(int s=0;s<pars->numSites;s++){
+      if(pars->keepSites[s]==0)
+	continue;
+      int a=refToInt[pars->anc[s]];
+      int b=refToInt[pars->major[s]];
+      int c=refToInt[pars->minor[s]];
+      if(a!=b&&a!=c)
+	pars->keepSites[s]=0;
       
     }
+    
   }
+  
   //if user has requested reference/ancestral then it is done in majorMinorGL and majorMinorCounts 0.585
   /*
-  if(doMajorMinor==4||doMajorMinor==5)
+    if(doMajorMinor==4||doMajorMinor==5)
     modMajorMinor(pars,doMajorMinor);
   */
   if(doGlf==2||doVcf>0){
@@ -426,7 +425,7 @@ void abcMajorMinor::run(funkyPars *pars){
     lh3->hasAlloced = new char[pars->numSites];
     memset(lh3->hasAlloced,0,pars->numSites);
     lh3->lh3 = new double *[pars->numSites];
-
+    
     for(int s=0;s<pars->numSites;s++) {
       if(pars->keepSites[s]==0)
 	continue;
