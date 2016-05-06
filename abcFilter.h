@@ -1,6 +1,6 @@
 #include "prep_sites.h"
 class abcFilter : public abc{
-
+  int strict;
   int doMajorMinor;
   char *fname;
   FILE *fp;

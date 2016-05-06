@@ -27,6 +27,7 @@ abcFilter::~abcFilter(){
 
 abcFilter::abcFilter(argStruct *arguments){
     //below if shared for all analysis classes
+  strict =1;
   shouldRun[index] = 1;
   header = arguments->hd;
   revMap = arguments->revMap;
@@ -62,6 +63,7 @@ void abcFilter::printArg(FILE *argFile){
   fprintf(argFile,"\t-sites\t\t%s\t(File containing sites to keep (chr pos major minor af ac an))\n",fname);
   fprintf(argFile,"\t-minInd\t\t%d\tOnly use site if atleast minInd of samples has data\n",minInd);
   fprintf(argFile,"\t-capDepth\t%d\tOnly use the first capDepth bases\n",capDepth);
+  fprintf(argFile,"\t-strict\t%d\t (experimental)\n",strict);
   fprintf(argFile,"\t1) You can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");
 }
 
@@ -83,6 +85,7 @@ void abcFilter::getOptions(argStruct *arguments){
   }
   capDepth = angsd::getArg("-capDepth",capDepth,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
+  strict = angsd::getArg("-strict",strict,arguments);
   if(minInd >arguments->nInd){
     fprintf(stderr,"\t-> Potential problem you  filter -minInd %d but you only have %d samples?\n",minInd,arguments->nInd);
     exit(0);
@@ -111,8 +114,8 @@ void abcFilter::run(funkyPars *p){
     }else{
       for(int s=0;s<p->numSites;s++){
 	//	fprintf(stderr,"p->posi:%d keeppre:%d\n",p->posi[s]+1,p->keepSites[s]);
-	if(0&&fl->keeps[p->posi[s]]==0){
-	  fprintf(stderr,"never here\n");
+	if(strict&&fl->keeps[p->posi[s]]==0){
+	  //	  fprintf(stderr,"never here\n");
 	  p->keepSites[s] =0;
 	}
 	//fprintf(stderr,"p->posi:%d keeppost:%d\n",p->posi[s]+1,p->keepSites[s]);
