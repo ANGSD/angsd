@@ -175,6 +175,9 @@ void filt_dalloc(filt *f){
   free(f->keeps);
   free(f->major);
   free(f->minor);
+  free(f->af);
+  free(f->an);
+  free(f->ac);
   delete f;
   f=NULL;
 
