@@ -24,7 +24,7 @@ int doCheck = 1;
 int MAX_SEQ_LEN = 250;
 char *regfile = NULL;
 char *regfiles = NULL;
-
+char *fai_fname = NULL;
 unsigned int includeflags = 2;
 unsigned int discardflags = 4;
 
@@ -175,6 +175,7 @@ void setArgsBam(argStruct *arguments){
   remove_bads = angsd::getArg("-remove_bads",remove_bads,arguments);
   uniqueOnly = angsd::getArg("-uniqueOnly",uniqueOnly,arguments);
   only_proper_pairs =angsd::getArg("-only_proper_pairs",only_proper_pairs,arguments);
+   fai_fname =angsd::getArg("-f",fai_fname,arguments);
   minMapQ = angsd::getArg("-minMapQ",minMapQ,arguments);
   minQ = angsd::getArg("-minQ",minQ,arguments);
   downSample = angsd::getArg("-downSample",downSample,arguments);

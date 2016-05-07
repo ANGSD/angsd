@@ -114,11 +114,16 @@ int checkIfSorted(char *str){
 
 
 
-bufReader initBufReader2(const char*fname,int doCheck){
+bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname){
   bufReader ret;
   ret.fn = strdup(fname);
   int newlen=strlen(fname);//<-just to avoid valgrind -O3 uninitialized warning
   ret.fp = openBAM(ret.fn,doCheck);
+  if (fai_fname && hts_set_fai_filename(ret.fp, fai_fname) != 0) {
+    fprintf(stderr, "[%s] failed to process %s\n",
+	    __func__, fai_fname);
+    exit(EXIT_FAILURE);
+  }
   ret.isEOF =0;
   ret.itr=NULL;
   ret.idx=NULL;
@@ -150,11 +155,11 @@ bool operator < (const pair& v1, const pair& v2)
   }
 
 int *bamSortedIds = NULL;
-bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,int doCheck){
+bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,int doCheck,char *fai_fname){
   bufReader *ret = new bufReader[vec.size()];
 
   for(size_t i =0;i<vec.size();i++)
-    ret[i] = initBufReader2(vec[i],doCheck);
+    ret[i] = initBufReader2(vec[i],doCheck,fai_fname);
   //now all readers are inialized, lets validate the header is the same
   for(size_t i=1;i<vec.size();i++)
     if(compHeader(ret[0].hdr,ret[i].hdr)){
@@ -217,7 +222,8 @@ int bammer_main(argStruct *args){
   //read bamfiles
   extern int checkBamHeaders;
   extern int doCheck;
-  bufReader *rd = initializeBufReaders2(args->nams,checkBamHeaders,doCheck);
+  extern char *fai_fname;
+  bufReader *rd = initializeBufReaders2(args->nams,checkBamHeaders,doCheck,fai_fname);
 
   extern int maxThreads;
   
