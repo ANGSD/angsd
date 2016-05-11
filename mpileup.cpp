@@ -22,7 +22,7 @@ mpileup::~mpileup(){
   free(original);
 }
 
-tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
+tNode **parseNd(char *line,int nInd,const char *delims,int minQ,char ref){
 
   tNode **ret =(tNode**) calloc(nInd,sizeof(tNode*));
 
@@ -69,7 +69,17 @@ tNode **parseNd(char *line,int nInd,const char *delims,int minQ){
 	}else if(tok[inner]=='*'){
 	  ret[i]->seq[at++]='N';
 	  inner++;
-	}else{
+	}
+	else if(tok[inner]=='.' ){
+	  ret[i]->seq[at++]=ref;
+	  inner++;
+	}
+	else if(tok[inner]==','){
+	  //  fprintf(stderr,"This wil...:%s sub:%c\n",tok,ref);
+	  ret[i]->seq[at++]=ref;
+	  inner++;
+	}
+	else{
 	  fprintf(stderr,"This will never happen, ever...:%s sub:%s\n",tok,tok+inner);
 	  exit(0);
 	}
@@ -115,13 +125,13 @@ funkyPars *mpileup::fetch(int chunksize){
     myfunky->refId = lastRefId;
     myfunky->posi[nSites] = atoi(strtok_r(NULL,delims,&buffer))-1;
     myfunky->ref[nSites] = refToInt[strtok_r(NULL,delims,&buffer)[0]];
-    myfunky->chk->nd[nSites++] = parseNd(buffer,nInd,delims,minQ);
+    myfunky->chk->nd[nSites++] = parseNd(buffer,nInd,delims,minQ,myfunky->ref[nSites]);
     
     changed =0;
   }
   buffer=original;
   while(aio::tgets(gz,&buffer,&l)) {
-    if(buffer!=original)
+    if(buffer!=original) 
       original=buffer;
     char *tok = strtok_r(buffer,delims,&buffer);
     it=revMap->find(tok);
@@ -141,8 +151,10 @@ funkyPars *mpileup::fetch(int chunksize){
     myfunky->refId = lastRefId;
 
     myfunky->posi[nSites] = atoi(strtok_r(NULL,delims,&buffer))-1;
-    myfunky->ref[nSites] = refToInt[strtok_r(NULL,delims,&buffer)[0]];
-    myfunky->chk->nd[nSites++] = parseNd(buffer,nInd,delims,minQ);
+    char ref = strtok_r(NULL,delims,&buffer)[0];
+    myfunky->ref[nSites] = refToInt[ref];
+
+    myfunky->chk->nd[nSites++] = parseNd(buffer,nInd,delims,minQ,ref);
     
     buffer=original;
     if(nSites>=chunksize)
