@@ -375,13 +375,11 @@ void abcMajorMinor::run(funkyPars *pars){
   //allocate and initialize
     
   //unless we want to base the majominor on counts we always use the gls
-  if(doMajorMinor!=2)
+  if(doMajorMinor!=2 && doMajorMinor!=3)
     majorMinorGL(pars,doMajorMinor);
   else if(doMajorMinor==2)
     majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
-  else
-    fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
-  if(doMajorMinor==3){
+  else if(doMajorMinor==3){
     for(int s=0;s<pars->numSites;s++){
       //      fprintf(stderr,"MMposi:%d keeps:%d\n",pars->posi[s]+1,pars->keepSites[s]);
       if(pars->keepSites[s]&&fl!=NULL&&fl->keeps[pars->posi[s]] && fl->hasExtra>0 &&doMajorMinor==3){
@@ -391,7 +389,9 @@ void abcMajorMinor::run(funkyPars *pars){
       //fprintf(stderr,"MMposi2:%d keeps:%d maj:%d min:%d\n",pars->posi[s]+1,pars->keepSites[s],pars->major[s],pars->minor[s]);
     }
   }
-  
+  else
+    fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
+
   if(rmTrans){
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s] == 0)
