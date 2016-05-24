@@ -882,7 +882,12 @@ FILE *aio::openFile(const char* a,const char* b){
   strncat(c,b,strlen(b));
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   dumpedFiles.push_back(strdup(c));
-  FILE *fp = fopen(c,"w");
+  FILE *fp = NULL;
+  fp = fopen(c,"w");
+  if(fp==NULL){
+    fprintf(stderr,"\t-> Problem opening file: \'%s\' check permissions\n",c);
+    exit(0);
+  }
   delete [] c;
   return fp;
 }
