@@ -44,8 +44,8 @@ private:
   double minMaf;
   double SNP_pval;
   double SNP_pval_tri;
-   int beagleProb;
-
+  int beagleProb;
+  int minInd;
   int inputIsBeagle;
 public:
   int algoGeno(double *liks,int major_offset,int minor_offset,int numInds,int underFlowProtect,double *pest,double *postp);

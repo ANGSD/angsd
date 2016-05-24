@@ -199,6 +199,7 @@ void abcFreq::getOptions(argStruct *arguments){
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
 
   beagleProb=angsd::getArg("-beagleProb",beagleProb,arguments);
+  minInd=angsd::getArg("-minInd",minInd,arguments);
 
   if(abs(doMaf)==0 &&doPost==0)
     return;
@@ -243,10 +244,12 @@ void abcFreq::getOptions(argStruct *arguments){
     fprintf(stderr,"Do post requires major and minor: supply -doMajorMinor \n");
     exit(0);
   }
+
 }
 
 //constructor
 abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
+  minInd = 0;
   chisq1=chisq2=chisq3=NULL;
   inputIsBeagle =0;
   beagleProb = 0; //<-output for beagleprobs
@@ -558,6 +561,8 @@ void abcFreq::run(funkyPars *pars) {
       	pars->keepSites[s]=0;
       if(rmTriallelic && (freq->lrt_tri[s] > SNP_pval_tri))
       	pars->keepSites[s]=0;
+      if(minInd>0&&pars->keepSites[s]<minInd)
+	pars->keepSites[s] = 0;
     }
   }
   if(doPost) {
