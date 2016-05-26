@@ -300,7 +300,7 @@ int simrbinom(double p){
     return 1;
 }
 
-void analysis(dat &d,int nThreads,int nJack) {
+void analysis(dat &d,int nThreads,int nJack,int skipML) {
   int *rowSum = new int[d.cn.size()];
   int *rowMax = new int[d.cn.size()];
   int *rowMaxW = new int[d.cn.size()];
@@ -435,17 +435,27 @@ void analysis(dat &d,int nThreads,int nJack) {
   momJack = jackMom(&ap,nJack);
   tpars tp;tp.ap=&ap;tp.skip=-1;
   //  print(tp.ap,"asdff1");
-  kmin_brent(myfun,1e-6,0.5-1e-6,&tp,0.0001,&ML);
-  mlJack= jackML(&ap,nThreads,NULL,nJack);
+  if(skipML==0){
+    kmin_brent(myfun,1e-6,0.5-1e-6,&tp,0.0001,&ML);
+    mlJack= jackML(&ap,nThreads,NULL,nJack);
+  }else{
+    ML=-1;
+    mlJack=-1;
+  }
   fprintf(stderr,"\nMethod1: old_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e",mom,momJack,ML,mlJack);
   
   ap.newllh =1;
   mom=likeNewMom(d.cn.size()/9,d0,err0,freq,c,-1);
   momJack= jackMom(&ap,nJack);
   //marshall(&ap,"prem1");
-  val=kmin_brent(myfun,1e-6,0.5-1e-6,&tp,0.0001,&ML);
-  //  fprintf(stderr,"\nM1: ML:%f VAL:%f\n",ML,val);
-  mlJack= jackML(&ap,nThreads,NULL,nJack);
+  if(skipML==0){
+    val=kmin_brent(myfun,1e-6,0.5-1e-6,&tp,0.0001,&ML);
+    //  fprintf(stderr,"\nM1: ML:%f VAL:%f\n",ML,val);
+    mlJack= jackML(&ap,nThreads,NULL,nJack);
+  }else{
+    val=-1;
+    mlJack=-1;
+  }
   fprintf(stderr,"\nMethod1: new_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e",mom,momJack,ML,mlJack);
   // fread(error2,sizeof(int),d.cn.size(),fopen("error2.bin","rb"));
   //for(int i=0;0&&i<d.cn.size();i++)
@@ -782,7 +792,8 @@ int main(int argc,char**argv){
   int nJack=-1;
   long int seed = 0;
   int n;
-  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:p:s:j:")) >= 0) {
+  int skipML = 0;
+  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:p:s:j:l:")) >= 0) {
     switch (n) {
     case 'h': hapfile = strdup(optarg); break;
     case 'a': icounts = strdup(optarg); break;
@@ -795,6 +806,7 @@ int main(int argc,char**argv){
     case 'j': nJack = atoi(optarg); break;
     case 'p': nThreads = atoi(optarg); break;
     case 's': seed = atol(optarg); break;
+    case 'l': skipML = atoi(optarg); break;
     default: {fprintf(stderr,"unknown arg:\n");return 0;}
     }
   }
@@ -805,7 +817,7 @@ int main(int argc,char**argv){
   }
   
   int minDist = 10;
-  fprintf(stderr,"-----------------\nhapmap:%s counts:%s minMaf:%f startPos:%d stopPos:%d minDepth:%d maxDepth:%d skiptrans:%d nthreads:%d seed:%lu\n",hapfile,icounts,minMaf,startPos,stopPos,minDepth,maxDepth,skipTrans,nThreads,seed);
+  fprintf(stderr,"-----------------\nhapmap:%s counts:%s minMaf:%f startPos:%d stopPos:%d minDepth:%d maxDepth:%d skiptrans:%d nthreads:%d seed:%lu skipML:%d\n",hapfile,icounts,minMaf,startPos,stopPos,minDepth,maxDepth,skipTrans,nThreads,seed,skipML);
   fprintf(stderr,"Method2 is subject to fluctuations due to random sampling\n");
   fprintf(stderr,"Seed value of 0 (zero) will use time as seed\n-----------------\n");
   if(seed==0)
@@ -818,7 +830,7 @@ int main(int argc,char**argv){
   std::vector<int*> cnt;
   readicnts(icounts,ipos,cnt,minDepth,maxDepth);
   dat d=count(myMap,ipos,cnt);
-  analysis(d,nThreads,nJack);
+  analysis(d,nThreads,nJack,skipML);
 
   //cleanup
   for(int i=0;i<cnt.size();i++)
