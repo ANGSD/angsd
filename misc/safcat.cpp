@@ -63,8 +63,8 @@ int saf_cat(int argc,char **argv){
   FILE *outfileSAFIDX = openFile(outnames,SAFIDX);
 
   char buf[8]="safv3";
-  bgzf_write(outfileSAF,buf,8);
-  bgzf_write(outfileSAFPOS,buf,8);
+  my_bgzf_write(outfileSAF,buf,8);
+  my_bgzf_write(outfileSAFPOS,buf,8);
   fwrite(buf,1,8,outfileSAFIDX);
   int64_t offs[2];
   offs[0] = bgzf_tell(outfileSAFPOS);
@@ -83,11 +83,11 @@ int saf_cat(int argc,char **argv){
       bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
       bgzf_seek(saf[i]->saf,it->second.saf,SEEK_SET);
       bgzf_read(saf[i]->pos,ppos,sizeof(int)*it->second.nSites);
-      bgzf_write(outfileSAFPOS,ppos,sizeof(int)*it->second.nSites);
+      my_bgzf_write(outfileSAFPOS,ppos,sizeof(int)*it->second.nSites);
       float flt[saf[0]->nChr+1];
       for(uint s=0;s<it->second.nSites;s++){
 	bgzf_read(saf[i]->saf,flt,sizeof(float)*(saf[0]->nChr+1));
-	bgzf_write(outfileSAF,flt,sizeof(float)*(saf[0]->nChr+1));
+	my_bgzf_write(outfileSAF,flt,sizeof(float)*(saf[0]->nChr+1));
       }
       delete [] ppos;
 

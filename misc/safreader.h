@@ -36,3 +36,5 @@ persaf* persaf_init(char *fname);
 void writesaf_header(FILE *fp,persaf *pp);
 void persaf_destroy(persaf *pp);
 myMap::iterator iter_init(persaf *,char *,int,int);
+
+void my_bgzf_write(BGZF *fp, const void *data, size_t length);

@@ -302,3 +302,11 @@ persaf * persaf_init(char *fname){
    
   goto reread;
 }
+
+void my_bgzf_write(BGZF *fp, const void *data, size_t length){
+  if(bgzf_write(fp,data,length)!=length){
+    fprintf(stderr,"\t-> Problem writing bgzf block of size: %lu\n",length);
+    exit(0);
+  }
+
+}

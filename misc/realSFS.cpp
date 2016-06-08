@@ -949,7 +949,10 @@ int fst_index(int argc,char **argv){
   BGZF *fstbg = openFileBG(arg->fstout,".fst.gz");
   FILE *fstfp = openFile(arg->fstout,".fst.idx");
   char buf[8]="fstv1";
-  bgzf_write(fstbg,buf,8);    
+  if(bgzf_write(fstbg,buf,8)!=8){
+    fprintf(stderr,"\t-> Problem writing 8bytes into output file\n");
+    exit(0);
+  }
   fwrite(buf,1,8,fstfp);
 #if 0
   for(int i=0;i<ndim;i++)
@@ -1019,12 +1022,12 @@ int fst_index(int argc,char **argv){
     assert(1==fwrite(&nit,sizeof(size_t),1,fstfp));
     int64_t tell = bgzf_tell(fstbg);
     fwrite(&tell,sizeof(int64_t),1,fstfp);
-    bgzf_write(fstbg,&posi[0],posi.size()*sizeof(int));
+    my_bgzf_write(fstbg,&posi[0],posi.size()*sizeof(int));
     int inc =0;
     for(int i=0;i<saf.size();i++)
       for(int j=i+1;j<saf.size();j++){
-	bgzf_write(fstbg,&(ares[inc][0]),ares[inc].size()*sizeof(double));
-	bgzf_write(fstbg,&(bres[inc][0]),bres[inc].size()*sizeof(double));
+	my_bgzf_write(fstbg,&(ares[inc][0]),ares[inc].size()*sizeof(double));
+	my_bgzf_write(fstbg,&(bres[inc][0]),bres[inc].size()*sizeof(double));
 	inc++;
       }
     if(arg->chooseChr!=NULL)
