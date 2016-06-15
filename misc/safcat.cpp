@@ -80,13 +80,13 @@ int saf_cat(int argc,char **argv){
     }
     for(myMap::iterator it=saf[i]->mm.begin();it!=saf[i]->mm.end();++it){
       int *ppos = new int[it->second.nSites];
-      bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
-      bgzf_seek(saf[i]->saf,it->second.saf,SEEK_SET);
-      bgzf_read(saf[i]->pos,ppos,sizeof(int)*it->second.nSites);
+      my_bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
+      my_bgzf_seek(saf[i]->saf,it->second.saf,SEEK_SET);
+      my_bgzf_read(saf[i]->pos,ppos,sizeof(int)*it->second.nSites);
       my_bgzf_write(outfileSAFPOS,ppos,sizeof(int)*it->second.nSites);
       float flt[saf[0]->nChr+1];
       for(uint s=0;s<it->second.nSites;s++){
-	bgzf_read(saf[i]->saf,flt,sizeof(float)*(saf[0]->nChr+1));
+	my_bgzf_read(saf[i]->saf,flt,sizeof(float)*(saf[0]->nChr+1));
 	my_bgzf_write(outfileSAF,flt,sizeof(float)*(saf[0]->nChr+1));
       }
       delete [] ppos;

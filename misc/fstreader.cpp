@@ -1,4 +1,5 @@
 
+#include "safreader.h"
 #include "fstreader.h"
 
 
@@ -120,7 +121,7 @@ perfst * perfst_init(char *fname){
     return NULL;
   }
   ret->fp = bgzf_open(tmp2,"r");
-  bgzf_seek(ret->fp,8,SEEK_SET);
+  my_bgzf_seek(ret->fp,8,SEEK_SET);
 
   free(tmp);
   free(tmp2);

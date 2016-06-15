@@ -112,15 +112,15 @@ int fst_print(int argc,char **argv){
     }
     if(it->second.nSites==0)
       continue;
-    bgzf_seek(pf->fp,it->second.off,SEEK_SET);
+    my_bgzf_seek(pf->fp,it->second.off,SEEK_SET);
     ppos = new int[it->second.nSites];
     
-    bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
+    my_bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
     for(int i=0;i<choose((int)pf->names.size(),2);i++){
       ares[i] = new double[it->second.nSites];
       bres[i] = new double[it->second.nSites];
-      bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
-      bgzf_read(pf->fp,bres[i],sizeof(double)*it->second.nSites);
+      my_bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
+      my_bgzf_read(pf->fp,bres[i],sizeof(double)*it->second.nSites);
     }
     
 
@@ -207,18 +207,18 @@ int fst_stat2(int argc,char **argv){
       break;
     else if(it->second.nSites==0&&pars->chooseChr==NULL)
       continue;
-    bgzf_seek(pf->fp,it->second.off,SEEK_SET);
+    my_bgzf_seek(pf->fp,it->second.off,SEEK_SET);
     ppos = new int[it->second.nSites];
     
-    bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
+    my_bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
     for(int i=0;i<it->second.nSites;i++)//what? why? dragon!
       ppos[i]++;
 
     for(int i=0;i<choose((int)pf->names.size(),2);i++){
       ares[i] = new double[it->second.nSites];
       bres[i] = new double[it->second.nSites];
-      bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
-      bgzf_read(pf->fp,bres[i],sizeof(double)*it->second.nSites);
+      my_bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
+      my_bgzf_read(pf->fp,bres[i],sizeof(double)*it->second.nSites);
     }
     
 
@@ -337,15 +337,15 @@ int fst_stat(int argc,char **argv){
     }
     if(it->second.nSites==0)
       continue;
-    bgzf_seek(pf->fp,it->second.off,SEEK_SET);
+    my_bgzf_seek(pf->fp,it->second.off,SEEK_SET);
     ppos = new int[it->second.nSites];
     
-    bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
+    my_bgzf_read(pf->fp,ppos,sizeof(int)*it->second.nSites);
     for(int i=0;i<choose((int)pf->names.size(),2);i++){
       ares[i] = new double[it->second.nSites];
       bres[i] = new double[it->second.nSites];
-      bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
-      bgzf_read(pf->fp,bres[i],sizeof(double)*it->second.nSites);
+      my_bgzf_read(pf->fp,ares[i],sizeof(double)*it->second.nSites);
+      my_bgzf_read(pf->fp,bres[i],sizeof(double)*it->second.nSites);
     }
     
 

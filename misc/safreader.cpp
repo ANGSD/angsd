@@ -140,7 +140,7 @@ persaf * persaf_init(char *fname){
   fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
   ret->saf = bgzf_open(tmp2,"r");
   if(ret->saf)
-    bgzf_seek(ret->saf,8,SEEK_SET);
+    my_bgzf_seek(ret->saf,8,SEEK_SET);
   if(ret->saf && ret->version!=safversion(tmp2)){
     fprintf(stderr,"\t-> Problem with mismatch of version of %s vs %s %d vs %d\n",fname,tmp2,ret->version,safversion(tmp2));
     exit(0);
@@ -150,7 +150,7 @@ persaf * persaf_init(char *fname){
   fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
   ret->pos = bgzf_open(tmp2,"r");
   if(ret->pos)
-    bgzf_seek(ret->pos,8,SEEK_SET);
+    my_bgzf_seek(ret->pos,8,SEEK_SET);
   if(ret->pos&& ret->version!=safversion(tmp2)){
     fprintf(stderr,"Problem with mismatch of version of %s vs %s\n",fname,tmp2);
     exit(0);
@@ -188,12 +188,12 @@ persaf * persaf_init(char *fname){
 	 break;
        }
      }
-     bgzf_seek(saf->pos,it->second.pos,SEEK_SET);
-     bgzf_seek(saf->saf,it->second.saf,SEEK_SET);
+     my_bgzf_seek(saf->pos,it->second.pos,SEEK_SET);
+     my_bgzf_seek(saf->saf,it->second.saf,SEEK_SET);
      int *ppos = new int[it->second.nSites];
-     bgzf_read(saf->pos,ppos,sizeof(int)*it->second.nSites);
+     my_bgzf_read(saf->pos,ppos,sizeof(int)*it->second.nSites);
      for(size_t s=0;s<it->second.nSites;s++){
-       bgzf_read(saf->saf,flt,sizeof(float)*(saf->nChr+1));
+       my_bgzf_read(saf->saf,flt,sizeof(float)*(saf->nChr+1));
        fprintf(stdout,"%s\t%d",it->first,ppos[s]);
        for(size_t is=0;is<saf->nChr+1;is++)
 	 fprintf(stdout,"\t%f",flt[is]);
@@ -219,7 +219,7 @@ persaf * persaf_init(char *fname){
      fprintf(stderr,"\t-> [%s] Problem finding chr: %s\n",__FUNCTION__,chr);
      return it;
    }
-   bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
+   my_bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
 
    if(pp->toKeep==NULL)
      pp->toKeep = keep_alloc<char>();
@@ -232,12 +232,12 @@ persaf * persaf_init(char *fname){
      return it;
    }
    //   fprintf(stderr,"doing pos: kind:%d nsites:%lu\n\n",pp->kind,it->second.nSites);
-   bgzf_seek(pp->pos,it->second.pos,SEEK_SET);
+   my_bgzf_seek(pp->pos,it->second.pos,SEEK_SET);
    if(pp->ppos){
      delete [] pp->ppos;
    }
    pp->ppos = new int[it->second.nSites];
-   assert((sizeof(int)*it->second.nSites)==bgzf_read(pp->pos,pp->ppos,sizeof(int)*it->second.nSites));
+   my_bgzf_read(pp->pos,pp->ppos,sizeof(int)*it->second.nSites);
 
    keep_set<char>(pp->toKeep,it->second.nSites,0);
    keep_clear(pp->toKeep);
@@ -306,6 +306,19 @@ persaf * persaf_init(char *fname){
 void my_bgzf_write(BGZF *fp, const void *data, size_t length){
   if(bgzf_write(fp,data,length)!=length){
     fprintf(stderr,"\t-> Problem writing bgzf block of size: %lu\n",length);
+    exit(0);
+  }
+
+}
+void my_bgzf_seek(BGZF *fp, int64_t pos, int whence){
+  if(bgzf_seek(fp,pos,whence)<0){
+    fprintf(stderr,"\t-> Problems seeking in bgzf_seek");
+    exit(0);
+  }
+}
+void my_bgzf_read(BGZF *fp, void *data, size_t length){
+  if(length!=bgzf_read(fp,data,length)){
+    fprintf(stderr,"\t-> Problem reading chunk in bgzf_read\n");
     exit(0);
   }
 
