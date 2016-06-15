@@ -117,8 +117,11 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
     for(size_t j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++){
-      //      fprintf(stderr,"fl:%p fl->keeps:%p\n",fl,fl->keeps);
-      if(i==0&&fl!=NULL&&fl->keeps!=NULL){//we only check for -sites for the first saf. 
+      if(j>saf[i]->toKeep->first&&saf[i]->ppos[j] <= saf[i]->ppos[j-1])
+	fprintf(stderr,"\t-> Potential big problem, ordering of positions indicates that sites has not been sorted ? \n");
+      //      fprintf(stderr,"fl:%p fl->keeps:%p\n",fl,fl!=NULL?fl->keeps:NULL);
+      if(i==0&&fl!=NULL&&fl->keeps!=NULL){//we only check for -sites for the first saf.
+	
 	if( saf[i]->toKeep->d[j] && fl->keeps[saf[i]->ppos[j]])
 	  hit->d[saf[i]->ppos[j]]++;
       }else if(saf[i]->toKeep->d[j])
