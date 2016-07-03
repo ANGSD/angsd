@@ -41,25 +41,27 @@ print.args<-function(args,des){
 ## choose your parameters and defaults
 ## NULL is an non-optional argument, NA is an optional argument with no default, others are the default arguments
 args<-list(angsdFile = NULL,
-           file1="NoFile1",
-           file2="NoFile2",
-           file3="NoFile3",
+           file1=FALSE,
+           file2=FALSE,
+           file3=FALSE,
+           file4=FALSE,
            out="errorEst",
            erCor=0,
            addErrors=0,
            nIter=100,
-           main="Error rate using an outgroup and a high quality genome",
+           main="",
            maxErr=0.02
            )
 
 #if no argument aree given prints the need arguments and the optional ones with default
-des<-list(angsdFile="output angsdFile (w extension) from 'angsd -doAbbababa2 1' command",
+des<-list(angsdFile="output angsdFile (no .abbababa2 extension) from 'angsd -doAbbababa2 1' command",
           file1="the ancError File of population H1",
           file2="the ancError File of population H2",
           file3="the ancError File of population H3",
+          file4="the ancError File of population H4",
           out="Name of the out files",
           erCor="1 perform the error correction",
-          addErrors="Set to 1 to add to the output addition of type-spec errors in the range [0,0.005]",
+          addErrors="Set to 1 to add to the output addition of type-spec errors in the range [-0.005,0.005]",
           nIter="Number of optimazation attemps",
           maxErr="maximum allowed error rate"
           )
@@ -88,8 +90,6 @@ readTable <- function(file){
     r <- matrix(data=r,nrow=1,ncol=length(r))
 }
     
-
-
 getMat<-function(x){
     m<-array(0,dim=c(5,5,5),dimnames=list(b,b,b))
     for(s in 0:4)
@@ -155,8 +155,7 @@ buildMat <- function(res){
 
 
 buildInv <- function(res){
-    decomp = svd(res);
-    return(decomp$v %*% diag(1/decomp$d) %*% t(decomp$u));       
+    return(solve(res))
 }
 
 
@@ -236,52 +235,56 @@ getJackKnife <- function(outData,finalInv,printData=0,ABBAname,BABAname,BBAAname
     pseudo <- 1/weigth
     thetaJStar <- sapply( 1:L, function(x) sum(as.numeric(num[-x]))/sum(as.numeric(den[-x])) )  #D statistic in each block
     thetaJack <- L*thetaN - sum((1-weigth) * thetaJStar) #jackknife D statistic       
-    meanJack <- mean(thetaJStar)# average D statistics in blocks
+    meanJack <- mean(thetaJStar)# average D statistics over the blocks
     thetaTilde <- pseudo*thetaN-(pseudo-1) * thetaJStar #intermediate quantity for the variance of the jackknife D statistic
     varJack <- 1/L * sum( 1/(pseudo-1) * (thetaTilde - thetaJack)^2 ) #variance of the jackknife D     
     Z <- thetaN / sqrt(varJack) #Z value for standard normal
     pv = 2*min(pnorm(Z,0,1),1-pnorm(Z,0,1)) #pvalue for standard normal
-    if(printData){
-        print(c("thetaN",thetaN))
-        print(c("theta JF",thetaJack))
-        print(c("SD D_Jack",sqrt(varJack)))
-        print(c("Z",Z))
-        print(c("p-value",pv))
-        print(c("visited sites",seenSites))
-        if(errorCount > 0)
-            print(sprintf("Warning: you got %d times that Num>Den. This can  happen when you apply error correction on alleles combination with low probability. If this happen too many times, may be error correction is unnecessary.",errorCount))
-    }
     return(list(thetaN=thetaN,thetaJack=thetaJack,varJack=varJack,Z=Z,pv=pv,nABBA=totAbba,nBABA=totBaba,nBBAA=totBbaa))
 }
 
 angsdFile = paste(angsdFile,".abbababa2",sep="")
 outData <- read.table(angsdFile,header=T,as.is=T,sep="")
+erCor=as.numeric(erCor)
+if(erCor==1){#ERROR CORRECTED D
 
-if(erCor){
-print("-----------------------------------------------")    
-print("Estimation with error correction and no Ancient Transition removal")
+    nInd1<-1
+    nInd2<-1
+    nInd3<-1
+    nInd4<-1
 
-r1 = readTable(file1)
-r2 = readTable(file2)
-r3 = readTable(file3)
+    res1=diag(c(1,1,1,1))
+    res2=diag(c(1,1,1,1))
+    res3=diag(c(1,1,1,1))
+    res4=diag(c(1,1,1,1))  
 
-nInd1<-1
-nInd2<-1
-nInd3<-1
-
-res1 = NULL
-res2 = NULL
-res3 = NULL
-res1 = getFromErrFile(r1,res1,maxErr,nInd1,logLike)
-res2 = getFromErrFile(r2,res2,maxErr,nInd2,logLike)
-res3 = getFromErrFile(r3,res3,maxErr,nInd3,logLike)
-
-resMat = list();
-
-resMat[[1]] = buildMat(res1)
-resMat[[2]] = buildMat(res2)
-resMat[[3]] = buildMat(res3)
-resMat[[4]] = diag(rep(1,4))
+    resMat = list();
+    resMat[[1]] = diag(c(1,1,1,1))
+    resMat[[2]] = diag(c(1,1,1,1))
+    resMat[[3]] = diag(c(1,1,1,1))
+    resMat[[4]] = diag(c(1,1,1,1))
+    
+if(file1!=FALSE){
+    r1 = readTable(file1)
+    res1 = getFromErrFile(r1,res1,maxErr,nInd1,logLike)
+    resMat[[1]] = buildMat(res1)
+}
+if(file2!=FALSE){
+    r2 = readTable(file2)
+    res2 = getFromErrFile(r2,res2,maxErr,nInd2,logLike)
+    resMat[[2]] = buildMat(res2)
+    }
+if(file3!=FALSE){
+    r3 = readTable(file3)
+    res3 = getFromErrFile(r3,res3,maxErr,nInd3,logLike)
+    resMat[[3]] = buildMat(res3)
+}
+if(file4!=FALSE){
+    r4 = readTable(file4)
+    res4 = getFromErrFile(r4,res4,maxErr,nInd4,logLike)
+    resMat[[4]] = buildMat(res4)
+}    
+    
 
 errMat = getErrMat(resMat)
 
@@ -289,29 +292,24 @@ finalInv = buildInv(errMat)
 
 result1 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
 
-fileOut = paste(out,"ErrorCorr",".txt",sep="")
+fileOut = paste(out,".ErrorCorr",".txt",sep="")
 
 str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
-str2 = sprintf("%f\t%f\t%f\t%f\t%f",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,result1$nBBAA)
+str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,result1$nBBAA)
 cat(str,str2,file=fileOut,sep="\n")
 
+result3 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
 
-
-
-print("-----------------------------------------------")
-print("Error correction and removal of ancient transition")
-result2 = getJackKnife(outData,finalInv,printData=1,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
-
-fileOut = paste(out,"ErrorCorrNoTrans",".txt",sep="")
+fileOut = paste(out,".TransRemErrorCorr",".txt",sep="")
 
 str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
-str2 = sprintf("%f\t%f\t%f\t%f\t%f",result2$thetaN,result2$thetaJack,result2$varJack,result2$Z,result2$pv,result2$nABBA,result2$nBABA,result2$nBBAA)
+str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f",result3$thetaN,result3$thetaJack,result3$varJack,result3$Z,result3$pv,result3$nABBA,result3$nBABA,result3$nBBAA)
 cat(str,str2,file=fileOut,sep="\n")
 
 }
 
 ### write in files the effect of added error to transition FROM --> TO
-
+### NEEDS TO BE FINISHED
 addErr = c(0,0.001,0.002,0.003,0.004,0.005)
 LErr = length(addErr)
 letters = c("A","C","G","T")
@@ -346,10 +344,6 @@ for(FROM in 1:4){
         }
     }
 }
-
-
-print("-----------------------------------------------")
-print("Remove ancient transitions G->A + C->T  AND  Add error to transitions")
         
 for(FROM in 1:4){
     for(TO in 1:4){
@@ -380,10 +374,8 @@ for(FROM in 1:4){
 }
 }#####end if(FALSE)
 
-print("-----------------------------------------------")
-print("D-statistic calculated without Error correction")
-
-fileOut=paste(out,"Std",".txt",sep="",collapse="")
+### D WITH NO ERROR CORRECTION AND USING ALL TRANSITIONS
+fileOut=paste(out,".Observed",".txt",sep="",collapse="")
 
 outData <- read.table(angsdFile,header=T,as.is=T,sep="")
 result5 = getJackKnife(outData,diag(rep(1,256)),printData=1,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
@@ -392,10 +384,8 @@ str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
 str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv,result5$nABBA,result5$nBABA,result5$nBBAA)
 cat(str,str2,file=fileOut,sep="\n")
 
-print("-----------------------------------------------")
-print("D-statistic calculated w/o Error correction and transitions")
-
-fileOut=paste(out,"NoErrorNoTrans",".txt",sep="",collapse="")
+### D WITH NO ERROR CORRECTION AND REMOVING ANCIENT TRANSITIONS
+fileOut=paste(out,".RemTrans",".txt",sep="",collapse="")
 
 
 outData <- read.table(angsdFile,header=T,as.is=T,sep="")
@@ -404,3 +394,31 @@ result6 = getJackKnife(outData,diag(rep(1,256)),printData=1,ABBAname=ABBAtr,BABA
 str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBBAA")
 str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv,result6$nABBA,result6$nBABA,result6$nBBAA)
 cat(str,str2,file=fileOut,sep="\n")
+
+### output fancy table
+str1=sprintf("  Mode\t\t|Dstat\t\t|sd(Dstat)\t|Djack\t\t|Zscore\t|Pvalue\n")
+str2=sprintf("Observed\t|%.3e\t|%.3e\t|%.3e\t|%.3f\t|%.1e\n",result5$thetaN,sqrt(result5$varJack),result5$thetaJack,result5$Z,result5$pv)
+if(erCor==1){
+str3=sprintf("Err Corr\t|%.3e\t|%.3e\t|%.3e\t|%.3f\t|%.1e\n",result1$thetaN,sqrt(result1$varJack),result1$thetaJack,result1$Z,result1$pv)}
+str4=sprintf("No Trans\t|%.3e\t|%.3e\t|%.3e\t|%.3f\t|%.1e\n",result6$thetaN,sqrt(result6$varJack),result6$thetaJack,result6$Z,result6$pv)
+if(erCor==1){
+str5=sprintf("Err Corr\t|\t\t|\t\t|\t\t|\t|\t\n")
+str6=sprintf("   and\t\t|%.3e\t|%.3e\t|%.3e\t|%.3f\t|%.1e\n",result3$thetaN,sqrt(result3$varJack),result3$thetaJack,result3$Z,result3$pv)
+str7=sprintf("No Trans\t|\t\t|\t\t|\t\t|\t|\t\n")}
+
+cat("--- Table of Results ---\n")
+cat("---------------------------------------------------------------------------------\n")
+cat(str1)
+cat("---------------------------------------------------------------------------------\n")
+cat(str2)
+if(erCor==1){
+    cat("---------------------------------------------------------------------------------\n")
+    cat(str3)}
+cat("---------------------------------------------------------------------------------\n")
+cat(str4)
+cat("---------------------------------------------------------------------------------\n")
+if(erCor==1){
+    cat(str5)
+    cat(str6)
+    cat(str7)
+    cat("---------------------------------------------------------------------------------\n")}

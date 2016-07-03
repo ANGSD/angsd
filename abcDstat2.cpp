@@ -202,7 +202,7 @@ void abcDstat2::printAndEmpty(int blockStart,int theChr){
     for(int i=0;i<256;i++){
       fprintf(outfile,"\t%f",COMBprint[i]);
       //if(combFile==1)
-	fprintf(outfile2,"\t%.0f",ALLCOMBprint[i]);
+	fprintf(outfile2,"\t%f",ALLCOMBprint[i]);
 	}
     fprintf(outfile,"\n");
     //if(combFile == 1)
@@ -260,7 +260,7 @@ void abcDstat2::print(funkyPars *pars){
   }
  
   for(int i=0;i<256;i++)
-    COMBprint[i] += abbababaStruct->COMB[i]; //?????
+    COMBprint[i] += abbababaStruct->COMB[i]; 
   //if(combFile == 1){
   for(int i=0;i<256;i++)
     ALLCOMBprint[i] += abbababaStruct->ALLCOMB[i];
@@ -283,8 +283,6 @@ void abcDstat2::print(funkyPars *pars){
 
 
 void abcDstat2::run(funkyPars *pars){
-  // pars->nInd
-  // pars->numSites
   if(doAbbababa2==0)
     return;
 
@@ -300,7 +298,8 @@ void abcDstat2::run(funkyPars *pars){
   }
 
   
-  double *ALLCOMB = new double[256];
+  double *ALLCOMB;
+  ALLCOMB = new double[256];
   for(int j=0;j<256;j++)
     ALLCOMB[j] = 0;
     
@@ -408,10 +407,10 @@ void abcDstat2::run(funkyPars *pars){
       for(int i=0;i<sizeH3;i++){
 	if(normc!=0)
 	  w3[i] = w3[i]/normc;
+	//fprintf(stderr,"%f\n",w3[i]);
       }
 
       //---------------building weighted individual 4. written in ABCD2.
-
       somma = 0;
       normc = 0;
  
@@ -426,7 +425,6 @@ void abcDstat2::run(funkyPars *pars){
       }
       
       //---------------building ABCD2 - weighted (pseudo) 4 individuals
-
       for(int j=0;j<16;j++)
 	ABCD2[j] = 0;
 
@@ -446,41 +444,66 @@ void abcDstat2::run(funkyPars *pars){
       }
 
       //---------------count alleles combination of 4 pseudoindividials
-
       somma = 0;
-
       //normalizing observation vector
       for(int i=0;i<4;i++){
 	somma = ABCD2[i*4]+ABCD2[i*4+1]+ABCD2[i*4+2]+ABCD2[i*4+3];
 	if(somma != 0){
-	  ABCD2[i*4]=ABCD2[i*4]/somma;
-	  ABCD2[i*4+1]=ABCD2[i*4+1]/somma;
-	  ABCD2[i*4+2]=ABCD2[i*4+2]/somma;
-	  ABCD2[i*4+3]=ABCD2[i*4+3]/somma;
+	  ABCD2[i*4]=ABCD2[i*4]  / somma;
+	  ABCD2[i*4+1]=ABCD2[i*4+1]  / somma;
+	  ABCD2[i*4+2]=ABCD2[i*4+2]  / somma;
+	  ABCD2[i*4+3]=ABCD2[i*4+3]  / somma;
 	}	 
       }
-   
-      // count allele combinations without weighting individuals
+
+      //---------------count normalized allele combinations without weighting individuals
       int posiz = 0;
+      double *sum1 = new double[sizeH1];
+      double *sum2= new double[sizeH2];
+      double *sum3 = new double[sizeH3];
+      double *sum4 = new double[sizeH4];
+
+      for(int h1=0;h1<sizeH1;h1++)
+	sum1[h1] = ABCD[s][h1*4]+ABCD[s][h1*4+1]+ABCD[s][h1*4+2]+ABCD[s][h1*4+3];
+      for(int h2=0;h2<sizeH2;h2++)
+	sum2[h2] = ABCD[s][sizeH1*4+h2*4]+ABCD[s][sizeH1*4+h2*4+1]+ABCD[s][sizeH1*4+h2*4+2]+ABCD[s][sizeH1*4+h2*4+3];
+      for(int h3=0;h3<sizeH3;h3++)
+	sum3[h3] = ABCD[s][sizeH1*4+sizeH2*4+h3*4]+ABCD[s][sizeH1*4+sizeH2*4+h3*4+1]+ABCD[s][sizeH1*4+sizeH2*4+h3*4+2]+ABCD[s][sizeH1*4+sizeH2*4+h3*4+3];
+      for(int h4=0;h4<sizeH4;h4++)
+	sum4[h4] = ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4]+ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+1]+ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+2]+ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+3];
+
       if(combFile == 1){
-	int allele1 = 0;
-	int allele2 = 0;
-	int allele3 = 0;
-	int allele4 = 0;	
-	for(int i=0;i<4;i++){
-	  for(int j=0;j<4;j++){
-	    for(int k=0;k<4;k++){
-	      for(int l=0;l<4;l++){
-		for(int h1=0;h1<sizeH1;h1++)
-		  allele1 += ABCD[s][h1*4+i];
-		for(int h2=0;h2<sizeH2;h2++)
-		  allele2 += ABCD[s][sizeH1*4+h2*4+j];
-		for(int h3=0;h3<sizeH3;h3++)
-		  allele3 += ABCD[s][sizeH1*4+sizeH2*4+h3*4+k];
-		for(int h4=0;h4<sizeH4;h4++)
-		  allele4 += ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+l];
-		ALLCOMB[posiz] += allele1 * allele2 * allele3 * allele4;
-		posiz++;
+	double allele1 = 0;
+	double allele2 = 0;
+	double allele3 = 0;
+	double allele4 = 0;
+	for(int h1=0;h1<sizeH1;h1++){
+	  posiz = 0;
+	  for(int h2=0;h2<sizeH2;h2++){
+	    posiz = 0;
+	    for(int h3=0;h3<sizeH3;h3++){
+	      posiz = 0;
+	      for(int h4=0;h4<sizeH4;h4++){
+		posiz = 0;
+		for(int i=0;i<4;i++){
+		  for(int j=0;j<4;j++){
+		    for(int k=0;k<4;k++){
+		      for(int l=0;l<4;l++){
+			allele1 = ABCD[s][h1*4+i];
+			allele2 = ABCD[s][sizeH1*4+h2*4+j];
+			allele3 = ABCD[s][sizeH1*4+sizeH2*4+h3*4+k];
+			allele4 = ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+l];
+			if(sum1[h1]*sum2[h2]*sum3[h3]*sum4[h4] != 0)
+			  ALLCOMB[posiz] += (allele1/sum1[h1]) * (allele2/sum2[h2]) * (allele3/sum3[h3]) * (allele4/sum4[h4]);
+			allele1 = 0;
+			allele2 = 0;
+			allele3 = 0;
+			allele4 = 0;
+			posiz++;
+		      }
+		    }
+		  }
+		}
 	      }
 	    }
 	  }
