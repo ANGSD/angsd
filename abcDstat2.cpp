@@ -304,12 +304,7 @@ void abcDstat2::run(funkyPars *pars){
   }
 
   
-  double *ALLCOMB;
-  ALLCOMB = new double[256];
-  for(int j=0;j<256;j++)
-    ALLCOMB[j] = 0;
-    
-
+  double *ALLCOMB = new double[256];
   double *NUM = new double[pars->numSites];
   double *DEN = new double[pars->numSites];
   double *ALLELES = new double[256];//----observation of four alleles *1*2*3*4* counter
@@ -318,7 +313,11 @@ void abcDstat2::run(funkyPars *pars){
   double *w2 = new double[sizeH2]; // of
   double *w3 = new double[sizeH3]; // the 4
   double *w4 = new double[sizeH4]; // populations
-
+  double *sum1 = new double[sizeH1];
+  double *sum2= new double[sizeH2];
+  double *sum3 = new double[sizeH3];
+  double *sum4 = new double[sizeH4];
+      
   double somma;
   double normc;
   int contNeg;
@@ -327,7 +326,9 @@ void abcDstat2::run(funkyPars *pars){
     ALLELES[i] = 0;
   for(int i=0;i<16;i++)
     ABCD2[i] = 0;
-
+  for(int j=0;j<256;j++)
+    ALLCOMB[j] = 0;
+    
   if(doAbbababa2==1){
     
     for(int s=0;s<pars->numSites;s++){
@@ -480,10 +481,6 @@ void abcDstat2::run(funkyPars *pars){
       /*-------------------------------------------------------------------------------- */
       /*---------------count normalized allele combinations without weighting individuals*/
       int posiz = 0;
-      double *sum1 = new double[sizeH1];
-      double *sum2= new double[sizeH2];
-      double *sum3 = new double[sizeH3];
-      double *sum4 = new double[sizeH4];
 
       for(int h1=0;h1<sizeH1;h1++)
 	sum1[h1] = ABCD[s][h1*4]+ABCD[s][h1*4+1]+ABCD[s][h1*4+2]+ABCD[s][h1*4+3];
@@ -632,6 +629,13 @@ void abcDstat2::run(funkyPars *pars){
   delete[] w3;
   delete[] w4;
   delete[] ABCD2;
+  delete[] sum1;
+  delete[] sum2;
+  delete[] sum3;
+  delete[] sum4;
+  //delete[] ALLCOMB;
+  //delete[] ALLELES;
   pars -> extras[index] = abbababaStruct;
 }
+
 
