@@ -25,6 +25,7 @@ public:
   int sizeH3;
   int sizeH4;
   int enhance;
+  int nIndFasta;
   //int nComb;
   int rmTrans;
   int Aanc;

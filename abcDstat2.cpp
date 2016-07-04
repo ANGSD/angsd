@@ -61,7 +61,7 @@ void abcDstat2::getOptions(argStruct *arguments){
       fprintf(stderr,"Error: bam or soap input needed for -doAbbababa2 \n");
       exit(0);
     }
-    if(arguments->nInd==3){
+    if(arguments->nInd==3 && ancName==NULL){
       fprintf(stderr,"Error: -doAbbababa2 needs 4 individual\n");
       exit(0);
     }
@@ -69,7 +69,7 @@ void abcDstat2::getOptions(argStruct *arguments){
       fprintf(stderr,"Error: -doAbbababa2 needs allele counts (use -doCounts 1)\n");
       exit(0);
     }
-    if(arguments->nInd != sizeH1 + sizeH2 + sizeH3 + sizeH4){
+    if((arguments->nInd != sizeH1 + sizeH2 + sizeH3 + sizeH4) && ancName == NULL){
       fprintf(stderr,"Error: the number of individuals in sizeH* does not match the number of individuals in bam files\n");
       exit(0);
     }
@@ -119,6 +119,12 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
     shouldRun[index] = 0;
     return;
   }
+
+  //update number of individuals if using fasta outgroup
+  //with the option -anc ancName
+  nIndFasta = arguments->nInd;
+  if(ancName != NULL)
+    nIndFasta++;
 
   //make output files
   const char* postfix;
@@ -292,8 +298,8 @@ void abcDstat2::run(funkyPars *pars){
   ABCD = new double*[pars->numSites]; 
 
   for(int s=0;s<pars->numSites;s++){
-    ABCD[s] = new double[4*pars->nInd];
-    for(int b = 0; b < 4*pars->nInd; b++)
+    ABCD[s] = new double[4*nIndFasta];
+    for(int b = 0; b < 4*nIndFasta; b++)
       ABCD[s][b] = 0;   
   }
 
@@ -329,7 +335,7 @@ void abcDstat2::run(funkyPars *pars){
       if(pars->keepSites[s]==0)
 	continue;
 
-      for(int i=0;i<pars->nInd;i++){ 
+      for(int i=0;i<nIndFasta;i++){ 
 	if(pars->counts[s][i*4]<0 || pars->counts[s][i*4+1]<0 || pars->counts[s][i*4+2]<0 || pars->counts[s][i*4+3]<0)
 	  contNeg += 1;                //count negative occurrences in site s
 	if(pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3] == 0)
@@ -407,7 +413,7 @@ void abcDstat2::run(funkyPars *pars){
       for(int i=0;i<sizeH3;i++){
 	if(normc!=0)
 	  w3[i] = w3[i]/normc;
-	//fprintf(stderr,"%f\n",w3[i]);
+	
       }
 
       //---------------building weighted individual 4. written in ABCD2.
@@ -423,7 +429,18 @@ void abcDstat2::run(funkyPars *pars){
 	if(normc!=0)
 	  w4[i] = w4[i]/normc;
       }
-      
+      /*
+      fprintf(stderr,"Weigths ");
+     for(int i=0;i<sizeH1;i++) 
+       fprintf(stderr,"%.2e ",w1[i]);
+     for(int i=0;i<sizeH2;i++)
+       fprintf(stderr,"%.2e ",w2[i]);
+     for(int i=0;i<sizeH3;i++)
+       fprintf(stderr,"%.2e ",w3[i]);
+     for(int i=0;i<sizeH4;i++)
+       fprintf(stderr,"%.2e ",w4[i]);
+       fprintf(stderr,"\n");*/
+
       //---------------building ABCD2 - weighted (pseudo) 4 individuals
       for(int j=0;j<16;j++)
 	ABCD2[j] = 0;
@@ -449,14 +466,19 @@ void abcDstat2::run(funkyPars *pars){
       for(int i=0;i<4;i++){
 	somma = ABCD2[i*4]+ABCD2[i*4+1]+ABCD2[i*4+2]+ABCD2[i*4+3];
 	if(somma != 0){
-	  ABCD2[i*4]=ABCD2[i*4]  / somma;
-	  ABCD2[i*4+1]=ABCD2[i*4+1]  / somma;
-	  ABCD2[i*4+2]=ABCD2[i*4+2]  / somma;
-	  ABCD2[i*4+3]=ABCD2[i*4+3]  / somma;
+	  /*fprintf(stderr,"Define Weighted ABCD alleles\n ");
+	  for(int mm=0;mm<16;mm++)
+	    fprintf(stderr,"%.2e ",ABCD2[mm]);
+	    fprintf(stderr,"\n");*/
+	  ABCD2[i*4] = ABCD2[i*4]  / somma;
+	  ABCD2[i*4+1] = ABCD2[i*4+1]  / somma;
+	  ABCD2[i*4+2] = ABCD2[i*4+2]  / somma;
+	  ABCD2[i*4+3] = ABCD2[i*4+3]  / somma;
 	}	 
       }
 
-      //---------------count normalized allele combinations without weighting individuals
+      /*-------------------------------------------------------------------------------- */
+      /*---------------count normalized allele combinations without weighting individuals*/
       int posiz = 0;
       double *sum1 = new double[sizeH1];
       double *sum2= new double[sizeH2];
@@ -471,6 +493,7 @@ void abcDstat2::run(funkyPars *pars){
 	sum3[h3] = ABCD[s][sizeH1*4+sizeH2*4+h3*4]+ABCD[s][sizeH1*4+sizeH2*4+h3*4+1]+ABCD[s][sizeH1*4+sizeH2*4+h3*4+2]+ABCD[s][sizeH1*4+sizeH2*4+h3*4+3];
       for(int h4=0;h4<sizeH4;h4++)
 	sum4[h4] = ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4]+ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+1]+ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+2]+ABCD[s][sizeH1*4+sizeH2*4+sizeH3*4+h4*4+3];
+
 
       if(combFile == 1){
 	double allele1 = 0;
@@ -509,8 +532,15 @@ void abcDstat2::run(funkyPars *pars){
 	  }
 	}
       }
+      /*-ENDENDEND-----count normalized allele combinations without weighting individuals*/
+      /*-------------------------------------------------------------------------------- */
 
-      // allele counts of the 4 weighted individuals
+
+
+
+
+      /*-------------------------------------------------------------------------------- */
+      /*------------count WEIGHTED normalized allele combinations -----------------------*/
       posiz = 0;
       for(int i=0;i<4;i++){
 	for(int j=0;j<4;j++){
@@ -522,23 +552,59 @@ void abcDstat2::run(funkyPars *pars){
 	  }
 	}
       }
+      /*-ENDENDEND--count WEIGHTED normalized allele combinations -----------------------*/
+      /*-------------------------------------------------------------------------------- */
 
+
+      /*-------------------------------------------------------------------------------- */
+      /*------------numerator and denominator for the D-statistic -----------------------*/
+      /*-------HERE IS WHERE I PRINT OUT THINGS ORIGINATING THE PROBLEM------------------*/
       DEN[s]=0;
       NUM[s]=0;
-      
-      // numerator and denominator for the error-free estimation of the D-statistic
+      double addNum;
+      double addDen;
+
       for(int i=0;i<4;i++){
 	for(int j=0;j<4;j++){
 	  if(i!=j){
-	    NUM[s] += ABCD2[i]*ABCD2[4+j]*ABCD2[8+j]*ABCD2[12+i] - ABCD2[j]*ABCD2[4+i]*ABCD2[8+j]*ABCD2[12+i];
-	    DEN[s] += ABCD2[i]*ABCD2[4+j]*ABCD2[8+j]*ABCD2[12+i] + ABCD2[j]*ABCD2[4+i]*ABCD2[8+j]*ABCD2[12+i];
-	    if(NUM[s] > 1 || NUM[s] < -1){fprintf(stderr,"error NUM>1\n%f\t\n",NUM[s]);}
-	    if(DEN[s] > 1 || DEN[s] < 0){fprintf(stderr,"error DEN>1\n%f\t\n",DEN[s]);}
+	    addNum = ABCD2[i]*ABCD2[4+j]*ABCD2[8+j]*ABCD2[12+i] - ABCD2[j]*ABCD2[4+i]*ABCD2[8+j]*ABCD2[12+i];
+	    addDen = ABCD2[i]*ABCD2[4+j]*ABCD2[8+j]*ABCD2[12+i] + ABCD2[j]*ABCD2[4+i]*ABCD2[8+j]*ABCD2[12+i];
+	    //check if there are problems in the numerator
+	    if(addNum > 1 || addNum < -1){
+	      fprintf(stderr,"error NUM>1\n%f\t\n",NUM[s]);
+	      fprintf(stderr,"NON-weighted ABCD alleles\n ");
+	      for(int mm=0;mm<16;mm++)
+		fprintf(stderr,"%.2e ",ABCD[s][mm]);
+	      fprintf(stderr,"\n");
+	      fprintf(stderr,"weighted ABCD alleles\n ");
+	      for(int mm=0;mm<16;mm++)
+		fprintf(stderr,"%.2e ",ABCD2[mm]);
+	      fprintf(stderr,"\n");
+	    }
+	    if(addDen > 1 || addDen < 0){
+	      fprintf(stderr,"error DEN>1\n%f\t\n",DEN[s]);
+	      fprintf(stderr,"NON-weighted ABCD alleles\n ");
+	      for(int mm=0;mm<16;mm++)
+		fprintf(stderr,"%.2e ",ABCD[s][mm]);
+	      fprintf(stderr,"\n");
+	      fprintf(stderr,"weighted ABCD alleles\n ");
+	      for(int mm=0;mm<16;mm++)
+		fprintf(stderr,"%.2e ",ABCD2[mm]);
+	      fprintf(stderr,"\n");
+	    }
+	    NUM[s] += addNum;
+	    DEN[s] += addDen;
+	    //if(NUM[s] > 1 || NUM[s] < -1){fprintf(stderr,"error NUM>1\n%f\t\n",NUM[s]); continue;}
+	    //if(DEN[s] > 1 || DEN[s] < 0){fprintf(stderr,"error DEN>1\n%f\t\n",DEN[s]); continue;}
 	  }
 	}
       }
-      
-      //'-enhance' option for analyzing only non-polymorphic sites of the outgroup
+      /*---ENDEND---numerator and denominator for the D-statistic -----------------------*/ 
+      /*-------------------------------------------------------------------------------- */
+
+
+      /*---'-enhance' option for analyzing only non-polymorphic sites of the outgroup----*/ 
+      /*-------------------------------------------------------------------------------- */    
       if(enhance==1){
 	int enh=0;
 	for(int j=0;j<4;j++)
@@ -549,6 +615,9 @@ void abcDstat2::run(funkyPars *pars){
 	  NUM[s]=0;
 	}	  
       }
+      /*END-'-enhance' option for analyzing only non-polymorphic sites of the outgroup---*/ 
+      /*-------------------------------------------------------------------------------- */  
+
 
     }//---end for(int s=0;s<pars->numSites;s++)
   }//---end if(doAbbababa2==1)
