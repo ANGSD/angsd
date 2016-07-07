@@ -21,7 +21,7 @@ else
 $(info HTSSRC not defined, assuming systemwide installation -lhts)
 endif
 
-PACKAGE_VERSION  = 0.912
+PACKAGE_VERSION  = 0.913
 
 ifneq "$(wildcard .git)" ""
 PACKAGE_VERSION := $(shell git describe --always --dirty)
