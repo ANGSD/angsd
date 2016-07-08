@@ -199,12 +199,12 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
 
   getOptions(arguments);
 
-  printArg(arguments->argumentFile);  
+
   if(doSaf==0){
     shouldRun[index] =0;
     return;
   }
-
+  printArg(arguments->argumentFile);  
   newDim = 2*arguments->nInd+1;
   if(fold && isHap){
     fprintf(stderr,"\t-> folding for haploid hasn't been defined and implemented\n");

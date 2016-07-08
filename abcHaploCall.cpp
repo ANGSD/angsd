@@ -69,13 +69,13 @@ abcHaploCall::abcHaploCall(const char *outfiles,argStruct *arguments,int inputty
   }
   
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
 
   if(doHaploCall==0){
     shouldRun[index] =0;
     return;
   }
-  
+  printArg(arguments->argumentFile);  
   //for kputs output
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
 

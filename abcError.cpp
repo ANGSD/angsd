@@ -340,12 +340,13 @@ abcError::abcError(const char *outfiles,argStruct *arguments,int inputtype){
   }
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);  
+
   
   if(doError==0){
     shouldRun[index] = 0;
     return;
   }
+  printArg(arguments->argumentFile);  
   void readError(double **errors,const char *fname);
   
   double errorsDefault[4][4]={{0       ,0.00031 , 0.00373 , 0.000664},

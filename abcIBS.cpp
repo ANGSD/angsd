@@ -88,13 +88,13 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
   }
   
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
 
   if(doIBS==0){
     shouldRun[index] =0;
     return;
   }
-  
+  printArg(arguments->argumentFile);  
   //for kputs output
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
 

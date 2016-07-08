@@ -87,13 +87,16 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   }
   
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
 
   if(doFasta==0){
     shouldRun[index] = 0;
     return;
-
   }
+
+  printArg(arguments->argumentFile);
+
+
   for(int i=0;i<256;i++)
     lphred[i] =log(1.0-pow(i,-1.0*i/10.0));
   //make output files

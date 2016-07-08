@@ -79,9 +79,11 @@ abcSmartCounts::abcSmartCounts(const char *outfiles,argStruct *arguments,int inp
   }
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
   if(doSmartCounts==0)
     return;
+
+  printArg(arguments->argumentFile);
   counts = new unsigned char*[4];
   counts[0]=counts[1]=counts[2]=counts[3]=NULL;
   

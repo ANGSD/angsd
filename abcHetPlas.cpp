@@ -315,11 +315,13 @@ abcHetPlas::abcHetPlas(const char *outfiles,argStruct *arguments,int inputtype){
 
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
   if(doHetPlas>0&&arguments->nInd!=1){
     fprintf(stderr,"Heteroplasmy analysis only implemented for single bamfiles\n");
     exit(0);
   }
+
+  printArg(arguments->argumentFile);
 
   if(doHetPlas){
     probs=gen_probs();

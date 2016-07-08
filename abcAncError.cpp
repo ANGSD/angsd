@@ -65,12 +65,14 @@ abcAncError::abcAncError(const char *outfiles,argStruct *arguments,int inputtype
   }
   
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
 
   if(doAncError==0){
     shouldRun[index] =0;
     return;
-}
+  }
+  printArg(arguments->argumentFile);
+
   //make output files
   const char* postfix;
   postfix=".ancError";

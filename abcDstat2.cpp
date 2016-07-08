@@ -113,13 +113,13 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   
   //get all options
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
   //ignore
   if(doAbbababa2==0){
     shouldRun[index] = 0;
     return;
   }
-
+  printArg(arguments->argumentFile);
   //update number of individuals if using fasta outgroup
   //with the option -anc ancName
   nIndFasta = arguments->nInd;

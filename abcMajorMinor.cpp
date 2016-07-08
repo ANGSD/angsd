@@ -141,7 +141,7 @@ abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int input
   getOptions(arguments);
   if(doMajorMinor==0)
     shouldRun[index] =0;
-
+  if(doMajorMinor!=0)
   printArg(arguments->argumentFile);
 }
 

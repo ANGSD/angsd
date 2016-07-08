@@ -121,11 +121,12 @@ abcTsk::abcTsk(const char *outfiles,argStruct *arguments,int inputtype){
 
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
   if(doMismatch==0){
     shouldRun[index]=0;
     return;
   }
+  printArg(arguments->argumentFile);
   fprintf(stderr,"\t-> Estimating calibration matrix: %s\n",outfiles);
   //make output files
   const char* postfix;

@@ -314,12 +314,12 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
   }
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
   if(doSnpStat==0){
     shouldRun[index] =0;
     return;
   }
-  
+  printArg(arguments->argumentFile);  
 
   if(doSnpStat){
     //    fprintf(stderr,"running doSnpStat=%d\n",doSnpStat);

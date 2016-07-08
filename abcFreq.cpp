@@ -285,11 +285,12 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
 
   
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
   if(doMaf==0 && doPost==0){
     shouldRun[index]=0;
     return;
   }
+  printArg(arguments->argumentFile);
   if(doMaf>0){
     //make output files
     const char* postfix;

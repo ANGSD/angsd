@@ -192,12 +192,13 @@ abcWritePlink::abcWritePlink(const char *outfiles,argStruct *arguments,int input
 
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
 
   if(doPlink==0){
     shouldRun[index] =0;
     return;
 }
+  printArg(arguments->argumentFile);
   if(doPlink == 1){
     const char* postfix1=".fam";
     fp1 = aio::openFile(outfiles,postfix1);

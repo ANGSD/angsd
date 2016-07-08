@@ -111,12 +111,12 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
 
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
   if(doGeno==0){
     shouldRun[index] =0;
     return;
   }
-
+  printArg(arguments->argumentFile);
 
   //make output files
   const char* postfix=GENO;

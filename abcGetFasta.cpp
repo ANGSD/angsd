@@ -171,7 +171,10 @@ char *abcGetFasta::magic(int refId,int *posi,int numSites,perFasta *f){
    }
 
    getOptions(arguments);
-   printArg(arguments->argumentFile);
+
+
+   if(ref!=NULL || anc!=NULL)
+     printArg(arguments->argumentFile);
 
 
    if(ancName!=NULL)

@@ -136,10 +136,11 @@ abcTemplate::abcTemplate(const char *outfiles,argStruct *arguments,int inputtype
   //now parse the arguments
   getOptions(arguments);
   //now print the arguments
-  printArg(arguments->argumentFile);
+
   if(doTemplate==0)
     return ;
 
+  printArg(arguments->argumentFile);
   //initalize outputfile
   outfile = aio::openFile(outfiles,".results");
   // fprintf(outfile,"Chromo\tPosition\t+A\t+C\t+G\t+T\t-A\t-C\t-G\t-T\n");

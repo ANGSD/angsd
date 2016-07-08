@@ -185,7 +185,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   getOptions(arguments);
   printArg(arguments->argumentFile);
 
-  //  if(GL==0)
+  //  if(GL==0) //why?
   //  return;
   if(GL==1)
     bam_likes_init();

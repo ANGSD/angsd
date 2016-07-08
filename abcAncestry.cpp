@@ -31,10 +31,10 @@ abcAncestry::abcAncestry(const char *outfiles,argStruct *arguments,int inputtype
   
   getOptions(arguments);
   
-  printArg(arguments->argumentFile);
+
   if(doAncestry==0)
     return ;
-
+  printArg(arguments->argumentFile);
   
   outfile = aio::openFile(outfiles,".ancestry");
 }

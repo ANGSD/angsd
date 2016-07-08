@@ -68,11 +68,12 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   }
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
   if(doHWE==0){
     shouldRun[index] = 0;
     return;
   }
+  printArg(arguments->argumentFile);
   //make output files
   const char* postfix;
   postfix=".hwe.gz";

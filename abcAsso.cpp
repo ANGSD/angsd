@@ -129,12 +129,14 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   
 
   getOptions(arguments);
-  printArg(arguments->argumentFile);
+
 
   if(doAsso==0){
     shouldRun[index] =0;
     return;
   }
+
+  printArg(arguments->argumentFile);
 
   //read phenotype
   if(isBinary)
