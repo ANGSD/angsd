@@ -105,7 +105,7 @@ void printProgInfo(FILE *fp){
   fprintf(fp,"\t-bam\t\tOptions relating to bam reading\n\t-doMajorMinor\tInfer the major/minor using different approaches\n");  
   fprintf(fp,"\t-ref/-anc\tRead reference or ancestral genome\n");
   fprintf(fp,"\t-doSNPstat\tCalculate various SNPstat\n");
-  fprintf(fp,"'t-cigstat\n");
+  fprintf(fp,"\t-cigstat\tPrintout CIGAR stat across readlength\n");
   fprintf(fp,"\tmany others\n\n");
   
   fprintf(fp,"For information of specific options type: \n\t./angsd METHODNAME eg \n\t\t./angsd -GL\n\t\t./angsd -doMaf\n\t\t./angsd -doAsso etc\n");

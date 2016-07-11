@@ -27,7 +27,7 @@ char *regfiles = NULL;
 char *fai_fname = NULL;
 unsigned int includeflags = 2;
 unsigned int discardflags = 4;
-
+int cigstat =0;
 
 int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,const aMap *revMap) {
   aMap::const_iterator it;
@@ -177,6 +177,7 @@ void setArgsBam(argStruct *arguments){
   only_proper_pairs =angsd::getArg("-only_proper_pairs",only_proper_pairs,arguments);
    fai_fname =angsd::getArg("-f",fai_fname,arguments);
   minMapQ = angsd::getArg("-minMapQ",minMapQ,arguments);
+  cigstat = angsd::getArg("-cigstat",cigstat,arguments);
   minQ = angsd::getArg("-minQ",minQ,arguments);
   downSample = angsd::getArg("-downSample",downSample,arguments);
   trim = angsd::getArg("-trim",trim,arguments);
