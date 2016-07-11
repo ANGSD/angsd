@@ -105,8 +105,9 @@ void printProgInfo(FILE *fp){
   fprintf(fp,"\t-bam\t\tOptions relating to bam reading\n\t-doMajorMinor\tInfer the major/minor using different approaches\n");  
   fprintf(fp,"\t-ref/-anc\tRead reference or ancestral genome\n");
   fprintf(fp,"\t-doSNPstat\tCalculate various SNPstat\n");
+  fprintf(fp,"'t-cigstat\n");
   fprintf(fp,"\tmany others\n\n");
- 
+  
   fprintf(fp,"For information of specific options type: \n\t./angsd METHODNAME eg \n\t\t./angsd -GL\n\t\t./angsd -doMaf\n\t\t./angsd -doAsso etc\n");
   fprintf(fp,"\t\t./angsd sites for information about indexing -sites files\n");
   fprintf(fp,"Examples:\n\tEstimate MAF for bam files in 'list'\n\t\t\'./angsd -bam list -GL 2 -doMaf 2 -out RES -doMajorMinor 1\'\n");
