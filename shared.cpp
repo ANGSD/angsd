@@ -32,6 +32,8 @@
 #include "printRes.h"
 #include "mUpPile.h"
 #include "pooled_alloc.h"
+
+#include "cigstat.h"
 extern tpool_alloc_t *tnodes;
 
 pthread_attr_t attr;
@@ -119,7 +121,10 @@ void destroy_shared(){
   void destroy_tnode_pool();
   destroy_tnode_pool();
 #endif
-
+  extern int cigstat;
+  if(cigstat)
+    cigstat_close();
+    
 }
 void tnode_destroy(tNode*);
 void cleanUptNodeArray(tNode **row,int nSamples){

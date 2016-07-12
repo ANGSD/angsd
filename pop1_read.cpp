@@ -16,6 +16,7 @@
 #include "pop1_read.h"
 #include "bam_md.h"
 #include "abcGetFasta.h"
+#include "cigstat.h"
 
 //three externs below are from
 extern int uniqueOnly;
@@ -81,7 +82,7 @@ int restuff(bam1_t *b){
   return 1;
 
 }
-
+extern int cigstat;
 int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
   int r;
  bam_iter_reread:
@@ -103,6 +104,8 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     
     if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
       //fprintf(stderr,"r:%d\n",r);
+      if(cigstat)
+	assert(cigstat_calc(b)==0);
       return r;
     }
     
@@ -142,6 +145,8 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
       goto bam_iter_reread;
   }
   // fprintf(stderr,"r:%d\n",r);
+  if(cigstat)
+    assert(cigstat_calc(b)==0);
   return r; 
 }
 

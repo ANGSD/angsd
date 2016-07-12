@@ -11,13 +11,13 @@
 
 #include "version.h"
 #include <cassert>
-#include<iostream>//for printing time
-#include<cstring> //for cstring functions
-#include<cstdlib> //for exit()
-#include<cstdio> //for fprintf
+#include <iostream>//for printing time
+#include <cstring> //for cstring functions
+#include <cstdlib> //for exit()
+#include <cstdio> //for fprintf
 #include <signal.h>//for catching ctrl+c, allow threads to finish
 #include <htslib/hts.h>
-
+#include "cigstat.h"
 #include "shared.h"
 #include "multiReader.h"
 
@@ -225,10 +225,15 @@ int main(int argc, char** argv){
    init(args);
    //   fprintf(stderr,"adsfadsf\n");exit(0);
    parseArgStruct(args);
-
+   
    //Below is main loop which will run until nomore data
    assert(args->hd);
    assert(args->revMap);
+
+   extern int cigstat;
+   if(cigstat)
+     cigstat_init(args->outfiles);
+   
    int lastRefId=-1;
    while(SIG_COND) {
      funkyPars *tmp = mr->fetch(); //YES MISTER FETCH
