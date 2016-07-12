@@ -29,7 +29,7 @@ private:
   size_t *qsDist;
   int nInd;
   int minInd;
-
+  int minQ;
   int setMaxDepth;
   int setMinDepth;
   int setMaxDepthInd;

@@ -26,7 +26,8 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"\t-doDepth\t%d\t(dump distribution of seqdepth)\t%s,%s\n",doDepth,postfix4,postfix5);
   fprintf(argFile,"\t  -maxDepth\t%d\t(bin together high depths)\n",maxDepth);
   
-  fprintf(argFile,"\t-doQsDist\t%d\t(dump distribution of qscores)\t%s\n",doQsDist,postfix3);  
+  fprintf(argFile,"\t-doQsDist\t%d\t(dump distribution of qscores)\t%s\n",doQsDist,postfix3);
+  fprintf(argFile,"\t-minQ\t%d\t(minimumQ)\n",minQ);
   fprintf(argFile,"\t-dumpCounts\t%d\n",dumpCounts);
   fprintf(argFile,"\t  1: total seqdepth for site\t%s\n",postfix1);
   fprintf(argFile,"\t  2: seqdepth persample\t\t%s,%s\n",postfix1,postfix2);
@@ -77,6 +78,7 @@ void abcCounts::getOptions(argStruct *arguments){
 
   //from command line
   minQfile=angsd::getArg("-minQfile",minQfile,arguments);
+  minQ=angsd::getArg("-minQ",minQ,arguments);
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   dumpCounts=angsd::getArg("-dumpCounts",dumpCounts,arguments);
   doQsDist=angsd::getArg("-doQsDist",doQsDist,arguments);
@@ -136,10 +138,13 @@ void abcCounts::getOptions(argStruct *arguments){
    fprintf(stderr,"\t-> Must fix -minQ 0 when using -qfile \n");
    exit(0);
  }
-
+ if(doQsDist)
+   if(minQ>0)
+     fprintf(stderr,"\t-> NB: you are doing qscore distribution, set -minQ to zero if you want to count qscores below: %d\n",minQ);
 }
 //constructor
 abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
+  minQ = MINQ;
   globCount = NULL;
   const char *delim = "\t\n ";
   ffileFname=qfileFname=NULL;
@@ -397,7 +402,7 @@ abcCounts::~abcCounts(){
     delete [] globCount;
 }
 
-void countQs(const chunkyT *chk,size_t *ret,int *keepSites){
+void countQs(const chunkyT *chk,size_t *ret,int *keepSites,int minQ){
   // fprintf(stderr,"chk->nSites:%d\n",chk->nSites);
   for(int s=0;s<chk->nSites;s++){
     if(keepSites[s]==0)
@@ -407,7 +412,8 @@ void countQs(const chunkyT *chk,size_t *ret,int *keepSites){
       //loop over samples
       for(int l=0;chk->nd[s][n]&&(l<chk->nd[s][n]->l);l++){
 	//loop over persample reads for this position/sample
-	ret[chk->nd[s][n]->qs[l]]++;
+	if(chk->nd[s][n]->qs[l]>=minQ)
+	  ret[chk->nd[s][n]->qs[l]]++;
 	
       }
     }
@@ -427,7 +433,7 @@ void abcCounts::print(funkyPars *pars){
     aio::bgzf_write(oFileCountsPos,bpos.s,bpos.l);bpos.l=0;
 
   if(doQsDist)
-    countQs(pars->chk,qsDist,pars->keepSites);
+    countQs(pars->chk,qsDist,pars->keepSites,minQ);
   
   if(doDepth!=0){
     assert(pars->counts!=NULL);
