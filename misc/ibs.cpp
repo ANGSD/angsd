@@ -112,9 +112,17 @@ int readGLF(const char* fname,double * &gls,int nInd,int maxSites){
 
   gls = new double[nSites*10*nInd];
   fp=gzopen(fname,"r");
-  size_t nSites2 = gzread(fp,gls,sizeof(double)*nSites*10*nInd);
+
+  size_t nSites2=0;
+  size_t offset=0;
+  while( temp = gzread(fp,gls+offset,sizeof(double)*sizeMax) ){
+    nSites2 += temp/sizeof(double)/10/nInd; 
+    offset+=sizeMax;
+    if(nSites>=maxSites)
+      break;
+  }
+  //  size_t nSites2 = gzread(fp,gls,sizeof(double)*nSites*10*nInd);
   gzclose(fp);
-  nSites2 = nSites2/sizeof(double)/10/nInd;
   if(nSites!=nSites2){
     fprintf(stdout,"reading failed nSites%lu != nSites2 %lu\n",nSites,nSites2);   
   }
@@ -183,7 +191,7 @@ void runEM(double *gl,argu *pars){
       p[w] = pold[w];
     }
     if(diff<tol){
-      fprintf(stdout,"tol reached %d\t%f\n",it,diff);
+      fprintf(stdout,"\ttol reached %d\t%f\tmodel %d\n",it,diff,model);
       break;
     }
 
@@ -275,7 +283,7 @@ int main(int argc, char **argv){
   int p2=-1;
   int maxSites=100000;
   int all=0;
-  int model=0;
+  model=0;
   // reading arguments
   argv++;
   while(*argv){
@@ -295,6 +303,10 @@ int main(int argc, char **argv){
     ++argv;
   }
 
+  if(maxSites<10000){
+    fprintf(stderr,"maxSites cannot be smaller than 10000\n");
+    exit(0);
+     }
 
 
   //
@@ -327,6 +339,10 @@ int main(int argc, char **argv){
   argu * myPars= new argu;
   myPars->totalSites = totalSites;
   myPars->keepSites =  new int[totalSites];
+
+
+  fprintf(stdout,"\tusing model %d \n",model);
+
 
   if(p2==-1 && all!=1){
     //header of ibs files
