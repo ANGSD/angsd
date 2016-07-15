@@ -18,6 +18,7 @@ int model;
 typedef struct
 {
   int nInd;
+  int theInd;
   int nSites;
   int totalSites;
   int *keepSites;
@@ -28,8 +29,9 @@ typedef struct
 
 typedef struct
 {
-  int nInd1;
-  int nInd2;
+  int theInd1;
+  int theInd2;
+  int nInd;
   int nSites;
   int totalSites;
   int *keepSites;
@@ -118,7 +120,7 @@ int readGLF(const char* fname,double * &gls,int nInd,int maxSites){
   while( temp = gzread(fp,gls+offset,sizeof(double)*sizeMax) ){
     nSites2 += temp/sizeof(double)/10/nInd; 
     offset+=sizeMax;
-    if(nSites>=maxSites)
+    if(nSites2>=maxSites)
       break;
   }
   //  size_t nSites2 = gzread(fp,gls,sizeof(double)*nSites*10*nInd);
@@ -141,7 +143,7 @@ void runEM(double *gl,argu *pars){
   double W[10];
   double Wtmp[10];
   double p[10];
-  double pold[10];
+  double pnew[10];
   for(int w=0;w<10;w++)
     p[w] = 0.1;
 
@@ -159,7 +161,8 @@ void runEM(double *gl,argu *pars){
 	continue;
       double sum=0;
       for(int w=0;w<10;w++){
-	Wtmp[w]=exp(gl[i*10+w+pars->nInd*10*pars->totalSites])*p[w];
+	//	Wtmp[w]=exp(gl[i*10+w+pars->nInd*10*pars->totalSites])*p[w];
+	Wtmp[w]=exp(gl[pars->theInd*10+w+pars->nInd*10*i])*p[w];
 	sum += Wtmp[w];
       }
       for(int w=0;w<10;w++)
@@ -168,7 +171,7 @@ void runEM(double *gl,argu *pars){
 
     if(model==0){ //full model. all 10 genotypes
       for(int w=0;w<10;w++)
-	pold[w] = W[w]/pars->nSites;
+	pnew[w] = W[w]/pars->nSites;
 
     }
     else if(model==1){// 2 genotype model (HO/HE)
@@ -177,18 +180,20 @@ void runEM(double *gl,argu *pars){
       for(int a1=0;a1<4;a1++)
 	for(int a2=a1;a2<4;a2++){
 	  if(a1==a2)
-	    pold[w] = HO/pars->nSites/4;
+	    pnew[w] = HO/pars->nSites/4;
 	  else
-	    pold[w] =(1-HO/pars->nSites)/6;
+	    pnew[w] =(1-HO/pars->nSites)/6;
 	  w++;
 	}
     }
+
+
     double diff=0;
     for(int w=0;w<10;w++){
-      double d = fabs(p[w]-pold[w]);
+      double d = fabs(p[w]-pnew[w]);
       if(d>diff)
 	diff=d;
-      p[w] = pold[w];
+      p[w] = pnew[w];
     }
     if(diff<tol){
       fprintf(stdout,"\ttol reached %d\t%f\tmodel %d\n",it,diff,model);
@@ -203,7 +208,7 @@ void runEM(double *gl,argu *pars){
   for(int i=0;i<pars->totalSites;i++){
     double sum=0;
     for(int w=0;w<10;w++){
-      sum += exp(gl[i*10+w])*p[w];
+      sum += exp(gl[pars->theInd*10+w+pars->nInd*10*i])*p[w];
     }
      like+=log(sum);
 
@@ -212,6 +217,161 @@ void runEM(double *gl,argu *pars){
   pars->lres = like;
 
 }
+
+
+void model1_2D(double *W,double  pnew[],int Nsites){
+      double HOHO=0;
+      double HOHE=0;
+      double HEHO=0;
+      double HEHE=0;
+      double HOaHO=0;
+      int w=0;
+      for(int a11=0;a11<4;a11++)
+	for(int a12=a11;a12<4;a12++)
+	  for(int a21=0;a21<4;a21++)
+	    for(int a22=a21;a22<4;a22++){
+	      if(a11!=a12){
+		if(a21!=a22)
+		  HEHE += W[w];
+		else
+		  HEHO += W[w];
+	      }
+	      else{
+		if(a21!=a22)
+		  HOHE += W[w];
+		else{
+		  if(a11==a22)
+		    HOHO += W[w];
+		  else
+		    HOaHO +=W[w];
+		}
+	      }
+	      w++;
+	    }
+      //    fprintf(stdout,"%f\t%f\t%f\t%f\t%f\t\n",HOHO,HOHE,HEHO,HEHE,HOaHO);
+     w=0;
+      for(int a11=0;a11<4;a11++)
+	for(int a12=a11;a12<4;a12++)
+	  for(int a21=0;a21<4;a21++)
+	    for(int a22=a21;a22<4;a22++){
+	      if(a11!=a12){
+		if(a21!=a22)
+		  pnew[w] = HEHE/Nsites/36;
+		else
+		  pnew[w] = HEHO/Nsites/24;
+	      }
+	      else{
+		if(a21!=a22)
+		  pnew[w] = HOHE/Nsites/24;
+		else{
+		  if(a11==a22)
+		    pnew[w] = HOHO/Nsites/4;
+		  else
+		    pnew[w] = HOaHO/Nsites/12;
+		}
+	      }
+	      w++;
+	      //  fprintf(stdout,"w pnew %d\t%f\tmodel %d\n",w,pnew[w],model);
+	    }
+
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
+  multi-allelic model
+
+
+*/
+
+
+void model2_2D(double *W,double  pnew[],int Nsites){
+      double AAAA=0;
+      double AABA=0;
+      double AABB=0;
+      double AABC=0;
+      double ABAB=0;
+      double ABAA=0;
+      double ABCC=0;
+      double ABAC=0;
+      double ABCD=0;
+      int w=0;
+      for(int a11=0;a11<4;a11++)
+	for(int a12=a11;a12<4;a12++)
+	  for(int a21=0;a21<4;a21++)
+	    for(int a22=a21;a22<4;a22++){
+	      if(a11!=a12){ //AB__
+		if( (a21==a11 && a22==a12) ||  (a21==a12 && a22==a11)) //ABAB
+		  ABAB += W[w];
+		else if( (a21==a11 && a22==a11 ) ||  (a21==a12 && a22==a12 ) ) // ABAA
+		  ABAA += W[w];
+		else if( a21==a22 && a22!=a11 && a22!=a12 ) // ABCC
+		  ABCC += W[w];
+		else if( a21!=a22 && (a21==a12 || a21==a11 || a22==a12 || a22==a11 ) ) // ABAC  ( (a21==a11 && a22!=a12 ) ||  (a21==a12 && a22!=a11 ) ) 
+		  ABAC += W[w];
+		else  //ABCD
+		  ABCD +=W[w];
+	      }
+	      else{ //AA__
+		if(a21==a11 && a22==a12) //AAAA
+		  AAAA += W[w];
+		else if( (a21==a11 && a22!=a11 ) ||  (a22==a11 && a21!=a11 ) ) // AABA
+		  AABA += W[w];
+		else if( a21==a22 && a22!=a11 ) // AABB
+		  AABB += W[w];
+		else if( a21!=a22 && a22!=a12 ) // AABC
+		  AABC += W[w];
+		else  //ABCD
+		  exit(0);
+	      }
+	      w++;
+	    }
+ 
+      w=0;
+      for(int a11=0;a11<4;a11++)
+	for(int a12=a11;a12<4;a12++)
+	  for(int a21=0;a21<4;a21++)
+	    for(int a22=a21;a22<4;a22++){
+	      if(a11!=a12){ //AB__
+		if( (a21==a11 && a22==a12) ||  (a21==a12 && a22==a11)) //ABAB
+		  pnew[w] = ABAB/Nsites/6;
+		else if( (a21==a11 && a22==a11 ) ||  (a21==a12 && a22==a12 ) ) // ABAA
+		  pnew[w] = ABAA/Nsites/6/2;
+		else if( a21==a22 && a22!=a11 && a22!=a12 ) // ABCC
+		  pnew[w] = ABCC/Nsites/6/2;
+		else if( (a21==a11 && a22!=a12 ) ||  (a21==a12 && a22!=a11 ) ) // ABAC
+		  pnew[w] = ABAC/Nsites/6/4;
+		else  //ABCD
+		  pnew[w] = ABCD/Nsites/6/1;
+	      }
+	      else{ //AA__
+		if(a21==a11 && a22==a12) //AAAA
+		  pnew[w] = AAAA /Nsites/4;
+		else if( (a21==a11 && a22!=a11 ) ||  (a22==a11 && a21!=a11 ) ) // AABA
+		  pnew[w] = AABA /Nsites/4/3;
+		else if( a21==a22 && a22!=a11 ) // AABB
+		  pnew[w] = AABB /Nsites/4/3;
+		else if( a21!=a22 && a22!=a12 ) // AABC
+		  pnew[w] = AABC/Nsites/4/3;
+		else  //ABCD
+		  exit(0);
+	      }
+	      w++;
+	    }
+}
+
+
+
+
+
 
 
 
@@ -225,8 +385,12 @@ void runEM2D(double *gl,argu2 *pars){
   double W[100];
   double Wtmp[100];
   double p[100];
-  for(int w=0;w<100;w++)
+  double pnew[100];
+  for(int w=0;w<100;w++){
     p[w] = 0.01;
+    pnew[w] = 0.01;
+  }
+  double tol = 0.0000001;
 
 
   for(it=0;it<maxIter;it++){
@@ -238,34 +402,64 @@ void runEM2D(double *gl,argu2 *pars){
       if(pars->keepSites[i]==0)
 	continue;
       double sum=0;
-      for(int w=0;w<100;w++){
-	Wtmp[w]=exp(gl[i*10+w+pars->nInd1*10*pars->totalSites]+gl[i*10+w+pars->nInd2*10*pars->totalSites])*p[w];
+      for(int w1=0;w1<10;w1++){
+	for(int w2=0;w2<10;w2++){
+	  int w=w1 + 10 * w2;
+	//	Wtmp[w]=exp(gl[i*10+w+pars->nInd1*10*pars->totalSites]+gl[i*10+w+pars->nInd2*10*pars->totalSites])*p[w];
+	Wtmp[w]=exp(gl[pars->theInd1*10+w1+pars->nInd*10*i]+gl[pars->theInd2*10+w2+pars->nInd*10*i])*p[w];
 	sum += Wtmp[w];
+	//	fprintf(stdout,"%f\t%f\t%d\t%d\t%d\t\n",gl[pars->theInd1*10+w1+pars->nInd*10*i],gl[pars->theInd2*10+w2+pars->nInd*10*i],w,w1,w2);
+	}
       }
       for(int w=0;w<100;w++)
 	W[w] += Wtmp[w]/sum;
     }
-    for(int w=0;w<100;w++){
-      p[w] = W[w]/pars->nSites;
-      //      fprintf(stdout,"%f\t",p[w]);
+    if(model==0){ //full model. all 10 genotypes
+      for(int w=0;w<100;w++)
+	pnew[w] = W[w]/pars->nSites;
+
     }
+    else if(model==1){// 2 genotype model (HO/HE), diallelic model
+      model1_2D(W,pnew,pars->nSites);
+    }
+    else if(model==2){// 2 genotype model (HO/HE), multiAllelic model
+      model2_2D(W,pnew,pars->nSites);
+    }
+    
+    double diff=0;
+    for(int w=0;w<100;w++){
+      double d = fabs(p[w]-pnew[w]);
+      if(d>diff)
+	diff=d;
+      p[w] = pnew[w];
+    }
+    if(diff<tol){
+      fprintf(stdout,"\ttol reached %d\t%f\tmodel %d\n",it,diff,model);
+      break;
+    }
+    
+    
+    
     //        fprintf(stdout,"\n");
   }
+  
+    
+  
   for(int w=0;w<100;w++)
     pars->pi[w]=p[w];
-
+  
   double like=0;
   for(int i=0;i<pars->totalSites;i++){
     double sum=0;
     for(int w=0;w<100;w++){
-      sum += exp(gl[i*10+w+pars->nInd1*10*pars->totalSites]+gl[i*10+w+pars->nInd2*10*pars->totalSites])*p[w];
+      sum += exp(gl[pars->theInd1*10+w+pars->nInd*10*i]+gl[pars->theInd2*10+w+pars->nInd*10*i])*p[w];
     }
-     like+=log(sum);
-
-  }
+    like+=log(sum);
     
+    }
+  
   pars->lres = like;
-
+    
 }
 
 
@@ -339,29 +533,31 @@ int main(int argc, char **argv){
   argu * myPars= new argu;
   myPars->totalSites = totalSites;
   myPars->keepSites =  new int[totalSites];
-
+  myPars->nInd = nInd;
 
   fprintf(stdout,"\tusing model %d \n",model);
 
 
-  if(p2==-1 && all!=1){
+  if(p2==-1 && all!=1){ // single ind
     //header of ibs files
-    fprintf(fibs,"ind\tnSites\tLlike\tpAA\tpAC\tpAG\tpAT\tpCC\tpCG\tpCT\tpGG\tpGT\tpTT\n");
-
+    if(model==0)
+      fprintf(fibs,"ind\tnSites\tLlike\tpAA\tpAC\tpAG\tpAT\tpCC\tpCG\tpCT\tpGG\tpGT\tpTT\n");
+    else if(model==1)
+      fprintf(fibs,"ind\tnSites\tLlike\tpHO\tpHE\n");
+     
     
-
     for(int theInd=0;theInd<nInd;theInd++){
       
       if(p1!=-1 && p1!=theInd)
-	  continue;
+	continue;
       fprintf(stdout,"analysing individual %d\n",theInd);
-      myPars->nInd = theInd;
+      myPars->theInd = theInd;
       
       int nSites=0;
       for(int i=0;i<totalSites;i++){
 	myPars->keepSites[i] = 0;
 	for(int w=0;w<10;w++)
-	  if(-genoLike[i*10+w+myPars->nInd*10*totalSites]>myPars->keepSites[i]){
+	  if(-genoLike[myPars->theInd*10+w+myPars->nInd*10*i]>myPars->keepSites[i]){
 	    myPars->keepSites[i] = 1;
 	    nSites++;
 	    break;
@@ -374,8 +570,15 @@ int main(int argc, char **argv){
       
       
       fprintf(fibs,"%d\t%d\t%f",theInd,myPars->nSites,myPars->lres);
-      for(int w=0;w<10;w++){
-	fprintf(fibs,"\t%f",myPars->pi[w]);
+
+      if(model==0){
+	for(int w=0;w<10;w++){
+	  fprintf(fibs,"\t%f",myPars->pi[w]);
+	}
+      }
+      else if(model==1){
+	double HO=myPars->pi[0]+myPars->pi[4]+myPars->pi[7]+myPars->pi[9];
+	fprintf(fibs,"\t%f\t%f",HO,1-HO);
       }
       fprintf(fibs,"\n");
     }
@@ -393,16 +596,17 @@ int main(int argc, char **argv){
    argu2 * myPars2D= new argu2;
    myPars2D->totalSites = totalSites;
    myPars2D->keepSites =  new int[totalSites];
+   myPars2D->nInd = nInd;
    
-   myPars2D->nInd1 = p1;
-   myPars2D->nInd2 = p2;
+   myPars2D->theInd1 = p1;
+   myPars2D->theInd2 = p2;
    fprintf(stdout,"analysing pair %d %d\n",p1,p2);
 
    int nSites=0;
    for(int i=0;i<totalSites;i++){
      myPars2D->keepSites[i] = 0;
      for(int w=0;w<10;w++)
-       if(-genoLike[i*10+w+myPars2D->nInd1*10*totalSites]>myPars2D->keepSites[i] && -genoLike[i*10+w+myPars2D->nInd2*10*totalSites]>myPars2D->keepSites[i]){
+       if(-genoLike[myPars2D->theInd1*10+w+myPars2D->nInd*10*i]>myPars2D->keepSites[i] && -genoLike[myPars2D->theInd2*10+w+myPars2D->nInd*10*i]>myPars2D->keepSites[i]){
 	 myPars2D->keepSites[i] = 1;
 	 nSites++;
 	 break;
@@ -415,7 +619,7 @@ int main(int argc, char **argv){
    
    fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
    for(int w=0;w<100;w++){
-     fprintf(fibspair,"\t%f",myPars2D->pi[w]);
+     fprintf(fibspair,"\t%f",myPars2D->pi[w]*100);
    }
    fprintf(fibspair,"\n");
    
@@ -432,20 +636,21 @@ int main(int argc, char **argv){
    argu2 * myPars2D= new argu2;
    myPars2D->totalSites = totalSites;
    myPars2D->keepSites =  new int[totalSites];
+   myPars2D->nInd = nInd;
    
    for(int i1=0;i1<nInd-1;i1++){
      for(int i2=i1+1;i2<nInd;i2++){
 
        p1=i1;
        p2=i2;
-       myPars2D->nInd1 = p1;
-       myPars2D->nInd2 = p2;
+       myPars2D->theInd1 = p1;
+       myPars2D->theInd2 = p2;
        fprintf(stdout,"analysing pair %d %d\n",p1,p2);
        int nSites=0;
        for(int i=0;i<totalSites;i++){
 	 myPars2D->keepSites[i] = 0;
 	 for(int w=0;w<10;w++)
-	   if(-genoLike[i*10+w+myPars2D->nInd1*10*totalSites]>myPars2D->keepSites[i] && -genoLike[i*10+w+myPars2D->nInd2*10*totalSites]>myPars2D->keepSites[i]){
+	   if(-genoLike[myPars2D->theInd1*10+w+myPars2D->nInd*10*i]>myPars2D->keepSites[i] && -genoLike[myPars2D->theInd2*10+w+myPars2D->nInd*10*i]>myPars2D->keepSites[i]){
 	     myPars2D->keepSites[i] = 1;
 	     nSites++;
 	     break;
