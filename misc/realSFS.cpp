@@ -1218,6 +1218,7 @@ int main(int argc,char **argv){
 
     fprintf(stderr,"\n\t-> See realSFS print for possible print options\n");
     fprintf(stderr,"\t-> Use realSFS print_header for printing the header\n");
+    fprintf(stderr,"\t-> Use realSFS cat for concatenating saf files\n");
 
     fprintf(stderr,"\n\t->------------------\n\t-> NB: Output is now counts of sites instead of log probs!!\n");
     fprintf(stderr,"\t-> NB: You can print data with ./realSFS print afile.saf.idx !!\n");
