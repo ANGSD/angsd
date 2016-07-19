@@ -81,7 +81,7 @@ static tpool_t *new_pool(tpool_alloc_t *p) {
     p->npools++;
 
     if(!(p->npools % 10)){
-      fprintf(stderr,"\n\t-> We have now allocated approximately %lu Megabytes of raw nodes to the nodepool\n",p->npools);
+      fprintf(stderr,"\n\t-> Allocated ~ %lu Megabytes to the nodepool\n",p->npools);
     }
 
     return pool;
