@@ -47,8 +47,8 @@ public:
   void scoreAsso(funkyPars  *pars,assoStruct *assoc);
   void frequencyAsso(funkyPars  *pars,assoStruct *assoc);
   double doAssociation(funkyPars *pars,double *post,double *y,int keepInd,int *keepList,double freq,int s,assoStruct *assoc);
-  void getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv);
-  void getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv);
+  int getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv);
+  int getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv);
   double normScoreEnv(double *post,int numInds, double *y, double *ytilde,double *cov,int nEnv,double freq,assoStruct *assoc,int s);
   double binomScoreEnv(double *post,int numInds, double *y, double *ytilde,double *cov,int nEnv,double freq,assoStruct *assoc,int s);
   void printDoAsso(funkyPars *pars);

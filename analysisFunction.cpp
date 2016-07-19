@@ -686,7 +686,7 @@ int angsd::getMaxCount(suint *counts,int i, int depth){
   return whichMax;
 }
 
-void ludcmp(double **a, int *indx, double &d,int n)
+int ludcmp(double **a, int *indx, double &d,int n)
 {
   int imax = 0;
   double big, dum, sum, temp;
@@ -700,9 +700,12 @@ void ludcmp(double **a, int *indx, double &d,int n)
       if ((temp=fabs(a[i][j])) > big) 
 	big=temp;
     }
-    
-    assert(big!=0) ;
-      //      fprintf(stderr,"singular matrix in ludcmp");
+    if(big==0){
+      fprintf(stderr,"singular matrix in ludcmp");
+      return(1);
+	//    assert(big!=0) ;
+
+    }
     vv[i]=1/big;
   }
   
@@ -742,6 +745,7 @@ void ludcmp(double **a, int *indx, double &d,int n)
 	a[i][j] *= dum;
     }
   }
+  return 0;
 }
 
 
@@ -787,7 +791,7 @@ char *angsd::strpop(char **str,char split){
 
 
 
-void angsd::svd_inverse(double mat[],int xLen, int yLen){
+int angsd::svd_inverse(double mat[],int xLen, int yLen){
   if(xLen !=yLen){
 
     fprintf(stderr,"non square matrix [%s]\t[%s]\n",__FILE__,__FUNCTION__);
@@ -809,8 +813,10 @@ void angsd::svd_inverse(double mat[],int xLen, int yLen){
       tm[i][j]=mat[j*xLen+i];
 
 
-  ludcmp(tm,indx,d,xLen);
-
+  int singular=ludcmp(tm,indx,d,xLen);
+  if(singular)
+    return 1 ;
+  
   for (int j=0; j<xLen; j++)
     {
       for (int i=0; i<xLen; i++)
@@ -831,6 +837,7 @@ void angsd::svd_inverse(double mat[],int xLen, int yLen){
   for (int i=0; i < xLen; i++)
     delete[] tm[i];
   delete[] tm;
+  return 0;
 }
 
 

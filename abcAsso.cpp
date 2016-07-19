@@ -92,7 +92,7 @@ void abcAsso::getOptions(argStruct *arguments){
     exit(0);
   }
   if(doAsso && arguments->inputtype!=INPUT_BEAGLE&&(doAsso==2)&&doPost==0){
-    fprintf(stderr,"Error: For doAsso=2 you must estimate the posterior probabilites for the genotypes (doPost!=0) \n");
+    fprintf(stderr,"Error: For doAsso=2 you must estimate the posterior probabilites for the genotypes (-doPost 1) \n");
     exit(0);
   }  
 
@@ -512,7 +512,7 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
 }
 
 
-void abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
+int abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
 
   /*
     linear regression. Fits a linear model. 
@@ -549,8 +549,11 @@ void abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
       for(int i=0;i<nInd;i++)
 	XtX[x*nEnv+y]+=covMatrix[y*nInd+i]*covMatrix[x*nInd+i];
 
-  double workspace[2*nEnv];
-  angsd::matinv(XtX, nEnv, nEnv, workspace);
+  //  double workspace[2*nEnv];
+  //  angsd::matinv(XtX, nEnv, nEnv, workspace);
+  int singular=angsd::svd_inverse(XtX,nEnv,nEnv);
+  if(singular)
+    return 1 ;
 
 
   //get (inv(t(X)%*%X))%*%(t(X)%*%y) //this is the coef!
@@ -566,9 +569,11 @@ void abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
      for(int x=0;x<nEnv;x++)
        res[j]+=covMatrix[x*nInd+j]*invXtX_Xt_y[x];
  
+
+   return 0;
 }
 
-void abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
+int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
 
   double tol = 1e-6;
   /*
@@ -645,9 +650,12 @@ void abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEn
 	for(int i=0;i<nInd;i++)
 	  XtX[x*nEnv+y]+=covMatrix[y*nInd+i] * eta[i] * covMatrix[x*nInd+i];
 
-    double workspace[2*nEnv];
+    //    double workspace[2*nEnv];
     //    angsd::matinv(XtX, nEnv, nEnv, workspace);
-    angsd::svd_inverse(XtX,nEnv,nEnv);
+    int singular=angsd::svd_inverse(XtX,nEnv,nEnv);
+    if(singular)
+      return 1 ;
+  
     //S = svd_inverse(S,flag);     
     //get (inv(t(X)%*%X))%*%(t(X)%*%y)
     for(int x=0;x<nEnv;x++)//col X
@@ -690,7 +698,7 @@ void abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEn
   //   fprintf(stdout,"%f\t",coef[x]);
   //fprintf(stdout,"\n");
 
-  
+  return 0;
 }
 
 
@@ -788,10 +796,14 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
       yfit[i]=mean;
   }
   else{
-    if(isBinary)
-      getFitBin(yfit,y,covMatrix,keepInd,nEnv);
+    if(isBinary){
+      if(getFitBin(yfit,y,covMatrix,keepInd,nEnv))
+	return -999;
+    }
     else
-      getFit(yfit,y,covMatrix,keepInd,nEnv);
+      if(getFit(yfit,y,covMatrix,keepInd,nEnv))
+	return -999;
+
 
   }
   

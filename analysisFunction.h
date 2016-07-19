@@ -60,7 +60,7 @@ namespace angsd {
   void deleteMatrix(Matrix<double> mat);
   void printMatrix(Matrix<double> mat,FILE *file);
   void logrescale(double *ary,int len);
-  void svd_inverse(double mat[],int xLen, int yLen);
+  int svd_inverse(double mat[],int xLen, int yLen);
   std::vector<char*> getFilenames(const char * name,int nInd);
   char *strpop(char **str,char split);
   int getRandomCount(suint *d, int i,  int depth = -1);
