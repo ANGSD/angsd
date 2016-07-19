@@ -622,7 +622,8 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
     for(int x=0;x<nEnv;x++){
       Xt_y[x]=0;
       invXtX_Xt_y[x]=0;
-      XtX[x]=0;
+      for(int y=0;y<nEnv;y++)
+	XtX[x*nEnv + y]=0;
     }
     for(int i=0;i<nInd;i++){
       eta[i]=0;
@@ -650,8 +651,8 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
 	for(int i=0;i<nInd;i++)
 	  XtX[x*nEnv+y]+=covMatrix[y*nInd+i] * eta[i] * covMatrix[x*nInd+i];
 
-    //    double workspace[2*nEnv];
-    //    angsd::matinv(XtX, nEnv, nEnv, workspace);
+    // double workspace[2*nEnv];
+    //angsd::matinv(XtX, nEnv, nEnv, workspace);
     int singular=angsd::svd_inverse(XtX,nEnv,nEnv);
     if(singular)
       return 1 ;
@@ -1125,6 +1126,7 @@ void abcAsso::printDoAsso(funkyPars *pars){
      } 
       if(doAsso==2){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+
 
       }else{
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s]);
