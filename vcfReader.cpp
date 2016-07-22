@@ -35,6 +35,7 @@ vcfReader::vcfReader(int &nInd_a,gzFile gz_a,const aMap *revMap_a){
     
 
   }
+  fprintf(stderr,"\t-> BETA when using vcf-gl make sure that you use -doMajorMinor 1")
   original=saveptr=buf;
 }
 
