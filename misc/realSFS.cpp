@@ -748,8 +748,9 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
   oldLik = like_master<T>(nThreads);
   
   fprintf(stderr,"startlik=%f\n",oldLik);fflush(stderr);
+
   double tmp[dim];
-  
+
   for(int it=0;SIG_COND&&it<maxIter;it++) {
     emStep_master<T>(tmp,nThreads);
     double sr2 = 0;
@@ -782,11 +783,14 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   oldLik = like_master<T>(nThreads);
   
   fprintf(stderr,"startlik=%f\n",oldLik);fflush(stderr);
-  double p1[dim];
-  double p2[dim];
-  double q1[dim];
-  double q2[dim];
-  double pnew[dim];
+
+  double *p1 = new double[dim];
+  double *p2 = new double[dim];
+  double *q1 = new double[dim];
+  double *q2 = new double[dim];
+  double *pnew = new double[dim];
+  double *oldp = new double[dim];
+  double *tmp = new double[dim];
   int stepMax = 1;
   int mstep = 4;
   int stepMin = 1;
@@ -797,13 +801,12 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     emStep_master<T>(p1,nThreads);
     iter++;
     double sr2 =0;
-    for(int i=0;i<dim;i++){
+    for(size_t i=0;i<dim;i++){
       q1[i] = p1[i]-p[i];
       sr2 += q1[i]*q1[i];
     }
-    double oldp[dim];
-    memcpy(oldp,p,sizeof(double)*dim);
 
+    memcpy(oldp,p,sizeof(double)*dim);
     memcpy(p,p1,sizeof(double)*dim);  
     if(sqrt(sr2)<tole){
       fprintf(stderr,"\t-> Breaking EM(sr2) at iter:%d, sqrt(sr2):%e\n",iter,sqrt(sr2));
@@ -814,7 +817,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
 
 
     double sq2 =0;
-    for(int i=0;i<dim;i++){
+    for(size_t i=0;i<dim;i++){
       q2[i] = p2[i]-p1[i];
       sq2 += q2[i]*q2[i];
     }
@@ -824,19 +827,17 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       break;
     }
     double sv2=0;
-    for(int i=0;i<dim;i++)
+    for(size_t i=0;i<dim;i++)
       sv2 += (q2[i]-q1[i])*(q2[i]-q1[i]);
-
 
     double alpha = sqrt(sr2/sv2);
     alpha =std::max(stepMin*1.0,std::min(1.0*stepMax,alpha));
     
     //the magical step
-    for(int j=0;j<dim;j++)
+    for(size_t j=0;j<dim;j++)
       pnew[j] = oldp[j] + 2.0 * alpha * q1[j] + alpha*alpha * (q2[j] - q1[j]);
-
 #if 1 //fix for going out of bound
-    for(int j=0;j<dim;j++){
+    for(size_t j=0;j<dim;j++){
       if(pnew[j]<ttol)
 	pnew[j]=ttol;
       if(pnew[j]>1-ttol)
@@ -846,7 +847,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
 #endif
     if(fabs(alpha-1) >0.01){
       //this is clearly to stabilize
-      double tmp[dim];
+      //      double tmp[dim];
       memcpy(p,pnew,sizeof(double)*dim);
       emStep_master<T>(tmp,nThreads);
       memcpy(pnew,tmp,sizeof(double)*dim);
@@ -854,7 +855,6 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     }
     memcpy(p,pnew,sizeof(double)*dim);
     
-
     //like_master is using sfs[] to calculate like
     lik = like_master<T>(nThreads);
     fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e\n",iter,lik,fabs(lik-oldLik),alpha,sr2);
@@ -864,7 +864,6 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       memcpy(p,p2,sizeof(double)*dim);
       break;
     }
-
     
     if(0&&lik<oldLik)//this should at some point be investigated further //
       fprintf(stderr,"\t-> New like is worse?\n");
@@ -879,9 +878,16 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       stepMax = mstep * stepMax;
     if(stepMin<0 &&alpha==stepMin)
       stepMin = mstep*stepMin;
-    
+
   }
   destroy<T>(emp,nThreads);
+  delete [] p1;
+  delete [] p2;
+  delete [] q1;
+  delete [] q2;
+  delete [] pnew;
+  delete [] oldp;
+  delete [] tmp;
   return oldLik;
 }
 
@@ -1104,6 +1110,7 @@ int main_opt(args *arg){
       continue;
     
     fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
+
   neverusegoto:
     if(arg->bootstrap)
       fprintf(stderr,"Will do bootstrap replicate %d/%d\n",b+1,arg->bootstrap);
@@ -1134,10 +1141,12 @@ int main_opt(args *arg){
 	std::sort(bootstrap,bootstrap+gls[0]->x);
       }
       double lik;
+
       if(arg->emAccl==0)
 	lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
       else
 	lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl);
+
       fprintf(stderr,"likelihood: %f\n",lik);
       fprintf(stderr,"------------\n");
 #if 1
@@ -1190,7 +1199,6 @@ int fst(int argc,char**argv){
 
 
 int main(int argc,char **argv){
-  
   //start of signal handling
   struct sigaction sa;
   sigemptyset (&sa.sa_mask);
