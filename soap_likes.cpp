@@ -367,7 +367,7 @@ void soap_likes::run(chunkyT *chk,double **lk,char *refs,int trim) {
       calc_gl(chk,p_matrix[i],i,lk,trim);
   }else{
     if(refs==NULL){
-      fprintf(stderr,"Must supply reference for SOAPsnp calibration\n");
+      fprintf(stderr,"\t-> Must supply reference for SOAPsnp calibration\n");
       exit(0);
     }
     for(int i=0;i<chk->nSamples;i++){

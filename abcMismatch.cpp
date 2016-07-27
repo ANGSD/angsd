@@ -96,7 +96,7 @@ void abcTsk::getOptions(argStruct *arguments){
     return;
   
   if(doMismatch&&(refName==NULL)){
-    fprintf(stderr,"Must supply -ref\n");
+    fprintf(stderr,"\t-> Must supply -ref\n");
     printArg(stderr);
     exit(0);
   }

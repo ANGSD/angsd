@@ -41,7 +41,7 @@ void abcAncError::getOptions(argStruct *arguments){
       exit(0);
     }
     if(refName==NULL||ancName==NULL){
-      fprintf(stderr,"Must supply -ref and -anc for analysis\n");
+      fprintf(stderr,"\t-> Must supply -ref and -anc for analysis\n");
       exit(0);
     }
   }

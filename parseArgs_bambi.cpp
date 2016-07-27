@@ -198,11 +198,11 @@ void setArgsBam(argStruct *arguments){
   char *tmp = NULL;
   tmp = angsd::getArg("-ref",tmp,arguments);
   if(tmp==NULL && adjustMapQ!=0){
-    fprintf(stderr,"Must also supply -ref for adjusting the mapping quality\n");
+    fprintf(stderr,"\t-> Must also supply -ref for adjusting the mapping quality\n");
     exit(0);
   }
   if(tmp==NULL&&baq!=0){
-    fprintf(stderr,"Must also supply -ref for adjusting base qualities (baq)\n");
+    fprintf(stderr,"\t-> Must also supply -ref for adjusting base qualities (baq)\n");
     exit(0);
   }
   free(tmp);

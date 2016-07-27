@@ -94,7 +94,7 @@ void abcTemplate::getOptions(argStruct *arguments){
   if (doTemplate == 2) refName = angsd::getArg("-ref", refName, arguments);
 
   if ((doTemplate == 2) && (refName==NULL)) {
-    fprintf(stderr, "Must supply -ref \n");
+    fprintf(stderr, "\t-> Must supply -ref \n");
     printArg(stderr);
     exit(0);
   }
