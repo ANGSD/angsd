@@ -270,7 +270,7 @@ void abcHWE::HWE_EM(double *x,double *loglike,int nInd){
  
  
   if(1){
-    if(isnan(newFreq1*0.5 + newFreq2)){
+    if(std::isnan(newFreq1*0.5 + newFreq2)){
       fprintf(stderr,"problems in abcHWE: \tx[0] %f\tx[1] %f\told 1 %f 2 %f 3 %f\tnew 1 %f 2 %f 3 %f \n",x[0],x[1],freq0,freq1,freq2,newFreq0,newFreq1,newFreq2);
       //      exit(0);
     }
