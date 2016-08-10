@@ -1298,7 +1298,7 @@ void destroy_tnode_pool(){
   if(tnodes==NULL)
     return;
   flush_queue();
-  fprintf(stderr,"\n\t-> npools:%zu unfreed tnodes before clean:%lu \n",tnodes->npools,currentnodes);
+  //  fprintf(stderr,"\n\t-> npools:%zu unfreed tnodes before clean:%lu \n",tnodes->npools,currentnodes);
   for(int i=0;i<tnodes->npools;i++){
     //fprintf(stderr,"%d/%d\n",i,tnodes->npools);    
     tNode **nd =(tNode**)tnodes->pools[i].pool;

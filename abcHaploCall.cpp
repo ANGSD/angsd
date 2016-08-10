@@ -106,7 +106,7 @@ abcHaploCall::~abcHaploCall(){
 
   if(doHaploCall==0)
     return; 
-   
+  fprintf(stderr,"\t-> The misc folder now contains a program to convert to plink format \'misc/haploToPlink angsdput.haplo.gz outputname\'\n");
   if(outfileZ!=NULL) bgzf_close(outfileZ);
 }
 
