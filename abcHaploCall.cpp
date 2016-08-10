@@ -5,7 +5,6 @@
   anders albrecht@binf.ku.dk made this.
 
   part of angsd
-  ans -> anc dec 7 2013, added -ref -anc
 */
 
 #include <cmath>
@@ -43,11 +42,11 @@ void abcHaploCall::getOptions(argStruct *arguments){
     return;
 
   if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
-    fprintf(stderr,"Error: bam or soap input needed for -doHaploCall \n");
+    fprintf(stderr,"\t-> bam or pileup input needed for -doHaploCall \n");
     exit(0);
   }
   if( doCount==0){
-    fprintf(stderr,"Error: -doHaploCalls needs allele counts (use -doCounts 1)\n");
+    fprintf(stderr,"\t-> -doHaploCalls needs allele counts (use -doCounts 1)\n");
     exit(0);
   }
 
