@@ -1049,9 +1049,9 @@ int countsSample(suint *a){
   double r = drand48()*(a[0]+a[1]+a[2]+a[3]);
   if(r<a[0])
     return 0;
-  else if(r>=a[0] &&r<[1])
+  else if(r>=a[0] &&r<a[1])
     return 1;
-  else if(r>=a[1] &&r<[2])
+  else if(r>=a[1] &&r<a[2])
     return 2;
   else
     return 3;
