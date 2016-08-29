@@ -465,9 +465,9 @@ void printFunky(funkyPars *p){
   if(p->killSig==0) {//don't print the empty killSig chunk
     if((p->chunkNumber%howOften)==0){
       if(isAtty)
-	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d ",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
+	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
       else
-	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber);
+	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
     }if(p->numSites!=0){
       for(int i=0;i<andersSux;i++)
 	if(shouldRun[i])

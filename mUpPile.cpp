@@ -10,6 +10,8 @@
 #include "analysisFunction.h"
 #include "makeReadPool.h"
 #include "pop1_read.h"
+#define USE_MALLOC_WRAPPERS
+#include "malloc_wrap.h"
 
 #ifdef __WITH_POOL__
 #include "pooled_alloc.h"
@@ -254,7 +256,7 @@ node initNode(int l,int refPos,int arypos){
   return nd;
 }
 
-void realloc(tNode *d,int newsize){
+void tnode_realloc(tNode *d,int newsize){
 
   kroundup32(newsize);
   if(newsize<=d->m)
@@ -310,7 +312,7 @@ tNode *initNodeT(int l){
     d->mapQ=(unsigned char *)malloc(d->m);
     d->m2=0;
   }else if(l>d->m){
-    realloc(d,l);
+    tnode_realloc(d,l);
   }
   d->l = d->l2 =d->m2 =0;
   //d->l = d->l2 = d->m2 = 0;
@@ -1484,7 +1486,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       int pickStop=MAX_SEQ_LEN;
       
 #ifndef __NEW__
-      int doFlush = (collect_reads(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
+      int doFlush =  (collect_reads(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
 #else
       int doFlush = (collect_reads2(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
 #endif
