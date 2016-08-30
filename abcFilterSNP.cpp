@@ -22,30 +22,6 @@
 #include "abcHWE.h"
 #include <htslib/kstring.h>
 
-//public domain from here http://www.johndcook.com/cpp_phi.html
-double phi(double x){
-    // constants
-    double a1 =  0.254829592;
-    double a2 = -0.284496736;
-    double a3 =  1.421413741;
-    double a4 = -1.453152027;
-    double a5 =  1.061405429;
-    double p  =  0.3275911;
-
-    // Save the sign of x
-    int sign = 1;
-    if (x < 0)
-        sign = -1;
-    x = fabs(x)/sqrt(2.0);
-
-    // A&S formula 7.1.26
-    double t = 1.0/(1.0 + p*x);
-    double y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
-
-    return 0.5*(1.0 + sign*y);
-}
-
-
 /*
   wilcox manwhitney u test, whatever ,implementation is from wiki
   validated with wilcox.test (qscores of major,qscores of minor,exact=T,correct=F)
@@ -202,7 +178,12 @@ double sb3(int cnts[4]){
 
 void abcFilterSNP::printArg(FILE *argFile){
    fprintf(argFile,"-----BETA---------------\n%s:\n",__FILE__);
-  fprintf(argFile,"doSnpStat=%d\n",doSnpStat);
+  fprintf(argFile,"\t-doSnpStat %d\n",doSnpStat);
+  fprintf(argFile,"\t-edge_pval %f\n",edge_pval);
+  fprintf(argFile,"\t-mapQ_pval %f\n",mapQ_pval);
+  fprintf(argFile,"\t-sb_pval %f\n",sb_pval);
+  fprintf(argFile,"\t-hwe_pval %f\n",hwe_pval);
+  fprintf(argFile,"\t-qscore_pval %f\n",qscore_pval);
 
 }
 void abcFilterSNP::run(funkyPars *pars){
@@ -214,6 +195,9 @@ void abcFilterSNP::run(funkyPars *pars){
     kstring_t *bufstr = new kstring_t;
     bufstr->s=NULL;bufstr->l=bufstr->m=0;
     //loop over sites;
+    kstring_t persite;
+    persite.s=NULL;persite.l=persite.m=0;
+
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s]==0)
 	continue;
@@ -238,8 +222,11 @@ void abcFilterSNP::run(funkyPars *pars){
 	  cnts[strand]++;
 	}
       }
-      ksprintf(bufstr,"%s\t%d\t%d %d %d %d\t",header->target_name[pars->refId],pars->posi[s]+1, cnts[0],cnts[1],cnts[2],cnts[3]);
-      ksprintf(bufstr,"%f:%f:%f\t",sb1(cnts),sb2(cnts),sb3(cnts));
+      ksprintf(&persite,"%s\t%d\t%d %d %d %d\t",header->target_name[pars->refId],pars->posi[s]+1, cnts[0],cnts[1],cnts[2],cnts[3]);
+      ksprintf(&persite,"%f:%f:%f\t",sb1(cnts),sb2(cnts),sb3(cnts));
+      if(sb3(cnts)>sb_pval)
+	pars->keepSites[s] = 0;
+
       funkyHWE *hweStruct = (funkyHWE *) pars->extras[8];//THIS IS VERY NASTY! the ordering within general.cpp is now important
       double lrt = 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
       double pval;
@@ -249,14 +236,33 @@ void abcFilterSNP::run(funkyPars *pars){
 	pval =1;
       else
 	pval =1- chi.cdf(lrt);
-      ksprintf(bufstr,"%f:%e\t",lrt,pval);
+      ksprintf(&persite,"%f:%e\t",lrt,pval);
+
+      if(pval>hwe_pval)
+	pars->keepSites[s] = 0;
+
       double Z = baseQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
-      ksprintf(bufstr,"%f:%e\t",Z,2*phi(Z));
+      ksprintf(&persite,"%f:%e\t",Z,2*phi(Z));
+      if(2*phi(Z)>qscore_pval)
+	pars->keepSites[s] = 0;
+    
+
       Z = mapQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
-      ksprintf(bufstr,"%f:%e\t",Z,2*phi(Z));
+      ksprintf(&persite,"%f:%e\t",Z,2*phi(Z));
+
+      if(2*phi(Z)>mapQ_pval)
+	pars->keepSites[s] = 0;
+
       Z = edgebias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
-      ksprintf(bufstr,"%f:%e\n",Z,2*phi(Z));
+      ksprintf(&persite,"%f:%e\n",Z,2*phi(Z));
+      if(2*phi(Z)>edge_pval)
+	pars->keepSites[s] = 0;
+      
+      if(pars->keepSites[s]!=0)
+	ksprintf(bufstr,"%s",persite.s);
+      persite.l=0;
    }
+    free(persite.s);
     pars->extras[index] = bufstr;
   }
 }
@@ -296,7 +302,12 @@ void abcFilterSNP::getOptions(argStruct *arguments){
     fprintf(stderr,"-doSnpStat require -snp_pval and -hwe_pval \n");
     exit(0);
   }
-    
+
+  edge_pval=angsd::getArg("-edge_pval",edge_pval,arguments);      
+  mapQ_pval=angsd::getArg("-mapQ_pval",mapQ_pval,arguments);      
+  sb_pval=angsd::getArg("-sb_pval",sb_pval,arguments);    
+  hwe_pval=angsd::getArg("-hwe_pval",hwe_pval,arguments);    
+  qscore_pval=angsd::getArg("-qscore_pval",hwe_pval,arguments);    
   
 
 }
@@ -305,6 +316,7 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputtype){
   doSnpStat=0;
   outfileZ = NULL;
+  edge_pval=mapQ_pval=sb_pval=hwe_pval=qscore_pval=1;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSnpStat")||!strcasecmp(arguments->argv[1],"-doPost")){
       printArg(stdout);
@@ -330,6 +342,7 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
     aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     free(bufstr.s);
   }
+
 }
 
 abcFilterSNP::~abcFilterSNP(){

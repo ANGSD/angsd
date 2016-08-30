@@ -115,3 +115,4 @@ namespace aio{
 #endif
 
 
+double phi(double x);

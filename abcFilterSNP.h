@@ -2,6 +2,11 @@
 
 class abcFilterSNP:public abc{
   BGZF* outfileZ;
+  double edge_pval;
+  double mapQ_pval;
+  double sb_pval;
+  double hwe_pval;
+  double qscore_pval;
 public:
   int doSnpStat;
   
