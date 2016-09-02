@@ -14,7 +14,6 @@
 #include <cmath>
 #include <htslib/hts.h>
 #include "pop1_read.h"
-#include "bam_md.h"
 #include "abcGetFasta.h"
 #include "cigstat.h"
 
@@ -65,12 +64,12 @@ int restuff(bam1_t *b){
  if(baq){
    assert(gf->ref!=NULL);
    assert(gf->ref->curChr==b->core.tid);
-   bam_prob_realn_core(b,gf->ref->seqs,baq);
+   sam_prob_realn(b,gf->ref->seqs,gf->ref->chrLen,baq);
  }
 
  if(adjustMapQ!=0){
    assert(gf->ref!=NULL);
-   int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
+   int q = sam_cap_mapq(b,gf->ref->seqs,gf->ref->chrLen,adjustMapQ);
    if(q<0)
      return 0;
    if(q<b->core.qual)
@@ -126,14 +125,14 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     
     if(gf->ref!=NULL&&gf->ref->curChr==b->core.tid){
       if(baq){
-	bam_prob_realn_core(b,gf->ref->seqs,baq);
+	sam_prob_realn(b,gf->ref->seqs,gf->ref->chrLen,baq);
       }
     }
     
     if(gf->ref!=NULL&&gf->ref->curChr==b->core.tid){
       if(adjustMapQ!=0){
 	assert(gf->ref!=NULL);
-	int q = bam_cap_mapQ(b,gf->ref->seqs,adjustMapQ);
+	int q = sam_cap_mapq(b,gf->ref->seqs,gf->ref->chrLen,adjustMapQ);
 	if(q<0)
 	  goto bam_iter_reread;
 	if(q<b->core.qual)
