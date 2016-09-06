@@ -1,6 +1,6 @@
 /*
   little class that does 
-1) hwe using genotype likelihoods
+s1) hwe using genotype likelihoods
 2) a) fisher exact
    b) GATK approach
    c) SB
@@ -224,7 +224,8 @@ void abcFilterSNP::run(funkyPars *pars){
       }
       ksprintf(&persite,"%s\t%d\t%d %d %d %d\t",header->target_name[pars->refId],pars->posi[s]+1, cnts[0],cnts[1],cnts[2],cnts[3]);
       ksprintf(&persite,"%f:%f:%f\t",sb1(cnts),sb2(cnts),sb3(cnts));
-      if(sb3(cnts)>sb_pval)
+      //      fprintf(stderr,"sb4:%f\n",sb3(cnts));
+      if(sb_pval!=-1 && sb3(cnts)<sb_pval)
 	pars->keepSites[s] = 0;
 
       funkyHWE *hweStruct = (funkyHWE *) pars->extras[8];//THIS IS VERY NASTY! the ordering within general.cpp is now important
@@ -238,24 +239,24 @@ void abcFilterSNP::run(funkyPars *pars){
 	pval =1- chi.cdf(lrt);
       ksprintf(&persite,"%f:%e\t",lrt,pval);
 
-      if(pval>hwe_pval)
+      if(hwe_pval!=-1 && pval<hwe_pval)
 	pars->keepSites[s] = 0;
 
       double Z = baseQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(&persite,"%f:%e\t",Z,2*phi(Z));
-      if(2*phi(Z)>qscore_pval)
+      if(qscore_pval!=-1 && 2*phi(Z)<qscore_pval)
 	pars->keepSites[s] = 0;
     
 
       Z = mapQbias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(&persite,"%f:%e\t",Z,2*phi(Z));
 
-      if(2*phi(Z)>mapQ_pval)
+      if(mapQ_pval!=-1 && 2*phi(Z)<mapQ_pval)
 	pars->keepSites[s] = 0;
 
       Z = edgebias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(&persite,"%f:%e\n",Z,2*phi(Z));
-      if(2*phi(Z)>edge_pval)
+      if(2*phi(Z)<edge_pval)
 	pars->keepSites[s] = 0;
       
       if(pars->keepSites[s]!=0)
@@ -293,13 +294,11 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 
   if(doSnpStat==0)
     return;
-  int domajmin=0;
   //from command line
   int doHWE =0;
-  domajmin=angsd::getArg("-snp_pval",domajmin,arguments);
   doHWE=angsd::getArg("-hwe_pval",doHWE,arguments);
-  if(!domajmin||!doHWE){
-    fprintf(stderr,"-doSnpStat require -snp_pval and -hwe_pval \n");
+  if(!doHWE){
+    fprintf(stderr,"\t-> -doSnpStat requires -hwe_pval \n");
     exit(0);
   }
 
@@ -316,7 +315,7 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputtype){
   doSnpStat=0;
   outfileZ = NULL;
-  edge_pval=mapQ_pval=sb_pval=hwe_pval=qscore_pval=1;
+  edge_pval=mapQ_pval=sb_pval=hwe_pval=qscore_pval=-1;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSnpStat")||!strcasecmp(arguments->argv[1],"-doPost")){
       printArg(stdout);
