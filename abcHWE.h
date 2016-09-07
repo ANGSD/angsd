@@ -14,7 +14,7 @@ typedef struct {
 class abcHWE:public abc{
 private:
   Chisqdist *chisq;
-  int doHWE;
+  int doSnpStat;
   BGZF* outfileZ;
   kstring_t bufstr;
   void estHWE(double *x,double *loglike,int nInd);

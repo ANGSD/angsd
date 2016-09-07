@@ -10,7 +10,7 @@
 
   part of ANGSD: http://www.popgen.dk/angsd 
 
-  
+  this code is horrible and will be merged into snpstat at some point, tsk 7sep 2016
 
  */
 #include <htslib/kstring.h>
@@ -25,36 +25,29 @@ void abcHWE::printArg(FILE *argFile){
 }
 
 void abcHWE::getOptions(argStruct *arguments){
-
-  int GL =0;
+  doSnpStat = angsd::getArg("-doSnpStat",doSnpStat,arguments);
   HWE_pval = angsd::getArg("-HWE_pval",HWE_pval,arguments);
-
-  if(HWE_pval==0)
+  if(HWE_pval!=-1&&doSnpStat==0){
+    fprintf(stderr,"\t-> Must supply -doSnpStat fro hwe_pval\n");
+    exit(0);//dragon
+  }
+  if(doSnpStat==0)
     return;
- 
-  doHWE=1;
-  chisq = new Chisqdist(1);//<- 1degree of freedom;
-  LRT_thres = chisq->invcdf(1-HWE_pval);
-  fprintf(stderr,"\t-> HWE-filter using a pvalue: %.4e correspond to %.4f likelihood units\n",HWE_pval,LRT_thres);    
-
   
-  if(doHWE==0)
-    return;
-  GL=angsd::getArg("-GL",GL,arguments);
-
   if(arguments->inputtype==INPUT_BEAGLE||arguments->inputtype==INPUT_VCF_GP){
     fprintf(stderr,"Error: you cannot estimate HWE based on posterior probabilities \n");
     exit(0);
   }
-  
+
+  chisq = new Chisqdist(1);//<- 1degree of freedom;
 
 }
 
 abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   chisq = NULL;
   outfileZ = NULL;
-  doHWE=0;
-  HWE_pval = 0;
+  doSnpStat=0;
+  HWE_pval = -1;
   testMe=0;
   tolStop = 0.00001;
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
@@ -69,7 +62,7 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
 
   getOptions(arguments);
 
-  if(doHWE==0){
+  if(doSnpStat==0){
     shouldRun[index] = 0;
     return;
   }
@@ -77,7 +70,7 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   //make output files
   const char* postfix;
   postfix=".hwe.gz";
-  if(doHWE>0){
+  if(doSnpStat>0){
     outfileZ = aio::openFileBG(outfiles,postfix);
     //print header
     const char *str = "Chromo\tPosition\tMajor\tMinor\thweFreq\tFreq\tF\tLRT\tp-value\n";
@@ -88,9 +81,9 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
 
 abcHWE::~abcHWE(){
 
-  if(doHWE==0)
+  if(doSnpStat==0)
     return;
-  if(doHWE>0)
+  if(doSnpStat>0)
     if(outfileZ!=NULL)
       bgzf_close(outfileZ);
   delete chisq;
@@ -98,7 +91,7 @@ abcHWE::~abcHWE(){
 
 
 void abcHWE::clean(funkyPars *pars){
-  if(doHWE==0)
+  if(doSnpStat==0)
     return;
 
   funkyHWE *hweStruct =(funkyHWE *) pars->extras[index];
@@ -112,7 +105,7 @@ void abcHWE::clean(funkyPars *pars){
 }
 
 void abcHWE::print(funkyPars *pars){
-  if(doHWE<=0)
+  if(doSnpStat<=0)
     return;
 
   funkyHWE *hweStruct = (funkyHWE *) pars->extras[index];//new
@@ -140,7 +133,7 @@ void abcHWE::print(funkyPars *pars){
 
 void abcHWE::run(funkyPars *pars){
  
-  if(doHWE==0)
+  if(doSnpStat==0)
     return;
 
   funkyHWE *hweStruct = new funkyHWE;
@@ -184,11 +177,7 @@ void abcHWE::run(funkyPars *pars){
 
     //    fprintf(stderr,"%f\t%f\n",x[0],x[1]);
     //fprintf(stderr,"%f\t%f\t%f\n",loglike3[s][0],loglike3[s][1],loglike3[s][2]);
-    float lrt= 2*like0[s]-2*likeF[s];
-    if(lrt<0)
-      lrt=0;
-    if(lrt<LRT_thres)
-      pars->keepSites[s] =0;
+
   }
 
 

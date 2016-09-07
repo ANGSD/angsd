@@ -1,6 +1,6 @@
 /*
   little class that does 
-s1) hwe using genotype likelihoods
+1) hwe using genotype likelihoods
 2) a) fisher exact
    b) GATK approach
    c) SB
@@ -238,7 +238,7 @@ void abcFilterSNP::run(funkyPars *pars){
       else
 	pval =1- chi.cdf(lrt);
       ksprintf(&persite,"%f:%e\t",lrt,pval);
-
+      ksprintf(&persite,"%f:%e\t",lrt,pval);
       if(hwe_pval!=-1 && pval<hwe_pval)
 	pars->keepSites[s] = 0;
 
@@ -295,12 +295,6 @@ void abcFilterSNP::getOptions(argStruct *arguments){
   if(doSnpStat==0)
     return;
   //from command line
-  int doHWE =0;
-  doHWE=angsd::getArg("-hwe_pval",doHWE,arguments);
-  if(!doHWE){
-    fprintf(stderr,"\t-> -doSnpStat requires -hwe_pval \n");
-    exit(0);
-  }
 
   edge_pval=angsd::getArg("-edge_pval",edge_pval,arguments);      
   mapQ_pval=angsd::getArg("-mapQ_pval",mapQ_pval,arguments);      
