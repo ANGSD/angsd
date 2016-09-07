@@ -205,10 +205,7 @@ int main_analysis(funkyPars *p) {
 
 
 void interface(funkyPars *p){
-
-  if(p->killSig==0)
-    main_analysis(p);//dont do analysis on the killsig chunk
-
+  main_analysis(p);//dont do analysis on the killsig chunk
   printer.prop(p);
 }
 
@@ -239,8 +236,7 @@ void *slave(void *ptr){
 
 void *slave2(void *ptr){
   funkyPars *p = (funkyPars *) ptr;
-  if(p->killSig==0)
-    main_analysis(p);
+  main_analysis(p);
   printFunky(p);
   pthread_mutex_unlock( &counterMut );
   pthread_exit(NULL);
@@ -327,13 +323,9 @@ void waiter(int refId){
   This is the function that determines whether or not to start a new thread
 */
 void selector(funkyPars *p){
-  // fprintf(stderr,"funkypars\n");
-  if(p==NULL){
-    p = allocFunkyPars();
-    p->killSig = 1;
-  }else
-    p->extras = new void*[andersSux];//funky
-  
+  if(p==NULL)
+    return;
+  p->extras = new void*[andersSux];//funky
   p->chunkNumber = chunkNumber++;
 
   if(maxThreads==1)
@@ -367,7 +359,6 @@ funkyPars *allocFunkyPars(){
   r->keepSites =NULL;
   r->chk = NULL;
   r->for_callback = NULL;
-  r->killSig =0;
   r->posi = NULL;
   r->refId = -1;
   return r;
@@ -462,27 +453,19 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
 //only one instance at a time is running this function
 void printFunky(funkyPars *p){
   //  fprintf(stderr,"printFunky killsig=%d nsites=%d refid:%d\n",p->killSig,p->numSites,p->refId);
-  if(p->killSig==0) {//don't print the empty killSig chunk
-    if((p->chunkNumber%howOften)==0){
-      if(isAtty)
-	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
-      else
-	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
-    }if(p->numSites!=0){
-      for(int i=0;i<andersSux;i++)
-	if(shouldRun[i])
-	  allMethods[i]->print(p);
-    }
-   
-    deallocFunkyPars(p);
-    
-  }else{
-    deallocFunkyPars(p);
-    pthread_mutex_unlock(&mUpPile_mutex);
-    fprintf(stderr,"\n");//after last positions print add a neu line mutafuka
+  if((p->chunkNumber%howOften)==0){
+    if(isAtty)
+      fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
+    else
+      fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
+  }if(p->numSites!=0){
+    for(int i=0;i<andersSux;i++)
+      if(shouldRun[i])
+	allMethods[i]->print(p);
   }
-
-}
+  
+  deallocFunkyPars(p);
+}    
 
 
 

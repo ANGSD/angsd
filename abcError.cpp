@@ -57,7 +57,7 @@ void abcError::consolidate(funkyPars *p) {
     }
   
   //  fprintf(stderr,"sizeof alist=%lu\n",aList.size());
-  if(aList.size()>minSites||(p->killSig==1)){
+  if(aList.size()>minSites){
     fprintf(stderr,"\t Triggering error estimation with nsites=%lu\n",aList.size());
     int numSites = aList.size();
     int *major = new int[aList.size()];

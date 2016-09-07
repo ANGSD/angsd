@@ -42,7 +42,7 @@ void printTime(FILE *fp){
 
 //this function is called from within the bamreader
 void callBack_bambi(fcb *fff){
-
+  //  assert(fff!=NULL);
   if(fff==NULL){
     //    fprintf(stderr,"SEnding NULL this is a killswitch");
     selector(NULL);//<-send NULL which acts as a killswitch
