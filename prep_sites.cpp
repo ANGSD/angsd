@@ -387,6 +387,15 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     //check that we have the same number of columsn acroos all lines
     if(nCols==-1){
       nCols=nRead;
+      if(nCols==2)
+	fprintf(stderr,"\t-> Input file has 2 columns, chr pos\n");
+      if(nCols==3)
+	fprintf(stderr,"\t-> Input file has 3 columns(bed), chr posStart posStop\n");
+      if(nCols==4)
+	fprintf(stderr,"\t-> Input file has 4 columns, chr pos major minor\n");
+      if(nCols==7)
+	fprintf(stderr,"\t-> Input file has 7 columns(vcf)(experimental) \n");
+      
       if(nRead==4||nRead==7){
 	hasExtra =1;
 	major= init<char>();
