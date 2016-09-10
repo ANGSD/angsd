@@ -32,7 +32,7 @@
 #include "printRes.h"
 #include "mUpPile.h"
 #include "pooled_alloc.h"
-
+#include "abcPSMC.h"
 #include "cigstat.h"
 extern tpool_alloc_t *tnodes;
 
@@ -287,6 +287,7 @@ void changeChr(int refId){
   ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
   ((abcSaf *)allMethods[11])->changeChr(refId);//used when changing chr;
+  ((abcPSMC *)allMethods[27])->changeChr(refId);//used when changing chr;
 #ifdef __WITH_POOL__
   void flush_queue();
   flush_queue();

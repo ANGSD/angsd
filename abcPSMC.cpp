@@ -66,10 +66,30 @@ void abcPSMC::clean(funkyPars *pars){
 
 }
 
+ void printit(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char *chr,int &nnnSites){
+
+    psmcRes *r=(psmcRes *) p->extras[index];
+    int id=0;
+    for(int s=0; s<p->numSites;s++){
+    if(r->oklist[s]==1){
+      nnnSites++;
+      aio::bgzf_write(outfileSFS,&r->pLikes[2*(id++)],sizeof(double)*2);
+  }
+  }
+
+  for(int i=0;i<p->numSites;i++){
+    int mypos = p->posi[i];
+    if(r->oklist[i]==1)
+      aio::bgzf_write(outfileSFSPOS,&mypos,sizeof(int));
+    else if (r->oklist[i]==2)
+      fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
+  }
+  //fprintf(stderr,"asdf: nnnSites:%d\n",nnnSites);
+}
 void abcPSMC::print(funkyPars *pars){
   if(dopsmc==0)
     return;
-
+  printit(pars,index,outfileSAF,outfileSAFPOS,header->target_name[pars->refId],nnnSites);
 }
 
 void abcPSMC::getOptions(argStruct *arguments){
@@ -80,7 +100,7 @@ void abcPSMC::getOptions(argStruct *arguments){
   int gl =0;
   gl=angsd::getArg("-gl",gl,arguments);
 
-  if(gl==0||INPUT_BEAGLE||INPUT_VCF_GP){
+  if(gl==0){//||INPUT_BEAGLE||INPUT_VCF_GP){
     fprintf(stderr,"\nPotential problem. We need genotypes for dumping psmc\n\n");
     exit(0);
   }
@@ -113,9 +133,9 @@ abcPSMC::abcPSMC(const char *outfiles,argStruct *arguments,int inputtype){
   }
   printArg(arguments->argumentFile);
 
-  const char *SAF = ".saf.gz";
-  const char *SAFPOS =".saf.pos.gz";
-  const char *SAFIDX =".saf.idx";
+  const char *SAF = ".psmc.gz";
+  const char *SAFPOS =".psmc.pos.gz";
+  const char *SAFIDX =".psmc.idx";
 
   outfileSAF =  aio::openFileBG(outfiles,SAF);
   outfileSAFPOS =  aio::openFileBG(outfiles,SAFPOS);
