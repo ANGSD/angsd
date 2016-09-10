@@ -30,9 +30,10 @@
 #include "abcAncestry.h"
 #include "abcIBS.h"
 #include "abcWriteVcf.h" //<- dump plink files.
+#include "abcPSMC.h"
 
 //below we set some variables that are shared between all the analysis classes
-#define MAX_CLASS 27
+#define MAX_CLASS 28
 
 int abc::tot_index =0;
 const bam_hdr_t *abc::header = NULL;
@@ -73,6 +74,7 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcDstat2(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcHWE_F(outfiles,arguments,inputtype); // 25
   tskStuff[nit++] = new abcIBS(outfiles,arguments,inputtype); // 
+(outfiles,arguments,inputtype); // 
 
 
   nItem = nit;
