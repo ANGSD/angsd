@@ -1,5 +1,5 @@
 #include "main_psmc.h"
-
+#include <ctime>
 args * getArgs(int argc,char **argv){
   args *p = new args;
   p->chooseChr=NULL;
