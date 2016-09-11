@@ -15,14 +15,15 @@ void destroy(myMap &mm){
 
 
 void perpsmc_destroy(perpsmc *pp){
-  //  fprintf(stderr,"pp:%p pp->pos:%p\n",pp,pp->pos);
-  if(pp->pos)
-    bgzf_close(pp->pos);
   bgzf_close(pp->saf);
+  bgzf_close(pp->pos);
   destroy(pp->mm);
-  if(pp->ppos){
+  
+  if(pp->ppos)
     delete [] pp->ppos;
-  }
+  if(pp->gls)
+    delete [] pp->gls;
+
   free(pp->fname);
   delete pp;
 }

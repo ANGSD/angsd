@@ -44,6 +44,7 @@ args * getArgs(int argc,char **argv){
 
 //made a seperate function for this. Im assuming our args will contain allocated data at some point.
 void destroy_args(args *p){
+  perpsmc_destroy(p->perc);
   delete p;
 }
 
