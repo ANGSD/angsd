@@ -74,7 +74,7 @@ main_psmc: main_psmc.cpp main_psmc.h
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
 ngsPSMC: ngsPSMC.cpp psmcreader header main_psmc
-	$(CXX) $(FLAGS) ngsPSMC.cpp  -I$(HTS_INCDIR)$(HTS_LIBDIR) -O3 -o ngsPMSC psmcreader.o header.o main_psmc.o -lz
+	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPMSC psmcreader.o header.o main_psmc.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
 
 realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread

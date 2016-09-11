@@ -25,14 +25,9 @@
 #include <zlib.h>
 #include "safstat.h"
 #include <algorithm>
-#ifdef __APPLE__
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#endif
+#include <libgen.h>
 #include "psmcreader.h"
 #include "header.h"
-#include <libgen.h>
-
 #include "main_psmc.h"
 
 int SIG_COND =1;
