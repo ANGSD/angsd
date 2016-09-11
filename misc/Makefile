@@ -13,7 +13,7 @@ $(info HTSSRC not defined, assuming systemwide installation -lhts)
 endif
 
 
-all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink
+all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink psmcreader ngsPSMC
 
 kmath.o: kmath.c kmath.h
 	$(CC) $(FLAGS) -c kmath.c 
@@ -43,6 +43,9 @@ ifdef HTSSRC
 safreader: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp -I $(HTS_INCDIR)
 
+psmcreader: psmcreader.cpp psmcreader.h header.h
+	$(CXX) $(FLAGS) -c psmcreader.cpp -I $(HTS_INCDIR)
+
 fstreader: fstreader.cpp fstreader.h header.h
 	$(CXX) $(FLAGS) -c fstreader.cpp -I $(HTS_INCDIR)
 
@@ -67,6 +70,8 @@ thetaStat:	thetaStat.cpp stats.cpp
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
 
+ngsPMSM: ngsPSMC.cpp psmcreader header
+	$(CXX) $(FLAGS) ngsPSMC.cpp  -I$(HTS_INCDIR)$(HTS_LIBDIR) -O3 -o ngsPMSC psmcreader.o header.o -lz
 
 realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
@@ -80,9 +85,11 @@ fstreader: fstreader.cpp fstreader.h header.h
 safstat: safstat.cpp safstat.h 
 	$(CXX) $(FLAGS) -c safstat.cpp 
 
+psmcreader: psmcreader.cpp psmcreader.h header.h
+	$(CXX) $(FLAGS) -c psmcreader.cpp 
+
 realSFS_args: realSFS_args.cpp realSFS_args.h
 	$(CXX) $(FLAGS) -c realSFS_args.cpp 
-
 safcat: safcat.cpp safcat.h
 	$(CXX) $(FLAGS) -c safcat.cpp
 
@@ -101,6 +108,10 @@ msToGlf: msToGlf6.c
 
 realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -lhts -lz -lpthread
+
+
+ngsPSMC: ngsPSMC.cpp psmcreader header
+	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPMSC psmcreader.o header.o -lhts -lz
 
 endif
 

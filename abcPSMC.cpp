@@ -32,14 +32,12 @@ void abcPSMC::algoJoint(double **liks,int nsites,int *keepSites,psmcRes *r,int n
     const char transitz[] ={2,6};//* 
     double homo =log(0);
     double het= log(0);
-
     for(int i=0;i<4;i++){
-      homo +=angsd::addProtect2(homo,liks[it][homoz[i]]);
-      het += angsd::addProtect2(het,liks[it][transverz[i]]);
+      homo =angsd::addProtect2(homo,liks[it][homoz[i]]);
+      het = angsd::addProtect2(het,liks[it][transverz[i]]);
     }
     for(int i=0;(noTrans==0&&i<2);i++)
-      het += angsd::addProtect2(het,liks[it][transitz[i]]);
-
+      het = angsd::addProtect2(het,liks[it][transitz[i]]);
     r->oklist[it] = 1;
     r->pLikes[it*2] = homo;
     r->pLikes[it*2+1] = het;
@@ -69,13 +67,12 @@ void abcPSMC::clean(funkyPars *pars){
  void printit(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char *chr,int &nnnSites){
 
     psmcRes *r=(psmcRes *) p->extras[index];
-    int id=0;
     for(int s=0; s<p->numSites;s++){
-    if(r->oklist[s]==1){
-      nnnSites++;
-      aio::bgzf_write(outfileSFS,&r->pLikes[2*(id++)],sizeof(double)*2);
-  }
-  }
+      if(r->oklist[s]==1){
+	nnnSites++;
+	aio::bgzf_write(outfileSFS,&r->pLikes[2*s],sizeof(double)*2);
+      }
+    }
 
   for(int i=0;i<p->numSites;i++){
     int mypos = p->posi[i];
@@ -140,7 +137,7 @@ abcPSMC::abcPSMC(const char *outfiles,argStruct *arguments,int inputtype){
   outfileSAF =  aio::openFileBG(outfiles,SAF);
   outfileSAFPOS =  aio::openFileBG(outfiles,SAFPOS);
   outfileSAFIDX = aio::openFile(outfiles,SAFIDX);
-  char buf[8]="psmcv3";
+  char buf[8]="psmcv1";
   aio::bgzf_write(outfileSAF,buf,8);
   aio::bgzf_write(outfileSAFPOS,buf,8);
   fwrite(buf,1,8,outfileSAFIDX);
@@ -171,8 +168,12 @@ void abcPSMC::writeAll(){
 
 
 abcPSMC::~abcPSMC(){
-  if(dopsmc)
+  if(dopsmc){
     writeAll();
+    bgzf_close(outfileSAF);
+    bgzf_close(outfileSAFPOS);
+    fclose(outfileSAFIDX);
+  }
 }
 
 

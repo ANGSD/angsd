@@ -220,7 +220,7 @@ persaf * persaf_init(char *fname){
      return it;
    }
    my_bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
-
+   
    if(pp->toKeep==NULL)
      pp->toKeep = keep_alloc<char>();
    pp->at =-1;
@@ -301,25 +301,4 @@ persaf * persaf_init(char *fname){
      return ret;
    
   goto reread;
-}
-
-void my_bgzf_write(BGZF *fp, const void *data, size_t length){
-  if(bgzf_write(fp,data,length)!=length){
-    fprintf(stderr,"\t-> Problem writing bgzf block of size: %lu\n",length);
-    exit(0);
-  }
-
-}
-void my_bgzf_seek(BGZF *fp, int64_t pos, int whence){
-  if(bgzf_seek(fp,pos,whence)<0){
-    fprintf(stderr,"\t-> Problems seeking in bgzf_seek");
-    exit(0);
-  }
-}
-void my_bgzf_read(BGZF *fp, void *data, size_t length){
-  if(length!=bgzf_read(fp,data,length)){
-    fprintf(stderr,"\t-> Problem reading chunk in bgzf_read\n");
-    exit(0);
-  }
-
 }

@@ -34,10 +34,6 @@
 #include "safstat.h"
 #include <libgen.h>
 #include <algorithm>
-#ifdef __APPLE__
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#endif
 #include "realSFS_args.h"
 #include "safreader.h"
 #include "keep.hpp"
@@ -367,26 +363,6 @@ struct emPars{
 
 
 emPars<float> *emp = NULL;
-
-
-
-
-
-#ifdef __APPLE__
-size_t getTotalSystemMemory(){
-  uint64_t mem;
-  size_t len = sizeof(mem);
-  sysctlbyname("hw.memsize", &mem, &len, NULL, 0);
-  return mem;
-}
-#else
-size_t getTotalSystemMemory(){
-    long pages = sysconf(_SC_PHYS_PAGES);
-    long page_size = sysconf(_SC_PAGE_SIZE);
-    return pages * page_size;
-}
-#endif
-
 
 template <typename T>
 double lik1(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
