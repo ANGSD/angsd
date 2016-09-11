@@ -24,3 +24,4 @@ void my_bgzf_write(BGZF *fp, const void *data, size_t length);
 void my_bgzf_seek(BGZF *fp, int64_t pos, int whence);
 void my_bgzf_read(BGZF *fp, void *data, size_t length);
 size_t getTotalSystemMemory();
+char * get_region(char *extra,int &start,int &stop) ;

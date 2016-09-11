@@ -88,3 +88,64 @@ size_t getTotalSystemMemory(){
 #endif
 
 
+char * get_region(char *extra,int &start,int &stop) {
+  if(!extra){
+    fprintf(stderr,"Must supply parameter for -r option\n");
+    return NULL;
+  }
+  if(strrchr(extra,':')==NULL){//only chromosomename
+    char *ref = extra;
+    start = stop = -1;;
+    return ref;
+  }
+  char *tok=NULL;
+  tok = strtok(extra,":");
+
+  char *ref = tok;
+
+  start =stop=-1;
+
+  tok = extra+strlen(tok)+1;//tok now contains the rest of the string
+ 
+  if(strlen(tok)==0)//not start and/or stop ex: chr21:
+    return ref;
+  
+
+  if(tok[0]=='-'){//only contains stop ex: chr21:-stop
+    tok =strtok(tok,"-");
+    stop = atoi(tok);
+  }else{
+    //catch single point
+    int isProper =0;
+    for(size_t i=0;i<strlen(tok);i++)
+      if(tok[i]=='-'){
+	isProper=1;
+	 break;
+      }
+    //fprintf(stderr,"isProper=%d\n",isProper);
+    if(isProper){
+      tok =strtok(tok,"-");
+      start = atoi(tok)-1;//this is important for the zero offset
+      tok = strtok(NULL,"-");
+      if(tok!=NULL)
+	stop = atoi(tok);
+    }else{
+      //single point
+      stop = atoi(tok);
+      start =stop -1;
+      
+    }
+    
+  }
+  if(stop!=-1&&stop<start){
+    fprintf(stderr,"endpoint:%d is larger than startpoint:%d\n",start,stop);
+    exit(0);
+    
+  }
+  if(0){
+    fprintf(stderr,"[%s] ref=%s,start=%d,stop=%d\n",__FUNCTION__,ref,start,stop);
+    exit(0);
+  }
+  return ref;
+}
+

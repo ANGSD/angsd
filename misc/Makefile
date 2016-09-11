@@ -70,8 +70,11 @@ thetaStat:	thetaStat.cpp stats.cpp
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
 
-ngsPMSM: ngsPSMC.cpp psmcreader header
-	$(CXX) $(FLAGS) ngsPSMC.cpp  -I$(HTS_INCDIR)$(HTS_LIBDIR) -O3 -o ngsPMSC psmcreader.o header.o -lz
+main_psmc: main_psmc.cpp main_psmc.h
+	$(CXX) $(FLAGS) -c main_psmc.cpp -I(HTS_INCDIR)
+
+ngsPMSM: ngsPSMC.cpp psmcreader header main_psmc
+	$(CXX) $(FLAGS) ngsPSMC.cpp  -I$(HTS_INCDIR)$(HTS_LIBDIR) -O3 -o ngsPMSC psmcreader.o header.o main_psmc.o -lz
 
 realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
@@ -109,9 +112,11 @@ msToGlf: msToGlf6.c
 realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -lhts -lz -lpthread
 
+main_psmc: main_psmc.cpp main_psmc.h
+	$(CXX) $(FLAGS) -c main_psmc.cpp 
 
-ngsPSMC: ngsPSMC.cpp psmcreader header
-	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPMSC psmcreader.o header.o -lhts -lz
+ngsPSMC: ngsPSMC.cpp psmcreader header main_psmc
+	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPMSC psmcreader.o header.o main_psmc.o -lhts -lz
 
 endif
 
