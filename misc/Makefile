@@ -71,7 +71,7 @@ msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
 
 main_psmc: main_psmc.cpp main_psmc.h
-	$(CXX) $(FLAGS) -c main_psmc.cpp -I(HTS_INCDIR)
+	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
 ngsPSMC: ngsPSMC.cpp psmcreader header main_psmc
 	$(CXX) $(FLAGS) ngsPSMC.cpp  -I$(HTS_INCDIR)$(HTS_LIBDIR) -O3 -o ngsPMSC psmcreader.o header.o main_psmc.o -lz
