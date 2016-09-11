@@ -73,7 +73,7 @@ msToGlf: msToGlf6.c
 main_psmc: main_psmc.cpp main_psmc.h
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I(HTS_INCDIR)
 
-ngsPMSM: ngsPSMC.cpp psmcreader header main_psmc
+ngsPSMC: ngsPSMC.cpp psmcreader header main_psmc
 	$(CXX) $(FLAGS) ngsPSMC.cpp  -I$(HTS_INCDIR)$(HTS_LIBDIR) -O3 -o ngsPMSC psmcreader.o header.o main_psmc.o -lz
 
 realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
