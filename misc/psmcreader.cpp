@@ -15,12 +15,12 @@ void destroy(myMap &mm){
 
 
 void perpsmc_destroy(perpsmc *pp){
-  bgzf_close(pp->saf);
-  bgzf_close(pp->pos);
+  bgzf_close(pp->bgzf_gls);
+  bgzf_close(pp->bgzf_pos);
   destroy(pp->mm);
   
-  if(pp->ppos)
-    delete [] pp->ppos;
+  if(pp->pos)
+    delete [] pp->pos;
   if(pp->gls)
     delete [] pp->gls;
 
@@ -30,7 +30,7 @@ void perpsmc_destroy(perpsmc *pp){
 
 
 
-void writesaf_header(FILE *fp,perpsmc *pp){
+void writepsmc_header(FILE *fp,perpsmc *pp){
   fprintf(fp,"\t\tInformation from index file: nSites:%lu\n",pp->nSites);
   
   int i=0;
@@ -42,7 +42,7 @@ void writesaf_header(FILE *fp,perpsmc *pp){
 }
 
 
-int safversion(const char *fname){
+int psmcversion(const char *fname){
   gzFile gz=Z_NULL;
   gz = gzopen(fname,"r");
   if(gz==Z_NULL){
@@ -65,8 +65,8 @@ int safversion(const char *fname){
 perpsmc * perpsmc_init(char *fname){
   perpsmc *ret = new perpsmc ;
   ret->fname = strdup(fname);
-  ret->pos=ret->saf=NULL;
-  ret->ppos = NULL;
+  ret->bgzf_pos=ret->bgzf_gls=NULL;
+  ret->pos = NULL;
   size_t clen;
   if(!fexists(fname)){
     fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);
@@ -80,10 +80,10 @@ perpsmc * perpsmc_init(char *fname){
   }
   char buf[8];
   assert(fread(buf,1,8,fp)==8);
-  ret->version = safversion(fname);
+  ret->version = psmcversion(fname);
   fprintf(stderr,"\t-> Version of fname: \'%s\' is:%d\n",fname,ret->version);
   if(ret->version!=1){
-    fprintf(stderr,"\t-> Looks like you are trying to use a version of realSFS that is incompatible with the old binary output from ANGSD\n\t-> Please use realSFS.old instead (or consider redoing the saf files )\n\t-> Will exit\n");
+    fprintf(stderr,"\t-> Looks like you are trying to use a version of PSMC that does not exists\n");
     exit(0);
   }
   ret->nSites =0;
@@ -111,7 +111,7 @@ perpsmc * perpsmc_init(char *fname){
     if(it==ret->mm.end())
       ret->mm[chr] =d ;
     else{
-      fprintf(stderr,"Problem with chr: %s, key already exists, saffile needs to be sorted. (sort your -rf that you used for input)\n",chr);
+      fprintf(stderr,"Problem with chr: %s, key already exists, psmc file needs to be sorted. (sort your -rf that you used for input)\n",chr);
       exit(0);
     }
   }
@@ -122,21 +122,21 @@ perpsmc * perpsmc_init(char *fname){
   
   char *tmp2 = (char*)calloc(strlen(fname)+100,1);//that should do it
   snprintf(tmp2,strlen(fname)+100,"%sgz",tmp);
-  fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
-  ret->saf = bgzf_open(tmp2,"r");
-  if(ret->saf)
-    my_bgzf_seek(ret->saf,8,SEEK_SET);
-  if(ret->saf && ret->version!=safversion(tmp2)){
-    fprintf(stderr,"\t-> Problem with mismatch of version of %s vs %s %d vs %d\n",fname,tmp2,ret->version,safversion(tmp2));
+  fprintf(stderr,"\t-> Assuming .psmc.gz file: %s\n",tmp2);
+  ret->bgzf_gls = bgzf_open(tmp2,"r");
+  if(ret->bgzf_gls)
+    my_bgzf_seek(ret->bgzf_gls,8,SEEK_SET);
+  if(ret->bgzf_gls && ret->version!=psmcversion(tmp2)){
+    fprintf(stderr,"\t-> Problem with mismatch of version of %s vs %s %d vs %d\n",fname,tmp2,ret->version,psmcversion(tmp2));
     exit(0);
   }
 
   snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
-  fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
-  ret->pos = bgzf_open(tmp2,"r");
+  fprintf(stderr,"\t-> Assuming .psmc.pos.gz: %s\n",tmp2);
+  ret->bgzf_pos = bgzf_open(tmp2,"r");
   if(ret->pos)
-    my_bgzf_seek(ret->pos,8,SEEK_SET);
-  if(ret->pos&& ret->version!=safversion(tmp2)){
+    my_bgzf_seek(ret->bgzf_pos,8,SEEK_SET);
+  if(ret->bgzf_pos&& ret->version!=psmcversion(tmp2)){
     fprintf(stderr,"Problem with mismatch of version of %s vs %s\n",fname,tmp2);
     exit(0);
   }
@@ -154,28 +154,28 @@ perpsmc * perpsmc_init(char *fname){
      fprintf(stderr,"\t-> [%s] Problem finding chr: %s\n",__FUNCTION__,chr);
      return it;
    }
-   my_bgzf_seek(pp->saf,it->second.saf,SEEK_SET);
-   my_bgzf_seek(pp->pos,it->second.pos,SEEK_SET);
+   my_bgzf_seek(pp->bgzf_gls,it->second.saf,SEEK_SET);
+   my_bgzf_seek(pp->bgzf_pos,it->second.pos,SEEK_SET);
 
-   if(pp->ppos)
-     delete [] pp->ppos;
+   if(pp->pos)
+     delete [] pp->pos;
    if(pp->gls)
      delete [] pp->gls;
    
-   pp->ppos = new int[it->second.nSites];
-   my_bgzf_read(pp->pos,pp->ppos,sizeof(int)*it->second.nSites);
+   pp->pos = new int[it->second.nSites];
+   my_bgzf_read(pp->bgzf_pos,pp->pos,sizeof(int)*it->second.nSites);
    pp->gls = new double[2*it->second.nSites];
-   my_bgzf_read(pp->saf,pp->gls,2*sizeof(double)*it->second.nSites);
+   my_bgzf_read(pp->bgzf_gls,pp->gls,2*sizeof(double)*it->second.nSites);
    //   fprintf(stderr," end: %f %f\n",pp->gls[0],pp->gls[1]);
    pp->first=0;
    if(start!=-1)
-     while(pp->first<it->second.nSites&&pp->ppos[pp->first]<start)
+     while(pp->first<it->second.nSites&&pp->pos[pp->first]<start)
        pp->first++;
    
    pp->last = it->second.nSites;
-   if(stop!=-1&&stop<=pp->ppos[pp->last-1]){
+   if(stop!=-1&&stop<=pp->pos[pp->last-1]){
      pp->last=pp->first;
-     while(pp->ppos[pp->last]<stop) 
+     while(pp->pos[pp->last]<stop) 
        pp->last++;
    }
       

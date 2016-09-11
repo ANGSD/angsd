@@ -65,7 +65,7 @@ int print_header(int argc,char **argv){
   if(!pars)
     return 1;
   
-  writesaf_header(stdout,pars->perc);
+  writepsmc_header(stdout,pars->perc);
   
   destroy_args(pars);
   return 0;
@@ -81,7 +81,7 @@ void print(int argc,char **argv){
   }
   
   args *pars = getArgs(argc,argv);
-  writesaf_header(stderr,pars->perc);
+  writepsmc_header(stderr,pars->perc);
   
   for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
 
@@ -91,7 +91,7 @@ void print(int argc,char **argv){
       it = iter_init(pars->perc,it->first,pars->start,pars->stop);
 
     for(size_t s=pars->perc->first;s<pars->perc->last;s++)
-      fprintf(stdout,"%s\t%d\t%e\t%e\n",it->first,pars->perc->ppos[s]+1,pars->perc->gls[2*s],pars->perc->gls[2*s+1]);
+      fprintf(stdout,"%s\t%d\t%e\t%e\n",it->first,pars->perc->pos[s]+1,pars->perc->gls[2*s],pars->perc->gls[2*s+1]);
     
     if(pars->chooseChr!=NULL)
       break;

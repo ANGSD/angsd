@@ -58,7 +58,7 @@ int main_psmc(int argc, char **argv){
   if(!pars)
     return 0;
   //this will printout the header
-  writesaf_header(stderr,pars->perc);
+  writepsmc_header(stderr,pars->perc);
   
   for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
     //set perchr iterator, if pars->chooseChr, then we have only use a single chr
@@ -66,7 +66,7 @@ int main_psmc(int argc, char **argv){
 
     //print out the chromosome position and the two gls
     for(size_t s=pars->perc->first;s<pars->perc->last;s++)
-      fprintf(stdout,"%s\t%d\t%e\t%e\n",it->first,pars->perc->ppos[s]+1,pars->perc->gls[2*s],pars->perc->gls[2*s+1]);
+      fprintf(stdout,"%s\t%d\t%e\t%e\n",it->first,pars->perc->pos[s]+1,pars->perc->gls[2*s],pars->perc->gls[2*s+1]);
     
     if(pars->chooseChr!=NULL)
       break;
