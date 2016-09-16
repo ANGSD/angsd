@@ -24,6 +24,9 @@ printIcounts: printIcounts.c
 NGSadmix: ngsadmix32.cpp
 	$(CXX) $(FLAGS) ngsadmix32.cpp -o NGSadmix -lz -lpthread
 
+NGSadmix: ibs.cpp
+	$(CXX) $(FLAGS) ibs.cpp -o ibs -lz
+
 supersim: supersim.cpp rbeta.cpp
 	$(CXX) $(FLAGS) supersim.cpp -lz -o supersim
 
