@@ -70,6 +70,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
    */
   static int firstTime =1;
   static myMap::iterator it_outer=saf[0]->mm.begin();
+ aGotoHereIsTheEasiest:
   if(chooseChr==NULL){
     if(it_outer==saf[0]->mm.end())//if we are done
       return -2;
@@ -89,7 +90,20 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   fprintf(stderr,"\t-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect \n");
   fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites\n");
   assert(chooseChr!=NULL);
- //hit will contain the depth across different populations
+  //check that chooseChr exists in all pops.
+  for(int j=0;j<saf.size();j++){
+    myMap::iterator it = saf[j]->mm.find(chooseChr);
+    if(it==saf[j]->mm.end()){
+      fprintf(stderr,"\t-> Chromosome: \'%s\' does not exists in population: %s will skip it\n",chooseChr,saf[j]->fname);
+      //fprintf(stderr,"asdf: %s\n",it_outer->first);
+      chooseChr=NULL;
+      goto aGotoHereIsTheEasiest;
+    }
+
+  }
+
+
+  //hit will contain the depth across different populations
   keep<char> *hit =NULL;
 
   //  if(saf.size()>1)
