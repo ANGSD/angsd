@@ -13,7 +13,7 @@ $(info HTSSRC not defined, assuming systemwide installation -lhts)
 endif
 
 
-all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink psmcreader ngsPSMC
+all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink psmcreader ngsPSMC ibs
 
 kmath.o: kmath.c kmath.h
 	$(CC) $(FLAGS) -c kmath.c 
@@ -24,7 +24,7 @@ printIcounts: printIcounts.c
 NGSadmix: ngsadmix32.cpp
 	$(CXX) $(FLAGS) ngsadmix32.cpp -o NGSadmix -lz -lpthread
 
-NGSadmix: ibs.cpp
+ibs: ibs.cpp
 	$(CXX) $(FLAGS) ibs.cpp -o ibs -lz
 
 supersim: supersim.cpp rbeta.cpp
