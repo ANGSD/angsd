@@ -614,7 +614,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 
 
 
-nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
+nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
   int regionLen = coverage_in_bpT(np,sgl);//true covered regions
   nodePoolT dn;
   dn.l =0;
@@ -641,7 +641,10 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np) {
   for( r=0;r<sgl->readIDstop;r++) {
 
     bam1_t *rd = sgl->reads[r];
-
+    if(rd->core.tid!=refID){
+      fprintf(stderr,"ReferenceID:(r:%d) for read:%s is not: %d but is:%d\n",r,bam_get_qname(rd),refID,rd->core.tid);
+      exit(0);
+    }
     int mapQ = rd->core.qual;
     if(mapQ>=255) mapQ = 20;
 
@@ -1492,7 +1495,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 #endif
 #if 0
       for(int i=0;i<nFiles;i++)
-	fprintf(stderr,"[%s] sgl[%d].l=%d (%d,%d)\n",__FUNCTION__,i,sglp[i].l,sglp[i].first[0],sglp[i].last[sglp[i].l-1]);
+	fprintf(stderr,"2) [%s] sgl[%d].l=%d (%d:%d) l.0refid:%d\n",__FUNCTION__,i,sglp[i].l,sglp[i].first[0],sglp[i].last[sglp[i].l-1],sglp[i].reads[0]->core.tid);
       
 #endif
       
@@ -1520,7 +1523,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       if(show!=1){
 	dnT = new nodePoolT[nFiles];
 	for(int i=0;i<nFiles;i++){
-	  dnT[i] = mkNodes_one_sampleTb(&sglp[i],&npsT[i]);
+	  dnT[i] = mkNodes_one_sampleTb(&sglp[i],&npsT[i],theRef);
 	  tmpSum += dnT[i].l;
 	}
       }else

@@ -61,6 +61,13 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
 	rdObjRegionDone =1;
       break;
     }
+    if(b->core.tid>refToRead){
+      //buffed=1;
+      ret.bufferedRead = bam_dup(b);
+      rdObjRegionDone =1;
+      return;
+    }
+    
     ret.first[ret.l] = b->core.pos;
     ret.last[ret.l] = bam_endpos(b);
     ret.l++;
@@ -279,7 +286,6 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readN
     int pre=ret[i].l;//number of elements before
     //function reads readNlines reads, from rd[i].fp and modifies isEOF and regionDone
     read_reads_noStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
-    
     //first check if reading caused and end of region event to occur
     if(rd[i].regionDone||rd[i].isEOF) 
       rd[i].regionDone = 1;
@@ -329,7 +335,6 @@ int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &read
       pickStop += ret[i].first[ret[i].l-1];
     // fprintf(stderr,"reading until:%d\n",pickStop);
     read_reads(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
-
     //first check if reading caused and end of region event to occur
     if(rd[i].regionDone||rd[i].isEOF) 
       rd[i].regionDone = 1;
@@ -340,7 +345,7 @@ int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &read
       break;
     }
   }
-  //fprintf(stderr,"pickstop:%d\n",pickStop);
+  //  fprintf(stderr,"pickstop:%d\n",pickStop);
   if(usedPicker==-1)  //<-this means we are done with the current chr/region
     return nFiles;
 
