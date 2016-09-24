@@ -112,6 +112,8 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
 
 
 abcWriteFasta::~abcWriteFasta(){
+  if(ref)
+    free(ref);
   if(doFasta==0)
     return;
   changeChr(-1);
