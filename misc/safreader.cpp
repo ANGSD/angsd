@@ -265,7 +265,7 @@ persaf * persaf_init(char *fname){
    if(pp->kind==0){
      delete [] pp->ppos;
      pp->ppos=NULL;
-     fprintf(stderr,"yoyoyooyoyoyoyoyppos:\n");
+     // fprintf(stderr,"yoyoyooyoyoyoyoyppos:\n");
    }
    return it;
  }

@@ -64,16 +64,11 @@ void bhatiaFst(int sfs1,int sfs2,double **aMat,double **bMat){
     for(int a2=0;a2<=sfs2;a2++){
       double p1 = 1.0 * a1/(1.0*sfs1);
       double p2 = 1.0 * a2/(1.0*sfs2);
-      double q1 = 1 - p1;
-      double q2 = 1 - p2;
-      double alpha1 = 1 - (p1*p1 + q1*q1);
-      double alpha2 = 1 - (p2*p2 + q2*q2);
-      
-      double al =  0.5 * ( pow(p1-p2,2.0) + pow(q1-q2,2)) - (sfs1+sfs2) *  (sfs1*alpha1 + sfs2*alpha2) / (4*sfs1*sfs2*(sfs1+sfs2-1));
-      double bal = 0.5 * ( pow(p1-p2,2) + pow(q1-q2,2)) + (4*sfs1*sfs2-sfs1-sfs2)*(sfs1*alpha1 + sfs2*alpha2) / (4*sfs1*sfs2*(sfs1+sfs2-1));
-      (*aMat)[at] = al;
-      (*bMat)[at] = bal;
-      //      fprintf(stderr,"p1:%f p2:%f q1:%f q2:%f alhpa1:%f alpha:%f al:%f bal:%f\n",p1,p2,q1,q2,alpha1,alpha2,al,bal);
+
+      //sample size correction
+      (*aMat)[at] = (p1-p2)*(p1-p2)-((p1*(1.0-p1))/((double)sfs1-1))-((p2*(1.0-p2))/((double)sfs2-1.0));
+      (*bMat)[at] = p1*(1.0-p2)+p2*(1.0-p1);
+      //fprintf(stderr,"(%d,%d) p1:%f p2:%f al:%f bal:%f\n",a1,a2,p1,p2,(*aMat)[at],(*bMat)[at]);
       at++;
     }
 }
