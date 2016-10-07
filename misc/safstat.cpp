@@ -42,7 +42,7 @@ void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat){
     for(int a2=0;a2<=sfs2;a2++){
       double p1 = 1.0 * a1/(1.0*sfs1);
       double p2 = 1.0 * a2/(1.0*sfs2);
-      double q1 = 1 - p1;
+      double q1 = 0;//1 - p1;
       double q2 = 1 - p2;
       double alpha1 = 1 - (p1*p1 + q1*q1);
       double alpha2 = 1 - (p2*p2 + q2*q2);
