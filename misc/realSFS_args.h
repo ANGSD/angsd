@@ -23,6 +23,7 @@ typedef struct {
   long seed;//<-seed=-1 old version;seed=0 means time; othervise it will be used as seed
   int bootstrap;
   filt *fl;
+  int whichFst;
 }args;
 args * getArgs(int argc,char **argv);
 void destroy_args(args *p);
