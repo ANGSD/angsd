@@ -2,6 +2,7 @@
 #include "soap_likes.h"
 #include "gatk_likes.h"
 #include "bam_likes.h"
+#include "simple_likes.h"
 
 class abcGL:public abc{
 private:
