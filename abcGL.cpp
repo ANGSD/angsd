@@ -77,6 +77,7 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t3: SOAPsnp\n");
   fprintf(argFile,"\t4: SYK\n");
   fprintf(argFile,"\t5: phys\n");
+  fprintf(argFile,"\t6: Super simple sample an allele type GL. (1.0,0.5,0.0)\n");
   fprintf(argFile,"\t-trim\t\t%d\t\t(zero means no trimming)\n",trim);
   fprintf(argFile,"\t-tmpdir\t\t%s/\t(used by SOAPsnp)\n",angsd_tmpdir);
   fprintf(argFile,"\t-errors\t\t%s\t\t(used by SYK)\n",errorFname);
@@ -124,12 +125,16 @@ void abcGL::getOptions(argStruct *arguments){
   if(GL==0)
     return;
 
-  if(GL<0||GL>5){
-    fprintf(stderr,"\t-> You've choosen a GL model=%d, only 1,2,3,4,5,7 are implemented\n",GL);
+  if(GL<0||GL>6){
+    fprintf(stderr,"\t-> You've choosen a GL model=%d, only 1,2,3,4,5,6 are implemented\n",GL);
     exit(0);
   }
   if(GL==4&&(doCounts==0)){
     fprintf(stderr,"\t-> Must supply -doCounts 1 for SYK model\n");
+    exit(0);
+  }
+  if(GL==6&&(doCounts==0)){
+    fprintf(stderr,"\t-> Must supply -doCounts 1 for -gl 6\n");
     exit(0);
   }
   /*
@@ -217,8 +222,10 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
     errorProbs = abcError::generateErrorPointers(errors,3,4);
   }else if(GL==5){
       phys_init(arguments->nams);
+  }else if(GL==6){
+    simple_init();
   }
-  
+
   gzoutfile = gzoutfile2 = NULL;
   bufstr.s=NULL; bufstr.l=bufstr.m=0;// <- used for buffered output 
 
@@ -263,6 +270,8 @@ abcGL::~abcGL(){
     abcError::killGlobalErrorProbs(errorProbs);
   else if(GL==5)
     phys_destroy();
+  else if(GL==6)
+    simple_destroy();
   if(doGlf)    bgzf_close(gzoutfile);
     
   if(gzoutfile!=NULL)
@@ -321,6 +330,9 @@ void abcGL::run(funkyPars *pars){
     getLikesFullError10Genotypes(pars->numSites,pars->nInd,pars->counts,errorProbs,pars->keepSites,likes);
   else if(GL==5)
     call_phys(pars->chk,likes,trim);
+  else if(GL==6){
+    call_simple(pars->counts,pars->keepSites,likes,pars->numSites,pars->nInd);
+  }
   pars->likes = likes;
   
 
