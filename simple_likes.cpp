@@ -73,7 +73,9 @@ void call_simple(suint **counts,int *keepSites,double **lk,int nSites,int nSampl
 
       int r = angsd::getRandomCount(counts[s],i,-1);
       //      fprintf(stdout,"ris\t%d\n",r);
-      assert(r>-1&&r<4);
+      assert(r>-1);
+      if(r==4)
+	continue;
       for(int j=0;j<10;j++){
 	lk[s][i*10+j]=probs_simple[r][j];
       }
