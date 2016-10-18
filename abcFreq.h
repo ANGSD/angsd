@@ -15,6 +15,7 @@ typedef struct{
 
 class abcFreq:public abc{
 private:
+  int underflowprotect;
   kstring_t bufstr;
   double to_pval(Chisqdist *str,double f);
   Chisqdist *chisq1;

@@ -94,6 +94,7 @@ void abcFreq::printArg(FILE *argFile){
   
   fprintf(argFile,"\t-beagleProb\t%d (Dump beagle style postprobs)\n",beagleProb);
   fprintf(argFile,"\t-indFname\t%s (file containing individual inbreedcoeficients)\n",indFname);
+  fprintf(argFile,"\t-underFlowProtect\t%d (file containing individual inbreedcoeficients)\n",underflowprotect);
   fprintf(argFile,"NB These frequency estimators requires major/minor -doMajorMinor\n");
 }
 
@@ -143,6 +144,7 @@ void abcFreq::getOptions(argStruct *arguments){
 
   if(doMaf==0 )//&& doPost==0?
     return;
+  underflowprotect=angsd::getArg("-underFlowProtect",underflowprotect,arguments);
   chisq1 = new Chisqdist(1);
   chisq2 = new Chisqdist(2);
   chisq3 = new Chisqdist(3);
@@ -254,6 +256,7 @@ void abcFreq::getOptions(argStruct *arguments){
 
 //constructor
 abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
+  underflowprotect =0;
   minInd = 0;
   chisq1=chisq2=chisq3=NULL;
   inputIsBeagle =0;
@@ -594,7 +597,7 @@ void abcFreq::run(funkyPars *pars) {
 	}
       }
       else if(doPost==3){//uniform prior
-	if(algoGeno(pars->likes[s],refToInt[pars->major[s]],refToInt[pars->minor[s]],pars->nInd,0,abcSaf::prior,post[s]))
+	if(algoGeno(pars->likes[s],refToInt[pars->major[s]],refToInt[pars->minor[s]],pars->nInd,underflowprotect,abcSaf::prior,post[s]))
 	   fprintf(stderr,"\t-> Problem calling genotypes at: (%s,%d)\n",header->target_name[pars->refId],pars->posi[s]+1);	   
       }
       else if(doPost==4){
