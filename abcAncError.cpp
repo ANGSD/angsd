@@ -31,6 +31,10 @@ void abcAncError::getOptions(argStruct *arguments){
 
   //from command line
   doAncError=angsd::getArg("-doAncError",doAncError,arguments);
+
+  if(doAncError==0)
+    return;
+
   nInd=arguments->nInd;
   refName=angsd::getArg("-ref",refName,arguments);
   ancName=angsd::getArg("-anc",ancName,arguments);

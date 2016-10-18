@@ -34,12 +34,14 @@ void abcHaploCall::getOptions(argStruct *arguments){
 
   //from command line
   doHaploCall=angsd::getArg("-doHaploCall",doHaploCall,arguments);
+  if(doHaploCall==0)
+    return;
+
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   minMinor=angsd::getArg("-minMinor",minMinor,arguments);
   maxMis=angsd::getArg("-maxMis",maxMis,arguments);
 
-  if(doHaploCall==0)
-    return;
+
 
   if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
     fprintf(stderr,"\t-> bam or pileup input needed for -doHaploCall \n");

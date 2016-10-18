@@ -37,6 +37,9 @@ void abcDstat::printArg(FILE *argFile){
 void abcDstat::getOptions(argStruct *arguments){
     //from command line
   doAbbababa=angsd::getArg("-doAbbababa",doAbbababa,arguments);
+  if(doAbbababa==0)
+    return;
+
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   blockSize=angsd::getArg("-blockSize",blockSize,arguments);
   ancName = angsd::getArg("-anc",ancName,arguments);
@@ -47,8 +50,6 @@ void abcDstat::getOptions(argStruct *arguments){
   if(useLast != 0)
     useLast = 1;
 
-  if(doAbbababa==0)
-    return;
 
   if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
     fprintf(stderr,"Error: bam or soap input needed for -doAbbababa \n");

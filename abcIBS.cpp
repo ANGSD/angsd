@@ -38,6 +38,8 @@ void abcIBS::getOptions(argStruct *arguments){
 
   //from command line
   doIBS=angsd::getArg("-doIBS",doIBS,arguments);
+  if(doIBS==0)
+    return;
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   minMinor=angsd::getArg("-minMinor",minMinor,arguments);
   minFreq=angsd::getArg("-minFreq",minFreq,arguments);
@@ -47,8 +49,6 @@ void abcIBS::getOptions(argStruct *arguments){
   makeMatrix=angsd::getArg("-makeMatrix",makeMatrix,arguments);
   doCov=angsd::getArg("-doCov",doCov,arguments);
   
-  if(doIBS==0)
-    return;
 
   if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
     fprintf(stderr,"Error: bam or soap input needed for -doIBS \n");

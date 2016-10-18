@@ -91,6 +91,8 @@ void abcTemplate::printArg(FILE *argFile){
 void abcTemplate::getOptions(argStruct *arguments){
   //from command line
   doTemplate=angsd::getArg("-doTemplate",doTemplate,arguments);
+
+  
   if (doTemplate == 2) refName = angsd::getArg("-ref", refName, arguments);
 
   if ((doTemplate == 2) && (refName==NULL)) {

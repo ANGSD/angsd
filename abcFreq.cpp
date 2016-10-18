@@ -107,11 +107,14 @@ int isPowerOfTwo (unsigned int x)
 void abcFreq::getOptions(argStruct *arguments){
   int inputtype = arguments->inputtype;
   
-
-  rmTriallelic=angsd::getArg("-rmTriallelic",rmTriallelic,arguments);
-
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
   doPost=angsd::getArg("-doPost",doPost,arguments);
+
+  if(doMaf==0 && doPost ==0)
+    return;
+  
+  rmTriallelic=angsd::getArg("-rmTriallelic",rmTriallelic,arguments);
+
   GL=angsd::getArg("-GL",GL,arguments);
   if(inputtype!=INPUT_VCF_GL && inputtype!=INPUT_GLF && inputtype!=INPUT_GLF3 && doPost && GL==0){
     fprintf(stderr,"\t-> Potential problem: You are required to choose a genotype likelihood model (-GL) for estimating genotypes posteriors.\n");
@@ -145,13 +148,15 @@ void abcFreq::getOptions(argStruct *arguments){
   chisq3 = new Chisqdist(3);
 
 
+
+  
   minMaf=angsd::getArg("-minMaf",minMaf,arguments);
   //  assert(minMaf<=1&&minMaf>=0);
 
   double tmp=-1;
   tmp=angsd::getArg("-SNP_pval",tmp,arguments);
  
-  if(tmp!=-1){
+  if(tmp!=-1){ 
     SNP_pval = tmp;
     double pre = SNP_pval;
     //    fprintf(stderr,"ind:%f :%p: \t",SNP_pval,chisq3);

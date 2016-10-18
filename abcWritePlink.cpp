@@ -149,6 +149,8 @@ void abcWritePlink::print(funkyPars *pars){
 void abcWritePlink::getOptions(argStruct *arguments){
 
   doPlink=angsd::getArg("-doPlink",doPlink,arguments);
+  if(doPlink==0)
+    return;
   
   int doGeno = 0;
   doGeno = angsd::getArg("-doGeno",doGeno,arguments);

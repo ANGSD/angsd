@@ -282,6 +282,8 @@ void abcError::killGlobalErrorProbs(double ****errorProbs){
 void abcError::getOptions(argStruct *arguments){
 
   doError=angsd::getArg("-doError",doError,arguments);
+  if(doError==0)
+    return;
 
   int doMajorMinor = 0;
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);

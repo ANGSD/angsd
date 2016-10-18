@@ -97,6 +97,10 @@ void abcGL::getOptions(argStruct *arguments){
 
   //parse all parameters that this class could use
   GL=angsd::getArg("-GL",GL,arguments);
+
+  if(GL==0)
+    return;
+  
   trim = angsd::getArg("-trim",trim,arguments);
   angsd_tmpdir = angsd::getArg("-tmpdir",angsd_tmpdir,arguments);
   doGlf=angsd::getArg("-doGlf",doGlf,arguments);

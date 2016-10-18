@@ -52,6 +52,9 @@ void abcAsso::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> -doAsso 3 is deprecated from version 0.615 \n");
     exit(0);
   }
+  if(doAsso==0)
+    return;
+  
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
 
   adjust=angsd::getArg("-adjust",adjust,arguments);

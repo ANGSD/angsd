@@ -67,6 +67,10 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   int GL=0;
   int doCounts=0;
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
+
+  if(doMajorMinor==0)
+    return;
+  
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   rmTrans=angsd::getArg("-rmTrans",rmTrans,arguments);
    

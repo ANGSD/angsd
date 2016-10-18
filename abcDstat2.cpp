@@ -41,7 +41,11 @@ void abcDstat2::printArg(FILE *argFile){
 void abcDstat2::getOptions(argStruct *arguments){
   //from command line
   // 0: ignore this class, non zero: run this class
-  doAbbababa2 = angsd::getArg("-doAbbababa2",doAbbababa2,arguments); 
+  doAbbababa2 = angsd::getArg("-doAbbababa2",doAbbababa2,arguments);
+
+  if(doAbbababa2==0)
+    return;
+
   doCount = angsd::getArg("-doCounts",doCount,arguments);
   blockSize = angsd::getArg("-blockSize",blockSize,arguments);
   ancName = angsd::getArg("-anc",ancName,arguments);

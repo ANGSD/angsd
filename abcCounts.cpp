@@ -76,10 +76,13 @@ void printCounts(char *chr,int *posi,suint **counts,int nSites,size_t nInd,kstri
 
 void abcCounts::getOptions(argStruct *arguments){
 
+
+  doCounts=angsd::getArg("-doCounts",doCounts,arguments);
+  if(doCounts==0)
+    return;
   //from command line
   minQfile=angsd::getArg("-minQfile",minQfile,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
-  doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   dumpCounts=angsd::getArg("-dumpCounts",dumpCounts,arguments);
   doQsDist=angsd::getArg("-doQsDist",doQsDist,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
