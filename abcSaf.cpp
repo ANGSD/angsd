@@ -37,13 +37,13 @@ void abcSaf::printArg(FILE *argFile){
 
 void abcSaf::getOptions(argStruct *arguments){
   doSaf=angsd::getArg("-doSaf",doSaf,arguments);
-  if(doSaf==0)
-    return;
+  //  if(doSaf==0)
+  //  return;
   doPost=angsd::getArg("-doPost",doPost,arguments);
   isHap=angsd::getArg("-isHap",isHap,arguments);
   pest = angsd::getArg("-pest",pest,arguments);
   fold=angsd::getArg("-fold",fold,arguments);
-  if(doSaf==3){
+  if(doSaf==3){ //DRAGON
     fprintf(stderr,"\t-> Please use -doPost 3 instead for -doSaf 3\n");
     exit(0);
   }
