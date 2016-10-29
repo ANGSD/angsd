@@ -98,7 +98,7 @@ void abcGL::getOptions(argStruct *arguments){
   //parse all parameters that this class could use
   GL=angsd::getArg("-GL",GL,arguments);
 
-  if(GL==0)
+  if(0&&GL==0)//DRAGON
     return;
   
   trim = angsd::getArg("-trim",trim,arguments);
