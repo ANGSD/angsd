@@ -994,7 +994,10 @@ double abcAsso::normScoreEnv(double *post,int numInds, double *y, double *ytilde
 
     fflush(stderr);
     fflush(stdout);
-    exit(0);
+      fprintf(stderr,"The test is unreliable. You should increase -minHigh\n");
+
+
+      //    exit(0);
   }
   
   delete []  Ex;
@@ -1102,7 +1105,10 @@ double abcAsso::binomScoreEnv(double *post,int numInds, double *y, double *ytild
       for(int i=0 ; i<numInds ;i++) {
 	fprintf(stderr,"y: %f\t  post %f %f %f\tEx %f %f\tU %f\n",y[i],post[i*3+0],post[i*3+1],post[i*3+2],Ex[i],Ex2[i],U);
       }
-      exit(0);
+      //      exit(0);
+      fprintf(stderr,"The test is unreliable. You should increase -minHigh\n");
+      
+      
     }
 
     delete []  Ex;
