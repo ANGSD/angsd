@@ -86,11 +86,11 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   }
   
   if(doMajorMinor==4&&ref==NULL){
-    fprintf(stderr,"\t-> Must supply reference (-ref) when -doMajorMinor 4");
+    fprintf(stderr,"\t-> Must supply reference (-ref) when -doMajorMinor 4\n");
     exit(0);
   }
   if(doMajorMinor==5&&anc==NULL){
-    fprintf(stderr,"\t-> Must supply ancestral (-anc) when -doMajorMinor 5");
+    fprintf(stderr,"\t-> Must supply ancestral (-anc) when -doMajorMinor 5\n");
     exit(0);
   }
   free(ref);
