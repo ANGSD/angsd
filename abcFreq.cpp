@@ -683,17 +683,14 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
   int keepList[pars->nInd];  
 
   //loop though all sites and check if we have data.
-  //fprintf(stderr,"keepSites[0] %d\n",pars->keepSites[0]);
   for(int s=0;s<pars->numSites;s++) {
-    //    fprintf(stderr,"posi:%d keep:%d maj:%d min:%d\n",pars->posi[s]+1,pars->keepSites[s],pars->major[s],pars->minor[s]);
     if(keepInd[s]==0)//if we dont have any information
       continue;
     keepInd[s]=0;//
     for(int i=0 ; i<pars->nInd ;i++) {//DRAGON CHECK THIS
-      //fprintf(stderr,"size %d\nind %d\t loglike:%f\t%f\t%f\n",s,i,loglike[s][i*3+0],loglike[s][i*3+1],loglike[s][i*3+2]);
       keepList[i]=1;
-      if(loglike[s][i*3+0]+loglike[s][i*3+1]+loglike[s][i*3+2]>-0.0001){
-	//	fprintf(stderr,"size %d nind %d\t loglike:%f\t%f\t%f\n",s,i,loglike[s][i*3+0],loglike[s][i*3+1],loglike[s][i*3+2]);
+      //also discard if all gls are the same
+      if(loglike[s][i*3+0]+loglike[s][i*3+1]+loglike[s][i*3+2]>-0.0001||((loglike[s][i*3]==loglike[s][i*3+1] )&& (loglike[s][i*3]==loglike[s][i*3+2]))){
 	keepList[i]=0;
       }      
       else{
@@ -702,8 +699,6 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
 
     }
 
-    //    fprintf(stderr,"posi2:%d keep:%d\n",pars->posi[s]+1,pars->keepSites[s]);
-    //exit(0);
     if(keepInd[s]==0)//if we dont have any information
       continue;
 
@@ -1209,8 +1204,7 @@ double abcFreq::emFrequency(double *loglike,int numInds, int iter,double start,i
   
   if(indF!=NULL)
     return emFrequency_F(loglike,numInds,iter,start,keep,keepInd);
-  
-
+    
   float W0;
   float W1;
   float W2;
@@ -1221,7 +1215,7 @@ double abcFreq::emFrequency(double *loglike,int numInds, int iter,double start,i
   double accu2=0;
   float sum;
 
-
+  
   int it=0;
   
   for(it=0;it<iter;it++){
@@ -1233,20 +1227,16 @@ double abcFreq::emFrequency(double *loglike,int numInds, int iter,double start,i
       W1=exp(loglike[i*3+1])*2*p*(1-p);
       W2=exp(loglike[i*3+2])*(pow(p,2));
       sum+=(W1+2*W2)/(2*(W0+W1+W2));
-      //  fprintf(stderr,"%f %f %f\n",W0,W1,W2);
-      if(0&&std::isnan(sum)){
-	//fprintf(stderr,"PRE[%d]: W %f\t%f\t%f sum=%f\n",i,W0,W1,W2,sum);
-	exit(0);
-      }
+      if(std::isnan(sum))
+	fprintf(stderr,"PRE[%d]:gls:(%f,%f,%f) W(%f,%f,%f) sum=%f\n",i,loglike[i*3],loglike[i*3+1],loglike[i*3+2],W0,W1,W2,sum);
     }
-
+    
     p=sum/keepInd;
-    // fprintf(stderr,"it=%d\tp=%f\tsum=%f\tkeepInd=%d\n",it,p,log(sum),keepInd);
     if((p-temp_p<accu&&temp_p-p<accu)||(p/temp_p<1+accu2&&p/temp_p>1-accu2))
       break;
     temp_p=p;
   }
-
+  
   if(std::isnan(p)){
     fprintf(stderr,"[%s] caught nan will not exit\n",__FUNCTION__);
     fprintf(stderr,"logLike (3*nInd). nInd=%d\n",numInds);
@@ -1254,13 +1244,14 @@ double abcFreq::emFrequency(double *loglike,int numInds, int iter,double start,i
     fprintf(stderr,"keepList (nInd)\n");
     //print_array(stderr,keep,numInds);
     fprintf(stderr,"used logLike (3*length(keep))=%d\n",keepInd);
-
+    
     for(int ii=0;1&&ii<numInds;ii++){
-      if(keep!=NULL && keep[ii]==1)
-	    fprintf(stderr,"1\t");
+      if(keep!=NULL && keep[ii]==1){
+	//	fprintf(stderr,"1\t");
 	for(int gg=0;gg<3;gg++)
 	  fprintf(stderr,"%f\t",loglike[ii*3+gg]);
-      fprintf(stderr,"\n");
+	fprintf(stderr,"\n");
+      }
     }
     sum=0;
     for(int i=0;i<numInds;i++){
@@ -1270,12 +1261,14 @@ double abcFreq::emFrequency(double *loglike,int numInds, int iter,double start,i
       W1=exp(loglike[i*3+1])*2*p*(1-p);
       W2=exp(loglike[i*3+2])*(pow(p,2));
       sum+=(W1+2*W2)/(2*(W0+W1+W2));
-      fprintf(stderr,"p=%f W %f\t%f\t%f sum=%f loglike: %f\n",p,W0,W1,W2,sum,exp(loglike[i*3+2])*pow(1-p,2));
+      fprintf(stderr,"[%s.%s():%d] p=%f W %f\t%f\t%f sum=%f loglike: %f\n",__FILE__,__FUNCTION__,__LINE__,p,W0,W1,W2,sum,exp(loglike[i*3+2])*pow(1-p,2));
+      break;
     }
     p=-999;
-    //exit(0);
+    assert(p!=999);
+    return p;
   }
-  
+
   return(p);
 }
 
