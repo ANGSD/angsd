@@ -300,8 +300,13 @@ double **angsd::get3likesRescale(funkyPars *pars){
       for(int ii=1;ii<3;ii++)
 	if(loglike[s][i*3+ii]>mmax)
 	  mmax = loglike[s][i*3+ii];
-      for(int ii=0;ii<3;ii++)
+      for(int ii=0;(!std::isinf(mmax))&&ii<3;ii++){
 	loglike[s][i*3+ii] -=mmax;
+	if(std::isnan(loglike[s][i*3+ii])){
+	  fprintf(stderr,"mmax: %f\n",mmax);
+	  exit(0);
+	}
+      }
     }
   }
   return loglike;
