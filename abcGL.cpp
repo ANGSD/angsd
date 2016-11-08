@@ -10,7 +10,7 @@
   3) SOAPsnp
   4) SYK
   5) new fancy method
-
+  6) simple sample gls
   4 different output formats are supplied
   
   1) binary 10xdouble persample
