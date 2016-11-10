@@ -454,6 +454,9 @@ void abcMajorMinor::run(funkyPars *pars){
 	  pars->keepSites[s]=0;
 	  break;
 	}
+	//fixed awkward case where all gls are -Inf, should only happen with -gl 6
+	if(std::isinf(val[0])&&std::isinf(val[1])&&std::isinf(val[2]))
+	  val[0]=val[1]=val[2]=0;
 	angsd::logrescale(val,3);
 	lh3->lh3[s][i*3+0]=val[0];
 	lh3->lh3[s][i*3+1]=val[1];

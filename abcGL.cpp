@@ -462,6 +462,9 @@ void abcGL::printLike(funkyPars *pars) {
 	ksprintf(&bufstr, "\t%f",val[0]);
 	ksprintf(&bufstr, "\t%f",val[1]);
 	ksprintf(&bufstr, "\t%f",val[2]);
+	assert(!std::isnan(val[0]));
+	assert(!std::isnan(val[1]));
+	assert(!std::isnan(val[2]));
       }
 
       if(bufstr.l!=0)
