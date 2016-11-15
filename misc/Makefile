@@ -13,7 +13,7 @@ $(info HTSSRC not defined, assuming systemwide installation -lhts)
 endif
 
 
-all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink psmcreader ngsPSMC ibs
+all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink ngsPSMC ibs
 
 kmath.o: kmath.c kmath.h
 	$(CC) $(FLAGS) -c kmath.c 
@@ -43,25 +43,25 @@ splitgl: splitgl.c
 	$(CC) $(FLAGS) splitgl.c -lz -o splitgl
 
 ifdef HTSSRC
-safreader: safreader.cpp safreader.h header.h
+safreader.o: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp -I $(HTS_INCDIR)
 
-psmcreader: psmcreader.cpp psmcreader.h header.h
+psmcreader.o: psmcreader.cpp psmcreader.h header.h
 	$(CXX) $(FLAGS) -c psmcreader.cpp -I $(HTS_INCDIR)
 
-fstreader: fstreader.cpp fstreader.h header.h
+fstreader.o: fstreader.cpp fstreader.h header.h
 	$(CXX) $(FLAGS) -c fstreader.cpp -I $(HTS_INCDIR)
 
-safstat: safstat.cpp safstat.h 
+safstat.o: safstat.cpp safstat.h 
 	$(CXX) $(FLAGS) -c safstat.cpp -I $(HTS_INCDIR)
 
-realSFS_args: realSFS_args.cpp realSFS_args.h
+realSFS_args.o: realSFS_args.cpp realSFS_args.h
 	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTS_INCDIR)
 
-safcat: safcat.cpp safcat.h
+safcat.o: safcat.cpp safcat.h
 	$(CXX) $(FLAGS) -c safcat.cpp -I $(HTS_INCDIR)
 
-header: header.cpp header.h
+header.o: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp -I $(HTS_INCDIR)
 
 smartCount:	smartCount.c  
@@ -73,33 +73,33 @@ thetaStat:	thetaStat.cpp stats.cpp
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
 
-main_psmc: main_psmc.cpp main_psmc.h
+main_psmc.o: main_psmc.cpp main_psmc.h
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
-ngsPSMC: ngsPSMC.cpp psmcreader header main_psmc
+ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o
 	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
 
-realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
+realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
 else
-safreader: safreader.cpp safreader.h header.h
+safreader.o: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp 
 
-fstreader: fstreader.cpp fstreader.h header.h
+fstreader.o: fstreader.cpp fstreader.h header.h
 	$(CXX) $(FLAGS) -c fstreader.cpp 
 
-safstat: safstat.cpp safstat.h 
+safstat.o: safstat.cpp safstat.h 
 	$(CXX) $(FLAGS) -c safstat.cpp 
 
-psmcreader: psmcreader.cpp psmcreader.h header.h
+psmcreader.o: psmcreader.cpp psmcreader.h header.h
 	$(CXX) $(FLAGS) -c psmcreader.cpp 
 
-realSFS_args: realSFS_args.cpp realSFS_args.h
+realSFS_args.o: realSFS_args.cpp realSFS_args.h
 	$(CXX) $(FLAGS) -c realSFS_args.cpp 
-safcat: safcat.cpp safcat.h
+safcat.o: safcat.cpp safcat.h
 	$(CXX) $(FLAGS) -c safcat.cpp
 
-header: header.cpp header.h
+header.o: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp 
 
 smartCount:	smartCount.c  
@@ -112,13 +112,13 @@ msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm  -lhts
 
 
-realSFS: realSFS.cpp safreader keep.hpp safstat realSFS_args header fstreader safcat
+realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -lhts -lz -lpthread
 
-main_psmc: main_psmc.cpp main_psmc.h
+main_psmc.o: main_psmc.cpp main_psmc.h
 	$(CXX) $(FLAGS) -c main_psmc.cpp 
 
-ngsPSMC: ngsPSMC.cpp psmcreader header main_psmc
+ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o
 	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o main_psmc.o -lhts -lz
 
 endif
