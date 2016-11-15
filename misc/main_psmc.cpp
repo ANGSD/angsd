@@ -1,4 +1,5 @@
 #include "main_psmc.h"
+#include "fpsmc.cpp"
 #include <ctime>
 args * getArgs(int argc,char **argv){
   args *p = new args;
@@ -10,6 +11,7 @@ args * getArgs(int argc,char **argv){
   p->fname = NULL;
   p->onlyOnce = 0;
   p->seed =0;
+  p->winSize = 100;//default 100bp
   if(argc==0)
     return p;
 
@@ -19,6 +21,8 @@ args * getArgs(int argc,char **argv){
       p->tole = atof(*(++argv));
     else  if(!strcasecmp(*argv,"-maxIter"))
       p->maxIter = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-winSize"))
+      p->winSize = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-nSites"))
       p->nSites = atol(*(++argv));
     else  if(!strcasecmp(*argv,"-seed"))
@@ -59,17 +63,22 @@ int main_psmc(int argc, char **argv){
     return 0;
   //this will printout the header
   writepsmc_header(stderr,pars->perc);
-  
-  for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
-    //set perchr iterator, if pars->chooseChr, then we have only use a single chr
-    it = pars->chooseChr?iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop):iter_init(pars->perc,it->first,pars->start,pars->stop);
 
-    //print out the chromosome position and the two gls
-    for(size_t s=pars->perc->first;s<pars->perc->last;s++)
-      fprintf(stdout,"%s\t%d\t%e\t%e\n",it->first,pars->perc->pos[s]+1,pars->perc->gls[2*s],pars->perc->gls[2*s+1]);
-    
-    if(pars->chooseChr!=NULL)
-      break;
+  if(1){
+    psmc_wrapper(pars);
+  }  else{
+    //below is old printout, keeping for reference
+    for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
+      //set perchr iterator, if pars->chooseChr, then we have only use a single chr
+      it = pars->chooseChr?iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop):iter_init(pars->perc,it->first,pars->start,pars->stop);
+      
+      //print out the chromosome position and the two gls
+      for(size_t s=pars->perc->first;0&&s<pars->perc->last;s++)
+	fprintf(stdout,"%s\t%d\t%e\t%e\n",it->first,pars->perc->pos[s]+1,pars->perc->gls[2*s],pars->perc->gls[2*s+1]);
+      
+      if(pars->chooseChr!=NULL)
+	break;
+    }
   }
   destroy_args(pars);
   return 0;
