@@ -9,6 +9,7 @@ private:
   int hasData;
   int rmTrans;
   char *ref;
+  int seed;
 public:
   int doFasta;
   BGZF *outfileZ;

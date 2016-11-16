@@ -648,6 +648,7 @@ int angsd::getRandomCount(suint *counts, int i,int depth){
 
 // get the most frequent base, use random for tie
 // depth is without N
+// i is the individual
 int angsd::getMaxCount(suint *counts,int i, int depth){
 
   if(depth==-1){
@@ -672,15 +673,94 @@ int angsd::getMaxCount(suint *counts,int i, int depth){
   }
 
   if(nMax>1){ // in case of ties
-    int i=0;
+    int j=0;
+    int r = std::rand() % nMax;
+    for(int b=1;b<4;b++){
+      if(counts[b+4*i]==counts[whichMax+4*i]){
+	if(r==j){
+	  whichMax=b;
+	  break;
+	}
+	j++;
+      }
+    }     
+  }
+  
+
+  return whichMax;
+}
+
+
+//count is 4 long, A C G T
+int angsd::getRandomCountTotal(suint *counts, int nInd){
+
+  size_t totalCounts[4]={0,0,0,0};
+  for(int i=0;i<4*nInd;i++)
+    totalCounts[i%4] +=counts[i];   
+  
+
+  size_t depth=0;
+  for( int b = 0; b < 4; b++ )
+    depth+=totalCounts[b];
+  
+
+  if(depth==0)
+    return 4;
+
+  size_t j = std::rand() % depth;
+  size_t cumSum=0;
+  int res=4;
+
+  for( int b = 0; b < 4; b++ ){
+    cumSum+=totalCounts[b];
+    if( cumSum > j ){
+      res = b;
+      break;
+    }
+  }
+  return res;
+}
+
+// get the most frequent base, use random for tie
+// depth is without N
+// i is the individual
+int angsd::getMaxCountTotal(suint *counts,int nInd){
+
+  size_t totalCounts[4]={0,0,0,0};
+  for(int i=0;i<4*nInd;i++)
+    totalCounts[i%4] +=counts[i];   
+  
+
+  size_t depth=0;
+  for( int b = 0; b < 4; b++ )
+    depth+=totalCounts[b];
+  
+
+  if(depth==0)
+    return 4;
+
+  int whichMax = 0;
+  int nMax=1;  
+  for(int b=1;b<4;b++){
+    if ( totalCounts[b] > totalCounts[whichMax] ){
+      whichMax = b;
+      nMax = 1;
+    }
+    else if( totalCounts[b] == totalCounts[whichMax] ){
+      nMax++;
+    }
+  }
+
+  if(nMax>1){ // in case of ties
+    int j=0;
     int r = std::rand() % nMax;
      for(int b=1;b<4;b++){
-       if(counts[b+4*i]==counts[whichMax+4*i]){
-	 if(r==i){
+       if( totalCounts[b] == totalCounts[whichMax] ){
+	 if(r==j){
 	   whichMax=b;
 	   break;
 	 }
-	 i++;
+	 j++;
        }
 
      }
@@ -690,6 +770,11 @@ int angsd::getMaxCount(suint *counts,int i, int depth){
 
   return whichMax;
 }
+
+
+
+
+
 
 int ludcmp(double **a, int *indx, double &d,int n)
 {
