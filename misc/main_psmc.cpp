@@ -1,6 +1,48 @@
 #include "main_psmc.h"
 #include "fpsmc.cpp"
 #include <ctime>
+#include <ctype.h>
+#define DEFAULT_PATTERN "4+5*3+4"
+// parse a pattern like "4+5*3+4"
+// the returned array holds which parameters are linked together
+// number of parameters and number of free parameters will be also returned
+
+int *psmc_parse_pattern(const char *pattern, int *n_free, int *n_pars)
+{
+	char *q, *p, *tmp;
+	int top = 0, *stack = (int*)malloc(sizeof(int) * 0x100);
+	int *pars_map, k, l, i;
+	p = q = tmp = strdup(pattern);
+	k = 1;
+	while (1) {
+		assert(isdigit(*p) || *p == '*' || *p == '+' || *p == '\0'); // allowed characters
+		if (*p == '+' || *p == '\0') {
+			int is_end = (*p == 0)? 1 : 0;
+			*p++ = '\0';
+			l = atoi(q); q = p;
+			for (i = 0; i < k; ++i) {
+				stack[top++] = l;
+				assert(top <= 0xff);
+			}
+			k = 1;
+			if (is_end) break;
+		} else if (*p == '*') {
+			*p = '\0';
+			k = atoi(q); // number of repeats
+			*p++ = '*'; q = p;
+		} else ++p;
+	}
+	for (k = l = 0; k != top; ++k) l += stack[k];
+	*n_pars = l - 1; *n_free = top;
+	pars_map = (int*)malloc(sizeof(int) * (*n_pars + 1));
+	for (k = i = 0; k != top; ++k)
+		for (l = 0; l < stack[k]; ++l)
+			pars_map[i++] = k;
+	free(tmp); free(stack);
+	return pars_map;
+}
+
+
 args * getArgs(int argc,char **argv){
   args *p = new args;
   p->chooseChr=NULL;
@@ -12,6 +54,7 @@ args * getArgs(int argc,char **argv){
   p->onlyOnce = 0;
   p->seed =0;
   p->winSize = 100;//default 100bp
+  p->par =(psmc_par*) calloc(1,sizeof(psmc_par));
   if(argc==0)
     return p;
 
@@ -23,6 +66,8 @@ args * getArgs(int argc,char **argv){
       p->maxIter = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-winSize"))
       p->winSize = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-p"))
+      p->par->pattern =  strdup(*(++argv));
     else  if(!strcasecmp(*argv,"-nSites"))
       p->nSites = atol(*(++argv));
     else  if(!strcasecmp(*argv,"-seed"))
@@ -42,7 +87,10 @@ args * getArgs(int argc,char **argv){
     p->seed = time(NULL);
   srand48(p->seed);
   fprintf(stderr,"\t-> args: tole:%f maxiter:%d chr:%s start:%d stop:%d fname:%s seed:%ld \n",p->tole,p->maxIter,p->chooseChr,p->start,p->stop,p->fname,p->seed);
-
+  if(p->par->pattern!=NULL)
+    p->par->pattern = strdup(DEFAULT_PATTERN);
+  p->par->par_map = psmc_parse_pattern(p->par->pattern, &p->par->n_free, &p->par->n);
+  
   return p;
 }
 
