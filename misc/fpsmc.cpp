@@ -22,118 +22,104 @@ class fastPSMC {
   std::vector<double> fbProb;
 	
 public:
-	
+  void init();
 	//Initialisation
-	void SetTimeIntervals(){
-	  for (unsigned i = 0; i < maxTime+1; i++){
-	    timePoints.push_back( i );
-	    //prob1.push_back( 0 );
-	  }
-	}
-	
-	void AllocateMemory(){//TODO
-	  /*
-		P1...P7;
-		R1, R2;
-	  */
-	}
-	
-	void SetEPSize(){
-		epSize.clear();
-		for (unsigned i = 0; i < maxTime; i++)
-			epSize.push_back( 1 );
-	}
-	
+  void SetTimeIntervals(){
+    for (unsigned i = 0; i < maxTime+1; i++){
+      timePoints.push_back( i );
+      //prob1.push_back( 0 );
+    }
+  }
+  
+  void SetEPSize(){
+    epSize.clear();
+    for (unsigned i = 0; i < maxTime; i++)
+      epSize.push_back( 1 );
+  }
+  
 private:
+  void ComputeP1(){
+    for (unsigned i = 0; i < maxTime; i++)
+      P1[i] = exp( -rho*1*(timePoints[i+1] - timePoints[i]) );
+  }
+  void ComputeP2(){
+    for (unsigned i = 0; i < maxTime; i++)
+      P2[i] = 1 - P5[i];
+  }
+  
+  void ComputeP3(){
+    for (unsigned i = 0; i < maxTime; i++)
+      P3[i] = exp(-2*rho*timePoints[i]) - exp(-2*rho*timePoints[i+1]) - P6[i];
+  }
 	
-	void ComputeP1(){
-		for (unsigned i = 0; i < maxTime; i++)
-			P1[i] = exp( -rho*1*(timePoints[i+1] - timePoints[i]) );
-	}
+  void ComputeP4(){
+    for (unsigned i = 0; i < maxTime; i++)
+      P4[i] = P3[i];
+  }
 	
-/*	void ComputeP2(){
-		P2.clear();
-		for (unsigned i = 0; i < maxTime; i++)
-			P2.push_back( 1 - exp( -epSize[i]*(timePoints[i+1] - timePoints[i]) );
-	}*/
+  void ComputeP5(){
+    for (unsigned i = 0; i < maxTime; i++)
+      P5[i] = exp( -epSize[i]*(timePoints[i+1] - timePoints[i]) );
+  }
 	
-	void ComputeP2(){
-		for (unsigned i = 0; i < maxTime; i++)
-			P2[i] = 1 - P5[i];
-	}
+  void ComputeP6(){
+    for (unsigned i = 0; i < maxTime; i++){
+      double tmp = 0;
+      tmp = exp((epSize[i]-2*rho)*timePoints[i]) - exp((epSize[i]-2*rho)*timePoints[i+1]);
+      tmp = tmp*2*rho*exp(-epSize[i]*timePoints[i+1])/(epSize[i] - 2*rho);
+      P6[i] = tmp;
+    }
+  }
 	
-	void ComputeP3(){
-		for (unsigned i = 0; i < maxTime; i++){
-			P3[i] = exp(-2*rho*timePoints[i]) - exp(-2*rho*timePoints[i+1]) - P6[i];
-		}
-	}
-	
-	void ComputeP4(){
-		for (unsigned i = 0; i < maxTime; i++){
-			P4[i] = P3[i];
-		}
-	}
-	
-	void ComputeP5(){
-		for (unsigned i = 0; i < maxTime; i++){
-			P5[i] = exp( -epSize[i]*(timePoints[i+1] - timePoints[i]) );
-		}
-	}
-	
-	void ComputeP6(){
-		for (unsigned i = 0; i < maxTime; i++){
-			double tmp = 0;
-			tmp = exp((epSize[i]-2*rho)*timePoints[i]) - exp((epSize[i]-2*rho)*timePoints[i+1]);
-			tmp = tmp*2*rho*exp(-epSize[i]*timePoints[i+1])/(epSize[i] - 2*rho);
-			P6[i] = tmp;
-		}
-	}
-	
-	void ComputeP7(){
-		for (unsigned i = 0; i < maxTime; i++){
-			P7[i] = P6[i];
-		}
-	}
+  void ComputeP7(){
+    for (unsigned i = 0; i < maxTime; i++)
+      P7[i] = P6[i];
+  }
 
-	void ComputeR1(){
-		double tmp = 0;
-		for (unsigned i = maxTime - 1; i >= 0 ; i++){
-			R1[i] = tmp + fbProb[i];
-			tmp = R1[i];
-		}
-	}
+  void ComputeR1(){
+    double tmp = 0;
+    for (unsigned i = maxTime - 1; i >= 0 ; i++){
+      R1[i] = tmp + fbProb[i];
+      tmp = R1[i];
+    }
+  }
 	
-	void ComputeR2(){
-		double tmp = 0;
-		for (unsigned i = 0; i < maxTime ; i++){
-			R2[i] = tmp*P2[i]+fbProb[i]*P6[i]+R1[i]*P7[i];
-			tmp = R2[i];
-		}
-	}
+  void ComputeR2(){
+    double tmp = 0;
+    for (unsigned i = 0; i < maxTime ; i++){
+      R2[i] = tmp*P2[i]+fbProb[i]*P6[i]+R1[i]*P7[i];
+      tmp = R2[i];
+    }
+  }
 	
-	void ComputeRs(){
-		ComputeR1();
-		ComputeR2();
-	}
+  void ComputeRs(){
+    ComputeR1();
+    ComputeR2();
+  }
 	
-	void ComputeGlobalProbabilities(){
-		ComputeP1();
-		ComputeP5();
-		ComputeP6();
-		ComputeP2();
-		ComputeP3();
-		ComputeP4();
-		ComputeP7();
-	}
+  void ComputeGlobalProbabilities(){
+    ComputeP1();
+    ComputeP5();
+    ComputeP6();
+    ComputeP2();
+    ComputeP3();
+    ComputeP4();
+    ComputeP7();
+  }
 	
-	void ComputeFBProbs(){
-		fbProb[0] = fbProb[0]*P1[0] + R1[0]*P3[0] + fbProb[0]*P4[0];
-		for (unsigned i = 1; i < maxTime; i++){
-		  fbProb[i] = (fbProb[i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fbProb[i]*P4[i]);//removed last factor otherwise woulndt compile
-		  //fbProb[i] = (fbProb[i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fbProb[i]*P4[i])*emProb[i];
-		}
-	}
+  void ComputeFBProbs(){
+    fbProb[0] = fbProb[0]*P1[0] + R1[0]*P3[0] + fbProb[0]*P4[0];
+    for (unsigned i = 1; i < maxTime; i++){
+      fbProb[i] = (fbProb[i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fbProb[i]*P4[i]);//removed last factor otherwise woulndt compile
+      //fbProb[i] = (fbProb[i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fbProb[i]*P4[i])*emProb[i];
+    }
+  }
 };
+
+void fastPSMC::init(){
+  
+
+}
 
 
 double addProtect2(double a,double b){
