@@ -23,7 +23,7 @@ class fastPSMC {
 	
 public:
   void init();
-  void llh(std::vector<Site> &data);
+  double llh(std::vector<Site> &data);
 	//Initialisation
   void SetTimeIntervals(){
     for (unsigned i = 0; i < maxTime+1; i++){
@@ -124,7 +124,7 @@ void fastPSMC::init(){
 
 double fastPSMC::llh(std::vector<Site> &data){
   double llh=0;
-  for(int v=0;v<data.length();v++){//loop over windows
+  for(int v=0;v<data.size();v++){//loop over windows
     double g0=exp(data[v].g0);//homo gl
     double g1=exp(data[v].g1);//het gl
     double tmp =0;
