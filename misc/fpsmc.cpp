@@ -23,6 +23,7 @@ class fastPSMC {
 	
 public:
   void init();
+  void llh(std::vector<Site> &data);
 	//Initialisation
   void SetTimeIntervals(){
     for (unsigned i = 0; i < maxTime+1; i++){
@@ -117,8 +118,23 @@ private:
 };
 
 void fastPSMC::init(){
-  
+  ComputeGlobalProbabilities();
+  ComputeRs();
+}
 
+double fastPSMC::llh(std::vector<Site> &data){
+  double llh=0;
+  for(int v=0;v<data.length();v++){//loop over windows
+    double g0=exp(data[v].g0);//homo gl
+    double g1=exp(data[v].g1);//het gl
+    double tmp =0;
+    for (unsigned t = 1; t < maxTime; t++)
+      tmp += log((1-exp(t))*g0+exp(t)*g1);
+	
+    llh+=tmp;
+  }
+
+  return llh;
 }
 
 
@@ -145,7 +161,8 @@ int print_psmc_print_windows(std::vector<Site> &data){
 int main_analysis(std::vector<Site> &data){
   for(int i=0;0&&i<data.size();i++)
     fprintf(stdout,"%lu\t%s\t%f\t%f\n",data[i].siteId,data[i].name,data[i].g0,data[i].g1);
-
+  fastPSMC obj;
+  obj.init();
 }
 
 
