@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <htslib/bgzf.h>
 #include <assert.h>
+#include <ctime>
 
 #include "analysisFunction.h"
 #include "shared.h"
@@ -9,17 +10,17 @@
 #include "abc.h"
 #include "abcWriteFasta.h"
 
-
 void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doFasta\t%d\n",doFasta);
-  fprintf(argFile,"\t1: use a random base\n");
-  fprintf(argFile,"\t2: use the most common base (needs -doCounts 1)\n");
+  fprintf(argFile,"\t1: use a random (non N) base (needs -doCounts 1)\n");
+  fprintf(argFile,"\t2: use the most common (non N) base (needs -doCounts 1)\n");
   fprintf(argFile,"\t3: use the base with highest ebd (under development) \n");
   fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases perline in output file)\n",NbasesPerLine);
-  fprintf(argFile,"\t-explode\t%d\t(Should we include chrs with no data?)\n",explode);
-  fprintf(argFile,"\t-rmTrans\t%d\t(remove transitions (as different from -ref bases)?)\n",rmTrans);
-  fprintf(argFile,"\t-ref\t%s\t(reference fasta, only used with -rmTrans 1)\n",ref);
+  fprintf(argFile,"\t-explode\t%d\t print chromosome where we have no data (0:no,1:yes)\n",explode);
+  fprintf(argFile,"\t-rmTrans\t%d\t remove transitions as different from -ref bases (0:no,1:yes)\n",rmTrans);
+  fprintf(argFile,"\t-ref\t%s\t reference fasta, only used with -rmTrans 1\n",ref);
+  fprintf(argFile,"\t-seed\t%d\t use non random seed of value 1\n",seed);
   fprintf(argFile,"\n");
 }
 
@@ -34,6 +35,7 @@ void abcWriteFasta::getOptions(argStruct *arguments){
   NbasesPerLine = angsd::getArg("-basesPerLine",NbasesPerLine,arguments);
   rmTrans=angsd::getArg("-rmTrans",rmTrans,arguments);
   ref=angsd::getArg("-ref",ref,arguments);
+  seed=angsd::getArg("-seed",seed,arguments);
 
 
   if(doFasta){
@@ -41,12 +43,12 @@ void abcWriteFasta::getOptions(argStruct *arguments){
       fprintf(stderr,"Error: bam or soap input needed for -doFasta \n");
       exit(0);
     }
-    if(arguments->nInd!=1){
-      fprintf(stderr,"Error: -doFasta only uses a single individual\n");
+    if(doFasta==3 && arguments->nInd!=1){
+      fprintf(stderr,"Error: -doFasta 3 only works for a single individual\n");
       exit(0);
     }
-    if(doFasta==2 & doCount==0){
-      fprintf(stderr,"Error: -doFasta 2 needs allele counts (use -doCounts 1)\n");
+    if((doFasta==2||doFasta==1) & doCount==0){
+      fprintf(stderr,"Error: -doFasta 1 or 2 needs allele counts (use -doCounts 1)\n");
       exit(0);
     }
   }
@@ -79,6 +81,7 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   hasData =0;
   ref = NULL;
   rmTrans = 0;
+  seed=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doFasta")){
       printArg(stdout);
@@ -94,7 +97,12 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
     shouldRun[index] = 0;
     return;
   }
+  if(seed)
+    srand(seed);
+  else
+    srand(time(0));
 
+  
   printArg(arguments->argumentFile);
 
 
@@ -165,23 +173,27 @@ void abcWriteFasta::run(funkyPars *pars){
 
   if(doFasta==0)
     return;
+
+
   hasData=1;
   if(doFasta==1){//random number read
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
       if(pars->keepSites[s]==0)
 	continue;
-      if(pars->chk->nd[s][0]==NULL||pars->chk->nd[s][0]->l==0)
-	continue;
-      int j = std::rand() % pars->chk->nd[s][0]->l;
-      myFasta[pars->posi[s]] = pars->chk->nd[s][0]->seq[j];
-      
-    }
-  }else if(doFasta==2) {//most common
+      if(pars->nInd==1)
+	myFasta[pars->posi[s]] = intToRef[ angsd::getRandomCount(pars->counts[s],0) ];
+      else
+	myFasta[pars->posi[s]] = intToRef[ angsd::getRandomCountTotal(pars->counts[s],pars->nInd) ];
+    }     
+  }
+  else if(doFasta==2) {//most common
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
       if(pars->keepSites[s]==0)
 	continue;
-
-      myFasta[pars->posi[s]] = intToRef[ angsd::getMaxCount(pars->counts[s],0) ];
+      if(pars->nInd==1)
+	myFasta[pars->posi[s]] = intToRef[ angsd::getMaxCount(pars->counts[s],0) ];
+      else
+	myFasta[pars->posi[s]] = intToRef[ angsd::getMaxCountTotal(pars->counts[s],pars->nInd) ];
     }
   }else if(doFasta==3){
     for(int i=0;i<pars->nInd;i++){
