@@ -1,5 +1,5 @@
 #include "main_psmc.h"
-#include "fpsmc.cpp"
+#include "fpsmc.h"
 #include <ctime>
 #include <ctype.h>
 #define DEFAULT_PATTERN "4+5*3+4"
@@ -9,6 +9,7 @@
 
 int *psmc_parse_pattern(const char *pattern, int *n_free, int *n_pars)
 {
+  fprintf(stderr,"parsing pattern :\"%s\"\n",pattern);
 	char *q, *p, *tmp;
 	int top = 0, *stack = (int*)malloc(sizeof(int) * 0x100);
 	int *pars_map, k, l, i;
@@ -87,8 +88,10 @@ args * getArgs(int argc,char **argv){
     p->seed = time(NULL);
   srand48(p->seed);
   fprintf(stderr,"\t-> args: tole:%f maxiter:%d chr:%s start:%d stop:%d fname:%s seed:%ld \n",p->tole,p->maxIter,p->chooseChr,p->start,p->stop,p->fname,p->seed);
-  if(p->par->pattern!=NULL)
+  //  fprintf(stderr,"par:%p par->pattern:%p DEFAULT_PATTERN:%s\n",p->par,p->par->pattern,DEFAULT_PATTERN);
+  if(p->par->pattern==NULL)
     p->par->pattern = strdup(DEFAULT_PATTERN);
+  //  fprintf(stderr,"par:%p par->pattern:%p DEFAULT_PATTERN:%s\n",p->par,p->par->pattern,DEFAULT_PATTERN);
   p->par->par_map = psmc_parse_pattern(p->par->pattern, &p->par->n_free, &p->par->n);
   
   return p;

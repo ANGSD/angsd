@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cmath>
 #include "psmcreader.h"
+#include "main_psmc.h"
 
 using namespace std;
 
@@ -148,8 +149,15 @@ double addProtect2(double a,double b){
 }
 
 //function to print the data we need
-int print_psmc_window(std::vector<Site> &data){
+int print_psmc_print_windows(std::vector<Site> &data){
   for(int i=0;i<data.size();i++)
+    fprintf(stdout,"%lu\t%s\t%f\t%f\n",data[i].siteId,data[i].name,data[i].g0,data[i].g1);
+
+}
+
+//function to print the data we need
+int main_analysis(std::vector<Site> &data){
+  for(int i=0;0&&i<data.size();i++)
     fprintf(stdout,"%lu\t%s\t%f\t%f\n",data[i].siteId,data[i].name,data[i].g0,data[i].g1);
 
 }
@@ -186,7 +194,8 @@ int psmc_wrapper(args *pars){
       data.push_back(d);
       beginIndex = at;
     }
-    print_psmc_window(data);
+    main_analysis(data);
+    //print_psmc_print_windows(data);
     /*
     for(size_t s=pars->perc->first;0&&s<pars->perc->last;s++){
       fprintf(stdout,"%s\t%d\t%e\t%e\n",it->first,pars->perc->pos[s]+1,pars->perc->gls[2*s],pars->perc->gls[2*s+1]);
