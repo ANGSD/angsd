@@ -19,10 +19,12 @@ class fastPSMC {
   std::vector<double> P1, P2, P3, P4, P5, P6, P7;//each has length of timePoints.size()
   std::vector<double> R1, R2; ////each has length of timePoints.size()
   std::vector<double> epSize; //effective population size
-  std::vector<double> fbProb;
+  //  std::vector<double> fbProb; //length = timePoints.size()
+  double **fw;//maxTime x nWindows
+  double **bw;//maxTime x nWindows
 	
 public:
-  void init();
+  void init(size_t numWin);
   double llh(std::vector<Site> &data);
 	//Initialisation
   void SetTimeIntervals(){
@@ -37,7 +39,16 @@ public:
     for (unsigned i = 0; i < maxTime; i++)
       epSize.push_back( 1 );
   }
-  
+	
+  void ComputeFBProbs(std::vector<Site> &data){
+    for(int v=0;v<data.size();v++){
+      ComputeRs(v);
+      fw[v][0] = fw[v][0]*P1[0] + R1[0]*P3[0] + fw[v][0]*P4[0];
+      for (unsigned i = 1; i < maxTime; i++){
+	fw[v][i] = (fw[v][i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fw[v][i]*P4[i]);
+      }
+    }
+  }  
 private:
   void ComputeP1(){
     for (unsigned i = 0; i < maxTime; i++)
@@ -77,25 +88,25 @@ private:
       P7[i] = P6[i];
   }
 
-  void ComputeR1(){
+  void ComputeR1(int v){
     double tmp = 0;
     for (unsigned i = maxTime - 1; i >= 0 ; i++){
-      R1[i] = tmp + fbProb[i];
+      R1[i] = tmp + fw[v][i];
       tmp = R1[i];
     }
   }
 	
-  void ComputeR2(){
+  void ComputeR2(int v){
     double tmp = 0;
     for (unsigned i = 0; i < maxTime ; i++){
-      R2[i] = tmp*P2[i]+fbProb[i]*P6[i]+R1[i]*P7[i];
+      R2[i] = tmp*P2[i]+fw[v][i]*P6[i]+R1[i]*P7[i];
       tmp = R2[i];
     }
   }
 	
-  void ComputeRs(){
-    ComputeR1();
-    ComputeR2();
+  void ComputeRs(int v){
+    ComputeR1(v);
+    ComputeR2(v);
   }
 	
   void ComputeGlobalProbabilities(){
@@ -107,36 +118,19 @@ private:
     ComputeP4();
     ComputeP7();
   }
-	
-  void ComputeFBProbs(){
-    fbProb[0] = fbProb[0]*P1[0] + R1[0]*P3[0] + fbProb[0]*P4[0];
-    for (unsigned i = 1; i < maxTime; i++){
-      fbProb[i] = (fbProb[i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fbProb[i]*P4[i]);//removed last factor otherwise woulndt compile
-      //fbProb[i] = (fbProb[i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fbProb[i]*P4[i])*emProb[i];
-    }
-  }
+
 };
 
-void fastPSMC::init(){
+void fastPSMC::init(size_t numWindows){
   ComputeGlobalProbabilities();
-  ComputeRs();
-}
-
-double fastPSMC::llh(std::vector<Site> &data){
-  double llh=0;
-  for(int v=0;v<data.size();v++){//loop over windows
-    double g0=exp(data[v].g0);//homo gl
-    double g1=exp(data[v].g1);//het gl
-    double tmp =0;
-    for (unsigned t = 1; t < maxTime; t++)
-      tmp += log((1-exp(t))*g0+exp(t)*g1);
-	
-    llh+=tmp;
+  fw = new double *[timePoints.size()];
+  bw = new double *[timePoints.size()];
+  for(int i=0;i<timePoints.size();i++){
+    fw[i] = new double[numWindows];//maybe +1
+    bw[i] = new double[numWindows];//maybe +1
   }
-
-  return llh;
+  
 }
-
 
 double addProtect2(double a,double b){
   //function does: log(exp(a)+exp(b)) while protecting for underflow
@@ -162,7 +156,8 @@ int main_analysis(std::vector<Site> &data){
   for(int i=0;0&&i<data.size();i++)
     fprintf(stdout,"%lu\t%s\t%f\t%f\n",data[i].siteId,data[i].name,data[i].g0,data[i].g1);
   fastPSMC obj;
-  obj.init();
+  obj.init(data.size());
+  obj.ComputeFBProbs(data);
 }
 
 
