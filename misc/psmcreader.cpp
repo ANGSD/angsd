@@ -65,6 +65,8 @@ int psmcversion(const char *fname){
 perpsmc * perpsmc_init(char *fname){
   perpsmc *ret = new perpsmc ;
   ret->fname = strdup(fname);
+  ret->gls =NULL;
+  ret->pos = NULL;
   ret->bgzf_pos=ret->bgzf_gls=NULL;
   ret->pos = NULL;
   size_t clen;
@@ -156,7 +158,7 @@ perpsmc * perpsmc_init(char *fname){
    }
    my_bgzf_seek(pp->bgzf_gls,it->second.saf,SEEK_SET);
    my_bgzf_seek(pp->bgzf_pos,it->second.pos,SEEK_SET);
-
+   fprintf(stderr,"pp->gls:%p\n",pp->gls);
    if(pp->pos)
      delete [] pp->pos;
    if(pp->gls)

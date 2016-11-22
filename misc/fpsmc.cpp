@@ -8,8 +8,11 @@ using namespace std;
 
 struct Site{
   double g0, g1;
-  size_t siteId;//might not be needed
-  char *name;//chr_firstIdx:lastIdx_winStart:winStop //not needed
+};
+
+struct wins{
+  int from;//inclusive
+  int to;//inclusive
 };
 
 class fastPSMC {
@@ -20,10 +23,15 @@ class fastPSMC {
   std::vector<double> R1, R2; ////each has length of timePoints.size()
   std::vector<double> epSize; //effective population size
   //  std::vector<double> fbProb; //length = timePoints.size()
-  double **fw;//maxTime x nWindows
-  double **bw;//maxTime x nWindows
+  double **fw;//maxTime x nWindows+1
+  double **bw;//maxTime x nWindows+1
 	
 public:
+  fastPSMC(){
+    rho = 0.207;
+    maxTime=100;
+    fprintf(stderr,"rho:%f maxTime:%d\n",rho,maxTime);
+  }
   void init(size_t numWin);
   double llh(std::vector<Site> &data);
 	//Initialisation
@@ -39,20 +47,30 @@ public:
     for (unsigned i = 0; i < maxTime; i++)
       epSize.push_back( 1 );
   }
+
+  
 	
-  void ComputeFBProbs(std::vector<Site> &data){
-    for(int v=0;v<data.size();v++){
-      ComputeRs(v);
-      fw[v][0] = fw[v][0]*P1[0] + R1[0]*P3[0] + fw[v][0]*P4[0];
+  void ComputeFBProbs(std::vector<Site> &data,std::vector<wins> &windows){
+    //we first set the initial fwprobs to uniform
+    for(int i=0;i<timePoints.size();i++)
+      fw[i][0] = 1.0/timePoints.size();
+
+    //we now loop over windows.
+    //v=0 is above and is the initial distribution, we therefore plug in at v+1
+    for(int v=0;v<windows.size();v++){
+      ComputeRs(v);//<-prepare, this is based on last window
+
+      fw[v+1][0] = fw[v][0]*P1[0] + R1[0]*P3[0] + fw[v][0]*P4[0];
       for (unsigned i = 1; i < maxTime; i++){
-	fw[v][i] = (fw[v][i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fw[v][i]*P4[i]);
+	fw[v+1][i] = (fw[v+1][i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fw[v+1][i]*P4[i]);
       }
     }
   }  
 private:
   void ComputeP1(){
-    for (unsigned i = 0; i < maxTime; i++)
+    for (unsigned i = 0; i < maxTime; i++){
       P1[i] = exp( -rho*1*(timePoints[i+1] - timePoints[i]) );
+    }
   }
   void ComputeP2(){
     for (unsigned i = 0; i < maxTime; i++)
@@ -90,8 +108,10 @@ private:
 
   void ComputeR1(int v){
     double tmp = 0;
-    for (unsigned i = maxTime - 1; i >= 0 ; i++){
-      R1[i] = tmp + fw[v][i];
+    for (unsigned i = maxTime - 1; i > 0 ; i--){
+      //      fprintf(stderr,"i:%u\n",i);
+      fprintf(stderr,"i:%d cap:%lu val:(%d,%d)\n",i,R1.capacity(),i,v);
+      R1[i] = tmp + fw[i][v];
       tmp = R1[i];
     }
   }
@@ -105,6 +125,7 @@ private:
   }
 	
   void ComputeRs(int v){
+    fprintf(stderr,"v:%d\n",v);
     ComputeR1(v);
     ComputeR2(v);
   }
@@ -122,14 +143,28 @@ private:
 };
 
 void fastPSMC::init(size_t numWindows){
-  ComputeGlobalProbabilities();
+  SetTimeIntervals();
+  SetEPSize();
+
   fw = new double *[timePoints.size()];
   bw = new double *[timePoints.size()];
   for(int i=0;i<timePoints.size();i++){
-    fw[i] = new double[numWindows];//maybe +1
-    bw[i] = new double[numWindows];//maybe +1
+    fw[i] = new double[numWindows+1];
+    bw[i] = new double[numWindows+1];
   }
-  
+  maxTime++;
+  P1.reserve(maxTime);
+  P2.reserve(maxTime);
+  P2.reserve(maxTime);
+  P3.reserve(maxTime);
+  P4.reserve(maxTime);
+  P5.reserve(maxTime);
+  P6.reserve(maxTime);
+  P7.reserve(maxTime);
+  R1.reserve(maxTime);
+  R2.reserve(maxTime);
+  maxTime--;
+  ComputeGlobalProbabilities();
 }
 
 double addProtect2(double a,double b){
@@ -146,53 +181,64 @@ double addProtect2(double a,double b){
 
 //function to print the data we need
 int print_psmc_print_windows(std::vector<Site> &data){
-  for(int i=0;i<data.size();i++)
-    fprintf(stdout,"%lu\t%s\t%f\t%f\n",data[i].siteId,data[i].name,data[i].g0,data[i].g1);
+  for(size_t i=0;i<data.size();i++)
+    fprintf(stdout,"%lu\t%f\t%f\n",i,data[i].g0,data[i].g1);
 
 }
 
 //function to print the data we need
-int main_analysis(std::vector<Site> &data){
-  for(int i=0;0&&i<data.size();i++)
-    fprintf(stdout,"%lu\t%s\t%f\t%f\n",data[i].siteId,data[i].name,data[i].g0,data[i].g1);
+int main_analysis(std::vector<Site> &data,std::vector<wins> &windows){
   fastPSMC obj;
-  obj.init(data.size());
-  obj.ComputeFBProbs(data);
+  obj.init(windows.size());
+  for(int w=0;0&w<windows.size();w++){
+    fprintf(stderr,"win[%d]=(%d,%d)\n",w,windows[w].from,windows[w].to);
+  }
+  
+  for(size_t i=0;0&&i<data.size();i++)
+    fprintf(stdout,"%lu\t%f\t%f\n",i,data[i].g0,data[i].g1);
+
+
+  obj.ComputeFBProbs(data,windows);
 }
 
 
 int psmc_wrapper(args *pars){
   //  fprintf(stderr,"[%s]\n",__FUNCTION__);
+
+
+
   //loop over chrs;
+
   for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
     //set perchr iterator, if pars->chooseChr, then we have only use a single chr
+    std::vector<Site> data;//really stupid, but lets go with it for now.
+    std::vector<wins> windows;
     it = pars->chooseChr?iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop):iter_init(pars->perc,it->first,pars->start,pars->stop);
-
-    std::vector<Site> data;//this should be moved up so the end data will contain data for all chrs and not just a single chrs
 
     //generate window data
     int beginIndex = pars->perc->first;
     while(1){
       int beginPos=pars->perc->pos[beginIndex]+1;//add one due to positions being offset with one.
       int endPos = beginPos+pars->winSize;
-      Site d;
-      d.g0=d.g1=log(.0);//-Inf
-      d.name=NULL;
+
       int at=beginIndex;
       while(at<pars->perc->last&&pars->perc->pos[at]<endPos){
-	d.g0 = addProtect2(d.g0,pars->perc->gls[at]);
-	d.g1 = addProtect2(d.g1,pars->perc->gls[at+1]);
+      Site d;
+	d.g0 = pars->perc->gls[at];
+	d.g1 = pars->perc->gls[at+1];
+	data.push_back(d);
 	at++;
       }
       if(at>=pars->perc->last)
 	break;
-      d.name =(char*) calloc(1024,sizeof(char));
-      snprintf(d.name,1024,"%s_%d:%d_%d:%d",it->first,beginIndex,at,beginPos,endPos);
-      d.siteId=data.size();//very redundant. but lets keep for now.
-      data.push_back(d);
+      wins w;
+      w.from=beginIndex;
+      w.to=at;
+      windows.push_back(w);
       beginIndex = at;
     }
-    main_analysis(data);
+    main_analysis(data,windows);
+    break;
     //print_psmc_print_windows(data);
     /*
     for(size_t s=pars->perc->first;0&&s<pars->perc->last;s++){
