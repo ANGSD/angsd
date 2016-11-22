@@ -111,9 +111,19 @@ void abcSaf::getOptions(argStruct *arguments){
   if(arguments->regions.size()>1)
     fprintf(stderr,"\t-> !! You are doing -dosaf incombination with -rf, please make sure that your -rf file is sorted !!\n");
   anc = angsd::getArg("-anc",anc,arguments);
-  if(doSaf && (anc==NULL&&isSim==0)){
-    if(doSaf!=3){
+  if(doSaf && (anc==NULL&&isSim==0) ){
+    if(doSaf!=3 && doSaf!=5 ){
       fprintf(stderr,"\t-> Must supply -anc for polarizing the spectrum\n");
+      exit(0);
+    }
+  }
+  if(doSaf==5){
+    int doMajorMinor =0;
+    doMajorMinor = angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
+ 
+    if(doMajorMinor==0){
+      
+      fprintf(stderr,"\t-> for -doSaf 5 you must infer major and minor\n");
       exit(0);
     }
   }
@@ -925,6 +935,177 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
 
 
 
+void abcSaf::algoJointMajorMinor(double **liks,int nsites,int numInds, int *keepSites,realRes *r,int fold,char *major, char *minor) {
+  //  fprintf(stderr,"[%s]\n",__FUNCTION__);
+  int myCounter =0;
+  if(liks==NULL){
+    fprintf(stderr,"problems receiving data in [%s] will exit (likes=%p)\n",__FUNCTION__,liks);
+    exit(0);
+  }
+  double sumMinors[2*numInds+1];  //final results
+
+  for(int it=0; it<nsites; it++) {//loop over sites
+    int major_offset = major[it];
+
+
+    if(major_offset==4||(keepSites[it]==0)){//skip of no major information
+      keepSites[it] =0; //
+      //      r->oklist is zero no need to update
+      continue;
+    }
+    //set the resultarray to zeros
+    for(int sm=0 ; sm<(2*numInds+1) ; sm++ )
+      sumMinors[sm] = 0;
+    
+    //no loop through the 3 different minors
+    //    for(int minor_offset=0;minor_offset<4;minor_offset++)
+    int minor_offset = minor[it];
+
+    if(minor_offset == major_offset)
+      continue;
+    if(noTrans){
+      if((major_offset==2&&minor_offset==0)||(major_offset==0&&minor_offset==2))
+	continue;
+      if((major_offset==1&&minor_offset==3)||(major_offset==3&&minor_offset==1))
+	continue;
+    }
+    double totmax = 0.0;
+    //hook for only calculating one minor
+    int Aa_offset = angsd::majorminor[minor_offset][major_offset];//0-9
+    int AA_offset = angsd::majorminor[minor_offset][minor_offset];//0-9
+    int aa_offset = angsd::majorminor[major_offset][major_offset];//0-9
+    //     fprintf(stderr,"%d:%d\t%d\t%d\n",major_offset,Aa_offset,AA_offset,aa_offset);
+    //part two
+    double hj[2*numInds+1];
+    for(int index=0;index<(2*numInds+1);index++)
+      hj[index]=0;
+    double PAA,PAa,Paa;
+
+    for(int i=0 ; i<numInds ;i++) {
+      //	printf("pre scale AA=%f\tAa=%f\taa=%f\n",liks[it][i*3+AA_offset],liks[it][i*3+Aa_offset],liks[it][i*3+aa_offset]);
+      double GAA,GAa,Gaa;
+
+      //printf("post scale AA=%f\tAa=%f\taa=%f\n",liks[it][i*3+AA_offset],liks[it][i*3+Aa_offset],liks[it][i*3+aa_offset]);
+      GAA = liks[it][i*10+AA_offset];
+      GAa = log(2.0)+liks[it][i*10+Aa_offset];
+      Gaa = liks[it][i*10+aa_offset];
+      //printf("[GAA] GAA=%f\tGAa=%f\tGaa=%f\n",GAA,GAa,Gaa);
+      //do underlfow protection (we are in logspace here) (rasmus style)
+      double mymax;
+      if (Gaa > GAa && Gaa > GAA) mymax = Gaa;
+      else if (GAa > GAA) mymax = GAa;
+      else mymax = GAA;
+      // fprintf(stdout,"mymax[%d]=%f\t",i,mymax);
+	  
+      if(mymax<MINLIKE){
+	//	    fprintf(stderr,"\n%f %f %f\n",GAA, GAa,Gaa);
+	Gaa = 0;
+	GAa = 0;
+	GAA = 0;
+	totmax = totmax + mymax;
+      }else{
+	Gaa=Gaa-mymax;
+	GAa=GAa-mymax;
+	GAA=GAA-mymax;
+	totmax = totmax + mymax;
+	
+	//	fprintf(stderr,"totmax=%f\n",totmax);
+	//END underlfow protection (we are in logspace here) (rasmus style)
+      }
+      PAA=exp(GAA);
+      PAa=exp(GAa);
+      Paa=exp(Gaa);
+
+      //check for underflow error, this should only occur once in a blue moon
+      if(std::isnan(Paa)||std::isnan(PAa)||std::isnan(Paa)){
+	fprintf(stderr,"PAA=%f\tPAa=%f\tPaa=%f\n",PAA,PAa,Paa);
+      }
+      //	fprintf(stdout,"it=%d PAA=%f\tPAa=%f\tPaa=%f\n",it,PAA,PAa,Paa);
+      if(i==0){
+	hj[0] =Paa;
+	hj[1] =PAa;
+	hj[2] =PAA;
+      }else{
+	  //fprintf(stderr,"asdf\n");
+	for(int j=2*(i+1); j>1;j--){
+	    //  print_array(stdout,hj,2*numInds+1,0);
+	    //print_array(hj,2*numInds+1);
+	  double tmp;
+	  tmp = PAA*hj[j-2]+PAa*hj[j-1]+Paa*hj[j];
+	    
+	  if(std::isnan(tmp)){
+	    fprintf(stderr,"is nan:%d\n",j );
+	    
+	    hj[j] = 0;
+	    break;
+	  }else
+	    hj[j]  =tmp;
+	}
+	hj[1] = Paa*hj[1] + PAa*hj[0];
+	hj[0] = Paa*hj[0];
+      }
+
+
+    }
+
+    for(int ii=0;0&&ii<10*numInds;ii++)
+      fprintf(stdout,"%f\t",liks[it][ii]);
+    
+
+    for(int i=0;i<(2*numInds+1);i++)
+      sumMinors[i] +=  exp(log(hj[i])-lbicoTab[i]+totmax);
+    
+      //sumMinors is in normal space, not log
+    /*
+      we do 3 things.
+      1. log scaling everyting
+      2. rescaling to the most likely in order to avoid underflows in the optimization
+      3. we might do a fold also.
+      
+     */    
+
+    if(fold) {
+      int newDim = numInds+1;
+      for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
+	sumMinors[i] = log(sumMinors[i] + sumMinors[2*numInds-i]);//THORFINN NEW
+      sumMinors[newDim-1] = log(sumMinors[newDim-1])+log(2.0);
+      angsd::logrescale(sumMinors,newDim);
+      if(std::isnan(sumMinors[0]))
+	r->oklist[it] = 2;
+      else{
+	r->oklist[it] = 1;
+	r->pLikes[myCounter] =new float[numInds+1];
+ 	for(int iii=0;iii<numInds+1;iii++)
+	  r->pLikes[myCounter][iii] = sumMinors[iii];
+	  //memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(numInds+1));
+	myCounter++;
+      }
+    }else{
+      for(int i=0;i<2*numInds+1;i++)
+	sumMinors[i] = log(sumMinors[i]);
+      angsd::logrescale(sumMinors,2*numInds+1);
+      //  fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
+      if(std::isnan(sumMinors[0]))
+	r->oklist[it] = 2;
+      else{
+	r->oklist[it] = 1;
+	r->pLikes[myCounter] =new float[2*numInds+1];
+	for(int iii=0;iii<2*numInds+1;iii++){
+	  //	  fprintf(stderr,"iii:%f\n",sumMinors[iii]);
+	  r->pLikes[myCounter][iii] = sumMinors[iii];
+	}
+	//	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
+	myCounter++;
+      }
+    }
+  } 
+  
+}
+
+
+
+
+
 
 void print_array(FILE *fp,double *ary,int len,int doLogTransform){
   //  fprintf(stderr,"Printing in logspace\n");
@@ -960,7 +1141,10 @@ void abcSaf::run(funkyPars  *p){
       filipe::algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans,doSaf,p->major,p->minor,freq->freq,filipeIndF,newDim);
     }else if(doSaf==4){
     algoJointPost(p->post,p->numSites,p->nInd,p->keepSites,r,fold);
+    }else if(doSaf==5){
+      algoJointMajorMinor(p->likes,p->numSites,p->nInd,p->keepSites,r,fold,p->major,p->minor);
     }
+
     p->extras[index] = r;
   }
   if(doSaf==3){
