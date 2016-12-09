@@ -85,8 +85,8 @@ The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{si
   {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
   \hline
   1 & {\sf POSI} & int &  Length of CHR (not including terminating null)\\
-  2 & {\sf acoef1} & char* & Reference sequence name. Length is CLEN\\
-  3 & {\sf bcoef2} & size\_t & Number of sites with coverage from reference CHR\\
+  2 & {\sf acoef1} & double* & $\alpha$ coefficients from either reynolds estimator or Bhatia \\
+  3 & {\sf bcoef2} & double* & $\beta$ coeffficients from eithre Reynolds estimator or Bhatia\\
   \hline
 \end{tabular}\label{tab3}
 \end{table}
