@@ -292,8 +292,15 @@ void abcFilterSNP::getOptions(argStruct *arguments){
   //from command line
   doSnpStat=angsd::getArg("-doSnpStat",doSnpStat,arguments);
 
+
   if(doSnpStat==0)
     return;
+  int domajorminor=0;
+  domajorminor = angsd::getArg("-domajorminor",domajorminor,arguments);
+  if(domajorminor==0){
+    fprintf(stderr,"\t-> Must supply -doMajorMinor for running dosnpstat (needs to look a distributions of major and minor alleles)\n");
+    exit(0);
+  }
   //from command line
 
   edge_pval=angsd::getArg("-edge_pval",edge_pval,arguments);      
