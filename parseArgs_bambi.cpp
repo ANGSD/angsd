@@ -172,6 +172,7 @@ void printArg(FILE *argFile,argStruct *ret){
 
 //read program parameters
 void setArgsBam(argStruct *arguments){
+  int seed=0;
   remove_bads = angsd::getArg("-remove_bads",remove_bads,arguments);
   uniqueOnly = angsd::getArg("-uniqueOnly",uniqueOnly,arguments);
   only_proper_pairs =angsd::getArg("-only_proper_pairs",only_proper_pairs,arguments);
@@ -180,6 +181,7 @@ void setArgsBam(argStruct *arguments){
   cigstat = angsd::getArg("-cigstat",cigstat,arguments);
   minQ = angsd::getArg("-minQ",minQ,arguments);
   downSample = angsd::getArg("-downSample",downSample,arguments);
+  seed = angsd::getArg("-seed",seed,arguments);
   trim = angsd::getArg("-trim",trim,arguments);
   trim5 = angsd::getArg("-trim5",trim5,arguments);
   trim3 = angsd::getArg("-trim3",trim3,arguments);
@@ -194,7 +196,9 @@ void setArgsBam(argStruct *arguments){
   arguments->show = angsd::getArg("-show",arguments->show,arguments);
   if(regfile && regfiles)
     fprintf(stderr,"\t-> WARNING both -r and -rf has been set \n");
-    
+
+  if(seed)
+    srand48(seed);
   char *tmp = NULL;
   tmp = angsd::getArg("-ref",tmp,arguments);
   if(tmp==NULL && adjustMapQ!=0){
