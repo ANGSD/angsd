@@ -112,7 +112,7 @@ int main(int argc,char **argv){
 
   if(argc==1){
     fprintf(stderr, "\t-> ---./ngsPSMC\n");
-    fprintf(stderr,"\t-> ./ngsPSMC afile.psmc.idx \n");
+    fprintf(stderr,"\t-> ./ngsPSMC [print print_header] afile.psmc.idx \n");
     return 0;
   }
   ++argv;

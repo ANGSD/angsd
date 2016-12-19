@@ -18,7 +18,8 @@ struct wins{
 class fastPSMC {
   unsigned maxTime; //number of time intervals
   double rho;
-  std::vector<double> timePoints;//coalescence times.
+  double mu;
+  std::vector<double> timePoints;//coalescence times. Called T_k in document
   std::vector<double> P1, P2, P3, P4, P5, P6, P7;//each has length of timePoints.size()
   std::vector<double> R1, R2; ////each has length of timePoints.size()
   std::vector<double> epSize; //effective population size
@@ -29,8 +30,9 @@ class fastPSMC {
 public:
   fastPSMC(){
     rho = 0.207;
+    mu = 0.0001;
     maxTime=100;
-    fprintf(stderr,"rho:%f maxTime:%d\n",rho,maxTime);
+    fprintf(stderr,"\t-> rho:%f maxTime:%d mu:%f\n",rho,maxTime,mu);
   }
   void init(size_t numWin);
   double llh(std::vector<Site> &data);
@@ -49,8 +51,9 @@ public:
   }
 
   
-	
+  
   void ComputeFBProbs(std::vector<Site> &data,std::vector<wins> &windows){
+    
     //we first set the initial fwprobs to uniform
     for(int i=0;i<timePoints.size();i++)
       fw[i][0] = 1.0/timePoints.size();
@@ -58,11 +61,24 @@ public:
     //we now loop over windows.
     //v=0 is above and is the initial distribution, we therefore plug in at v+1
     for(int v=0;v<windows.size();v++){
-      ComputeRs(v);//<-prepare, this is based on last window
+      //calculate emissions
+      
+      
+      ComputeRs(v);//<-prepare R1,R2
 
-      fw[v+1][0] = fw[v][0]*P1[0] + R1[0]*P3[0] + fw[v][0]*P4[0];
+      //Calcute emission probs, looping over all sites from: windows[v].from to: windows[v].to
+      //we are calculating emission probs for each T_k?!
+      double logemis[maxTime];
+
+      for(int j=0;j<maxTime;j++){
+	logemis[j] = 0;
+	for(int i=windows[v].from;i<windows[v].to;i++){
+	  logemis[j] += log(exp(data[i].g0)*exp(-timePoints[j]*mu) + exp(data[i].g1)*(1-exp(-timePoints[j]*mu) ));
+	}
+      }
+      fw[v+1][0] = (fw[v][0]*P1[0] + R1[0]*P3[0] + fw[v][0]*P4[0])*logemis[0] ;
       for (unsigned i = 1; i < maxTime; i++){
-	fw[v+1][i] = (fw[v+1][i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fw[v+1][i]*P4[i]);
+	fw[v+1][i] = (fw[v+1][i]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fw[v+1][i]*P4[i])*logemis[i];
       }
     }
   }  
@@ -110,7 +126,7 @@ private:
     double tmp = 0;
     for (unsigned i = maxTime - 1; i > 0 ; i--){
       //      fprintf(stderr,"i:%u\n",i);
-      fprintf(stderr,"i:%d cap:%lu val:(%d,%d)\n",i,R1.capacity(),i,v);
+      //      fprintf(stderr,"i:%d cap:%lu val:(%d,%d)\n",i,R1.capacity(),i,v);
       R1[i] = tmp + fw[i][v];
       tmp = R1[i];
     }
@@ -125,7 +141,7 @@ private:
   }
 	
   void ComputeRs(int v){
-    fprintf(stderr,"v:%d\n",v);
+    //    fprintf(stderr,"v:%d\n",v);
     ComputeR1(v);
     ComputeR2(v);
   }
@@ -180,25 +196,22 @@ double addProtect2(double a,double b){
 }
 
 //function to print the data we need
-int print_psmc_print_windows(std::vector<Site> &data){
-  for(size_t i=0;i<data.size();i++)
-    fprintf(stdout,"%lu\t%f\t%f\n",i,data[i].g0,data[i].g1);
-
-}
-
-//function to print the data we need
 int main_analysis(std::vector<Site> &data,std::vector<wins> &windows){
   fastPSMC obj;
+  //prepare datastructures
   obj.init(windows.size());
-  for(int w=0;0&w<windows.size();w++){
-    fprintf(stderr,"win[%d]=(%d,%d)\n",w,windows[w].from,windows[w].to);
-  }
   
-  for(size_t i=0;0&&i<data.size();i++)
-    fprintf(stdout,"%lu\t%f\t%f\n",i,data[i].g0,data[i].g1);
+  //print indices for endpoint of windows
+  for(int w=0;0&w<windows.size();w++)
+    fprintf(stdout,"win[%d]=(%d,%d)\n",w,windows[w].from,windows[w].to);
+
+  //print out data:
+  for(int w=0;0&w<windows.size();w++)
+    for(int p=windows[w].from;p<windows[w].to;p++)
+      fprintf(stdout,"%d\t%d\t%f\t%f\n",p,w,data[p].g0,data[p].g1);
 
 
-  obj.ComputeFBProbs(data,windows);
+  //  obj.ComputeFBProbs(data,windows);
 }
 
 
@@ -236,6 +249,7 @@ int psmc_wrapper(args *pars){
       w.to=at;
       windows.push_back(w);
       beginIndex = at;
+      //      fprintf(stderr,"(%d,%d)\n",beginPos,endPos);
     }
     main_analysis(data,windows);
     break;

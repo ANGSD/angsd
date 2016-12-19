@@ -158,7 +158,7 @@ perpsmc * perpsmc_init(char *fname){
    }
    my_bgzf_seek(pp->bgzf_gls,it->second.saf,SEEK_SET);
    my_bgzf_seek(pp->bgzf_pos,it->second.pos,SEEK_SET);
-   fprintf(stderr,"pp->gls:%p\n",pp->gls);
+   //fprintf(stderr,"pp->gls:%p\n",pp->gls);
    if(pp->pos)
      delete [] pp->pos;
    if(pp->gls)
