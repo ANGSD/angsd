@@ -368,7 +368,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     p++;
   }
 
-  if(regLen==0){
+  if(regLen==0) {
     //only generate likes for truely variable sites
     for(int s=0;s<segsites;s++){
       if(pileup)
@@ -397,7 +397,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
       }
 	
     }
-  }else{
+  }else {
 
     int s =0;
     //shifted with one, to match the positions. This shouldbn't matte for correctness
@@ -429,12 +429,8 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	}
 	s++;
       }else{
-	if(pileup)
-	
-	  sim_invar_site(errate,nsam,depths,meandepth,gz,&kpl,count,i,onlyPoly);
-
-
-	/*	for(int i=0;i<nsam/2;i++){
+	//this 'for' loop is  important, should not be be commented out.
+	for(int i=0;1&&i<nsam/2;i++){
 	  int genotypes[2] = {0,0};
 	  if(depths==NULL)
 	    print_ind_site(errate,meandepth,genotypes,gz,&kpl);
@@ -443,7 +439,12 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  if(pileup && i<nsam/2-1)
 	    kputc('\t',&kpl);
 	}
-	*/
+
+	if(pileup)
+	
+	  sim_invar_site(errate,nsam,depths,meandepth,gz,&kpl,count,i,onlyPoly);
+
+	
 	if(pileup){
 	 
 	  if(kpl.l>4096){
