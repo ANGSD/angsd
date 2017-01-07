@@ -530,6 +530,21 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
       ksprintf(&kpsmc,"\n");
     gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+    ksprintf(&kpsmc,"+\n");
+    for(int s=0;s<segsites;s++){
+      if(s>0 &&(s % NBASE_PER_LINE) ==0){
+	//fprintf(stderr," s:%d NBA:%d\n",s,NBASE_PER_LINE);
+	ksprintf(&kpsmc,"\n");
+      }
+      ksprintf(&kpsmc,"5");
+      if(kpsmc.l>4096){
+	gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+	kpsmc.l=0;
+      }
+    }
+    if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
+      ksprintf(&kpsmc,"\n");
+    gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
     kpsmc.l=0;free(kpsmc.s);
   }
   for(int h=0;h<nsam/2;h++)
