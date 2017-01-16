@@ -1,5 +1,5 @@
 // g++ -o ibs ibs.cpp -lz -O3
-
+ 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -123,6 +123,7 @@ int readGLF(const char* fname,double * &gls,int nInd,int maxSites){
     if(nSites2>=maxSites)
       break;
   }
+  
   //  size_t nSites2 = gzread(fp,gls,sizeof(double)*nSites*10*nInd);
   gzclose(fp);
   if(nSites!=nSites2){
@@ -373,14 +374,12 @@ void model2_2D(double *W,double  pnew[],int Nsites){
 
 
 
-
-
-
 void runEM2D(double *gl,argu2 *pars){
+
 
   float sum;
   
-  int maxIter=100;
+  int maxIter=1000;
   int it;
   double W[100];
   double Wtmp[100];
@@ -402,15 +401,17 @@ void runEM2D(double *gl,argu2 *pars){
       if(pars->keepSites[i]==0)
 	continue;
       double sum=0;
+      double gl1;
       for(int w1=0;w1<10;w1++){
 	for(int w2=0;w2<10;w2++){
 	  int w=w1 + 10 * w2;
 	//	Wtmp[w]=exp(gl[i*10+w+pars->nInd1*10*pars->totalSites]+gl[i*10+w+pars->nInd2*10*pars->totalSites])*p[w];
 	Wtmp[w]=exp(gl[pars->theInd1*10+w1+pars->nInd*10*i]+gl[pars->theInd2*10+w2+pars->nInd*10*i])*p[w];
 	sum += Wtmp[w];
-	//	fprintf(stdout,"%f\t%f\t%d\t%d\t%d\t\n",gl[pars->theInd1*10+w1+pars->nInd*10*i],gl[pars->theInd2*10+w2+pars->nInd*10*i],w,w1,w2);
+	fprintf(stdout,"%f\t%f\t%d\t%d\t%d\t\n",gl[pars->theInd1*10+w1+pars->nInd*10*i],gl[pars->theInd2*10+w2+pars->nInd*10*i],w,w1,w2);
 	}
       }
+      exit(0);
       for(int w=0;w<100;w++)
 	W[w] += Wtmp[w]/sum;
     }
@@ -589,8 +590,10 @@ int main(int argc, char **argv){
 
    fprintf(fibspair,"ind1\tind2\tnSites\tLlike\t");
    //paste(paste0("p",paste(rep(GENO,10),rep(GENO,each=10),sep="_")),collapse="\t")
-   fprintf(fibspair,"pAA_AA\tpAC_AA\tpAG_AA\tpAT_AA\tpCC_AA\tpCG_AA\tpCT_AA\tpGG_AA\tpGT_AA\tpTT_AA\tpAA_AC\tpAC_AC\tpAG_AC\tpAT_AC\tpCC_AC\tpCG_AC\tpCT_AC\tpGG_AC\tpGT_AC\tpTT_AC\tpAA_AG\tpAC_AG\tpAG_AG\tpAT_AG\tpCC_AG\tpCG_AG\tpCT_AG\tpGG_AG\tpGT_AG\tpTT_AG\tpAA_AT\tpAC_AT\tpAG_AT\tpAT_AT\tpCC_AT\tpCG_AT\tpCT_AT\tpGG_AT\tpGT_AT\tpTT_AT\tpAA_CC\tpAC_CC\tpAG_CC\tpAT_CC\tpCC_CC\tpCG_CC\tpCT_CC\tpGG_CC\tpGT_CC\tpTT_CC\tpAA_CG\tpAC_CG\tpAG_CG\tpAT_CG\tpCC_CG\tpCG_CG\tpCT_CG\tpGG_CG\tpGT_CG\tpTT_CG\tpAA_CT\tpAC_CT\tpAG_CT\tpAT_CT\tpCC_CT\tpCG_CT\tpCT_CT\tpGG_CT\tpGT_CT\tpTT_CT\tpAA_GG\tpAC_GG\tpAG_GG\tpAT_GG\tpCC_GG\tpCG_GG\tpCT_GG\tpGG_GG\tpGT_GG\tpTT_GG\tpAA_GT\tpAC_GT\tpAG_GT\tpAT_GT\tpCC_GT\tpCG_GT\tpCT_GT\tpGG_GT\tpGT_GT\tpTT_GT\tpAA_TT\tpAC_TT\tpAG_TT\tpAT_TT\tpCC_TT\tpCG_TT\tpCT_TT\tpGG_TT\tpGT_TT\tpTT_TT\n");
-
+   if(model==0)
+     fprintf(fibspair,"pAA_AA\tpAC_AA\tpAG_AA\tpAT_AA\tpCC_AA\tpCG_AA\tpCT_AA\tpGG_AA\tpGT_AA\tpTT_AA\tpAA_AC\tpAC_AC\tpAG_AC\tpAT_AC\tpCC_AC\tpCG_AC\tpCT_AC\tpGG_AC\tpGT_AC\tpTT_AC\tpAA_AG\tpAC_AG\tpAG_AG\tpAT_AG\tpCC_AG\tpCG_AG\tpCT_AG\tpGG_AG\tpGT_AG\tpTT_AG\tpAA_AT\tpAC_AT\tpAG_AT\tpAT_AT\tpCC_AT\tpCG_AT\tpCT_AT\tpGG_AT\tpGT_AT\tpTT_AT\tpAA_CC\tpAC_CC\tpAG_CC\tpAT_CC\tpCC_CC\tpCG_CC\tpCT_CC\tpGG_CC\tpGT_CC\tpTT_CC\tpAA_CG\tpAC_CG\tpAG_CG\tpAT_CG\tpCC_CG\tpCG_CG\tpCT_CG\tpGG_CG\tpGT_CG\tpTT_CG\tpAA_CT\tpAC_CT\tpAG_CT\tpAT_CT\tpCC_CT\tpCG_CT\tpCT_CT\tpGG_CT\tpGT_CT\tpTT_CT\tpAA_GG\tpAC_GG\tpAG_GG\tpAT_GG\tpCC_GG\tpCG_GG\tpCT_GG\tpGG_GG\tpGT_GG\tpTT_GG\tpAA_GT\tpAC_GT\tpAG_GT\tpAT_GT\tpCC_GT\tpCG_GT\tpCT_GT\tpGG_GT\tpGT_GT\tpTT_GT\tpAA_TT\tpAC_TT\tpAG_TT\tpAT_TT\tpCC_TT\tpCG_TT\tpCT_TT\tpGG_TT\tpGT_TT\tpTT_TT\n");
+   else if(model==1) //    HOHO=1, HEHO=2, aHOHO=5, HOHE=11, HEHE 12 
+     fprintf(fibspair,"pAA_AA\tpAB_AA\tpAA_BB\tpAA_AB\tpAB_AB\n");
 
 
    argu2 * myPars2D= new argu2;
@@ -616,12 +619,21 @@ int main(int argc, char **argv){
    
    runEM2D(genoLike,myPars2D);
    
-   
-   fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
-   for(int w=0;w<100;w++){
-     fprintf(fibspair,"\t%f",myPars2D->pi[w]*100);
+   if(model==0){
+     fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+     for(int w=0;w<100;w++){
+       fprintf(fibspair,"\t%f",myPars2D->pi[w]*100);
+     }
+     fprintf(fibspair,"\n");
    }
-   fprintf(fibspair,"\n");
+   else if(model==1){
+     
+     //   HOHO=1, HEHO=2, aHOHO=5, HOHE=11, HEHE 12 
+     fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+     fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*24,myPars2D->pi[4]*100*12,myPars2D->pi[10]*100*24,myPars2D->pi[11]*100*36);
+     
+
+   }
    
    //    runEM2D(genoLike,myPars2D);
    
@@ -629,7 +641,11 @@ int main(int argc, char **argv){
  else if(all){
    fprintf(fibspair,"ind1\tind2\tnSites\tLlike\t");
    //paste(paste0("p",paste(rep(GENO,10),rep(GENO,each=10),sep="_")),collapse="\t")
-   fprintf(fibspair,"pAA_AA\tpAC_AA\tpAG_AA\tpAT_AA\tpCC_AA\tpCG_AA\tpCT_AA\tpGG_AA\tpGT_AA\tpTT_AA\tpAA_AC\tpAC_AC\tpAG_AC\tpAT_AC\tpCC_AC\tpCG_AC\tpCT_AC\tpGG_AC\tpGT_AC\tpTT_AC\tpAA_AG\tpAC_AG\tpAG_AG\tpAT_AG\tpCC_AG\tpCG_AG\tpCT_AG\tpGG_AG\tpGT_AG\tpTT_AG\tpAA_AT\tpAC_AT\tpAG_AT\tpAT_AT\tpCC_AT\tpCG_AT\tpCT_AT\tpGG_AT\tpGT_AT\tpTT_AT\tpAA_CC\tpAC_CC\tpAG_CC\tpAT_CC\tpCC_CC\tpCG_CC\tpCT_CC\tpGG_CC\tpGT_CC\tpTT_CC\tpAA_CG\tpAC_CG\tpAG_CG\tpAT_CG\tpCC_CG\tpCG_CG\tpCT_CG\tpGG_CG\tpGT_CG\tpTT_CG\tpAA_CT\tpAC_CT\tpAG_CT\tpAT_CT\tpCC_CT\tpCG_CT\tpCT_CT\tpGG_CT\tpGT_CT\tpTT_CT\tpAA_GG\tpAC_GG\tpAG_GG\tpAT_GG\tpCC_GG\tpCG_GG\tpCT_GG\tpGG_GG\tpGT_GG\tpTT_GG\tpAA_GT\tpAC_GT\tpAG_GT\tpAT_GT\tpCC_GT\tpCG_GT\tpCT_GT\tpGG_GT\tpGT_GT\tpTT_GT\tpAA_TT\tpAC_TT\tpAG_TT\tpAT_TT\tpCC_TT\tpCG_TT\tpCT_TT\tpGG_TT\tpGT_TT\tpTT_TT\n");
+    if(model==0)
+     fprintf(fibspair,"pAA_AA\tpAC_AA\tpAG_AA\tpAT_AA\tpCC_AA\tpCG_AA\tpCT_AA\tpGG_AA\tpGT_AA\tpTT_AA\tpAA_AC\tpAC_AC\tpAG_AC\tpAT_AC\tpCC_AC\tpCG_AC\tpCT_AC\tpGG_AC\tpGT_AC\tpTT_AC\tpAA_AG\tpAC_AG\tpAG_AG\tpAT_AG\tpCC_AG\tpCG_AG\tpCT_AG\tpGG_AG\tpGT_AG\tpTT_AG\tpAA_AT\tpAC_AT\tpAG_AT\tpAT_AT\tpCC_AT\tpCG_AT\tpCT_AT\tpGG_AT\tpGT_AT\tpTT_AT\tpAA_CC\tpAC_CC\tpAG_CC\tpAT_CC\tpCC_CC\tpCG_CC\tpCT_CC\tpGG_CC\tpGT_CC\tpTT_CC\tpAA_CG\tpAC_CG\tpAG_CG\tpAT_CG\tpCC_CG\tpCG_CG\tpCT_CG\tpGG_CG\tpGT_CG\tpTT_CG\tpAA_CT\tpAC_CT\tpAG_CT\tpAT_CT\tpCC_CT\tpCG_CT\tpCT_CT\tpGG_CT\tpGT_CT\tpTT_CT\tpAA_GG\tpAC_GG\tpAG_GG\tpAT_GG\tpCC_GG\tpCG_GG\tpCT_GG\tpGG_GG\tpGT_GG\tpTT_GG\tpAA_GT\tpAC_GT\tpAG_GT\tpAT_GT\tpCC_GT\tpCG_GT\tpCT_GT\tpGG_GT\tpGT_GT\tpTT_GT\tpAA_TT\tpAC_TT\tpAG_TT\tpAT_TT\tpCC_TT\tpCG_TT\tpCT_TT\tpGG_TT\tpGT_TT\tpTT_TT\n");
+   else if(model==1) //    HOHO=1, HEHO=2, aHOHO=5, HOHE=11, HEHE 12 
+     fprintf(fibspair,"pAA_AA\tpAB_AA\tpAA_BB\tpAA_AB\tpAB_AB\n");
+
 
 
 
@@ -660,12 +676,18 @@ int main(int argc, char **argv){
        
        runEM2D(genoLike,myPars2D);
        
-       
-       fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
-       for(int w=0;w<100;w++){
-	 fprintf(fibspair,"\t%f",myPars2D->pi[w]);
+       if(model==0){
+	 fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+	 for(int w=0;w<100;w++){
+	   fprintf(fibspair,"\t%f",myPars2D->pi[w]);
+	 }
+	 fprintf(fibspair,"\n");
        }
-       fprintf(fibspair,"\n");
+       else if(model==1){
+	 fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*24,myPars2D->pi[4]*100*12,myPars2D->pi[10]*100*24,myPars2D->pi[11]*100*36);
+	 
+       }
      }
    }
    //    runEM2D(genoLike,myPars2D);
