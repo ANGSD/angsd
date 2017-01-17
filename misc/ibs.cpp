@@ -600,6 +600,8 @@ int main(int argc, char **argv){
      fprintf(fibspair,"pAA_AA\tpAC_AA\tpAG_AA\tpAT_AA\tpCC_AA\tpCG_AA\tpCT_AA\tpGG_AA\tpGT_AA\tpTT_AA\tpAA_AC\tpAC_AC\tpAG_AC\tpAT_AC\tpCC_AC\tpCG_AC\tpCT_AC\tpGG_AC\tpGT_AC\tpTT_AC\tpAA_AG\tpAC_AG\tpAG_AG\tpAT_AG\tpCC_AG\tpCG_AG\tpCT_AG\tpGG_AG\tpGT_AG\tpTT_AG\tpAA_AT\tpAC_AT\tpAG_AT\tpAT_AT\tpCC_AT\tpCG_AT\tpCT_AT\tpGG_AT\tpGT_AT\tpTT_AT\tpAA_CC\tpAC_CC\tpAG_CC\tpAT_CC\tpCC_CC\tpCG_CC\tpCT_CC\tpGG_CC\tpGT_CC\tpTT_CC\tpAA_CG\tpAC_CG\tpAG_CG\tpAT_CG\tpCC_CG\tpCG_CG\tpCT_CG\tpGG_CG\tpGT_CG\tpTT_CG\tpAA_CT\tpAC_CT\tpAG_CT\tpAT_CT\tpCC_CT\tpCG_CT\tpCT_CT\tpGG_CT\tpGT_CT\tpTT_CT\tpAA_GG\tpAC_GG\tpAG_GG\tpAT_GG\tpCC_GG\tpCG_GG\tpCT_GG\tpGG_GG\tpGT_GG\tpTT_GG\tpAA_GT\tpAC_GT\tpAG_GT\tpAT_GT\tpCC_GT\tpCG_GT\tpCT_GT\tpGG_GT\tpGT_GT\tpTT_GT\tpAA_TT\tpAC_TT\tpAG_TT\tpAT_TT\tpCC_TT\tpCG_TT\tpCT_TT\tpGG_TT\tpGT_TT\tpTT_TT\n");
    else if(model==1) //    HOHO=1, HEHO=2, aHOHO=5, HOHE=11, HEHE 12 
      fprintf(fibspair,"pAA_AA\tpAB_AA\tpAA_BB\tpAA_AB\tpAB_AB\n");
+   else if(model==2) //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51,  =, =, =, =
+     fprintf(fibspair,"pAA_AA\tpAB_AA\tpAA_BB\tpAA_AB\tpAB_AB\tpAB_CC\tpAB_AC\tpAB_CD\tpAA_BC\n");
 
 
    argu2 * myPars2D= new argu2;
@@ -642,21 +644,26 @@ int main(int argc, char **argv){
      
 
    }
-   
+   else if(model==2){ //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51, 
+     fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+     fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*12,myPars2D->pi[40]*100*12,myPars2D->pi[10]*100*12,myPars2D->pi[11]*100*6,myPars2D->pi[71]*100*12,myPars2D->pi[21]*100*24,myPars2D->pi[81]*100*6,myPars2D->pi[50]*100*12);
+     
+
+   }
    //    runEM2D(genoLike,myPars2D);
    
  }
  else if(all){
    fprintf(fibspair,"ind1\tind2\tnSites\tLlike\t");
    //paste(paste0("p",paste(rep(GENO,10),rep(GENO,each=10),sep="_")),collapse="\t")
-    if(model==0)
+   if(model==0)
      fprintf(fibspair,"pAA_AA\tpAC_AA\tpAG_AA\tpAT_AA\tpCC_AA\tpCG_AA\tpCT_AA\tpGG_AA\tpGT_AA\tpTT_AA\tpAA_AC\tpAC_AC\tpAG_AC\tpAT_AC\tpCC_AC\tpCG_AC\tpCT_AC\tpGG_AC\tpGT_AC\tpTT_AC\tpAA_AG\tpAC_AG\tpAG_AG\tpAT_AG\tpCC_AG\tpCG_AG\tpCT_AG\tpGG_AG\tpGT_AG\tpTT_AG\tpAA_AT\tpAC_AT\tpAG_AT\tpAT_AT\tpCC_AT\tpCG_AT\tpCT_AT\tpGG_AT\tpGT_AT\tpTT_AT\tpAA_CC\tpAC_CC\tpAG_CC\tpAT_CC\tpCC_CC\tpCG_CC\tpCT_CC\tpGG_CC\tpGT_CC\tpTT_CC\tpAA_CG\tpAC_CG\tpAG_CG\tpAT_CG\tpCC_CG\tpCG_CG\tpCT_CG\tpGG_CG\tpGT_CG\tpTT_CG\tpAA_CT\tpAC_CT\tpAG_CT\tpAT_CT\tpCC_CT\tpCG_CT\tpCT_CT\tpGG_CT\tpGT_CT\tpTT_CT\tpAA_GG\tpAC_GG\tpAG_GG\tpAT_GG\tpCC_GG\tpCG_GG\tpCT_GG\tpGG_GG\tpGT_GG\tpTT_GG\tpAA_GT\tpAC_GT\tpAG_GT\tpAT_GT\tpCC_GT\tpCG_GT\tpCT_GT\tpGG_GT\tpGT_GT\tpTT_GT\tpAA_TT\tpAC_TT\tpAG_TT\tpAT_TT\tpCC_TT\tpCG_TT\tpCT_TT\tpGG_TT\tpGT_TT\tpTT_TT\n");
    else if(model==1) //    HOHO=1, HEHO=2, aHOHO=5, HOHE=11, HEHE 12 
      fprintf(fibspair,"pAA_AA\tpAB_AA\tpAA_BB\tpAA_AB\tpAB_AB\n");
+    else if(model==2) //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51,  =, =, =, =
+     fprintf(fibspair,"pAA_AA\tpAB_AA\tpAA_BB\tpAA_AB\tpAB_AB\tpAB_CC\tpAB_AC\tpAB_CD\tpAA_BC\n");
 
-
-
-
+   
    argu2 * myPars2D= new argu2;
    myPars2D->totalSites = totalSites;
    myPars2D->keepSites =  new int[totalSites];
@@ -664,7 +671,7 @@ int main(int argc, char **argv){
    
    for(int i1=0;i1<nInd-1;i1++){
      for(int i2=i1+1;i2<nInd;i2++){
-
+       
        p1=i1;
        p2=i2;
        myPars2D->theInd1 = p1;
@@ -696,6 +703,11 @@ int main(int argc, char **argv){
 	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*24,myPars2D->pi[4]*100*12,myPars2D->pi[10]*100*24,myPars2D->pi[11]*100*36);
 	 
        }
+       else if(model==2){ //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51, 
+	 fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*12,myPars2D->pi[40]*100*12,myPars2D->pi[10]*100*12,myPars2D->pi[11]*100*6,myPars2D->pi[71]*100*12,myPars2D->pi[21]*100*24,myPars2D->pi[81]*100*6,myPars2D->pi[50]*100*12);
+       }
+ 
      }
    }
    //    runEM2D(genoLike,myPars2D);
