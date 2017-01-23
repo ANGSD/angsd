@@ -67,6 +67,10 @@ void handler(int s) {
 
 }
 
+/*
+  over elaborate function to read a sfs. Assumption is that input file contains the expected values.
+  output is plugged into ret, with the values being log of the normalized values
+ */
 
 void readSFS(const char*fname,size_t hint,double *ret){
   fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
@@ -107,6 +111,8 @@ void readSFS(const char*fname,size_t hint,double *ret){
       //      fprintf(stderr,"i=%lu %f\n",i,ret[i]);
   }
   normalize(ret,(int)res.size());
+  for(int i=0;i<res.size();i++)
+    ret[i] = log(ret[i]);
   fclose(fp);
 }
 
