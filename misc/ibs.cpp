@@ -14,7 +14,8 @@
 #include <sys/stat.h>
 
 int model;
-
+int seed;
+FILE *flog;
 typedef struct
 {
   int nInd;
@@ -51,6 +52,7 @@ void info(){
  fprintf(stderr,"\t-allpairs/-a\tanalyse all pairs:\n");
  fprintf(stderr,"\t-maxSites/-m\tmaximum sites to analyze:\n");
  fprintf(stderr,"\t-model\t\tibs model:0 all 10 genotypes, 1 HO/HE\n");
+ fprintf(stderr,"\t-model\t\tibs -seed 0 use seed for random start\n");
  // fprintf(stderr,"\t-\t\t:\n");
 
 
@@ -147,15 +149,29 @@ void runEM(double *gl,argu *pars){
   double pnew[10];
   for(int w=0;w<10;w++)
     p[w] = 0.1;
+  if(seed){
+    srand48(seed);
+    double ssum=0;
+    for(int w=0;w<10;w++){
+	p[w] = drand48();
+	ssum += p[w];
+    }
+    for(int w=0;w<10;w++){
+      p[w] = p[w]/ssum;
+      pnew[w] = p[w];
+    }
+    
+  }
 
-  double tol = 0.0000001;
+
+  double tol = 0.00000001;
 
 
   for(it=0;it<maxIter;it++){
     sum=0;
     for(int w=0;w<10;w++)
       W[w]=0;
-
+ 
     for(int i=0;i<pars->totalSites;i++){
 
       if(pars->keepSites[i]==0)
@@ -198,7 +214,8 @@ void runEM(double *gl,argu *pars){
       p[w] = pnew[w];
     }
     if(diff<tol){
-      fprintf(stdout,"\ttol reached %d\t%f\tmodel %d\n",it,diff,model);
+      fprintf(stdout,"\ttol reached in %d interactions\tdiff=%f\tmodel=%d\n",it,diff,model);
+      fprintf(flog,"\ttol reached in %d interactions\tdiff=%f\tmodel=%d\n",it,diff,model);
       break;
     }
 
@@ -390,7 +407,21 @@ void runEM2D(double *gl,argu2 *pars){
     p[w] = 0.01;
     pnew[w] = 0.01;
   }
-  double tol = 0.0000001;
+  if(seed){
+    srand48(seed);
+    double ssum=0;
+    for(int w=0;w<100;w++){
+	p[w] = drand48();
+	ssum += p[w];
+    }
+    for(int w=0;w<100;w++){
+      p[w] = p[w]/ssum;
+      pnew[w] = p[w];
+    }
+    //    fprintf(stderr,"using seed p[0]=%f \n",p[0]);
+  }
+  //  fprintf(stderr,"using seed %d, p[0]=%f \n",seed,p[0]);
+  double tol = 0.00000001;
 
 
   for(it=0;it<maxIter;it++){
@@ -437,12 +468,10 @@ void runEM2D(double *gl,argu2 *pars){
       p[w] = pnew[w];
     }
     if(diff<tol){
-      fprintf(stdout,"\ttol reached %d\t%f\tmodel %d\n",it,diff,model);
+      fprintf(stdout,"\ttol reached in %d interations\tdiff=%f\tmodel=%d\n",it,diff,model);
+      fprintf(flog,"\ttol reached in %d interations\tdiff=%f\tmodel=%d\n",it,diff,model);
       break;
-    }
-    
-    
-    
+    }  
     //        fprintf(stdout,"\n");
   }
   
@@ -474,13 +503,14 @@ int main(int argc, char **argv){
 
   const char* likeFileName = NULL;
   const char* outFileName = NULL;
-  int seed =0;
+  seed =0;
   int nInd=1;
   int p1=-1;
   int p2=-1;
   int maxSites=10000000;
   int all=0;
   model=0;
+  seed=0;
   // reading arguments
   argv++;
   while(*argv){
@@ -492,6 +522,7 @@ int main(int argc, char **argv){
     else if(strcmp(*argv,"-allpairs")==0||strcmp(*argv,"-a")==0) all=atoi(*++argv);
     else if(strcmp(*argv,"-maxSites")==0||strcmp(*argv,"-m")==0) maxSites=atoi(*++argv);
     else if(strcmp(*argv,"-model")==0) model=atoi(*++argv);
+    else if(strcmp(*argv,"-seed")==0) seed=atoi(*++argv);
     else{
       fprintf(stderr,"Unknown arg:%s\n",*argv);
       info();
@@ -503,9 +534,9 @@ int main(int argc, char **argv){
   if(maxSites<10000){
     fprintf(stderr,"maxSites cannot be smaller than 10000\n");
     exit(0);
-     }
+  }
 
-
+  fprintf(stderr,"using seed %d\n",seed);
   //
   if(likeFileName==NULL){
       fprintf(stderr,"Please supply glf file: -f");
@@ -518,18 +549,18 @@ int main(int argc, char **argv){
 
   FILE *fibs;
   FILE *fibspair;
-  FILE *flog=openFile(outFileName,".log");
+  flog=openFile(outFileName,".log");
   if(p2==-1 && all!=1)
     fibs=openFile(outFileName,".ibs");
   if((p1>=0 && p2>=0) || all)
     fibspair=openFile(outFileName,".ibspair");
 
   double *genoLike=NULL;
-
+  fprintf(stderr,"reading data\n");
   int totalSites=readGLF(likeFileName,genoLike,nInd,maxSites);
   fprintf(stdout,"read %d sites\n",totalSites);
   fprintf(flog,"read %d sites\n",totalSites);
-
+  
 
   for(int s=0;s<totalSites;s++)
     for(int i=0;i<nInd*10;i++){
@@ -543,6 +574,7 @@ int main(int argc, char **argv){
   myPars->nInd = nInd;
 
   fprintf(stdout,"\tusing model %d \n",model);
+  fprintf(flog,"\tusing model %d \n",model);
 
 
   if(p2==-1 && all!=1){ // single ind
@@ -558,6 +590,7 @@ int main(int argc, char **argv){
       if(p1!=-1 && p1!=theInd)
 	continue;
       fprintf(stdout,"analysing individual %d\n",theInd);
+       fprintf(flog,"analysing individual %d\n",theInd);
       myPars->theInd = theInd;
       
       int nSites=0;
@@ -612,6 +645,7 @@ int main(int argc, char **argv){
    myPars2D->theInd1 = p1;
    myPars2D->theInd2 = p2;
    fprintf(stdout,"analysing pair %d %d\n",p1,p2);
+   fprintf(flog,"analysing pair %d %d\n",p1,p2);
 
    int nSites=0;
    for(int i=0;i<totalSites;i++){
@@ -677,6 +711,7 @@ int main(int argc, char **argv){
        myPars2D->theInd1 = p1;
        myPars2D->theInd2 = p2;
        fprintf(stdout,"analysing pair %d %d\n",p1,p2);
+       fprintf(flog,"analysing pair %d %d\n",p1,p2);
        int nSites=0;
        for(int i=0;i<totalSites;i++){
 	 myPars2D->keepSites[i] = 0;
