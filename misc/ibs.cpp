@@ -483,9 +483,18 @@ void runEM2D(double *gl,argu2 *pars){
   double like=0;
   for(int i=0;i<pars->totalSites;i++){
     double sum=0;
-    for(int w=0;w<100;w++){
-      sum += gl[pars->theInd1*10+w+pars->nInd*10*i]*gl[pars->theInd2*10+w+pars->nInd*10*i]*p[w];
-    }
+    if(pars->keepSites[i]==0)
+      continue;
+
+      for(int w1=0;w1<10;w1++){
+	for(int w2=0;w2<10;w2++){
+	  int w=w1 + 10 * w2;
+	  sum += gl[pars->theInd1*10+w1+pars->nInd*10*i]*gl[pars->theInd2*10+w2+pars->nInd*10*i]*p[w];
+	}
+      }
+      //    for(int w=0;w<100;w++){
+      //      sum += gl[pars->theInd1*10+w+pars->nInd*10*i]*gl[pars->theInd2*10+w+pars->nInd*10*i]*p[w];
+      //    }
     like+=log(sum);
     
     }
