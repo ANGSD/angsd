@@ -218,6 +218,7 @@ myMap getMap(const char *fname){
 
 typedef struct{
   char *chr;
+  int nChr;
   size_t nSites;
   int *posi;
   float *tW;
@@ -253,6 +254,7 @@ perChr getPerChr(BGZF *fp){
   bgzf_read(fp,ret.chr,clen);
   ret.chr[clen] = '\0';
   bgzf_read(fp,&ret.nSites,sizeof(size_t));
+  bgzf_read(fp,&ret.nChr,sizeof(int));
   ret.posi = new int[ret.nSites];
   ret.tW = new float[ret.nSites];
   ret.tP = new float[ret.nSites];
@@ -373,17 +375,24 @@ kstring_t do_stat_main(perChr &pc,int step,int win,int nChr,int type){
 }
 
 
+char *idxToGz(char *one){
+  char *ret = strdup(one);
+  strcpy(ret+strlen(ret)-3,"gz\0");
+  fprintf(stderr,"ret:%s\n",ret);
+  return ret;
+}
+
 
 
 
 int do_stat(int argc, char**argv){
   if(argc==0){
-    fprintf(stderr,"do_stat FILE -win -step -nChr [-r chrName -type [0,1,2]]\n");
+    fprintf(stderr,"do_stat .thetas.idx -win -step -nChr [-r chrName -type [0,1,2]]\n");
     exit(0);
   }
   char *base = *argv;
-  char* outnames_bin = append(base,BIN);
-  char* outnames_idx = append(base,IDX);
+  char* outnames_bin = idxToGz(base);
+  char* outnames_idx = base;
   fprintf(stderr,"\tAssuming binfile:%s and indexfile:%s\n",outnames_bin,outnames_idx);
   
   myMap mm = getMap(outnames_idx);
@@ -473,7 +482,7 @@ int do_stat(int argc, char**argv){
 
 void print_main(perChr &pc,FILE *fp){
   for(size_t i=0;i<pc.nSites;i++)
-    fprintf(fp,"%s\t%d\t%f\t%f\t%f\t%f\t%f\n",pc.chr,pc.posi[i],log(pc.tW[i]),log(pc.tP[i]),log(pc.tF[i]),log(pc.tH[i]),log(pc.tL[i]));
+    fprintf(fp,"%s\t%d\t%f\t%f\t%f\t%f\t%f\n",pc.chr,pc.posi[i]+1,log(pc.tW[i]),log(pc.tP[i]),log(pc.tF[i]),log(pc.tH[i]),log(pc.tL[i]));
 }
 
 int print(int argc, char**argv){
@@ -482,8 +491,8 @@ int print(int argc, char**argv){
     exit(0);
   }
   char *base = *argv;
-  char* outnames_bin = append(base,BIN);
-  char* outnames_idx = append(base,IDX);
+  char* outnames_bin = idxToGz(base);
+  char* outnames_idx = base;
   fprintf(stderr,"Assuming binfile:%s and indexfile:%s\n",outnames_bin,outnames_idx);
   
   myMap mm = getMap(outnames_idx);
@@ -526,7 +535,7 @@ int print(int argc, char**argv){
     perChr pc = getPerChr(fp);
     if(pc.nSites==0)
       break;
-    fprintf(stderr,"pc.chr=%s pc.nSites=%zu firstpos=%d lastpos=%d\n",pc.chr,pc.nSites,pc.posi[0],pc.posi[pc.nSites-1]);
+    fprintf(stderr,"pc.chr=%s pc.nSites=%zu pc.nChr=%d firstpos=%d lastpos=%d\n",pc.chr,pc.nSites,pc.nChr,pc.posi[0],pc.posi[pc.nSites-1]);
     print_main(pc,stdout);
     if(chr!=NULL)
       break;

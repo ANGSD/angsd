@@ -16,7 +16,7 @@
 
 
 
-void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<int> &p,std::vector<float> *res){
+void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<int> &p,std::vector<float> *res,int nChr){
   assert(dat!=NULL);
   assert(idx!=NULL);
   assert(p.size()==res[0].size());
@@ -24,11 +24,22 @@ void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<i
     assert(p.size()==res[i].size());//DRAGON, might be discarded during compilation
       
   if(p.size()!=0&&tmpChr!=NULL){
+    //write clen and chromoname for both index and bgzf
     size_t clen = strlen(tmpChr);
     fwrite(&clen,sizeof(size_t),1,idx);
     fwrite(tmpChr,1,clen,idx);
+    bgzf_write(dat,&clen,sizeof(size_t));
+    bgzf_write(dat,tmpChr,clen);
+
+    //write number of sites for both index and bgzf
     size_t tt = p.size();
     fwrite(&tt,sizeof(size_t),1,idx);
+    bgzf_write(dat,&tt,sizeof(size_t));
+    //write nChr for both index and bgzf
+    fwrite(&nChr,sizeof(int),1,idx);
+    bgzf_write(dat,&nChr,sizeof(int));
+
+    //write bgzf offset into idx
     fwrite(&offs,sizeof(int64_t),1,idx);
     for(int i=0;i<p.size();i++)
       aio::bgzf_write(dat,&p[i],sizeof(int));
@@ -107,7 +118,9 @@ void abcSaf::getOptions(argStruct *arguments){
       for(int i=0;i<arguments->nInd+1;i++)
 	lbicoTab[i] = angsd::lbico(arguments->nInd,i);
     }
-    
+    mynchr = 2*arguments->nInd;
+    if(fold)
+      mynchr = arguments->nInd;
   }
 
 
@@ -213,8 +226,8 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   const char *SAFPOS =".saf.pos.gz";
   const char *SAFIDX =".saf.idx";
   //for use when dumping binary indexed thetas files
-  const char *THETAS =".thetas.gz.bin";
-  const char *THETASIDX =".thetas.gz.idx";
+  const char *THETAS =".thetas.gz";
+  const char *THETASIDX =".thetas.idx";
   //for use when dumping called genotypes
   const char *GENO = ".saf.geno.gz";
   //default
@@ -318,8 +331,9 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
 abcSaf::~abcSaf(){
   if(doSaf&&doThetas==0&&doSaf!=3)
     writeAll();
+  fprintf(stderr,"hetapos:%lu thet_res:%lu\n",theta_pos.size(),theta_res[0].size());
   if(doSaf&&doThetas==1&&doSaf!=3)
-    writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res);
+    writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res,mynchr);
 
   if(pest) free(pest);
   if(prior) delete [] prior;
@@ -1238,7 +1252,7 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
 }
 
 
-void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,std::vector<float> *vecs){
+void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,std::vector<float> *vecs,std::vector<int> &myposi){
  realRes *r=(realRes *) pars->extras[index];
  int id=0;
  for(int i=0; i<pars->numSites;i++){
@@ -1261,6 +1275,7 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,std::vector<floa
        seq = log(pv)-aConst;//watterson
      vecs[0].push_back(seq);
      //     ksprintf(&kb,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
+     myposi.push_back(pars->posi[i]);
      if(fold==0) {
        double pairwise=0;    //Find theta_pi the pairwise
        double thL=0;    //Find thetaL sfs[i]*i;
@@ -1333,9 +1348,9 @@ void abcSaf::print(funkyPars *p){
 	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
       else
 	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
-      }
+    }
     else 
-      calcThetas(p,index,prior,theta_res);
+      calcThetas(p,index,prior,theta_res,theta_pos);
   }   
 }
 
@@ -1728,14 +1743,18 @@ void abcSaf::writeAll(){
 }
 
 void abcSaf::changeChr(int refId) {
-  if(doSaf&&doThetas==0&&doSaf!=3){
+  if(doSaf&&doThetas==0&&doSaf!=3)
     writeAll();
-  }
-  if(doSaf&&doThetas==1&&doSaf!=3){
-    writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res);
-  }
+
+
+  fprintf(stderr,"hetapos:%lu thet_res:%lu\n",theta_pos.size(),theta_res[0].size());
+
+  if(doSaf&&doThetas==1&&doSaf!=3)
+    writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res,mynchr);
+
   
   
   free(tmpChr);
   tmpChr = strdup(header->target_name[refId]);
+  fprintf(stderr,"[%s] tmpChr:%s\n",__FUNCTION__,tmpChr);
 }

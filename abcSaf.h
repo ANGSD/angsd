@@ -23,7 +23,7 @@ class abcSaf : public abc{
   char *pest;
   int doPost;
   int doThetas;
-  void calcThetas(funkyPars *p,int index,double *prior,std::vector<float> *vecs);
+  void calcThetas(funkyPars *p,int index,double *prior,std::vector<float> *vecs,std::vector<int> &myposi);
 
   double aConst;
   double aConst2;
@@ -45,6 +45,7 @@ class abcSaf : public abc{
   void algoJointMajorMinor(double **liks,int nsites,int numInds, int *keepSites,realRes *r,int fold,char *major, char *minor);
 
   void writeAll();
+  int mynchr;
 public:
   static double *prior; //<- outputfile form pest;
   static double *lbicoTab; //dim = [2*numInds+1]
