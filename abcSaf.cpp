@@ -14,6 +14,37 @@
 
 #define MINLIKE -1000.0 //this is for setting genotypelikelhoods to missing (EXPLAINED BELOW)
 
+
+
+void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<int> &p,std::vector<float> *res){
+  assert(dat!=NULL);
+  assert(idx!=NULL);
+  assert(p.size()==res[0].size());
+  for(int i=1;i<5;i++)
+    assert(p.size()==res[i].size());//DRAGON, might be discarded during compilation
+      
+  if(p.size()!=0&&tmpChr!=NULL){
+    size_t clen = strlen(tmpChr);
+    fwrite(&clen,sizeof(size_t),1,idx);
+    fwrite(tmpChr,1,clen,idx);
+    size_t tt = p.size();
+    fwrite(&tt,sizeof(size_t),1,idx);
+    fwrite(&offs,sizeof(int64_t),1,idx);
+    for(int i=0;i<p.size();i++)
+      aio::bgzf_write(dat,&p[i],sizeof(int));
+    for(int i=0;i<5;i++)
+      for(int j=0;j<p.size();j++)
+	aio::bgzf_write(dat,&res[i][j],sizeof(float));
+  }
+
+  //reset
+  offs = bgzf_tell(dat);
+  p.clear();
+  for(int i=0;i<5;i++)
+    res[i].clear();
+}
+
+
 namespace filipe{
   void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim);
 }
@@ -177,10 +208,14 @@ double *abcSaf::prior = NULL;
 abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   tmpChr = NULL;
   isHap =0;
+  //for use when dumping binary indexed saf files
   const char *SAF = ".saf.gz";
   const char *SAFPOS =".saf.pos.gz";
   const char *SAFIDX =".saf.idx";
-  const char *THETAS =".thetas.gz";
+  //for use when dumping binary indexed thetas files
+  const char *THETAS =".thetas.gz.bin";
+  const char *THETASIDX =".thetas.gz.idx";
+  //for use when dumping called genotypes
   const char *GENO = ".saf.geno.gz";
   //default
   underFlowProtect = 0;
@@ -197,7 +232,8 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   outfileSAF = NULL;
   outfileSAFPOS = NULL;
   outfileSAFIDX = NULL;
-  theta_fp = NULL;
+  theta_dat = NULL;
+  theta_idx = NULL;
   outfileGprobs = NULL;
   scalings = NULL;
   nnnSites = 0;
@@ -241,9 +277,12 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     size_t tt = newDim-1;
     fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
   }else {
-    theta_fp = aio::openFileBG(outfiles,THETAS);
-    const char *hd= "#Chromo\tPos\tWatterson\tPairwise\tthetaSingleton\tthetaH\tthetaL\n";
-    aio::bgzf_write(theta_fp,hd,strlen(hd));
+    theta_dat = aio::openFileBG(outfiles,THETAS);
+    theta_idx = aio::openFile(outfiles,THETASIDX);
+    theta_res = new std::vector<float>[5];
+    offs_thetas = bgzf_tell(theta_dat);
+
+
     aConst=0;
     int nChr = 2*arguments->nInd;
     for(int i=1;i<nChr;i++)
@@ -273,20 +312,22 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
       fprintf(stderr,"SCAL[%d]\t%f\n",i,scalings[i]);
 
 #endif
-
-  
 }
 
 
 abcSaf::~abcSaf(){
   if(doSaf&&doThetas==0&&doSaf!=3)
     writeAll();
+  if(doSaf&&doThetas==1&&doSaf!=3)
+    writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res);
+
   if(pest) free(pest);
   if(prior) delete [] prior;
   if(outfileSAF) bgzf_close(outfileSAF);;
   if(outfileSAFPOS) bgzf_close(outfileSAFPOS);
   if(outfileSAFIDX) fclose(outfileSAFIDX);
-  if(theta_fp) bgzf_close(theta_fp);
+  if(theta_dat) bgzf_close(theta_dat);
+  if(theta_idx) fclose(theta_idx);
   if(outfileGprobs)  bgzf_close(outfileGprobs);
   if(lbicoTab) delete [] lbicoTab;
   if(myComb2Tab) delete [] myComb2Tab;//not cleaned properly
@@ -1197,10 +1238,9 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
 }
 
 
-void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,BGZF *fpgz){
+void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,std::vector<float> *vecs){
  realRes *r=(realRes *) pars->extras[index];
  int id=0;
- kstring_t kb;kb.s=NULL;kb.l=kb.m=0;
  for(int i=0; i<pars->numSites;i++){
    
    if(r->oklist[i]==1){
@@ -1219,7 +1259,8 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,BGZF *fpgz){
        seq=log(0.0);
      else
        seq = log(pv)-aConst;//watterson
-     ksprintf(&kb,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
+     vecs[0].push_back(seq);
+     //     ksprintf(&kb,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
      if(fold==0) {
        double pairwise=0;    //Find theta_pi the pairwise
        double thL=0;    //Find thetaL sfs[i]*i;
@@ -1232,19 +1273,21 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,BGZF *fpgz){
 	 thL += exp(workarray[ii])*ii;
 	 thH += exp(2*li+workarray[ii]);
        }
-       ksprintf(&kb,"%f\t%f\t%f\t%f\n",log(pairwise)-aConst2,workarray[1],log(thH)-aConst2,log(thL)-aConst3);
+       vecs[1].push_back(log(pairwise)-aConst2);
+       vecs[2].push_back(workarray[1]);
+       vecs[3].push_back(log(thH)-aConst2);
+       vecs[4].push_back(log(thL)-aConst3);
      }else{
        double pairwise=0;    //Find theta_pi the pairwise
        for(size_t ii=1;ii<newDim;ii++)
 	 pairwise += exp(workarray[ii]+scalings[ii] );
-       
-       ksprintf(&kb,"%f\t-Inf\t-Inf\t-Inf\n",log(pairwise)-aConst2);
+       vecs[1].push_back(log(pairwise)-aConst2);
+       for(int i=2;i<=4;i++)
+	 vecs[i].push_back(log(0));
      }
    }else if(r->oklist[i]==2)
      fprintf(stderr,"PROBS at: %s\t%d\n",header->target_name[pars->refId],pars->posi[i]+1);
  }
- aio::bgzf_write(fpgz,kb.s,kb.l);
- free(kb.s);
 }
 
 
@@ -1292,7 +1335,7 @@ void abcSaf::print(funkyPars *p){
 	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
       }
     else 
-      calcThetas(p,index,prior,theta_fp);
+      calcThetas(p,index,prior,theta_res);
   }   
 }
 
@@ -1687,7 +1730,12 @@ void abcSaf::writeAll(){
 void abcSaf::changeChr(int refId) {
   if(doSaf&&doThetas==0&&doSaf!=3){
     writeAll();
-    free(tmpChr);
-    tmpChr = strdup(header->target_name[refId]);
   }
+  if(doSaf&&doThetas==1&&doSaf!=3){
+    writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res);
+  }
+  
+  
+  free(tmpChr);
+  tmpChr = strdup(header->target_name[refId]);
 }

@@ -6,12 +6,15 @@ typedef struct{
 
 
 class abcSaf : public abc{
+  std::vector<float> *theta_res;
+  std::vector<int> theta_pos;
   int doSaf;
   BGZF *outfileGprobs;
   BGZF *outfileSAF;
   FILE *outfileSAFIDX;
   BGZF *outfileSAFPOS;
-  BGZF *theta_fp;
+  BGZF *theta_dat;
+  FILE *theta_idx;
   int underFlowProtect;
   int fold;
   int isSim;
@@ -20,7 +23,7 @@ class abcSaf : public abc{
   char *pest;
   int doPost;
   int doThetas;
-  void calcThetas(funkyPars *p,int index,double *prior,BGZF* fpgz);
+  void calcThetas(funkyPars *p,int index,double *prior,std::vector<float> *vecs);
 
   double aConst;
   double aConst2;
@@ -32,6 +35,7 @@ class abcSaf : public abc{
   int ishap;
   int newDim;
   int64_t offs[2];
+  int64_t offs_thetas;
   int nnnSites;
   char *tmpChr;
   void algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r,int doFold);
