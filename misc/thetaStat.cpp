@@ -320,6 +320,8 @@ int do_stat(int argc, char**argv){
   myMap mm = getMap(outnames_idx);
   writemap(stderr,mm);
   BGZF *fp = bgzf_open(outnames_bin,"r");
+  char tmp[8];
+  bgzf_read(fp,tmp,8);
 
   --argc;++argv;
   //  fprintf(stderr,"argc=%d\n",argc);
