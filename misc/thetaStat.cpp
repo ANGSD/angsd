@@ -33,9 +33,41 @@ struct ltstr
 typedef struct{
   size_t nSites;
   int64_t fpos;
+  int nChr;
 }datum;
 
 typedef std::map<char*,datum,ltstr> myMap;
+
+
+int isok(char *bgzf_name,char *fp_name){
+  FILE *fp = NULL;
+  fp=fopen(fp_name,"rb");
+  if(fp==NULL){
+    fprintf(stderr,"\t-> Problems opening file: \'%s\'\n",fp_name);
+    return 0;
+  }
+  char buf[8];
+  assert(8==fread(buf,sizeof(char),8,fp));
+  if(strcmp(buf,"thetav2")!=0){
+    fprintf(stderr,"\t-> It looks like input files have been generated with an older version of ANGSD. Either use older version of angsd <0.915 or rerun main angsd with later version of angsd >0.917 magicnr:\'%s\'\n",buf);
+    return 0;
+  }
+  fclose(fp);
+
+  BGZF *bgzf=NULL;
+  bgzf=bgzf_open(bgzf_name,"rb");
+  if(bgzf==NULL){
+    fprintf(stderr,"\t-> Problems opening file: \'%s\'\n",bgzf_name);
+    return 0;
+  }
+  assert(8==bgzf_read(bgzf,buf,8*sizeof(char)));
+  if(strcmp(buf,"thetav2")!=0){
+    fprintf(stderr,"\t-> It looks like input files have been generated with an older version of ANGSD. Either use older version of angsd <0.915 or rerun main angsd with later version of angsd >0.917 magicnr:\'%s\'\n",buf);
+    return 0;
+  }
+  bgzf_close(bgzf);
+  return 1;
+}
 
 
 
@@ -56,126 +88,12 @@ typedef struct{
 }the_t;
 
 
-int64_t writeAll(std::vector<the_t> &thetas, char *chr,BGZF *fp){
-  fprintf(stderr,"\tWriting: chr:%s with nSites:%zu\n",chr,thetas.size());
-  int64_t retVal =bgzf_tell(fp); 
-  size_t clen=strlen(chr);
-  bgzf_write(fp,&clen,sizeof(size_t));//write len of chr
-  bgzf_write(fp,chr,clen);//write chr
-  size_t vLen = thetas.size();
-  bgzf_write(fp,&vLen,sizeof(size_t));//write len of positions;
-  int *posi = new int[thetas.size()];
-  static float **the = new float*[5];
-  for(int i=0;i<5;i++)
-    the[i] = new float[thetas.size()];
-  for(size_t i=0;i<thetas.size();i++){
-    posi[i] =thetas[i].posi;
-    for(int j=0;j<5;j++)
-      the[j][i] = thetas[i].vals[j];
-    delete [] thetas[i].vals;
-  }
-  bgzf_write(fp,posi,sizeof(int)*thetas.size());
-  for(int j=0;j<5;j++){
-    bgzf_write(fp,the[j],sizeof(float)*thetas.size());
-    delete [] the[j];
-  }
-  
-  delete [] posi;
-  fprintf(stderr,"\tDone writing: %s\n",chr);
-  return retVal;
-}
-
-
-void write_index(size_t nSites,char*chr,FILE *fp,int64_t fpos){
-  //write chr
-  size_t clen=strlen(chr);
-  fwrite(&clen,sizeof(size_t),1,fp);
-  fwrite(chr,1,clen,fp);
-  //write nSites;
-  fwrite(&nSites,sizeof(size_t),1,fp);
-  //write fpos
-  fwrite(&fpos,sizeof(int64_t),1,fp);
-  fflush(fp);
-}
-
-void make_bed(int argc,char **argv){
-  //  fprintf(stderr,"[%s] \n",__FUNCTION__);
-  if(argc==0){
-    fprintf(stderr,"make_bed FILE.theta.gz [OUTNAMES] (if OUTNAMES is supplied, this will be used as prefix \n");
-    exit(0);
-  }
-  
-  if(!fexists(argv[0])){
-    fprintf(stderr,"Problem opening file: %s\n",argv[0]);
-    exit(0);
-  }
-  char *base = argv[0];
-  if(argc==2)
-    base = argv[1];
-
-  char* outnames_bin = append(base,BIN);
-  char* outnames_idx = append(base,IDX);
-    
-  const char *delims = "\t \n";
-  gzFile gfp = gzopen(argv[0],"r");
-  char *buf = new char[LENS];
-  BGZF *cfpD = bgzf_open(outnames_bin,"w9");
-  FILE *fp =fopen(outnames_idx,"w");
-  
-  std::vector<the_t> vec;
-  char *lastChr = NULL;
-  
-  
-  while(gzgets(gfp,buf,LENS)){
-    char *chr = strtok(buf,delims);
-    if(chr[0]=='#')
-      continue;
-    int posi=atoi(strtok(NULL,delims)) ;
-    
-    if(lastChr==NULL){
-      lastChr = strdup(chr);
-    }else if(strcmp(lastChr,chr)!=0){
-      int64_t id=writeAll(vec,lastChr,cfpD);//write data
-      write_index(vec.size(),lastChr,fp,id);//write index;
-      
-      vec.clear();
-      free(lastChr);
-      lastChr=strdup(chr);
-    }
-    the_t t;
-    t.posi =posi;
-    float *the =new float[5];
-    for(int i=0;i<5;i++)
-      the[i] = atof(strtok(NULL,delims)) ;
-    t.vals = the;
-    vec.push_back(t);
-#if 0
-    fprintf(stderr,"%s %d ",chr,posi);
-    for(int i=0;i<5;i++)
-      fprintf(stderr," %f",the[i]);
-    fprintf(stderr,"\n");
-#endif
-  }
-  int64_t id=writeAll(vec,lastChr,cfpD);//write data
-  write_index(vec.size(),lastChr,fp,id);//write index;
-  vec.clear();
-  free(lastChr);
-  
-  fprintf(stderr,"\tHas dumped files:\n\t\t'%s\'\n\t\t\'%s\'\n",outnames_bin,outnames_idx);
-  bgzf_close(cfpD);
-  fclose(fp);
-  
-  gzclose(gfp);
-  delete [] buf;
-  delete [] outnames_bin; delete [] outnames_idx;
-}
-
 void writemap(FILE *fp,const myMap &mm){
   fprintf(fp,"\t\tInformation from index file:\n");
   int i=0;
   for(myMap::const_iterator it=mm.begin();it!=mm.end();++it){
     datum d = it->second;
-    fprintf(fp,"\t\t%d\t%s\t%zu\t%ld\n",i++,it->first,d.nSites,(long int)d.fpos);
+    fprintf(fp,"\t\t%d\t%s\t%zu\t%ld\t%d\n",i++,it->first,d.nSites,(long int)d.fpos,d.nChr);
 
   }
 
@@ -190,6 +108,8 @@ myMap getMap(const char *fname){
     exit(0);
   }
   FILE *fp = fopen(fname,"r");
+  char tmp[8];
+  fread(tmp,1,8,fp);
   while(fread(&clen,sizeof(size_t),1,fp)){
     char *chr = new char[clen+1];
     assert(clen==fread(chr,1,clen,fp));
@@ -387,14 +307,16 @@ char *idxToGz(char *one){
 
 int do_stat(int argc, char**argv){
   if(argc==0){
-    fprintf(stderr,"do_stat .thetas.idx -win -step -nChr [-r chrName -type [0,1,2]]\n");
+    fprintf(stderr,"do_stat .thetas.idx -win -step [-r chrName -type [0,1,2]]\n");
     exit(0);
   }
   char *base = *argv;
   char* outnames_bin = idxToGz(base);
   char* outnames_idx = base;
   fprintf(stderr,"\tAssuming binfile:%s and indexfile:%s\n",outnames_bin,outnames_idx);
-  
+  if(isok(outnames_bin,outnames_idx)==0)
+    return 0;
+
   myMap mm = getMap(outnames_idx);
   writemap(stderr,mm);
   BGZF *fp = bgzf_open(outnames_bin,"r");
@@ -422,8 +344,6 @@ int do_stat(int argc, char**argv){
       step = atoi(argv[argP+1]);
     else if(strcmp("-win",argv[argP])==0)
       win = atoi(argv[argP+1]);
-    else if(strcmp("-nChr",argv[argP])==0)
-      nChr = atoi(argv[argP+1]);
     else if(strcmp("-type",argv[argP])==0)
       type = atoi(argv[argP+1]);
     
@@ -434,11 +354,8 @@ int do_stat(int argc, char**argv){
     argP +=2;
   }
 
-  fprintf(stderr,"\t -r=%s outnames=%s step: %d win: %d nChr:%d\n",chr,outnames,step,win,nChr);
-  if(nChr==0){
-    fprintf(stderr,"nChr must be different from zero\n");
-    exit(0);
-  }
+  fprintf(stderr,"\t -r=%s outnames=%s step: %d win: %d\n",chr,outnames,step,win);
+
   if(win==0||step==0){
     fprintf(stderr,"\tWinsize equals zero or step size equals zero. Will use entire chromosome as window\n");
     win=step=0;
@@ -468,7 +385,7 @@ int do_stat(int argc, char**argv){
     if(pc.nSites==0)
       break;
     fprintf(stderr,"\tpc.chr=%s pc.nSites=%zu firstpos=%d lastpos=%d\n",pc.chr,pc.nSites,pc.posi[0],pc.posi[pc.nSites-1]);
-    kstring_t str = do_stat_main(pc,step,win,nChr,type);
+    kstring_t str = do_stat_main(pc,step,win,pc.nChr,type);
     fwrite(str.s,1,str.l,fpres);//should clean up str, doesn't matter for this program;
     fflush(fpres);
     if(chr!=NULL)
@@ -485,6 +402,7 @@ void print_main(perChr &pc,FILE *fp){
     fprintf(fp,"%s\t%d\t%f\t%f\t%f\t%f\t%f\n",pc.chr,pc.posi[i]+1,log(pc.tW[i]),log(pc.tP[i]),log(pc.tF[i]),log(pc.tH[i]),log(pc.tL[i]));
 }
 
+
 int print(int argc, char**argv){
   if(argc==0){
     fprintf(stderr,"print FILE [-r chrName]\n");
@@ -493,12 +411,15 @@ int print(int argc, char**argv){
   char *base = *argv;
   char* outnames_bin = idxToGz(base);
   char* outnames_idx = base;
+  if(isok(outnames_bin,outnames_idx)==0)
+    return 0;
   fprintf(stderr,"Assuming binfile:%s and indexfile:%s\n",outnames_bin,outnames_idx);
   
   myMap mm = getMap(outnames_idx);
   writemap(stderr,mm);
   BGZF *fp = bgzf_open(outnames_bin,"r");
-
+  char tmp[8];
+  bgzf_read(fp,tmp,8);
   --argc;++argv;
   //  fprintf(stderr,"argc=%d\n",argc);
   int argP =0;
@@ -544,72 +465,12 @@ int print(int argc, char**argv){
 
   return 0;
 }
-void fun(float a,float b){
-  if(fabs(exp(a)-b)>1e-6){
-    fprintf(stderr,"\tDifference between binary dump and raw text is rather big:%f vs %f\n",a,b);
-    exit(0);
-  }
-
-}
-
-int val_bed(int argc, char**argv){
-  if(argc!=1){
-    fprintf(stderr,"val_bed FILE.gz \n");
-    exit(0);
-  }
-  char *base = *argv;
-  char* outnames_bin = append(base,BIN);
-  char* outnames_gz = base;
-  fprintf(stderr,"Assuming binfile:%s and gzfile:%s\n",outnames_bin,outnames_gz);
-  
-  
-  BGZF *fp = bgzf_open(outnames_bin,"r");
-  gzFile gz =gzopen(outnames_gz,"r");
-  char buf[4096];
-  gzgets(gz,buf,4096);
-  while(1){
-    perChr pc = getPerChr(fp);
-    if(pc.nSites==0)
-      break;
-    fprintf(stderr,"pc.chr=%s pc.nSites=%zu firstpos=%d lastpos=%d\n",pc.chr,pc.nSites,pc.posi[0],pc.posi[pc.nSites-1]);
-    for(size_t i=0;i<pc.nSites;i++){
-      gzgets(gz,buf,4096);
-      char *chr = strtok(buf,"\n\t ");
-      if(strcmp(chr,pc.chr)!=0){
-	fprintf(stderr,"Problem with nonmatching chromosome: \'%s\' vs \'%s\'\n",chr,pc.chr);
-	exit(0);
-      }
-      int posi =atoi(strtok(NULL,"\t\n "));
-      if(posi!=pc.posi[i]){
-	fprintf(stderr,"Problem with nonmatching position\n");
-	exit(0);
-      }
-      float tW = atof(strtok(NULL,"\t\n "));
-      float tP = atof(strtok(NULL,"\t\n "));
-      float tF = atof(strtok(NULL,"\t\n "));
-      float tH = atof(strtok(NULL,"\t\n "));
-      float tL = atof(strtok(NULL,"\t\n "));
-      fun(tW,pc.tW[i]);
-      fun(tP,pc.tP[i]);
-      fun(tF,pc.tF[i]);
-      fun(tH,pc.tH[i]);
-      fun(tL,pc.tL[i]);
-    }
-    fprintf(stderr,"FILE: %s chr: %s OK\n",base,pc.chr); 
-    dalloc(pc);
-  }
-
-  fprintf(stderr,"ALL OK: %s\n",base);
-  return 0;
-}
-
 
 
 int main(int argc,char **argv){
   if(argc==1){
     fprintf(stderr,"\t\'thetaStat\', a program to do neutrality test statistics using thetas.gz output from angsd\n");
-    fprintf(stderr,"\tSYNOPSIS:\n\t\t./thetaStat [make_bed|do_stat|validate_bed|print]\n");
-    fprintf(stderr,"\tEXAMPLE:\n\t\t1) \'./thetaStat make_bed N00200.thetas.gz\'\n");
+    fprintf(stderr,"\tSYNOPSIS:\n\t\t./thetaStat [do_stat||print]\n");
     fprintf(stderr,"\t\t2) \'./thetaStat do_stat N00200.thetas.gz -nChr 16 -win 40000 -step 10000\'\n");
     fprintf(stderr,"\tOUTPUT IS THEN CALLED  \'N00200.thetas.gz.pestPG\n");
     fprintf(stderr,"\n\tYOU CAN TRY WITH DIFFERENT WINDOWSIZE LIKE:\n\t \'./thetaStat do_stat N00200.thetas.gz -nChr 16 -win 20000 -step 10000\' \n");
@@ -617,18 +478,13 @@ int main(int argc,char **argv){
   }
   //  fprintf(stderr,"zlibversion=%s zlibversion=%s file:%s\n",ZLIB_VERSION,zlib_version,__FILE__);
   --argc,++argv;
-  if(strcmp(*argv,"make_bed")==0){
-    make_bed(--argc,++argv);
-  }else if(strcmp(*argv,"do_stat")==0){
+  if(strcmp(*argv,"do_stat")==0){
     do_stat(--argc,++argv);
-  }else if(strcmp(*argv,"validate_bed")==0){
-    val_bed(--argc,++argv);
-  }
-  else if(strcmp(*argv,"print")==0){
+  }else if(strcmp(*argv,"print")==0){
     print(--argc,++argv);
   }else{
     fprintf(stderr,"Unknown argument: \'%s' please supply:\n",*argv);
-    fprintf(stderr,"./thetaStat [make_bed|do_stat|validate_bed|print]\n");
+    fprintf(stderr,"./thetaStat [do_stat||print]\n");
   }
 }
 

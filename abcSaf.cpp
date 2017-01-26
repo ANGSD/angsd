@@ -290,8 +290,11 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     size_t tt = newDim-1;
     fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
   }else {
+    char buf[8] = "thetav2";
     theta_dat = aio::openFileBG(outfiles,THETAS);
     theta_idx = aio::openFile(outfiles,THETASIDX);
+    aio::bgzf_write(theta_dat,buf,8);
+    fwrite(buf,1,8,theta_idx);
     theta_res = new std::vector<float>[5];
     offs_thetas = bgzf_tell(theta_dat);
 
@@ -331,7 +334,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
 abcSaf::~abcSaf(){
   if(doSaf&&doThetas==0&&doSaf!=3)
     writeAll();
-  fprintf(stderr,"hetapos:%lu thet_res:%lu\n",theta_pos.size(),theta_res[0].size());
+
   if(doSaf&&doThetas==1&&doSaf!=3)
     writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res,mynchr);
 
@@ -1746,15 +1749,9 @@ void abcSaf::changeChr(int refId) {
   if(doSaf&&doThetas==0&&doSaf!=3)
     writeAll();
 
-
-  fprintf(stderr,"hetapos:%lu thet_res:%lu\n",theta_pos.size(),theta_res[0].size());
-
   if(doSaf&&doThetas==1&&doSaf!=3)
     writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res,mynchr);
-
-  
   
   free(tmpChr);
   tmpChr = strdup(header->target_name[refId]);
-  fprintf(stderr,"[%s] tmpChr:%s\n",__FUNCTION__,tmpChr);
 }

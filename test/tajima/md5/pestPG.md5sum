@@ -6,8 +6,8 @@ c852a54d9e6ff25163a4164cc352772e  tajima/output/norm.saf.gz
 63b99ed660e5714221b1a6c93a449e9d  tajima/output/norm.saf.pos.gz
 63b99ed660e5714221b1a6c93a449e9d  tajima/output/fold.saf.pos.gz
 fbaeec5e4d36edb8f63f2cb7fbaf35e4  tajima/output/norm.saf.em.ml
-d09377945ca389c03060037edd6bf79f  tajima/output/fold.thetas.gz.pestPG
+d09377945ca389c03060037edd6bf79f  tajima/output/fold.thetas.idx.pestPG
 8771f4807db605a8a3e6d97770e6b3a0  tajima/output/fold.saf.em.ml
 4f680d9a51703c0c47007d7a8a635f51  tajima/output/fold.thetas.gz
 1b786a2b796d5948dee97dfea8e2cb3c  tajima/output/norm.thetas.gz
-c2b4313ecdbb20c1245160dd4aeba566  tajima/output/norm.thetas.gz.pestPG
+c2b4313ecdbb20c1245160dd4aeba566  tajima/output/norm.thetas.idx.pestPG
