@@ -453,7 +453,7 @@ int print(int argc, char**argv){
     datum d = it->second;
     bgzf_seek(fp,d.fpos,SEEK_SET);
   }
-
+  fprintf(stdout,"#Chromo\tPos\tWatterson\tPairwise\tthetaSingleton\tthetaH\tthetaL\n");
   while(1){
     perChr pc = getPerChr(fp);
     if(pc.nSites==0)
