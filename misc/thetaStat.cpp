@@ -34,7 +34,10 @@ typedef struct{
 }datum;
 
 typedef std::map<char*,datum,ltstr> myMap;
-
+//ssize_t bgzf_read(BGZF *fp, void *data, size_t length) HTS_RESULT_USED;
+void my_bgzf_read(BGZF *fp, void *data, size_t length){
+  assert(length==bgzf_read(fp,data,length));
+}
 
 int isok(char *bgzf_name,char *fp_name){
   FILE *fp = NULL;
@@ -168,10 +171,10 @@ perChr getPerChr(BGZF *fp){
   if(bgzf_read(fp,&clen,sizeof(size_t))==0)
     return ret;
   ret.chr = new char[clen+1];
-  bgzf_read(fp,ret.chr,clen);
+  my_bgzf_read(fp,ret.chr,clen);
   ret.chr[clen] = '\0';
-  bgzf_read(fp,&ret.nSites,sizeof(size_t));
-  bgzf_read(fp,&ret.nChr,sizeof(int));
+  my_bgzf_read(fp,&ret.nSites,sizeof(size_t));
+  my_bgzf_read(fp,&ret.nChr,sizeof(int));
   ret.posi = new int[ret.nSites];
   for(int i=0;i<ret.nSites;i++)
     ret.posi[i]++; //Old implemenation assummed positions was one indexed
@@ -182,12 +185,12 @@ perChr getPerChr(BGZF *fp){
   ret.tL = new float[ret.nSites];
   
   //read positions and thetas
-  bgzf_read(fp,ret.posi,ret.nSites*sizeof(int));
-  bgzf_read(fp,ret.tW,ret.nSites*sizeof(float));
-  bgzf_read(fp,ret.tP,ret.nSites*sizeof(float));
-  bgzf_read(fp,ret.tF,ret.nSites*sizeof(float));
-  bgzf_read(fp,ret.tH,ret.nSites*sizeof(float));
-  bgzf_read(fp,ret.tL,ret.nSites*sizeof(float));
+  my_bgzf_read(fp,ret.posi,ret.nSites*sizeof(int));
+  my_bgzf_read(fp,ret.tW,ret.nSites*sizeof(float));
+  my_bgzf_read(fp,ret.tP,ret.nSites*sizeof(float));
+  my_bgzf_read(fp,ret.tF,ret.nSites*sizeof(float));
+  my_bgzf_read(fp,ret.tH,ret.nSites*sizeof(float));
+  my_bgzf_read(fp,ret.tL,ret.nSites*sizeof(float));
   
   //make thetas into normal space
   for(size_t i=0;i<ret.nSites;i++){
@@ -320,7 +323,7 @@ int do_stat(int argc, char**argv){
   writemap(stderr,mm);
   BGZF *fp = bgzf_open(outnames_bin,"r");
   char tmp[8];
-  bgzf_read(fp,tmp,8);
+  my_bgzf_read(fp,tmp,8);
 
   --argc;++argv;
   //  fprintf(stderr,"argc=%d\n",argc);
@@ -369,7 +372,7 @@ int do_stat(int argc, char**argv){
       exit(0);
     }
     datum d = it->second;
-    bgzf_seek(fp,d.fpos,SEEK_SET);
+    assert(bgzf_seek(fp,d.fpos,SEEK_SET)==0);
   }
   if(outnames==NULL)
     outnames = base;
@@ -420,7 +423,7 @@ int print(int argc, char**argv){
   writemap(stderr,mm);
   BGZF *fp = bgzf_open(outnames_bin,"r");
   char tmp[8];
-  bgzf_read(fp,tmp,8);
+  my_bgzf_read(fp,tmp,8);
   --argc;++argv;
   //  fprintf(stderr,"argc=%d\n",argc);
   int argP =0;
@@ -450,7 +453,7 @@ int print(int argc, char**argv){
       exit(0);
     }
     datum d = it->second;
-    bgzf_seek(fp,d.fpos,SEEK_SET);
+    assert(0==bgzf_seek(fp,d.fpos,SEEK_SET));
   }
   fprintf(stdout,"#Chromo\tPos\tWatterson\tPairwise\tthetaSingleton\tthetaH\tthetaL\n");
   while(1){
