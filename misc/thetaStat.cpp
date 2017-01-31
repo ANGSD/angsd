@@ -9,9 +9,6 @@
 #include "stats.cpp"
 #include <cassert>
 
-#define VERSION "0.01"
-
-
 const char * BIN= ".bin";
 const char * IDX= ".idx";
 const char * RES=  ".pestPG";
@@ -176,6 +173,8 @@ perChr getPerChr(BGZF *fp){
   bgzf_read(fp,&ret.nSites,sizeof(size_t));
   bgzf_read(fp,&ret.nChr,sizeof(int));
   ret.posi = new int[ret.nSites];
+  for(int i=0;i<ret.nSites;i++)
+    ret.posi[i]++; //Old implemenation assummed positions was one indexed
   ret.tW = new float[ret.nSites];
   ret.tP = new float[ret.nSites];
   ret.tF = new float[ret.nSites];

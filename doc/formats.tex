@@ -139,7 +139,14 @@ The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{si
 \end{table}
 
 \section{theta formats}
-From 0.917 onwards, the -doThetas in angsd wont generate the old ASCII files but rather the indexed 3 files as described below.
+From 0.917 onwards, the -doThetas in angsd wont generate the old ASCII files but rather the indexed file as described below. The original format will not be described in this document.
 
+\subsection{thetav2}
+The main ANGSD program will generate two files if the options -dosaf 1 and -dothetas 1 has been selected. This will output two files
+
+\begin{itemize}
+\item[prefix.thetas.idx] small uncompressed binary file that contains chr,number of sites, number of chromosomes and the offset into the main data file contain the theta estimates. See below
+\item[prefix.thetas.gz] main file. Does also contain chr, number of sites number of chromsomes along with t
+\end{itemize}
 
 \end{document}

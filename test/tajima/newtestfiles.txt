@@ -1,0 +1,64 @@
+From version 0.917 i updated to binary theta files. This files describe and compare the two formats.
+
+1) checkout dev branch
+
+
+[fvr124@zl08368 angsd]$ git checkout safglAsLog
+Switched to branch 'safglAsLog'
+[fvr124@zl08368 angsd]$ make clean &>/dev/null ;make HTSSRC=../hts &>/dev/null
+[fvr124@zl08368 angsd]$ cd test;./testTaj.sh ../;
+[fvr124@zl08368 test]$ ../misc/thetaStat print tajima/output/norm.thetas.idx >/tmp/norm.thetas.new;../misc/thetaStat print tajima/output/fold.thetas.idx >/tmp/fold.thetas.new
+ret:tajima/output/norm.thetas.gz
+Assuming binfile:tajima/output/norm.thetas.gz and indexfile:tajima/output/norm.thetas.idx
+		Information from index file:
+		0	1	264256	34359738408	270792352
+pc.chr=1 pc.nSites=264256 pc.nChr=40 firstpos=0 lastpos=264255
+ret:tajima/output/fold.thetas.gz
+Assuming binfile:tajima/output/fold.thetas.gz and indexfile:tajima/output/fold.thetas.idx
+		Information from index file:
+		0	1	264256	34359738388	1741817504
+pc.chr=1 pc.nSites=264256 pc.nChr=20 firstpos=0 lastpos=264255
+[fvr124@zl08368 test]$ 
+
+
+2) checkout master branch
+
+[fvr124@zl08368 angsd]$  git checkout master;make clean &>/dev/null ;make HTSSRC=../hts &>/dev/null; cd test;./testTaj.sh ../;
+Switched to branch 'master'
+
+
+
+> b<-read.table("/tmp/norm.thetas.new")
+> a<-read.table("test/tajima/output/norm.thetas.gz")
+> table(a[,1:2]!=b[,1:2])
+
+ FALSE 
+528512 
+> a<-exp(a[,-c(1:2)])
+> b<-exp(b[,-c(1:2)])
+> range(abs(a-b))
+[1] 0.000000e+00 1.949447e-06
+> colSums(a)
+      V3       V4       V5       V6       V7 
+62119.94 55291.98 69243.38 98842.39 77067.18 
+> colSums(b)
+      V3       V4       V5       V6       V7 
+62119.94 55291.98 69243.38 98842.39 77067.18 
+
+
+> b<-read.table("/tmp/fold.thetas.new")
+> a<-read.table("test/tajima/output/fold.thetas.gz")
+> table(a[,1:2]!=b[,1:2])
+
+ FALSE 
+528512 
+> a<-exp(a[,-c(1:2)])
+> b<-exp(b[,-c(1:2)])
+> range(abs(a-b))
+[1] 0.000000e+00 5.127061e-07
+> colSums(b)
+      V3       V4       V5       V6       V7 
+62121.55 55292.36     0.00     0.00     0.00 
+> colSums(a)
+      V3       V4       V5       V6       V7 
+62121.55 55292.36     0.00     0.00     0.00 
