@@ -111,7 +111,7 @@ void readSFS(const char*fname,size_t hint,double *ret){
       //      fprintf(stderr,"i=%lu %f\n",i,ret[i]);
   }
   normalize(ret,(int)res.size());
-  for(int i=0;i<res.size();i++)
+  for(int i=0;0&&i<res.size();i++)
     ret[i] = log(ret[i]);
   fclose(fp);
 }

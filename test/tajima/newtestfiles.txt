@@ -62,3 +62,26 @@ Switched to branch 'master'
 > colSums(a)
       V3       V4       V5       V6       V7 
 62121.55 55292.36     0.00     0.00     0.00 
+
+#fullc omparison:
+
+[fvr124@zl08368 angsd]$ seq 22 >rf
+[fvr124@zl08368 angsd]$ ./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out forprior
+
+./misc/realSFS  forprior.saf.idx  >forprior.ml
+
+[fvr124@zl08368 angsd]$ git branch
+  master
+  newsaf2
+* safglAsLog
+[fvr124@zl08368 angsd]$ ./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out new -dothetas 1 -pest forprior.ml
+
+[fvr124@zl08368 angsd]$ ./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out new -dothetas 1 -pest forprior.ml 2>/dev/null
+ 
+[fvr124@zl08368 angsd]$ 
+[fvr124@zl08368 angsd]$ ./misc/thetaStat print new.thetas.idx >new.thetas.txt
+
+
+Difference in pestPG is:
+
+
