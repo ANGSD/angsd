@@ -192,7 +192,7 @@ perChr getPerChr(BGZF *fp){
   my_bgzf_read(fp,&ret.nChr,sizeof(int));
   ret.posi = new int[ret.nSites];
   for(int i=0;i<ret.nSites;i++)
-    ret.posi[i]++; //Old implemenation assummed positions was one indexed
+    ret.posi[i] = ret.posi[i]+1; //Old implemenation assummed positions was one indexed
   ret.tW = new float[ret.nSites];
   ret.tP = new float[ret.nSites];
   ret.tF = new float[ret.nSites];
@@ -422,7 +422,7 @@ int do_stat(int argc, char**argv){
 
 void print_main(perChr &pc,FILE *fp){
   for(size_t i=0;i<pc.nSites;i++)
-    fprintf(fp,"%s\t%d\t%f\t%f\t%f\t%f\t%f\n",pc.chr,pc.posi[i]+1,log(pc.tW[i]),log(pc.tP[i]),log(pc.tF[i]),log(pc.tH[i]),log(pc.tL[i]));
+    fprintf(fp,"%s\t%d\t%f\t%f\t%f\t%f\t%f\n",pc.chr,pc.posi[i],log(pc.tW[i]),log(pc.tP[i]),log(pc.tF[i]),log(pc.tH[i]),log(pc.tL[i]));
 }
 
 
