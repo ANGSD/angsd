@@ -114,16 +114,23 @@ myMap getMap(const char *fname){
     char *chr = new char[clen+1];
     assert(clen==fread(chr,1,clen,fp));
     chr[clen] = '\0';
-    
+
     datum d;
     if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
       exit(0);
     }
+
+    if(1!=fread(&d.nChr,sizeof(int),1,fp)){
+      fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
+      exit(0);
+    }
+
     if(1!=fread(&d.fpos,sizeof(int64_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
       exit(0);
     }
+
     myMap::iterator it = ret.find(chr);
     if(it==ret.end())
       ret[chr] =d ;
@@ -132,9 +139,17 @@ myMap getMap(const char *fname){
       exit(0);
     }
   }
-
+  fclose(fp);
   return ret;
 }
+
+void deleteMyMap(myMap &mm){
+  for(myMap::iterator it=mm.begin();it!=mm.end();it++){
+    delete [] it->first;
+  }
+
+}
+
 
 typedef struct{
   char *chr;
@@ -291,7 +306,6 @@ kstring_t do_stat_main(perChr &pc,int step,int win,int nChr,int type){
     while(pc.posi[endI]<pE) endI++;
     
   }
-  
   return str;
 
 }
@@ -300,7 +314,7 @@ kstring_t do_stat_main(perChr &pc,int step,int win,int nChr,int type){
 char *idxToGz(char *one){
   char *ret = strdup(one);
   strcpy(ret+strlen(ret)-3,"gz\0");
-  fprintf(stderr,"ret:%s\n",ret);
+  //  fprintf(stderr,"ret:%s\n",ret);
   return ret;
 }
 
@@ -391,13 +405,18 @@ int do_stat(int argc, char**argv){
     fprintf(stderr,"\tpc.chr=%s pc.nSites=%zu firstpos=%d lastpos=%d\n",pc.chr,pc.nSites,pc.posi[0],pc.posi[pc.nSites-1]);
     kstring_t str = do_stat_main(pc,step,win,pc.nChr,type);
     fwrite(str.s,1,str.l,fpres);//should clean up str, doesn't matter for this program;
+    free(str.s);
     fflush(fpres);
     if(chr!=NULL)
       break;
     dalloc(pc);
   }
+  free(outnames_bin);
   fclose(fpres);
   fprintf(stderr,"\tDumping file: \"%s\"\n",resname);
+  bgzf_close(fp);
+  deleteMyMap(mm);
+  delete [] resname;
   return 0;
 }
 
@@ -466,7 +485,9 @@ int print(int argc, char**argv){
       break;
     dalloc(pc);
   }
-
+  deleteMyMap(mm);
+  free(outnames_bin);
+  bgzf_close(fp);
   return 0;
 }
 

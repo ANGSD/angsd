@@ -29,7 +29,7 @@ class abcSaf : public abc{
   double aConst2;
   double aConst3;
   double *scalings;
-
+  int tsktsktsk;
   int isHap;
   double *filipeIndF;
   int ishap;

@@ -106,6 +106,7 @@ void abcSaf::getOptions(argStruct *arguments){
 	prior[i] = log(prior[i]/tts);
     }
     lbicoTab = new double[2*arguments->nInd+1];
+    tsktsktsk = 2*arguments->nInd+1;
     myComb2Tab = new double*[2*arguments->nInd+1];
     for(int i=0;i<2*arguments->nInd+1;i++){
       lbicoTab[i] = angsd::lbico(2*arguments->nInd,i);
@@ -219,6 +220,8 @@ double **abcSaf::myComb2Tab=NULL;
 double *abcSaf::prior = NULL;
 
 abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
+  theta_res = NULL;
+  tsktsktsk=0;
   tmpChr = NULL;
   isHap =0;
   //for use when dumping binary indexed saf files
@@ -346,9 +349,18 @@ abcSaf::~abcSaf(){
   if(theta_dat) bgzf_close(theta_dat);
   if(theta_idx) fclose(theta_idx);
   if(outfileGprobs)  bgzf_close(outfileGprobs);
-  if(lbicoTab) delete [] lbicoTab;
-  if(myComb2Tab) delete [] myComb2Tab;//not cleaned properly
+  if(lbicoTab) {
+    delete [] lbicoTab;
+  }
+  if(myComb2Tab){
+    for(int i=0;i<tsktsktsk;i++)
+      delete [] myComb2Tab[i];
+    delete [] myComb2Tab;
+  }
   if(tmpChr) free(tmpChr);
+  if(anc) free(anc);
+  if(scalings) delete [] scalings;
+  if(theta_res) delete [] theta_res;
  }
 
 
