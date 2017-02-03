@@ -344,7 +344,7 @@ int do_stat(int argc, char**argv){
   int argP =0;
   char *chr=NULL;
   char *outnames = NULL;
-  int nChr =0;
+  int nChr =-1;
   int win =0;
   int step =0;
   int type =0;
@@ -364,6 +364,8 @@ int do_stat(int argc, char**argv){
       win = atoi(argv[argP+1]);
     else if(strcmp("-type",argv[argP])==0)
       type = atoi(argv[argP+1]);
+    else if(strcmp("-nChr",argv[argP])==0)
+      nChr = atoi(argv[argP+1]);
     
     else {
       fprintf(stderr,"Unknown argument:%s\n",argv[argP]);
@@ -403,7 +405,9 @@ int do_stat(int argc, char**argv){
     if(pc.nSites==0)
       break;
     fprintf(stderr,"\tpc.chr=%s pc.nSites=%zu firstpos=%d lastpos=%d\n",pc.chr,pc.nSites,pc.posi[0],pc.posi[pc.nSites-1]);
-    kstring_t str = do_stat_main(pc,step,win,pc.nChr,type);
+    if(nChr == -1)
+      nChr = pc.nChr;
+    kstring_t str = do_stat_main(pc,step,win,nChr,type);
     fwrite(str.s,1,str.l,fpres);//should clean up str, doesn't matter for this program;
     free(str.s);
     fflush(fpres);
