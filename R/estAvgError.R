@@ -552,7 +552,7 @@ for(idComb in 1:numComb){
 ### D WITH NO ERROR CORRECTION AND USING ALL TRANSITIONS
         message("Running Observed D\n",appendLF=FALSE)
         flush.console()
-        fileOut=paste(out,".Observed",combNames[ idComb ],".txt",sep="",collapse="")
+        fileOut=paste(out,combNames[ idComb ],".Observed",".txt",sep="",collapse="")
 
         result5 = getJackKnife(outData,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
     if(idComb==1){
@@ -568,7 +568,7 @@ for(idComb in 1:numComb){
         message("Running Transition Removal\n",appendLF=FALSE)
         flush.console()
 
-        fileOut=paste(out,".RemTrans",combNames[ idComb ],".txt",sep="",collapse="")
+        fileOut=paste(out,combNames[ idComb ],".RemTrans",".txt",sep="",collapse="")
 
         result6 = getJackKnife(outData,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
         if(idComb==1){
