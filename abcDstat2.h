@@ -4,32 +4,34 @@ private:
   int currentChr;
   int NbasesPerLine;
   int nBlocks;
-  int block; //the current block number
+  int block;
   int blockSize;
-  double DENprint;
-  double NUMprint;
+  double *DENprint;
+  double *NUMprint;
   int NSITEprint;
   int Eprint;
   char *ancName;
-  double *COMBprint;
-  double *ALLCOMBprint;
+  double **COMBprint;
+  
 public:
   int doAbbababa2;
   FILE *outfile;
-  FILE *outfile2;
   int sample;
   int doCount;
+  int useLast;
   int maxDepth;
-  int sizeH1;
-  int sizeH2;
-  int sizeH3;
-  int sizeH4;
   int enhance;
   int nIndFasta;
-  //int nComb;
   int rmTrans;
   int Aanc;
-  int combFile;
+  int *POPSIZE;
+  int **SIZEIDX;
+  int **SIZEABCD;
+  char *sizeFile;
+  int numComb;
+
+  angsd::Matrix<int> sizeMat;
+  
   abcDstat2(const char *outfiles, argStruct *arguments,int inputtype);
   ~abcDstat2();
   void getOptions(argStruct *arguments);
