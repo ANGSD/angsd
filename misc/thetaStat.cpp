@@ -191,8 +191,6 @@ perChr getPerChr(BGZF *fp){
   my_bgzf_read(fp,&ret.nSites,sizeof(size_t));
   my_bgzf_read(fp,&ret.nChr,sizeof(int));
   ret.posi = new int[ret.nSites];
-  for(int i=0;i<ret.nSites;i++)
-    ret.posi[i] = ret.posi[i]+1; //Old implemenation assummed positions was one indexed
   ret.tW = new float[ret.nSites];
   ret.tP = new float[ret.nSites];
   ret.tF = new float[ret.nSites];
@@ -206,6 +204,12 @@ perChr getPerChr(BGZF *fp){
   my_bgzf_read(fp,ret.tF,ret.nSites*sizeof(float));
   my_bgzf_read(fp,ret.tH,ret.nSites*sizeof(float));
   my_bgzf_read(fp,ret.tL,ret.nSites*sizeof(float));
+
+  
+  for(int i=0;i<ret.nSites;i++){
+    ret.posi[i] = ret.posi[i]+1; //Old implemenation assummed positions was one indexed
+  }
+
   
   //make thetas into normal space
   for(size_t i=0;i<ret.nSites;i++){
