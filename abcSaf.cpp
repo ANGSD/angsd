@@ -99,7 +99,7 @@ void abcSaf::getOptions(argStruct *arguments){
       if(fold)
 	nd=arguments->nInd+1;
       
-      int tts=0;
+      double tts=0;
       for(int i=0;i<nd;i++)
 	tts += prior[i];
       for(int i=0;i<nd;i++)
