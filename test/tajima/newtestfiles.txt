@@ -95,102 +95,80 @@ table(a[,1:2]!=b[,1:2])
 
 
 # full comparison:
+git checkout safglAsLog; make clean;make HTSSRC=../hts
+seq 22 >rf;ls ../smallBam/*.bam >list
+./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out new.forprior
+./misc/realSFS  new.forprior.saf.idx  -seed 8 >new.forprior.ml
+./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out new -dothetas 1 -pest new.forprior.ml
+./misc/thetaStat print new.thetas.idx >new.thetas.txt
 
-[fvr124@zl08368 angsd]$ seq 22 >rf
-[fvr124@zl08368 angsd]$ ./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out forprior
+git checkout master; make clean;make HTSSRC=../hts
+./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out old.forprior
+./misc/realSFS  old.forprior.saf.idx -seed 8  >old.forprior.ml
+./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out old -dothetas 1 -pest old.forprior.ml
 
-./misc/realSFS  forprior.saf.idx  >forprior.ml
 
-[fvr124@zl08368 angsd]$ git branch
-  master
-  newsaf2
-* safglAsLog
-[fvr124@zl08368 angsd]$ ./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out new -dothetas 1 -pest forprior.ml
+cmp new.forprior.ml old.forprior.ml
 
-[fvr124@zl08368 angsd]$ ./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out new -dothetas 1 -pest forprior.ml 2>/dev/null
- 
-[fvr124@zl08368 angsd]$ 
-[fvr124@zl08368 angsd]$ ./misc/thetaStat print new.thetas.idx >new.thetas.txt
+> a<-read.table("old.)
+old.arg                  old.forprior.ml          old.forprior.saf.idx     old.thetas.gz            
+old.forprior.arg         old.forprior.saf.gz      old.forprior.saf.pos.gz  
+> a<-read.table("old.thetas.gz")
+> b<-read.table("new.thetas.txt")
 
-git checkout master
-make clean;make HTSSRC=../hts
-
-./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out original -dothetas 1 -pest forprior.ml 
-
-[fvr124@zl08368 angsd]$ R
-
-R version 3.3.1 (2016-06-21) -- "Bug in Your Hair"
-Copyright (C) 2016 The R Foundation for Statistical Computing
-Platform: x86_64-redhat-linux-gnu (64-bit)
-
-R is free software and comes with ABSOLUTELY NO WARRANTY.
-You are welcome to redistribute it under certain conditions.
-Type 'license()' or 'licence()' for distribution details.
-
-  Natural language support but running in an English locale
-
-R is a collaborative project with many contributors.
-Type 'contributors()' for more information and
-'citation()' on how to cite R or R packages in publications.
-
-Type 'demo()' for some demos, 'help()' for on-line help, or
-'help.start()' for an HTML browser interface to help.
-Type 'q()' to quit R.
-
-> a<-read.table("original.thetas.gz");b<-read.table("new.thetas.txt")
-
-> table(a[,1:2]!=b[,1:2])
-
+table(a[,1:2]!=b[,1:2])
   FALSE 
 3334150 
-> colSums(exp(a[,-c(1:2)])
-+ 
-> colSums(exp(a[,-c(1:2)]))
-          V3           V4           V5           V6           V7 
-1.118337e+03 1.484958e+03 2.190044e-02 1.853120e+03 1.669039e+03 
-> colSums(exp(b[,-c(1:2)]))
-          V3           V4           V5           V6           V7 
-1.118337e+03 1.484958e+03 2.190044e-02 1.853120e+03 1.669039e+03 
-> colSums(exp(b[,-c(1:2)]))-colSums(exp(a[,-c(1:2)]))
-           V3            V4            V5            V6            V7 
--2.326379e-06 -1.756357e-06  9.158794e-11  1.506844e-06  2.727703e-06 
-> 
 
-[fvr124@zl08368 angsd]$ cat test/tajima/output/norm.thetas.gz.pestPG 
-#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tLTajima	fuf	fud	fayh	zeng	nSites
+
+ a<-exp(a[,-c(1:2)])
+ b<-exp(b[,-c(1:2)])
+
+ range(abs(a-b))
+
+[1] 0.000000e+00 1.837356e-06
+
+
+ colSums(b);colSums(a)
+
+       V3        V4        V5        V6        V7 
+1154.2414 1478.2943  657.5712 1852.3295 1665.3119 
+       V3        V4        V5        V6        V7 
+1154.2414 1478.2943  657.5712 1852.3295 1665.3119 
+
+
+
+[fvr124@zl08368 angsd]$ cat test/tajima/outputOld/norm.thetas.gz.pestPG 
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
 (0,264255)(1,264256)(0,264256)	1	132128	62119.700924	55291.469137	69243.382862	98841.971147	77066.720164	-0.414251	-0.423020	-0.296850	-0.562553	0.195683	264255
 [fvr124@zl08368 angsd]$ cat test/tajima/outputNew/norm.thetas.idx.pestPG 
-#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tLTajima	fuf	fud	fayh	zeng	nSites
-(0,264255)(0,264255)(0,264255)	1	132127	62119.686074	55291.469147	69243.382919	98841.971148	77066.720148	-0.414250	-0.423020	-0.296850	-0.562553	0.195683	264255
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
+(0,264255)(1,264256)(0,264256)	1	132128	62119.686074	55291.469147	69243.382919	98841.971148	77066.720148	-0.414250	-0.423020	-0.296850	-0.562553	0.195683	264255
+[fvr124@zl08368 angsd]$ 
 
-[fvr124@zl08368 angsd]$ cat test/tajima/output/fold.thetas.gz.pestPG 
-#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tLTajima	fuf	fud	fayh	zeng	nSites
+[fvr124@zl08368 angsd]$ cat test/tajima/outputOld/fold.thetas.gz.pestPG 
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
 (0,264255)(1,264256)(0,264256)	1	132128	62121.313815	55291.849810	0.000000	0.000000	0.000000	-0.414315	1.676397	2.588579	0.714201	-0.813258	264255
 [fvr124@zl08368 angsd]$ cat test/tajima/outputNew/fold.thetas.idx.pestPG 
-#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tLTajima	fuf	fud	fayh	zeng	nSites
-(0,264255)(0,264255)(0,264255)	1	132127	62121.299219	55291.849749	0.000000	0.000000	0.000000	-0.461508	1.632640	2.294013	0.888461	-1.098844	264255
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
+(0,264255)(1,264256)(0,264256)	1	132128	62121.299219	55291.849749	0.000000	0.000000	0.000000	-0.461508	1.632640	2.294013	0.888461	-1.098844	264255
 [fvr124@zl08368 angsd]$ 
+
 
 Difference in pestPG is explained by the -nChr set to 40 instead of 20 in the old fold:
 
 
-
-
-[fvr124@zl08368 output]$ cat fold.thetas.gz.pestPG 
-#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
-(0,264255)(1,264256)(0,264256)	1	132128	62121.313815	55291.849810	0.000000	0.000000	0.000000	-0.414315	1.676397	2.588579	0.714201	-0.813258	264255
-[fvr124@zl08368 output]$ ../../../misc/thetaStat do_stat fold.thetas.gz -nChr 20
-	Assuming binfile:fold.thetas.gz.bin and indexfile:fold.thetas.gz.idx
+[fvr124@zl08368 angsd]$ ./misc/thetaStat do_stat test/tajima/outputNew/fold.thetas.idx -nChr 40
+	Assuming binfile:test/tajima/outputNew/fold.thetas.gz and indexfile:test/tajima/outputNew/fold.thetas.idx
 		Information from index file:
-		0	1	264256	0
-	 -r=(null) outnames=(null) step: 0 win: 0 nChr:20
+		0	1	264256	8	20
+	 -r=(null) outnames=(null) step: 0 win: 0
 	Winsize equals zero or step size equals zero. Will use entire chromosome as window
 	pc.chr=1 pc.nSites=264256 firstpos=1 lastpos=264256
-	Dumping file: "fold.thetas.gz.pestPG"
-[fvr124@zl08368 output]$ cat fold.thetas.gz.pestPG 
+	 nChr:40
+	Dumping file: "test/tajima/outputNew/fold.thetas.idx.pestPG"
+[fvr124@zl08368 angsd]$ cat test/tajima/outputNew/fold.thetas.idx.pestPG
 #(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
-(0,264255)(1,264256)(0,264256)	1	132128	62121.313815	55291.849810	0.000000	0.000000	0.000000	-0.461509	1.632640	2.294013	0.888461	-1.098844	264255
-
-
-Will checkup up on which is correct
+(0,264255)(1,264256)(0,264256)	1	132128	62121.299219	55291.849749	0.000000	0.000000	0.000000	-0.414314	1.676398	2.588579	0.714201	-0.813258	264255
+[fvr124@zl08368 angsd]$ 
 
