@@ -24,6 +24,7 @@ ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/norm -doSaf 1 -nIn
 ${WDIR}/misc/realSFS ${ODIR}/norm.saf.idx -P 24 -nSites 1000000 -m 0 -seed -1 >${ODIR}/norm.saf.em.ml 2>>${LOG}
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/norm -nInd 20 -doThetas 1 -doSaf 1 -pest ${ODIR}/norm.saf.em.ml -fai hg19.fa.fai  2>>${LOG}
 ${WDIR}/misc/thetaStat do_stat ${ODIR}/norm.thetas.idx 2>>${LOG}
+${WDIR}/misc/thetaStat do_stat ${ODIR}/norm.thetas.idx -outnames ${ODIR}/norm.thetas.idx.win -step 1000 -win 5000 2>>${LOG}
 
 echo "2) Will do folded analysis" >>${LOG} 2>&1
 
@@ -31,6 +32,8 @@ ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/fold -doSaf 1 -nIn
 ${WDIR}/misc/realSFS ${ODIR}/fold.saf.idx -P 24 -nSites 1000000 -m 0 -seed -1 >${ODIR}/fold.saf.em.ml 2>>${LOG}
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/fold -nInd 20 -doThetas 1 -doSaf 1 -pest ${ODIR}/fold.saf.em.ml -fold 1  -fai hg19.fa.fai 2>>${LOG}
 ${WDIR}/misc/thetaStat do_stat ${ODIR}/fold.thetas.idx -nChr 40 2>>${LOG}
+${WDIR}/misc/thetaStat do_stat ${ODIR}/fold.thetas.idx -nChr 40 -outnames ${ODIR}/fold.thetas.idx.win -step 1000 -win 5000 2>>${LOG}
+
 
 echo -e "\tThe theta estimates from msms simulated haplotypes for 8x 0.5% errorrate"  >>${LOG} 2>&1
 echo -e "\tWatterson\tpairwise\ttajimasD" >>${LOG} 2>&1

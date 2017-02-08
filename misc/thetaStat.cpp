@@ -327,8 +327,12 @@ char *idxToGz(char *one){
 
 int do_stat(int argc, char**argv){
   if(argc==0){
-    fprintf(stderr,"do_stat .thetas.idx -win -step [-r chrName -type [0,1,2]]\n");
-    exit(0);
+    fprintf(stderr,"\n\t./thetaStat do_stat .thetas.idx [-win INT -step INT -r chrName -type [0,1,2] -outnames outputprefix]\n");
+    fprintf(stderr,"\n\tExamples:\n\t1)./thetaStat do_stat angsdput.thetas.idx\n");
+    fprintf(stderr,"\t2)./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000\n");
+    fprintf(stderr,"\t3)./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000 -r chr1\n");
+    fprintf(stderr,"\t4)./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000 -r chr1 -nChr 20 -outnames newoutputname\n\n");
+    return 0;
   }
   char *base = *argv;
   char* outnames_bin = idxToGz(base);
@@ -436,8 +440,10 @@ void print_main(perChr &pc,FILE *fp){
 
 int print(int argc, char**argv){
   if(argc==0){
-    fprintf(stderr,"print FILE [-r chrName]\n");
-    exit(0);
+    fprintf(stderr,"\n\t./thetaStat print angsdput.thetas.idx [-r chrName]\n");
+    fprintf(stderr,"\n\tExamples:\n\t1)./thetaStat print angsdput.thetas.idx\n");
+    fprintf(stderr,"\t2)./thetaStat print angsdput.thetas.idx -r chr2\n\n");
+    return 0;
   }
   char *base = *argv;
   char* outnames_bin = idxToGz(base);
@@ -502,11 +508,10 @@ int print(int argc, char**argv){
 
 int main(int argc,char **argv){
   if(argc==1){
-    fprintf(stderr,"\t\'thetaStat\', a program to do neutrality test statistics using thetas.gz output from angsd\n");
-    fprintf(stderr,"\tSYNOPSIS:\n\t\t./thetaStat [do_stat||print]\n");
-    fprintf(stderr,"\t\t2) \'./thetaStat do_stat N00200.thetas.gz -nChr 16 -win 40000 -step 10000\'\n");
-    fprintf(stderr,"\tOUTPUT IS THEN CALLED  \'N00200.thetas.gz.pestPG\n");
-    fprintf(stderr,"\n\tYOU CAN TRY WITH DIFFERENT WINDOWSIZE LIKE:\n\t \'./thetaStat do_stat N00200.thetas.gz -nChr 16 -win 20000 -step 10000\' \n");
+    fprintf(stderr,"\n\t\'./thetaStat\': a program to do neutrality test statistics using thetas.idx output from angsd\n");
+    fprintf(stderr,"\n\tExamples:\n\t1) ./thetaStat print angsdput.thetas.idx\n");
+    fprintf(stderr,"\t2) ./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000\n");
+    fprintf(stderr,"\n\tType \'./thetaStat do_stat\' or './thetaStat print' for more information\n\n");
     return 0;
   }
   //  fprintf(stderr,"zlibversion=%s zlibversion=%s file:%s\n",ZLIB_VERSION,zlib_version,__FILE__);
