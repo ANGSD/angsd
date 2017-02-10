@@ -31,6 +31,7 @@ void abcDstat::printArg(FILE *argFile){
   fprintf(argFile,"\t-enhance\t\t%d\toutgroup must have same base for all reads\n",enhance);
   fprintf(argFile,"\t-ans\t\t\t%s\tfasta file with outgroup\n",ancName);
   fprintf(argFile,"\t-useLast\t\t%d\tuse the last individuals as outgroup instead of -anc\n",useLast);
+  fprintf(argFile,"\t-printEmpty\t\t%d\t print blocks without any ABBA or BABA sites \n",printEmpty);
   fprintf(argFile,"\n");
 }
 
@@ -47,6 +48,7 @@ void abcDstat::getOptions(argStruct *arguments){
   Aanc = angsd::getArg("-Aanc",Aanc,arguments);
   useLast =  angsd::getArg("-useLast",useLast,arguments);
   enhance =  angsd::getArg("-enhance",enhance,arguments);
+  printEmpty =  angsd::getArg("-printEmpty",printEmpty,arguments);
   if(useLast != 0)
     useLast = 1;
 
@@ -83,6 +85,7 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
   doAbbababa=0;
   doCount=0;
   Aanc = 0;
+  printEmpty = 1;
   useLast = 0;
   currentChr=-1;
   NbasesPerLine=50;
@@ -193,7 +196,9 @@ abcDstat::~abcDstat(){
   if(doAbbababa==0)
     return;
 
-  printAndEmpty();
+
+  if(currentChr > -1)//if first chunk
+    printAndEmpty();
   if(outfile) fclose(outfile);
   //  fclose(outfile2);
   if(bufstr.s!=NULL)
@@ -221,7 +226,18 @@ void abcDstat::clean(funkyPars *pars){
 
 void abcDstat::printAndEmpty(){
 
-  fprintf(outfile,"%s\t%d\t%d",header->target_name[currentChr],block*blockSize+1,block*blockSize+blockSize);
+
+  
+  if(printEmpty == 0 && 1){
+    int total=0;
+    for(int j=0;j<nComb;j++)
+      total += ABBA[j] + BABA[j];      
+    if(total==0)
+      return;
+    
+  }
+ 
+  fprintf(outfile,"%s\t%d\t%d",header->target_name[currentChr],block*blockSize,block*blockSize+blockSize-1);
   for(int j=0;j<nComb;j++){
     fprintf(outfile,"\t%d\t%d",ABBA[j],BABA[j]);
     ABBA[j]=0;
@@ -239,10 +255,18 @@ void abcDstat::getBlockNum(int pos){
 
 
 void abcDstat::print(funkyPars *pars){
-  //   fprintf(stderr,"currentpos %lu %d\n",currentPos,header->l_ref[currentChr]);
 
+  //fprintf(stderr,"currentChr %d %d\t refid %s \t pos[0] %d-%d\tnumSites %d\n",currentChr,header->target_name[currentChr],header->target_name[pars->refId],pars->posi[0]+1,pars->posi[pars->numSites-1]+1,pars->numSites);
+
+  // for(int i=0;i<pars->numSites;i++)
+  //if(pars->keepSites[i])
+  //  fprintf(stderr,"pos %d\n",pars->posi[i]+1);
+ 
+  
   if(doAbbababa==0)
     return;
+
+  
 
   funkyAbbababa *abbababaStruct = (funkyAbbababa *) pars->extras[index];//new
 
@@ -253,40 +277,41 @@ void abcDstat::print(funkyPars *pars){
       BABA[j]=0;
     }
     getBlockNum(pars->posi[0]);
-    currentChr=0;
+    if(currentChr > pars->refId)
+      fprintf(stdout,"Warning. Your regions are not sorted. Becarefull...\n");
+    currentChr=pars->refId;
   }
 
   while(currentChr!=pars->refId){//if new chr (not first)
     //start new block
     printAndEmpty();
-    currentChr++;
+    //    currentChr++;
+    currentChr = pars->refId;
     getBlockNum(pars->posi[0]);
   }
 
 
-
-
-
-  for(int s=0;s<pars->numSites;s++){
+  for(int s = 0 ; s < pars->numSites; s++){
     int comp=0;
 
-    if(pars->posi[s]>=block*blockSize+blockSize){
+    if( pars->keepSites[s]==0 )
+	continue;
+
+    if( pars->posi[s]+1 >= block*blockSize+blockSize ){
       printAndEmpty();
-      getBlockNum(pars->posi[s]);
+      getBlockNum( pars->posi[s] );
     }
 
-    if(pars->keepSites[s]==0)
-	continue;
     for(int h3=0; h3<(pars->nInd -useLast); h3++){
       for(int h2=0; h2<(pars->nInd-useLast); h2++){
-	if(h2==h3)
+	if( h2 == h3 )
 	  continue;
-	for(int h1=0; h1<h2; h1++){
-	  if(h1==h3)
+	for( int h1=0; h1 < h2 ; h1++ ){
+	  if( h1 == h3 )
 	    continue;
-	  if(abbababaStruct->ABCD[s][comp]==4)
+	  if( abbababaStruct->ABCD[s][comp]==4 )
 	    ABBA[comp]++;
-	  else if(abbababaStruct->ABCD[s][comp]==7){
+	  else if( abbababaStruct->ABCD[s][comp]==7 ){
 	    BABA[comp]++;
 	  }
 	    comp++;
@@ -294,7 +319,6 @@ void abcDstat::print(funkyPars *pars){
       }
     }
   }
-
 }
 
 
@@ -315,13 +339,14 @@ void abcDstat::run(funkyPars *pars){
       pattern[s][i]=4;
 
     ABCD[s] = new int[nComb];
+
   }
 
 
  
 
   // sample an allele for each individuals
-  if(doAbbababa!=0){//random number read
+  if( doAbbababa!=0 ){//random number read
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s]==0)
 	continue;
