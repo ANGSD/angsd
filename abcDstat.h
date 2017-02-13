@@ -16,7 +16,7 @@ private:
   char *ancName;
   int *ABBA;
   int *BABA;
-  
+  int printEmpty;  
 public:
   int doAbbababa;
   FILE *outfile;
