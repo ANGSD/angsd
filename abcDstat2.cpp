@@ -162,24 +162,18 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
     CUMPOPSIZE[a+1] = cumCont;
   }
 
-  //print some information
-  if(useLast==0)
-    fprintf(stderr,"\t-> %d Populations | %d Individuals\n", numPop, nIndFasta);
-  else if(useLast==1 && ancName!=NULL) 
-    fprintf(stderr,"\t-> %d Populations | %d Individuals | %s Outgroup\n", numPop, nIndFasta, ancName);
-  
   //combinations of populations
   numComb = 3;
   if(numPop > 4){
-    long int factPop1 = 1;
-    for(int i=numPop-2; i>2; i--)
-      factPop1 = factPop1 * i;
-    long int factPop2 = 1;
-    for(int i=numPop-4; i>0; i--)
-      factPop2 = factPop2 * i; 
-    numComb = factPop1 / factPop2 * (numPop-1);
+    numComb =  (numPop-1)*(numPop-2)*(numPop-3)/2;
   }
 
+  //print some information
+  if(useLast==0)
+    fprintf(stderr,"\t-> %d Populations | %d trees | %d Individuals\n", numPop, numComb, nIndFasta);
+  else if(useLast==1 && ancName!=NULL) 
+    fprintf(stderr,"\t-> %d Populations | %d trees | %d Individuals | %s Outgroup\n", numPop, numComb, nIndFasta, ancName);
+  
   SIZEIDX = new int*[numComb]; //populations' sizes for each possible combination
   SIZEABCD = new int*[numComb]; //indexes for reading ABCD data
   

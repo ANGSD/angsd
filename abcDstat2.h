@@ -29,7 +29,7 @@ public:
   int **SIZEIDX;
   int **SIZEABCD;
   char *sizeFile;
-  int numComb;
+  long int numComb;
   int numPop;
 
   angsd::Matrix<int> sizeMat;
