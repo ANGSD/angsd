@@ -257,8 +257,8 @@ erCor= (sizeFile != FALSE)
 
 namePop = unlist(read.table(nameFile, header=FALSE))
 numPop = length(namePop)
-numComb = choose(numPop,4)*factorial(4)
-sizePop = unlist(read.table(sizeFile, header=FALSE))
+numComb = choose(numPop-2,2)*(numPop-1)
+sizePop = unlist(read.table(sizeFile, header=FALSE, as.is=TRUE))
 cumPop = c(0,cumsum(sizePop))
 
 lenList = length(outDataTotal[,1])
@@ -295,24 +295,21 @@ if(addErrors){
 }
 
 combs = matrix(nrow=numComb, ncol=4)
-sizes = matrix(nrow=numComb, ncol=4)
+sizes = matrix(0, nrow=numComb, ncol=4)
 cumId = matrix(nrow=numComb, ncol=4)
 nameId = matrix(nrow=numComb, ncol=4)
 combNames = c()
-
 posit = 1
-for(i in 1:numPop){
-    for(j in 1:numPop){
-        for(k in 1:numPop){
-            for(l in 1:numPop){
-                if(i!=j && i!=k && i!=l && j!=k && j!=l && k!=l){
-                    combs[posit,1]=i; combs[posit,2]=j; combs[posit,3]=k; combs[posit,4]=l;
-                    sizes[posit,1]=sizePop[i]; sizes[posit,2]=sizePop[j]; sizes[posit,3]=sizePop[k]; sizes[posit,4]=sizePop[l];
-                    cumId[posit,1]=cumPop[i]; cumId[posit,2]=cumPop[j]; cumId[posit,3]=cumPop[k]; cumId[posit,4]=cumPop[l];
-                    combNames=c(combNames, paste("",namePop[i],namePop[j],namePop[k],namePop[l],sep="."))
-                    nameId[posit,] = c(as.character(namePop[i]),as.character(namePop[j]),as.character(namePop[k]),as.character(namePop[l]))
+for(i in 1:(numPop-1)){
+    for(j in 1:(numPop-1)){
+        for(k in 1:(numPop-1)){
+                if(j>i && j!=k && i!=k){
+                    combs[posit,1]=i; combs[posit,2]=j; combs[posit,3]=k; combs[posit,4]=numPop;
+                    sizes[posit,1]=sizePop[i]; sizes[posit,2]=sizePop[j]; sizes[posit,3]=sizePop[k]; sizes[posit,4]=sizePop[numPop];
+                    cumId[posit,1]=cumPop[i]; cumId[posit,2]=cumPop[j]; cumId[posit,3]=cumPop[k]; cumId[posit,4]=cumPop[numPop];
+                    combNames=c(combNames, paste("",namePop[i],namePop[j],namePop[k],namePop[numPop],sep="."))
+                    nameId[posit,] = c(as.character(namePop[i]),as.character(namePop[j]),as.character(namePop[k]),as.character(namePop[numPop]))
                     posit = posit + 1
-                }
             }
         }
     }
@@ -568,7 +565,7 @@ for(idComb in 1:numComb){
         message("Running Transition Removal\n",appendLF=FALSE)
         flush.console()
 
-        fileOut=paste(out,combNames[ idComb ],".RemTrans",".txt",sep="",collapse="")
+        fileOut=paste(out,combNames[ idComb ],".TransRem",".txt",sep="",collapse="")
 
         result6 = getJackKnife(outData,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
         if(idComb==1){

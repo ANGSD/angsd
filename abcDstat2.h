@@ -25,10 +25,12 @@ public:
   int rmTrans;
   int Aanc;
   int *POPSIZE;
+  int *CUMPOPSIZE;
   int **SIZEIDX;
   int **SIZEABCD;
   char *sizeFile;
   int numComb;
+  int numPop;
 
   angsd::Matrix<int> sizeMat;
   
