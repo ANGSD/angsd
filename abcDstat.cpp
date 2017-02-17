@@ -16,9 +16,7 @@
 #include "abc.h"
 
 #include "abcDstat.h"
-typedef struct {
-  int **ABCD;
-}funkyAbbababa;
+
 
 
 void abcDstat::printArg(FILE *argFile){
@@ -32,6 +30,8 @@ void abcDstat::printArg(FILE *argFile){
   fprintf(argFile,"\t-ans\t\t\t%s\tfasta file with outgroup\n",ancName);
   fprintf(argFile,"\t-useLast\t\t%d\tuse the last individuals as outgroup instead of -anc\n",useLast);
   fprintf(argFile,"\t-printEmpty\t\t%d\t print blocks without any ABBA or BABA sites \n",printEmpty);
+  fprintf(argFile,"\t-seed\t%d\t use non random seed of value 1\n",seed);
+
   fprintf(argFile,"\n");
 }
 
@@ -49,6 +49,7 @@ void abcDstat::getOptions(argStruct *arguments){
   useLast =  angsd::getArg("-useLast",useLast,arguments);
   enhance =  angsd::getArg("-enhance",enhance,arguments);
   printEmpty =  angsd::getArg("-printEmpty",printEmpty,arguments);
+  seed=angsd::getArg("-seed",seed,arguments);
   if(useLast != 0)
     useLast = 1;
 
@@ -91,7 +92,7 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
   NbasesPerLine=50;
   blockSize=5000000;
   enhance=0;
-
+  seed=0;
   block=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doAbbababa")){
@@ -109,6 +110,10 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
     return;
   }
   printArg(arguments->argumentFile);
+
+
+  if(seed)
+    srand48(seed);
   //make output files
   const char* postfix;
   postfix=".abbababa";
@@ -216,10 +221,15 @@ void abcDstat::clean(funkyPars *pars){
 
   funkyAbbababa *abbababaStruct =(funkyAbbababa *) pars->extras[index];
 
-  for(int s=0;s<pars->numSites;s++){
-    delete[] abbababaStruct->ABCD[s];
-  }
-  delete[] abbababaStruct->ABCD;
+  for(int i=0; i < abbababaStruct->nBlocks ; i++)
+    for(int c=0; c<nComb ; c++)
+      delete[] abbababaStruct->ABBABABAblocks[i][c];
+  for(int i=0; i < abbababaStruct->nBlocks ; i++)
+    delete[] abbababaStruct->ABBABABAblocks[i];
+  delete[] abbababaStruct->ABBABABAblocks;
+  
+  delete[] abbababaStruct->blockPos;
+  
   delete abbababaStruct;
 
 }
@@ -254,6 +264,24 @@ void abcDstat::getBlockNum(int pos){
 }
 
 
+// returns number of blocks in chunk
+int abcDstat::getNumBlocks(funkyPars *pars){
+
+  int nBlocks = 1;
+  int blockHere = -1;// (int)((pars->posi[0]+1)/blockSize);
+  for(int s = 0 ; s < pars->numSites; s++){
+    if( pars->keepSites[s]==0 )
+      continue;
+
+    if( pars->posi[s]+1 >= blockHere*blockSize+blockSize ){
+      nBlocks++;
+      blockHere =  (int)((pars->posi[s]+1)/blockSize);
+    }
+  }
+  return(nBlocks);
+}
+
+
 void abcDstat::print(funkyPars *pars){
 
   //fprintf(stderr,"currentChr %d %d\t refid %s \t pos[0] %d-%d\tnumSites %d\n",currentChr,header->target_name[currentChr],header->target_name[pars->refId],pars->posi[0]+1,pars->posi[pars->numSites-1]+1,pars->numSites);
@@ -269,7 +297,9 @@ void abcDstat::print(funkyPars *pars){
   
 
   funkyAbbababa *abbababaStruct = (funkyAbbababa *) pars->extras[index];//new
+  
 
+  
   if(currentChr==-1){//if first chunk
     //start new block
     for(int j=0;j<nComb;j++){
@@ -287,38 +317,26 @@ void abcDstat::print(funkyPars *pars){
     printAndEmpty();
     //    currentChr++;
     currentChr = pars->refId;
-    getBlockNum(pars->posi[0]);
+    block = abbababaStruct->blockPos[0];
   }
 
-
-  for(int s = 0 ; s < pars->numSites; s++){
-    int comp=0;
-
-    if( pars->keepSites[s]==0 )
-	continue;
-
-    if( pars->posi[s]+1 >= block*blockSize+blockSize ){
+  // fprintf(stdout,"nBlocks=%d\t",abbababaStruct->nBlocks);
+  for(int b=0; b < abbababaStruct->nBlocks;b++){
+    //  fprintf(stdout,"block %d-%d\t",abbababaStruct->blockPos[b],abbababaStruct->ABBABABAblocks[b][0][4]);
+    
+    if(abbababaStruct->blockPos[b] > block){
       printAndEmpty();
-      getBlockNum( pars->posi[s] );
+      block = abbababaStruct->blockPos[b];
     }
+    //   fprintf(stdout,"insert: bPos-%d-%d ABBA-%d\n",abbababaStruct->blockPos[0],block,abbababaStruct->ABBABABAblocks[0][0][4]);
+    for(int comp=0; comp<nComb;comp++){
 
-    for(int h3=0; h3<(pars->nInd -useLast); h3++){
-      for(int h2=0; h2<(pars->nInd-useLast); h2++){
-	if( h2 == h3 )
-	  continue;
-	for( int h1=0; h1 < h2 ; h1++ ){
-	  if( h1 == h3 )
-	    continue;
-	  if( abbababaStruct->ABCD[s][comp]==4 )
-	    ABBA[comp]++;
-	  else if( abbababaStruct->ABCD[s][comp]==7 ){
-	    BABA[comp]++;
-	  }
-	    comp++;
-	}
-      }
-    }
+	  ABBA[comp] += abbababaStruct->ABBABABAblocks[b][comp][4] ;
+	  BABA[comp] += abbababaStruct->ABBABABAblocks[b][comp][7] ;
+    }   
   }
+  
+  //fprintf(stdout,"\n");
 }
 
 
@@ -329,16 +347,32 @@ void abcDstat::run(funkyPars *pars){
 
   funkyAbbababa *abbababaStruct = new funkyAbbababa;//new
 
-  int **ABCD;
+  abbababaStruct->nBlocks = getNumBlocks(pars);
+  abbababaStruct->ABBABABAblocks = new int**[abbababaStruct->nBlocks];
+  
+  for(int i=0; i < abbababaStruct->nBlocks ; i++){
+    abbababaStruct->ABBABABAblocks[i] = new int*[nComb];
+    for(int c=0; c<nComb ; c++){
+      abbababaStruct->ABBABABAblocks[i][c] = new int[256];
+      for(int type=0;type<256;type++)
+	abbababaStruct->ABBABABAblocks[i][c][type] = 0;
+
+    }
+  }
+  abbababaStruct->blockPos = new int[abbababaStruct->nBlocks];
+  for(int b=0;b<abbababaStruct->nBlocks;b++)
+    abbababaStruct->blockPos[b] = 0 ;
+  
+  
+  
+
   int **pattern;
-  ABCD = new int*[pars->numSites];
   pattern = new int*[pars->numSites];
   for(int s=0;s<pars->numSites;s++){
     pattern[s]=new int[pars->nInd];
     for(int i=0;i<pars->nInd;i++)
       pattern[s][i]=4;
 
-    ABCD[s] = new int[nComb];
 
   }
 
@@ -397,6 +431,9 @@ void abcDstat::run(funkyPars *pars){
 	if(h1==h3)
 	  continue;
 	if(rmTrans){
+	  int blockHere = (int)((pars->posi[0]+1)/blockSize);
+	  int nBlocks = 0;
+	  abbababaStruct->blockPos[nBlocks] = blockHere;
 	  for(int s=0;s<pars->numSites;s++){
 	    int theAnc=4;
 	    if(Aanc==0 & useLast==0)
@@ -407,20 +444,34 @@ void abcDstat::run(funkyPars *pars){
 
 	    if(pars->keepSites[s]==0)
 	      continue;
- 
+
+	    if( pars->posi[s]+1 >= blockHere*blockSize+blockSize ){
+	      nBlocks++;
+	      blockHere =  (int)((pars->posi[s]+1)/blockSize);
+	      abbababaStruct->blockPos[nBlocks] = blockHere;
+	    }
+
+	    int ABCDsite=0;
 	    if(theAnc==0 && pattern[s][h3]==2)
-	      ABCD[s][comp]=0;
+	      ABCDsite=0;
 	    else if(theAnc==2 && pattern[s][h3]==0)
-	      ABCD[s][comp]=0;
+	      ABCDsite=0;
 	    else if(theAnc==1 && pattern[s][h3]==3)
-	      ABCD[s][comp]=0;
+	      ABCDsite=0;
 	    else if(theAnc==3 && pattern[s][h3]==1)
-	      ABCD[s][comp]=0;
+	      ABCDsite=0;
 	    else 
-	      ABCD[s][comp] = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [theAnc];
+	      ABCDsite = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [theAnc];
+	    abbababaStruct->ABBABABAblocks[nBlocks][comp][ABCDsite]++;
+	    
 	  }  
 	}
-	else
+	else{
+	  int blockHere = (int)((pars->posi[0]+1)/blockSize);
+	  int nBlocks = 0;
+	  
+	  abbababaStruct->blockPos[nBlocks] = blockHere;
+
 	  for(int s=0;s<pars->numSites;s++){
 	      int theAnc=4;
 	    if(Aanc==0 & useLast==0)
@@ -431,22 +482,38 @@ void abcDstat::run(funkyPars *pars){
 
 	    if(pars->keepSites[s]==0)
 	      continue;
-  	    ABCD[s][comp] = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [theAnc];
+
+	    if( pars->posi[s]+1 >= blockHere*blockSize+blockSize ){
+	      nBlocks++;
+	      blockHere =  (int)((pars->posi[s]+1)/blockSize);
+	      abbababaStruct->blockPos[nBlocks] = blockHere;
+	    }
+
+  	    int ABCDsite = matcat[pattern[s][h1]] [pattern[s][h2]] [pattern[s][h3]] [theAnc];
+	    abbababaStruct->ABBABABAblocks[nBlocks][comp][ABCDsite]++;
+	    //	    if(comp==0 && ABCDsite==4)
+	    // fprintf(stdout,"ABCD=%d-%d-%d\t",ABCDsite,nBlocks,abbababaStruct->ABBABABAblocks[nBlocks][comp][ABCDsite]);
+
 	    //  	    ABCD[s][comp] = matcat[2] [3] [2] [3];
 	    //	    if(ABCD[s][comp]!=1)
 	    //	      fprintf(stdout,"%d \n",ABCD[s][comp]);
 	  }
+	}
 	comp++;
       }
     }
   }
 
 
+
+  // fprintf(stdout,"run: bPos-%d ABBA-%d\n",abbababaStruct->blockPos[0],abbababaStruct->ABBABABAblocks[0][0][4]);
+ 
+  
   for(int s=0;s<pars->numSites;s++)
     delete[] pattern[s];
   delete[] pattern;
 
-  abbababaStruct->ABCD=ABCD;
+
   pars->extras[index] = abbababaStruct;
 }
 
