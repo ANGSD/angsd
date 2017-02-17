@@ -26,7 +26,6 @@ public:
   int Aanc;
   int *POPSIZE;
   int *CUMPOPSIZE;
-  int **SIZEIDX;
   int **SIZEABCD;
   char *sizeFile;
   long int numComb;

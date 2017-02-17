@@ -9,10 +9,8 @@
 
 typedef struct {
   double **ABCD; //counts
-  double **NUM;
-  double **DEN;
-  double **COMB;  //alleles combinations in weighted individuals
- }funkyAbbababa2;
+  double **ABCD2;
+}funkyAbbababa2;
 
 // shows up when you run ./angsd -doAbbababa2
 void abcDstat2::printArg(FILE *argFile){
@@ -114,6 +112,9 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
     sizeMat = angsd::getMatrixInt(sizeFile,nIndFasta);
     numPop = sizeMat.x;
   }
+  else{
+    numPop = nIndFasta;
+  }
   
   if(ancName != NULL && useLast == 1)
     nIndFasta += 1;
@@ -135,13 +136,10 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
       POPSIZE[a] = sizeMat.matrix[a][0];
     POPSIZE[numPop-1] = 1; 
   }
-  else{ //default with no sizeFile
-    numPop = 4;
-    POPSIZE = new int[4];
-    POPSIZE[0]=1;
-    POPSIZE[1]=1;
-    POPSIZE[2]=1;
-    POPSIZE[3]=1;
+  else{ //default with no sizeFile: every individual is a population
+    POPSIZE = new int[nIndFasta];
+    for(int i=0; i<nIndFasta; i++)
+      POPSIZE[i] = 1;
   }
 
   //check if the sizes of populations sum to the number of data files
@@ -163,10 +161,7 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   }
 
   //combinations of populations
-  numComb = 3;
-  if(numPop > 4){
-    numComb =  (numPop-1)*(numPop-2)*(numPop-3)/2;
-  }
+  numComb =  (numPop-1)*(numPop-2)*(numPop-3)/2;
 
   //print some information
   if(useLast==0)
@@ -174,22 +169,16 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   else if(useLast==1 && ancName!=NULL) 
     fprintf(stderr,"\t-> %d Populations | %d trees | %d Individuals | %s Outgroup\n", numPop, numComb, nIndFasta, ancName);
   
-  SIZEIDX = new int*[numComb]; //populations' sizes for each possible combination
-  SIZEABCD = new int*[numComb]; //indexes for reading ABCD data
-  
+  SIZEABCD = new int*[numComb]; //indexes for reading ABCD2 data  
   int cont=0;
     for(int i=0; i<numPop-1; i++){
       for(int j=0; j<numPop-1; j++){
 	for(int k=0; k<numPop-1; k++){
 	  if(j>i && j!=k && i!=k){
-	    SIZEIDX[cont] = new int[3];   
-	    SIZEIDX[cont][0] = POPSIZE[i];
-	    SIZEIDX[cont][1] = POPSIZE[j];
-	    SIZEIDX[cont][2] = POPSIZE[k];
 	    SIZEABCD[cont] = new int[3];   
-	    SIZEABCD[cont][0] = 4*CUMPOPSIZE[i];
-	    SIZEABCD[cont][1] = 4*CUMPOPSIZE[j];
-	    SIZEABCD[cont][2] = 4*CUMPOPSIZE[k];
+	    SIZEABCD[cont][0] = 4*i;
+	    SIZEABCD[cont][1] = 4*j;
+	    SIZEABCD[cont][2] = 4*k;
 	    cont += 1;
 	  }
 	}
@@ -251,10 +240,6 @@ abcDstat2::~abcDstat2(){
   angsd::deleteMatrixInt(sizeMat);
 
   for(int m=0; m<numComb; m++)
-    delete[] SIZEIDX[m];
-  delete[] SIZEIDX;
-
-  for(int m=0; m<numComb; m++)
     delete[] SIZEABCD[m];
   delete[] SIZEABCD;
 
@@ -279,17 +264,9 @@ void abcDstat2::clean(funkyPars *pars){
     delete[] abbababaStruct->ABCD[s];
   delete[] abbababaStruct->ABCD;
 
-  for(int m=0; m<numComb; m++){
-    delete[] abbababaStruct->NUM[m];
-    delete[] abbababaStruct->DEN[m];
-  }
-
-  for(int m=0; m<numComb*256; m++)
-    delete[] abbababaStruct->COMB[m];
-  
-  delete[] abbababaStruct->NUM;
-  delete[] abbababaStruct->DEN;
-  delete[] abbababaStruct->COMB;
+  for(int s=0;s<pars->numSites;s++)
+    delete[] abbababaStruct->ABCD2[s];
+  delete[] abbababaStruct->ABCD2;
 
   delete abbababaStruct;
 }//---end of abcDstat2::clean(funkyPars *pars)
@@ -362,19 +339,42 @@ void abcDstat2::print(funkyPars *pars){
     if(pars->keepSites[s]==0)
       continue;
 
+    
     for(int m=0; m<numComb; m++){
-      NUMprint[m] += abbababaStruct->NUM[m][s];
-      DENprint[m] += abbababaStruct->DEN[m][s];
-      if(abbababaStruct->NUM[m][s]>abbababaStruct->DEN[m][s])
-	Eprint += 1;
+      double abba=0;
+      double baba=0;
+      int pattern=0;
+      for(int i=0;i<4;i++){
+	for(int j=0;j<4;j++){
+	  for(int k=0;k<4;k++){
+	    for(int l=0;l<4;l++){
+	      
+	      if(i==l && j==k && i!=j)
+	        abba += abbababaStruct->ABCD2[s][ SIZEABCD[m][0] + i] * abbababaStruct->ABCD2[s][ SIZEABCD[m][1] + j] * abbababaStruct->ABCD2[s][ SIZEABCD[m][2] + k] * abbababaStruct->ABCD2[s][ (numPop-1)*4 + l];
+	      
+	      if(i==k && j==l && i!=j)
+	        baba += abbababaStruct->ABCD2[s][ SIZEABCD[m][0] + i] * abbababaStruct->ABCD2[s][ SIZEABCD[m][1] + j] * abbababaStruct->ABCD2[s][ SIZEABCD[m][2] + k] * abbababaStruct->ABCD2[s][ (numPop-1)*4 + l];
+	      
+	      COMBprint[m][pattern] += abbababaStruct->ABCD2[s][ SIZEABCD[m][0] + i] * abbababaStruct->ABCD2[s][ SIZEABCD[m][1] + j] * abbababaStruct->ABCD2[s][ SIZEABCD[m][2] + k] * abbababaStruct->ABCD2[s][ (numPop-1)*4 + l];
+	      pattern++;
+	    }
+	  }
+	}
+      }
+      //NUMprint[m] += COMBprint[m][20] + COMBprint[m][40] + COMBprint[m][60] +COMBprint[m][65] +COMBprint[m][105] +COMBprint[m][125] +COMBprint[m][130] +COMBprint[m][150] +COMBprint[m][190] +COMBprint[m][195] +COMBprint[m][215] +COMBprint[m][235] - COMBprint[m][17] - COMBprint[m][34] - COMBprint[m][51] - COMBprint[m][68] - COMBprint[m][102] - COMBprint[m][119] - COMBprint[m][136] - COMBprint[m][153] - COMBprint[m][187] - COMBprint[m][204] - COMBprint[m][221] - COMBprint[m][238];
+      //DENprint[m] += COMBprint[m][20] + COMBprint[m][40] + COMBprint[m][60] +COMBprint[m][65] +COMBprint[m][105] +COMBprint[m][125] +COMBprint[m][130] +COMBprint[m][150] +COMBprint[m][190] +COMBprint[m][195] +COMBprint[m][215] +COMBprint[m][235] + COMBprint[m][17] + COMBprint[m][34] + COMBprint[m][51] + COMBprint[m][68] + COMBprint[m][102] + COMBprint[m][119] + COMBprint[m][136] + COMBprint[m][153] + COMBprint[m][187] + COMBprint[m][204] + COMBprint[m][221] + COMBprint[m][238];
+      NUMprint[m] += abba - baba;
+      DENprint[m] += abba + baba;
     }
+    
 
-    for(int m=0; m<numComb; m++){
-      for(int i=0; i<256; i++)
-	COMBprint[m][i] += abbababaStruct->COMB[m*256 + i][s];
-    }
+
+
+    
+
     NSITEprint++;
-  }
+  }//---end of for(int s=0;s<pars->numSites;s++)
+  
 }//---end of abcDstat2::print(funkyPars *pars)
 
 
@@ -394,53 +394,13 @@ void abcDstat2::run(funkyPars *pars){
       ABCD[s][b] = 0;   
   }
   
-  double **NUM;//numerator of D-statistic
-  NUM = new double*[numComb];
-  for(int m=0; m<numComb; m++){
-    NUM[m] = new double[pars->numSites];
-    for(int b = 0; b < pars->numSites; b++)
-      NUM[m][b] = 0;   
+  double **ABCD2;
+  ABCD2 = new double*[pars->numSites];
+  for(int s = 0; s < pars->numSites; s++){
+    ABCD2[s] = new double[numPop * 4];
+    for(int i=0;i<numPop * 4;i++)
+       ABCD2[s][i] = 0;
   }
-
-  double **DEN;//denominator of D-statistic
-  DEN = new double*[numComb];
-  for(int m=0; m<numComb; m++){
-    DEN[m] = new double[pars->numSites];
-    for(int b = 0; b < pars->numSites; b++)
-      DEN[m][b] = 0;   
-  }
-  
-  double **ALLELES;//allele patterns
-  ALLELES = new double*[numComb*256];
-  for(int m=0; m<numComb*256; m++){
-    ALLELES[m] = new double[pars->numSites];{
-      for(int s = 0; s < pars->numSites; s++)
-	ALLELES[m][s] = 0;
-    }
-  }
-
-  double ABCD2[numComb * 12]; //three inner populations weighted allele counts
-  double ABCD2OUT[4]; //outgroup weighted allele counts
-
-  for(int i=0;i<4;i++)
-    ABCD2OUT[i]=0;
-
-  //indexes for data reading and populations sizes
-  int size1[numComb];
-  int size2[numComb];
-  int size3[numComb];
-  int id1[numComb];
-  int id2[numComb];
-  int id3[numComb];
-  
-  for(int comb=0; comb<numComb; comb++){  
-    size1[comb] = SIZEIDX[comb][0];
-    size2[comb] = SIZEIDX[comb][1];
-    size3[comb] = SIZEIDX[comb][2];
-    id1[comb] = SIZEABCD[comb][0];
-    id2[comb] = SIZEABCD[comb][1];
-    id3[comb] = SIZEABCD[comb][2];
-    }
 
   //normalizing constants
   double somma;
@@ -452,11 +412,6 @@ void abcDstat2::run(funkyPars *pars){
     
       if(pars->keepSites[s]==0)
 	continue;
-      
-      if(ancName != NULL && useLast == 1){ //if fasta file has no data
-	if(pars->anc[s] == 4)
-	  continue;
-      }
       
       for(int i=0;i<pars->nInd;i++){
 	//read the data
@@ -487,142 +442,50 @@ void abcDstat2::run(funkyPars *pars){
       }
 
       if(ancName != NULL && useLast == 1)
+	if(pars->anc[s] < 4)
 	  ABCD[s][pars->nInd * 4 + pars->anc[s]] = 1;
-
-      //------fix weights and alleles for the outgroup------     
-      double w4[POPSIZE[numPop-1]];
       
-      if(POPSIZE[numPop-1] == 1)
-	w4[0] = 1;
-      else{
-	somma = 0;
-	normc = 0;
-	for(int i=0;i<POPSIZE[numPop-1];i++){
-	  somma = ABCD[s][4*CUMPOPSIZE[numPop-1]+i*4]+ABCD[s][4*CUMPOPSIZE[numPop-1]+i*4+1]+ABCD[s][4*CUMPOPSIZE[numPop-1]+i*4+2]+ABCD[s][4*CUMPOPSIZE[numPop-1]+i*4+3]; 
-	  w4[i] = (2*somma)/(somma + 1);
-	  normc += w4[i];
-	}
-	if(normc!=0){
-	  for(int i=0;i<POPSIZE[numPop-1];i++)
-	    w4[i] = w4[i]/normc;
-	}
-      }
+      //------do all the populationss------
+      double w[nIndFasta];//weights
+      for(int p=0; p<numPop; p++){
       
-      somma=0;
-      
-      for(int j=0;j<4;j++){
-	for(int i=0; i<POPSIZE[numPop-1]; i++){
-	  ABCD2OUT[j] += w4[i]*ABCD[s][4*CUMPOPSIZE[numPop-1]+i*4+j];
-	}
-	somma += ABCD2OUT[j];
-      }
-
-      if(somma!=0){
-	for(int j=0;j<4;j++)
-	  ABCD2OUT[j] = ABCD2OUT[j]/somma;
-      }
-    
-      //------do all the combinations------
-      for(int comb=0; comb<numComb; comb++){
-	double w1[size1[comb]];//
-	double w2[size2[comb]];//
-	double w3[size3[comb]];//
-	double sum1[size1[comb]];//
-	double sum2[size2[comb]];//
-	double sum3[size3[comb]];//
-	
       //---------------building weighted individual 1. written in ABCD2.     
       somma = 0;
-      normc = 0;      
-      for(int i=0;i<size1[comb];i++){
-	w1[i]=0;
-	somma = ABCD[s][id1[comb]+i*4+0]+ABCD[s][id1[comb]+i*4+1]+ABCD[s][id1[comb]+i*4+2]+ABCD[s][id1[comb]+i*4+3]; 
-	w1[i] = (2*somma)/(somma + 1);
-	normc += w1[i];
-      }
-      if(normc!=0){
-	for(int i=0;i<size1[comb];i++)
-	  w1[i] = w1[i]/normc;
-      }
-      //---------------building weighted individual 2. written in ABCD2.
-      somma = 0;
       normc = 0;
-      for(int i=0;i<size2[comb];i++){
-	somma = ABCD[s][id2[comb]+i*4]+ABCD[s][id2[comb]+i*4+1]+ABCD[s][id2[comb]+i*4+2]+ABCD[s][id2[comb]+i*4+3]; 
-	w2[i] = (2 * somma)/(somma + 1);
-	normc += w2[i];
+      for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++){
+	w[i]=0;
+	somma = ABCD[s][i*4+0]+ABCD[s][i*4+1]+ABCD[s][i*4+2]+ABCD[s][i*4+3]; 
+	w[i] = (2*somma)/(somma + 1);
+	normc += w[i];
       }
       if(normc!=0){
-	for(int i=0;i<size2[comb];i++)
-	  w2[i] = w2[i]/normc;
+	for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++)
+	  w[i] = w[i]/normc;
       }
-      //---------------building weighted individual 3. written in ABCD2.
-
+      
+      //---------------building ABCD2 - weighted (pseudo) individuals
+      for(int al=0;al<4;al++){
+	for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++){
+	  ABCD2[s][p*4 + al] += w[i]*ABCD[s][i*4+al];
+	}
+      }
+      //normalize
       somma = 0;
-      normc = 0;
-      for(int i=0;i<size3[comb];i++){
-	somma = ABCD[s][id3[comb]+i*4]+ABCD[s][id3[comb]+i*4+1]+ABCD[s][id3[comb]+i*4+2]+ABCD[s][id3[comb]+i*4+3]; 
-	w3[i] = (2*somma)/(somma + 1);
-	normc += w3[i];
-      }
-      if(normc!=0){
-	for(int i=0;i<size3[comb];i++)
-	  w3[i] = w3[i]/normc;
+      for(int al=0;al<4;al++)
+	somma += ABCD2[s][p*4+al];
+      if(somma!=0){
+	for(int al=0;al<4;al++)
+	  ABCD2[s][p*4+al] /= somma;}
       }
 
-      //---------------building ABCD2 - weighted (pseudo) 3 inner individuals
-      for(int j=0;j<12;j++)
-	ABCD2[12 * comb + j] = 0;
-
-      for(int j=0;j<4;j++){// first pseudo individual
-	for(int i=0; i<size1[comb]; i++){
-	  ABCD2[12*comb + j] += w1[i]*ABCD[s][id1[comb]+i*4+j];
-	}
-	for(int i=0; i<size2[comb]; i++){
-	  ABCD2[12*comb + 4 + j] += w2[i]*ABCD[s][id2[comb]+i*4+j];
-	}
-	for(int i=0; i<size3[comb]; i++){
-	  ABCD2[12*comb + 8 + j] += w3[i]*ABCD[s][id3[comb]+i*4+j];
-	}
-      }
-    
-      //---------------count alleles combination of 4 pseudoindividials
-      somma = 0;
-      //normalizing observation vector
-      for(int i=0;i<3;i++){
-	somma = ABCD2[12*comb + i*4] + ABCD2[12*comb + i*4 + 1] + ABCD2[12*comb + i*4 + 2] + ABCD2[12*comb + i*4 + 3];
-	if(somma != 0){
-	  ABCD2[12*comb + i*4] = ABCD2[12*comb + i*4]  / somma;
-	  ABCD2[12*comb + i*4 + 1] = ABCD2[12*comb + i*4 + 1]  / somma;
-	  ABCD2[12*comb + i*4 + 2] = ABCD2[12*comb + i*4 + 2]  / somma;
-	  ABCD2[12*comb + i*4 + 3] = ABCD2[12*comb + i*4 + 3]  / somma;
-	}	 
-      }
-
-      /*-------------------------------------------------------------------------------- */
-      /*------------count WEIGHTED normalized allele combinations,---------------------- */ 
-      /*---------------------numerator and denominator ----------------------------------*/
-      int posiz = 0;
-      for(int i=0;i<4;i++){
-	for(int j=0;j<4;j++){
-	  for(int k=0;k<4;k++){
-	    for(int l=0;l<4;l++){
-	      ALLELES[256*comb + posiz][s] += ABCD2[comb*12 + i] * ABCD2[comb*12 + 4 + j] * ABCD2[comb*12 + 8 + k] * ABCD2OUT[l];
-	      posiz++;
-	    }
-	  }
-	}
-      }
-
-      NUM[comb][s] = NUM[comb][s] + ALLELES[256*comb+20][s] + ALLELES[256*comb+40][s] + ALLELES[256*comb+60][s] +ALLELES[256*comb+65][s] +ALLELES[256*comb+105][s] +ALLELES[256*comb+125][s] +ALLELES[256*comb+130][s] +ALLELES[256*comb+150][s] +ALLELES[256*comb+190][s] +ALLELES[256*comb+195][s] +ALLELES[256*comb+215][s] +ALLELES[256*comb+235][s] - ALLELES[256*comb+17][s] - ALLELES[256*comb+34][s] - ALLELES[256*comb+51][s] - ALLELES[256*comb+68][s] - ALLELES[256*comb+102][s] - ALLELES[256*comb+119][s] - ALLELES[256*comb+136][s] - ALLELES[256*comb+153][s] - ALLELES[256*comb+187][s] - ALLELES[256*comb+204][s] - ALLELES[256*comb+221][s] - ALLELES[256*comb+238][s];
-      DEN[comb][s] = DEN[comb][s] + ALLELES[256*comb+20][s] + ALLELES[256*comb+40][s] + ALLELES[256*comb+60][s] +ALLELES[256*comb+65][s] +ALLELES[256*comb+105][s] +ALLELES[256*comb+125][s] +ALLELES[256*comb+130][s] +ALLELES[256*comb+150][s] +ALLELES[256*comb+190][s] +ALLELES[256*comb+195][s] +ALLELES[256*comb+215][s] +ALLELES[256*comb+235][s] + ALLELES[256*comb+17][s] + ALLELES[256*comb+34][s] + ALLELES[256*comb+51][s] + ALLELES[256*comb+68][s] + ALLELES[256*comb+102][s] + ALLELES[256*comb+119][s] + ALLELES[256*comb+136][s] + ALLELES[256*comb+153][s] + ALLELES[256*comb+187][s] + ALLELES[256*comb+204][s] + ALLELES[256*comb+221][s] + ALLELES[256*comb+238][s];
       
       /*-ENDENDEND--count WEIGHTED normalized allele combinations -----------------------*/
       /*-------------------------------------------------------------------------------- */
 
 
       /*---'-enhance' option for analyzing only non-polymorphic sites of the outgroup----*/ 
-      /*-------------------------------------------------------------------------------- */    
+      /*-------------------------------------------------------------------------------- */
+      /*
       if(enhance==1){
 	int enh=0;
 	for(int j=0;j<4;j++)
@@ -633,19 +496,27 @@ void abcDstat2::run(funkyPars *pars){
 	  NUM[comb][s]=0;
 	}	  
       }
+      */
       /*END-'-enhance' option for analyzing only non-polymorphic sites of the outgroup---*/ 
       /*-------------------------------------------------------------------------------- */  
 
       }//---end for(combinations of populations)
-    }//---end for(int s=0;s<pars->numSites;s++)
-  }//---end if(doAbbababa2==1)
 
-  abbababaStruct -> ABCD=ABCD;
-  abbababaStruct -> DEN=DEN;
-  abbababaStruct -> NUM=NUM;
-  abbababaStruct -> COMB=ALLELES;
+      abbababaStruct -> ABCD=ABCD;
+      abbababaStruct -> ABCD2=ABCD2;
+      pars -> extras[index] = abbababaStruct;
+      
+  }//---end for(int s=0;s<pars->numSites;s++)
+    //}//---end if(doAbbababa2==1)
 
-  pars -> extras[index] = abbababaStruct;
+  //abbababaStruct -> ABCD=ABCD;
+  //abbababaStruct -> DEN=DEN;
+  //abbababaStruct -> NUM=NUM;
+  //abbababaStruct -> INNERPOP=ABCD2;
+  //abbababaStruct -> OUTPOP=ABCD2OUT;
+  //abbababaStruct -> COMB=ALLELES;
+
+  //pars -> extras[index] = abbababaStruct;
 }
 
 
