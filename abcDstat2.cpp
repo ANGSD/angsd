@@ -292,13 +292,13 @@ void abcDstat2::printAndEmpty(int blockAddress,int theChr){
   int denCont=0;
   for(int m=0; m<numComb; m++)
     denCont += DENprint[m];
-  //if(denCont != 0){
+  if(denCont != 0){
     for(int m=0; m<numComb; m++){
-      fprintf(outfile,"%s\t%d\t%d\t%f\t%f\t%d",header->target_name[theChr],blockAddress,blockAddress+blockSize-1,NUMprint[m],DENprint[m],NSITEprint);
+      fprintf(outfile,"%s\t%d\t%d\t%f\t%f\t%d",header->target_name[theChr],blockAddress-1,blockAddress+blockSize-2,NUMprint[m],DENprint[m],NSITEprint);
       for(int i=0;i<256;i++)
 	fprintf(outfile,"\t%f",COMBprint[m][i]);
       fprintf(outfile,"\n");
-      //}
+      }
   }
   
   for(int m=0; m<numComb; m++){
@@ -315,11 +315,6 @@ void abcDstat2::printAndEmpty(int blockAddress,int theChr){
   fflush(outfile);
   
 }//---end of abcDstat2::printAndEmpty(int blockStart,int theChr)
-
-
-  void abcDstat2::getBlockNum(int pos){
-  block=(int)((pos+1)/blockSize);
-  }
 
 void abcDstat2::print(funkyPars *pars){
   
@@ -389,11 +384,11 @@ void abcDstat2::run(funkyPars *pars){
       blockHere =  (int)((pars->posi[s]+1)/blockSize);
     }
   } 
-  //fprintf(stdout,"totblocks %d \n");
+  //fprintf(stdout,"totblocks %d \n",totBlocks);
   //fflush(stdout);
   
   funkyAbbababa2 *abbababaStruct = new funkyAbbababa2; //new structure
-  abbababaStruct->NUMBLOCK=totBlocks;
+  abbababaStruct->NUMBLOCK = totBlocks;
   double ABCD[4*nIndFasta];
   for(int i = 0; i < 4*nIndFasta; i++)
     ABCD[i] = 0;
@@ -458,12 +453,13 @@ void abcDstat2::run(funkyPars *pars){
       if(pars->keepSites[s]==0)
 	continue;
 
-      if( pars->posi[s] >= blockHere*blockSize+blockSize ){
+      if( pars->posi[s]+1 > blockHere*blockSize +blockSize ){
+	//fprintf(stderr,"totblocks %d blockidx %d block here %d position %d start %d\n",totBlocks,blockIdx,blockHere,pars->posi[s]+1,blockHere*blockSize+blockSize);
 	blockIdx++;
-	blockHere =  (int)((pars->posi[s])/blockSize);
-	//fprintf(stderr,"totblocks %d blockidx %d\n",totBlocks,blockIdx);
+	blockHere =  (int)((pars->posi[s]+1)/blockSize);
+	//fprintf(stderr,"totblocks %d blockidx %d block here %d position %d start %d\n------\n",totBlocks,blockIdx,blockHere,pars->posi[s]+1,blockHere*blockSize+blockSize);
 	BLOCKNUM[blockIdx] = blockHere;
-	
+	//blockIdx++;
       }
       for(int i=0;i<pars->nInd;i++){
 	//read the data
