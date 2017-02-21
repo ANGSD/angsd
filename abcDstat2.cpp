@@ -292,14 +292,14 @@ void abcDstat2::printAndEmpty(int blockAddress,int theChr){
   int denCont=0;
   for(int m=0; m<numComb; m++)
     denCont += DENprint[m];
-  if(denCont != 0){
+  //if(denCont != 0){
     for(int m=0; m<numComb; m++){
       fprintf(outfile,"%s\t%d\t%d\t%f\t%f\t%d",header->target_name[theChr],blockAddress-1,blockAddress+blockSize-2,NUMprint[m],DENprint[m],NSITEprint);
       for(int i=0;i<256;i++)
 	fprintf(outfile,"\t%f",COMBprint[m][i]);
       fprintf(outfile,"\n");
       }
-  }
+    //}
   
   for(int m=0; m<numComb; m++){
     DENprint[m]=0;
@@ -453,7 +453,7 @@ void abcDstat2::run(funkyPars *pars){
       if(pars->keepSites[s]==0)
 	continue;
 
-      if( pars->posi[s]+1 > blockHere*blockSize +blockSize ){
+      if( pars->posi[s]+1 >= blockHere*blockSize +blockSize ){
 	//fprintf(stderr,"totblocks %d blockidx %d block here %d position %d start %d\n",totBlocks,blockIdx,blockHere,pars->posi[s]+1,blockHere*blockSize+blockSize);
 	blockIdx++;
 	blockHere =  (int)((pars->posi[s]+1)/blockSize);
