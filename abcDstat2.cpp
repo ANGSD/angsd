@@ -8,8 +8,12 @@
 #include "abcDstat2.h"
 
 typedef struct {
-  double **ABCD; //counts
-  double **ABCD2;
+  double **NUM;
+  double **DEN;
+  double ***COMB;
+  int *BLOCKNUM;
+  int *NSITE;
+  int NUMBLOCK;
 }funkyAbbababa2;
 
 // shows up when you run ./angsd -doAbbababa2
@@ -76,11 +80,11 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   doCount=0;
   blockSize=5000000;
   block=0;
-  NSITEprint=0;
   enhance = 0;
-  maxDepth=100;
+  maxDepth=1000;
   useLast = 0;
-  
+  NSITEprint=0;
+ 
   // you are starting before chromosome 0
   currentChr=-1;
   NbasesPerLine=50;
@@ -162,12 +166,12 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
 
   //combinations of populations
   numComb =  (numPop-1)*(numPop-2)*(numPop-3)/2;
-
+ 
   //print some information
   if(useLast==0)
-    fprintf(stderr,"\t-> %d Populations | %d trees | %d Individuals\n", numPop, numComb, nIndFasta);
+    fprintf(stderr,"\t-> %d Populations | %lu trees | %d Individuals\n", numPop, numComb, nIndFasta);
   else if(useLast==1 && ancName!=NULL) 
-    fprintf(stderr,"\t-> %d Populations | %d trees | %d Individuals | %s Outgroup\n", numPop, numComb, nIndFasta, ancName);
+    fprintf(stderr,"\t-> %d Populations | %lu trees | %d Individuals | %s Outgroup\n", numPop, numComb, nIndFasta, ancName);
   
   SIZEABCD = new int*[numComb]; //indexes for reading ABCD2 data  
   int cont=0;
@@ -187,7 +191,7 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
 
   /*ENDEND get population sizes and indexes for combinations of populations ------*/
   /*------------------------------------------------------------------------------*/
-  
+
   //make output files
   const char* postfix;
   postfix=".abbababa2";
@@ -197,7 +201,7 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   bufstr.s=NULL;
   bufstr.m=0;
   bufstr.l=0;
-
+  
   //alleles pattern variable for printing
   COMBprint = new double*[numComb];
   for(int m=0; m<numComb; m++){
@@ -210,10 +214,11 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   NUMprint = new double[numComb];
   DENprint = new double[numComb];
   for(int m=0; m<numComb; m++){
-    NUMprint[m] = 0;
-    DENprint[m] = 0;
+    NUMprint[m]=0;
+    DENprint[m]=0;
   }
 
+  
   //print header
   fprintf(outfile,"CHR\tBLOCKstart\tBLOCKend\tNumer\tDenom\tnumSites");
   for(int a=0;a<4;a++)
@@ -231,26 +236,26 @@ abcDstat2::~abcDstat2(){
   if(doAbbababa2==0)
     return;
   
-  printAndEmpty(block*blockSize,currentChr);
+  printAndEmpty(block*blockSize+1,currentChr);
   
   if(outfile) fclose(outfile);
   if(bufstr.s!=NULL)
     free(bufstr.s);
-
-  angsd::deleteMatrixInt(sizeMat);
-
+  if(sizeFile != NULL)
+    angsd::deleteMatrixInt(sizeMat);
+  
   for(int m=0; m<numComb; m++)
     delete[] SIZEABCD[m];
   delete[] SIZEABCD;
-
-  for(int m=0; m<numComb; m++)
-    delete[] COMBprint[m];
-  delete[] COMBprint;
-
-  delete[] NUMprint;
-  delete[] DENprint;
+ 
   delete[] POPSIZE;
   delete[] CUMPOPSIZE;
+  delete[] DENprint;
+  delete[] NUMprint;
+  //delete[] NSITEprint;
+  for(int m=0; m<numComb; m++)
+    delete[] COMBprint[m];
+    delete[] COMBprint;
 }
 
 //clean after yourself
@@ -259,48 +264,62 @@ void abcDstat2::clean(funkyPars *pars){
     return;
 
   funkyAbbababa2 *abbababaStruct =(funkyAbbababa2 *) pars->extras[index];
-  
-  for(int s=0;s<pars->numSites;s++)
-    delete[] abbababaStruct->ABCD[s];
-  delete[] abbababaStruct->ABCD;
 
-  for(int s=0;s<pars->numSites;s++)
-    delete[] abbababaStruct->ABCD2[s];
-  delete[] abbababaStruct->ABCD2;
+  int totBlocks = abbababaStruct->NUMBLOCK;
+  for(int m=0; m<numComb; m++)
+    delete[] abbababaStruct->NUM[m];
+  delete[] abbababaStruct->NUM;
+
+  for(int m=0; m<numComb; m++)
+    delete[] abbababaStruct->DEN[m];
+  delete[] abbababaStruct->DEN;
+
+  for(int m=0; m<numComb; m++){
+    for(int j=0; j<totBlocks; j++)
+      delete[] abbababaStruct->COMB[m][j];
+    delete[] abbababaStruct->COMB[m];
+  }
+  delete[] abbababaStruct->COMB;
+  
+  delete[] abbababaStruct->NSITE;
+  delete[] abbababaStruct->BLOCKNUM;
 
   delete abbababaStruct;
 }//---end of abcDstat2::clean(funkyPars *pars)
-
 //print and eventually reset counters
-void abcDstat2::printAndEmpty(int blockStart,int theChr){
 
-  for(int m=0; m<numComb; m++){
-    if(NUMprint[m] != 0){ //avoid to print 0s in the first line of the output file
-    fprintf(outfile,"%s\t%d\t%d\t%f\t%f\t%d",header->target_name[theChr],blockStart,blockStart+blockSize,NUMprint[m],DENprint[m],NSITEprint);
-    for(int i=0;i<256;i++)
-      fprintf(outfile,"\t%f",COMBprint[m][i]);
-    fprintf(outfile,"\n");
-    }
+void abcDstat2::printAndEmpty(int blockAddress,int theChr){
+  int denCont=0;
+  for(int m=0; m<numComb; m++)
+    denCont += DENprint[m];
+  //if(denCont != 0){
+    for(int m=0; m<numComb; m++){
+      fprintf(outfile,"%s\t%d\t%d\t%f\t%f\t%d",header->target_name[theChr],blockAddress,blockAddress+blockSize-1,NUMprint[m],DENprint[m],NSITEprint);
+      for(int i=0;i<256;i++)
+	fprintf(outfile,"\t%f",COMBprint[m][i]);
+      fprintf(outfile,"\n");
+      //}
   }
   
   for(int m=0; m<numComb; m++){
     DENprint[m]=0;
     NUMprint[m]=0;
   }
-  
-  NSITEprint = 0; 
-  for(int m=0; m<numComb; m++){
+
+  NSITEprint=0;
+
+  for(int m=0; m<numComb; m++)
     for(int i=0; i<256; i++)
       COMBprint[m][i]=0;
-  }
+  
   fflush(outfile);
   
 }//---end of abcDstat2::printAndEmpty(int blockStart,int theChr)
 
 
-void abcDstat2::getBlockNum(int pos){
+  void abcDstat2::getBlockNum(int pos){
   block=(int)((pos+1)/blockSize);
-}
+  }
 
 void abcDstat2::print(funkyPars *pars){
   
@@ -318,61 +337,37 @@ void abcDstat2::print(funkyPars *pars){
 	COMBprint[m][i]=0;
     }
     //start new block
-    getBlockNum(pars->posi[0]);
+    
     currentChr=0;
+    block = abbababaStruct->BLOCKNUM[0];
   }
 
   while(currentChr!=pars->refId){ //if new chr (not first)
     //start new block
-    printAndEmpty(block*blockSize,currentChr);
+    printAndEmpty(block*blockSize+1,currentChr);
     currentChr=pars->refId;
-    getBlockNum(pars->posi[0]);
+    block = abbababaStruct->BLOCKNUM[0];
   }
   
-  for(int s=0;s<pars->numSites;s++){
+  for(int b=0;b<abbababaStruct->NUMBLOCK;b++){
     
-    if(pars->posi[s]>=block*blockSize+blockSize){
-      printAndEmpty(block*blockSize,pars->refId);
-      getBlockNum(pars->posi[s]);
+    
+    if(abbababaStruct->BLOCKNUM[b] > block){
+      printAndEmpty(block*blockSize+1,pars->refId);
+      block = abbababaStruct->BLOCKNUM[b];
     }
-    
-    if(pars->keepSites[s]==0)
-      continue;
 
-    
-    for(int m=0; m<numComb; m++){
-      double abba=0;
-      double baba=0;
-      int pattern=0;
-      for(int i=0;i<4;i++){
-	for(int j=0;j<4;j++){
-	  for(int k=0;k<4;k++){
-	    for(int l=0;l<4;l++){
-	      
-	      if(i==l && j==k && i!=j)
-	        abba += abbababaStruct->ABCD2[s][ SIZEABCD[m][0] + i] * abbababaStruct->ABCD2[s][ SIZEABCD[m][1] + j] * abbababaStruct->ABCD2[s][ SIZEABCD[m][2] + k] * abbababaStruct->ABCD2[s][ (numPop-1)*4 + l];
-	      
-	      if(i==k && j==l && i!=j)
-	        baba += abbababaStruct->ABCD2[s][ SIZEABCD[m][0] + i] * abbababaStruct->ABCD2[s][ SIZEABCD[m][1] + j] * abbababaStruct->ABCD2[s][ SIZEABCD[m][2] + k] * abbababaStruct->ABCD2[s][ (numPop-1)*4 + l];
-	      
-	      COMBprint[m][pattern] += abbababaStruct->ABCD2[s][ SIZEABCD[m][0] + i] * abbababaStruct->ABCD2[s][ SIZEABCD[m][1] + j] * abbababaStruct->ABCD2[s][ SIZEABCD[m][2] + k] * abbababaStruct->ABCD2[s][ (numPop-1)*4 + l];
-	      pattern++;
-	    }
-	  }
-	}
-      }
-      //NUMprint[m] += COMBprint[m][20] + COMBprint[m][40] + COMBprint[m][60] +COMBprint[m][65] +COMBprint[m][105] +COMBprint[m][125] +COMBprint[m][130] +COMBprint[m][150] +COMBprint[m][190] +COMBprint[m][195] +COMBprint[m][215] +COMBprint[m][235] - COMBprint[m][17] - COMBprint[m][34] - COMBprint[m][51] - COMBprint[m][68] - COMBprint[m][102] - COMBprint[m][119] - COMBprint[m][136] - COMBprint[m][153] - COMBprint[m][187] - COMBprint[m][204] - COMBprint[m][221] - COMBprint[m][238];
-      //DENprint[m] += COMBprint[m][20] + COMBprint[m][40] + COMBprint[m][60] +COMBprint[m][65] +COMBprint[m][105] +COMBprint[m][125] +COMBprint[m][130] +COMBprint[m][150] +COMBprint[m][190] +COMBprint[m][195] +COMBprint[m][215] +COMBprint[m][235] + COMBprint[m][17] + COMBprint[m][34] + COMBprint[m][51] + COMBprint[m][68] + COMBprint[m][102] + COMBprint[m][119] + COMBprint[m][136] + COMBprint[m][153] + COMBprint[m][187] + COMBprint[m][204] + COMBprint[m][221] + COMBprint[m][238];
-      NUMprint[m] += abba - baba;
-      DENprint[m] += abba + baba;
+    for(int c=0;c<numComb;c++)
+      for(int pat=0;pat<256;pat++)
+	COMBprint[c][pat] += abbababaStruct->COMB[c][b][pat];
+
+    for(int c=0;c<numComb;c++){
+      NUMprint[c] = abbababaStruct->NUM[c][b];
+      DENprint[c] = abbababaStruct->DEN[c][b];
     }
-    
 
+    NSITEprint += abbababaStruct->NSITE[b];
 
-
-    
-
-    NSITEprint++;
   }//---end of for(int s=0;s<pars->numSites;s++)
   
 }//---end of abcDstat2::print(funkyPars *pars)
@@ -382,41 +377,98 @@ void abcDstat2::run(funkyPars *pars){
   if(doAbbababa2==0)
     return;
 
+  //number of blocks
+  int totBlocks = 0;
+  int blockHere = -1;
+  for(int s = 0 ; s < pars->numSites; s++){
+    if( pars->keepSites[s]==0 )
+      continue;
+    
+    if( pars->posi[s]+1 >= blockHere*blockSize+blockSize ){
+      totBlocks++;
+      blockHere =  (int)((pars->posi[s]+1)/blockSize);
+    }
+  } 
+  //fprintf(stdout,"totblocks %d \n");
+  //fflush(stdout);
+  
   funkyAbbababa2 *abbababaStruct = new funkyAbbababa2; //new structure
+  abbababaStruct->NUMBLOCK=totBlocks;
+  double ABCD[4*nIndFasta];
+  for(int i = 0; i < 4*nIndFasta; i++)
+    ABCD[i] = 0;
+  
+  double ABCD2[numPop * 4];
+  for(int i=0;i<numPop * 4;i++)
+    ABCD2[i] = 0;
 
-  //allele counts from the data .bam files
-  double **ABCD; 
-  ABCD = new double*[pars->numSites]; 
 
-  for(int s=0;s<pars->numSites;s++){//set to zero
-    ABCD[s] = new double[4*nIndFasta];
-    for(int b = 0; b < 4*nIndFasta; b++)
-      ABCD[s][b] = 0;   
+  double ***COMB;
+  COMB = new double**[numComb];
+  for(int m=0; m<numComb; m++){
+    COMB[m] = new double*[totBlocks];
+    for(int i=0; i<totBlocks; i++){
+      COMB[m][i] = new double[256];
+      for(int j=0; j<256; j++)
+	COMB[m][i][j] = 0;
+    }
   }
   
-  double **ABCD2;
-  ABCD2 = new double*[pars->numSites];
-  for(int s = 0; s < pars->numSites; s++){
-    ABCD2[s] = new double[numPop * 4];
-    for(int i=0;i<numPop * 4;i++)
-       ABCD2[s][i] = 0;
+  double **NUM;
+  NUM = new double*[numComb];
+  for(int m=0; m<numComb; m++){
+    NUM[m] = new double[totBlocks];
+    for(int i=0; i<totBlocks; i++)
+      NUM[m][i] = 0;
   }
+
+
+  double **DEN;
+  DEN= new double*[numComb];
+  for(int m=0; m<numComb; m++){
+    DEN[m] = new double[totBlocks];
+    for(int i=0; i<totBlocks; i++)
+      DEN[m][i] = 0;
+  }
+
+  int *BLOCKNUM;
+  BLOCKNUM = new int[totBlocks];
+  for(int i=0; i<totBlocks; i++)
+    BLOCKNUM[i] = 0;
+  
+  int *NSITE;
+  NSITE = new int[totBlocks];
+  for(int i=0; i<totBlocks; i++)
+    NSITE[i] = 0;
+  
 
   //normalizing constants
   double somma;
   double normc;
   
   if(doAbbababa2==1){
-    
+    int blockIdx = -1;
+    int blockHere = -1;
     for(int s=0;s<pars->numSites;s++){
-    
+      for(int i = 0; i < 4*nIndFasta; i++)
+	  ABCD[i] = 0;
+	for(int i=0;i<numPop * 4;i++)
+	  ABCD2[i] = 0;
+	      
       if(pars->keepSites[s]==0)
 	continue;
-      
+
+      if( pars->posi[s] >= blockHere*blockSize+blockSize ){
+	blockIdx++;
+	blockHere =  (int)((pars->posi[s])/blockSize);
+	//fprintf(stderr,"totblocks %d blockidx %d\n",totBlocks,blockIdx);
+	BLOCKNUM[blockIdx] = blockHere;
+	
+      }
       for(int i=0;i<pars->nInd;i++){
 	//read the data
-	if(pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3] == 0) //if no data at site s
-	  continue;
+	//if(pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3] == 0) //if no data at site s
+	//continue;
 	if(pars->counts[s][i*4]<maxDepth && pars->counts[s][i*4+1]<maxDepth && pars->counts[s][i*4+2]<maxDepth && pars->counts[s][i*4+3]<maxDepth){
 	  
 	  if(sample==1){
@@ -429,21 +481,21 @@ void abcDstat2::run(funkyPars *pars){
 	    for( int b = 0; b < 4; b++ ){
 	      cumSum+=pars->counts[s][i*4+b];
 	      if(cumSum > j){
-		ABCD[s][i*4+b] = 1;
+		ABCD[i*4+b] = 1;
 		break;
 	      }
 	    }	    
 	  }
 	  else{
 	    for( int b = 0; b < 4; b++ )//{ //bases
-	      ABCD[s][i*4+b]=pars->counts[s][i*4+b];
+	      ABCD[i*4+b]=pars->counts[s][i*4+b];
 	  }
 	}
       }
-
+      
       if(ancName != NULL && useLast == 1)
 	if(pars->anc[s] < 4)
-	  ABCD[s][pars->nInd * 4 + pars->anc[s]] = 1;
+	  ABCD[pars->nInd * 4 + pars->anc[s]] = 1;
       
       //------do all the populationss------
       double w[nIndFasta];//weights
@@ -454,7 +506,7 @@ void abcDstat2::run(funkyPars *pars){
       normc = 0;
       for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++){
 	w[i]=0;
-	somma = ABCD[s][i*4+0]+ABCD[s][i*4+1]+ABCD[s][i*4+2]+ABCD[s][i*4+3]; 
+	somma = ABCD[i*4+0]+ABCD[i*4+1]+ABCD[i*4+2]+ABCD[i*4+3]; 
 	w[i] = (2*somma)/(somma + 1);
 	normc += w[i];
       }
@@ -462,23 +514,27 @@ void abcDstat2::run(funkyPars *pars){
 	for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++)
 	  w[i] = w[i]/normc;
       }
-      
+      for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++)
       //---------------building ABCD2 - weighted (pseudo) individuals
       for(int al=0;al<4;al++){
 	for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++){
-	  ABCD2[s][p*4 + al] += w[i]*ABCD[s][i*4+al];
+	  ABCD2[p*4 + al] += w[i]*ABCD[i*4+al];
 	}
       }
       //normalize
       somma = 0;
       for(int al=0;al<4;al++)
-	somma += ABCD2[s][p*4+al];
+	somma += ABCD2[p*4+al];
       if(somma!=0){
 	for(int al=0;al<4;al++)
-	  ABCD2[s][p*4+al] /= somma;}
+	  ABCD2[p*4+al] /= somma;}     
       }
-
-      
+      //fprintf(stderr,"\n");
+      //for(int i=0;i<16;i++)
+      //fprintf(stderr,"%.2f ",ABCD[i]);
+      //for(int i=0;i<16;i++)
+      //	fprintf(stderr,"%.2f ",ABCD2[i]);
+      //fprintf(stderr,"\n");
       /*-ENDENDEND--count WEIGHTED normalized allele combinations -----------------------*/
       /*-------------------------------------------------------------------------------- */
 
@@ -500,14 +556,48 @@ void abcDstat2::run(funkyPars *pars){
       /*END-'-enhance' option for analyzing only non-polymorphic sites of the outgroup---*/ 
       /*-------------------------------------------------------------------------------- */  
 
-      }//---end for(combinations of populations)
+      for(int m=0; m<numComb; m++){
+	//fprintf(stderr,"ciao\n");
+      double abba=0;
+      double baba=0;
+      int pattern=0;
+      
+      for(int i=0;i<4;i++){
+	for(int j=0;j<4;j++){
+	  for(int k=0;k<4;k++){
+	    for(int l=0;l<4;l++){
+	      if(i==l && j==k && i!=j)
+	        abba += ABCD2[ SIZEABCD[m][0] + i] * ABCD2[ SIZEABCD[m][1] + j] * ABCD2[ SIZEABCD[m][2] + k] * ABCD2[ (numPop-1)*4 + l];
+	      
+	      if(i==k && j==l && i!=j)
+	        baba += ABCD2[ SIZEABCD[m][0] + i] * ABCD2[ SIZEABCD[m][1] + j] * ABCD2[ SIZEABCD[m][2] + k] * ABCD2[ (numPop-1)*4 + l];
+	      
+	      COMB[m][blockIdx][pattern] += ABCD2[ SIZEABCD[m][0] + i] * ABCD2[ SIZEABCD[m][1] + j] * ABCD2[ SIZEABCD[m][2] + k] * ABCD2[ (numPop-1)*4 + l];
+	      pattern++;
+	    }
+	  }
+	}
+      }
+      NUM[m][blockIdx] += abba - baba;
+      DEN[m][blockIdx] += abba + baba;
+      }
+       
+      NSITE[blockIdx]++;
 
-      abbababaStruct -> ABCD=ABCD;
-      abbababaStruct -> ABCD2=ABCD2;
+
+
+      
+    }//---end for(int s=0;s<pars->numSites;s++)
+
+      abbababaStruct -> NUM=NUM;
+      abbababaStruct -> DEN=DEN;
+      abbababaStruct -> COMB=COMB;
+      abbababaStruct -> BLOCKNUM = BLOCKNUM;
+      abbababaStruct -> NSITE = NSITE;
       pars -> extras[index] = abbababaStruct;
       
-  }//---end for(int s=0;s<pars->numSites;s++)
-    //}//---end if(doAbbababa2==1)
+  }
+  
 
   //abbababaStruct -> ABCD=ABCD;
   //abbababaStruct -> DEN=DEN;
