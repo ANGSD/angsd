@@ -23,6 +23,7 @@ ${WDIR}/misc/msToGlf -in ${MSMS} -out ${ODIR}/glout -err 0.005 -depth 8 -singleO
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/norm -doSaf 1 -nInd 20 -fai hg19.fa.fai  2>>${LOG}
 ${WDIR}/misc/realSFS ${ODIR}/norm.saf.idx -P 24 -nSites 1000000 -m 0 -seed -1 >${ODIR}/norm.saf.em.ml 2>>${LOG}
 ${WDIR}/angsd -isSim 1 -glf ${ODIR}/glout.glf.gz -out ${ODIR}/norm -nInd 20 -doThetas 1 -doSaf 1 -pest ${ODIR}/norm.saf.em.ml -fai hg19.fa.fai  2>>${LOG}
+${WDIR}/misc/realSFS saf2theta ${ODIR}/norm.saf.idx -sfs ${ODIR}/norm.saf.em.ml -outname ${ODIR}/thetaFromSaf 2>>${LOG}
 ${WDIR}/misc/thetaStat do_stat ${ODIR}/norm.thetas.idx 2>>${LOG}
 ${WDIR}/misc/thetaStat do_stat ${ODIR}/norm.thetas.idx -outnames ${ODIR}/norm.thetas.idx.win -step 1000 -win 5000 2>>${LOG}
 
