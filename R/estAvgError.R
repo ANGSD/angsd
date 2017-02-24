@@ -243,11 +243,7 @@ getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
     L = length(num)
     thetaN = sum(num)/sum(den) #D statistics calculated without jackknife
     errorCount = 0
-    
-    for(i in 1:L)
-        if(num[i]>den[i])
-            errorCount = errorCount + 1
-      
+     
     thetaJStar <- rep(0,L) #partial estimators
     thetaJack <- rep(0,L)  #Block Jack knife estimator
     pseudo <- 1/weigth
@@ -263,7 +259,7 @@ getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
 
 angsdFile = paste(angsdFile,".abbababa2",sep="")
 outDataTotal <- read.table(angsdFile,header=T,as.is=T)
-erCor= (sizeFile != FALSE)
+erCor= (errFile != FALSE)
 
 if(sizeFile==FALSE && nameFile==FALSE){
 	cat("Error: Define at least one between nameFile and sizeFile!")
