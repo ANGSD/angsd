@@ -16,7 +16,7 @@
   april 20, removed 2dsfs as special scenario
   april 20, split out the safreader into seperate cpp/h
   may 5, seems to work well now
-*/
+  */
 
 #include <cstdio>
 #include <vector>
@@ -51,6 +51,9 @@ int **posiG  = NULL;
 size_t *bootstrap = NULL;
 int really_kill =3;
 int VERBOSE = 1;
+
+extern std::vector <char *> dumpedFiles;
+
 void handler(int s) {
   if(s==13)//this is sigpipe
     exit(0);
@@ -69,7 +72,7 @@ void handler(int s) {
 
 /*
   over elaborate function to read a sfs. Assumption is that input file contains the expected values.
-  output is plugged into ret, with the values being log of the normalized values
+  output is plugged into ret
  */
 
 void readSFS(const char*fname,size_t hint,double *ret){
@@ -240,8 +243,7 @@ int printMulti(args *arg){
   }
   while(1) {
     static char *curChr=NULL;
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl);//read nsites from data
-    //    fprintf(stderr,"ret:%d gls->x:%lu\n",ret,gls[0]->x);
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,1);//read nsites from data
     if(arg->oldout==0){
       for(int s=0;s<gls[0]->x;s++){
 	if(arg->chooseChr==NULL)
@@ -981,7 +983,7 @@ int fst_index(int argc,char **argv){
     }
     posi.clear();
     while(1) {
-      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL,arg->fl);//read nsites from data
+      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL,arg->fl,1);//read nsites from data
       //  fprintf(stderr,"ret:%d glsx:%lu\n",ret,gls[0]->x);
       //if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
 	//fprintf(stderr,"continue continue\n");
@@ -1068,7 +1070,7 @@ int main_opt(args *arg){
   //temp used for checking pos are in sync
   setGloc(saf,nSites);
   while(1) {
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL,arg->fl);//read nsites from data
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL,arg->fl,1);//read nsites from data
     int b=0;  
     //fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
     if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
@@ -1195,23 +1197,33 @@ void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<i
     size_t clen = strlen(tmpChr);
     fwrite(&clen,sizeof(size_t),1,idx);
     fwrite(tmpChr,1,clen,idx);
-    bgzf_write(dat,&clen,sizeof(size_t));
-    bgzf_write(dat,tmpChr,clen);
+    if(sizeof(size_t)!=bgzf_write(dat,&clen,sizeof(size_t))){
+      fprintf(stderr,"\t-> Problems writing theta files\n");
+      exit(0);
+    }
+    if(clen!=bgzf_write(dat,tmpChr,clen)){
+      fprintf(stderr,"\t-> Problems writing theta files\n");
+      exit(0);
+    }
 
     //write number of sites for both index and bgzf
     size_t tt = p.size();
     fwrite(&tt,sizeof(size_t),1,idx);
-    bgzf_write(dat,&tt,sizeof(size_t));
+    if(sizeof(size_t)!=bgzf_write(dat,&tt,sizeof(size_t))){
+      fprintf(stderr,"\t-> Problems writing theta files\n");
+      exit(0);
+    }
     //write nChr for both index and bgzf
     fwrite(&nChr,sizeof(int),1,idx);
-    bgzf_write(dat,&nChr,sizeof(int));
-
+    if(sizeof(int)!=bgzf_write(dat,&nChr,sizeof(int))){
+      fprintf(stderr,"\t-> Problems writing theta files\n");
+      exit(0);
+    }
     //write bgzf offset into idx
     fwrite(&offs,sizeof(int64_t),1,idx);
-    for(int i=0;i<p.size();i++){
-      fprintf(stderr,"posi:%d\n",p[i]);
+    for(int i=0;i<p.size();i++)
       aio::bgzf_write(dat,&p[i],sizeof(int));
-    }
+
     for(int i=0;i<5;i++)
       for(int j=0;j<p.size();j++)
 	aio::bgzf_write(dat,&res[i][j],sizeof(float));
@@ -1231,7 +1243,7 @@ int saf2theta(int argc,char**argv){
   const char *THETASIDX =".thetas.idx";
   BGZF *theta_dat;
   FILE *theta_idx;
-  std::vector<float> *theta_res = new std::vector<float>[5];;
+  std::vector<float> theta_res[5];// = new std::vector<float>[5];
   std::vector<int> theta_pos;
 
   if(argc==0){
@@ -1259,17 +1271,20 @@ int saf2theta(int argc,char**argv){
   arg->saf[0]->kind=2; //<-important orhterwise we dont read positions from saffles\n
   double *prior = new double[arg->saf[0]->nChr+1];
   readSFS(arg->sfsfname[0],arg->saf[0]->nChr+1,prior);
+  for(int i=0;i<arg->saf[0]->nChr+1;i++)
+    prior[i] = log(prior[i]);
   char buf[8] = "thetav2";
   theta_dat = aio::openFileBG(arg->outname,THETAS);
   theta_idx = aio::openFile(arg->outname,THETASIDX);
   aio::bgzf_write(theta_dat,buf,8);
   fwrite(buf,1,8,theta_idx);
-  theta_res = new std::vector<float>[5];
+  //  theta_res = new std::vector<float>[5];
   int64_t offs_thetas = bgzf_tell(theta_dat);
   
   
   double aConst=0;
   int nChr = arg->saf[0]->nChr;
+  fprintf(stderr,"\t-> nChr:%d\n",nChr);
   for(int i=1;i<nChr;i++)
     aConst += 1.0/i;
   aConst = log(aConst);//this is a1
@@ -1293,10 +1308,11 @@ int saf2theta(int argc,char**argv){
   static char *curChr=NULL;//why static?
 
   while(1) {
-    int ret=readdata(arg->saf,gls,arg->nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl);//read nsites from data
-    fprintf(stderr,"pos:%d ret:%d\n",posiToPrint[0],ret);exit(0);
-    if(arg->chooseChr!=NULL)
-      curChr=strdup(arg->chooseChr);
+    int ret=readdata(arg->saf,gls,arg->nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,0);//read nsites from data
+    if(arg->chooseChr!=NULL){
+      if(curChr==NULL)
+	curChr=strdup(arg->chooseChr);
+    }
     if(tmpChr==NULL)
       tmpChr = strdup(curChr);
     if(strcmp(tmpChr,curChr)!=0){
@@ -1305,28 +1321,31 @@ int saf2theta(int argc,char**argv){
       tmpChr=strdup(curChr);
     }
     //calc thetas
-    double workarray[nChr+1];
+
     for(int s=0;s<gls[0]->x;s++){
-      
+      double workarray[nChr+1];
       for(int i=0;i<nChr+1;i++)//gls->mat is float lets pluginto double
 	workarray[i] = gls[0]->mat[s][i];
+
       //calculate post probs
       double tsum =exp(workarray[0] + prior[0]);
       for(int i=1;i<nChr+1;i++)
 	tsum += exp(workarray[i]+prior[i]);
       tsum = log(tsum);
       
-    for(int i=0;i<nChr+1;i++)
-      workarray[i] = workarray[i]+prior[i]-tsum;
-
-
+      for(int i=0;i<nChr+1;i++){
+	workarray[i] = workarray[i]+prior[i]-tsum;
+	//      fprintf(stderr,"[%d]:%f\n",i,(workarray[i]));
+      }
+      //exit(0);
       //First find thetaW: nSeg/a1
       double pv,seq;
       if(fold)
 	pv = 1-exp(workarray[0]);
       else
-	pv = 1-exp(workarray[0])-exp(workarray[nChr+1]);
-      
+	pv = 1-exp(workarray[0])-exp(workarray[nChr]);
+      //      fprintf(stderr,"pv:%f work[0]:%f 2k:%f\n",pv,workarray[0],workarray[nChr]);
+      //      exit(0);
       if(pv<0)//catch underflow
 	seq=log(0.0);
       else
@@ -1361,7 +1380,7 @@ int saf2theta(int argc,char**argv){
       }
     }
     
-#if 1 //just for printout
+#if 0 //just for printout
     for(int s=0;s<gls[0]->x;s++){
       if(arg->chooseChr==NULL)
 	fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
@@ -1390,6 +1409,20 @@ int saf2theta(int argc,char**argv){
   
   fclose(theta_idx);
   bgzf_close(theta_dat);
+  if(curChr){
+    //  free(curChr);//<- DRAGON leak?
+    curChr=NULL;
+  }
+  if(tmpChr)
+    free(tmpChr);
+ 
+  delGloc(arg->saf,arg->nSites);
+  destroy(gls,arg->nSites);
+  delete [] prior;
+  //  delete [] theta_res;
+  delete [] scalings;
+  delete [] posiToPrint;
+  destroy_args(arg);
   return 0;
 }
 
@@ -1463,5 +1496,12 @@ int main(int argc,char **argv){
   }
   if(bootstrap!=NULL)
     delete [] bootstrap;
+
+  fprintf(stderr,"\t-> Output filenames:\n");
+  for(int i=0;i<(int)dumpedFiles.size();i++){
+    fprintf(stderr,"\t\t->\"%s\"\n",dumpedFiles[i]);
+    free(dumpedFiles[i]);
+  }
+
   return 0;
 }

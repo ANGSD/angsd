@@ -99,5 +99,9 @@ void destroy_safvec(std::vector<persaf *> &saf){
 void destroy_args(args *p){
   //  fprintf(stderr,"destroy args\n");
   destroy_safvec(p->saf);
+  if(p->outname)
+    free(p->outname);
+  for(int i=0;i<p->sfsfname.size();i++)
+    free(p->sfsfname[i]);
   delete p;
 }
