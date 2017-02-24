@@ -44,7 +44,7 @@ print.args<-function(args,des){
 args<-list(angsdFile = "out",
            errFile = FALSE,
            nameFile = FALSE,
-           sizeFile = NULL,
+           sizeFile = FALSE,
            out="out",
            addErr=FALSE,
            nIter=100,
@@ -182,8 +182,18 @@ ABBAtr<-c("X0110","X0330","X1001","X1221","X2112","X2332","X3003","X3223")
 BABAtr<-c("X0101","X0303","X1010","X1212","X2121","X2323","X3030","X3232")
 BBAA<-c("X0011","X0022","X0033","X1100","X1122","X1133","X2200","X2211","X2233","X3300","X3311","X3322")
 
-getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
-    
+getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){  
+    zeroIdx <- outData[,6]!=0 
+
+    outData <- outData[zeroIdx,]
+    if(dim(outData)[1]==0)
+	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA))
+
+    zeroIdx <- outData[,5]!=0
+    outData <- outData[zeroIdx,]
+    if(dim(outData)[1]==0)
+	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA))
+ 
     seenSites = sum(as.numeric(outData[,6]))
     weigth = as.numeric(outData[,6])
     weigth = as.numeric( rowSums(outData[,c(ABBAname,BABAname)])  )
@@ -245,20 +255,43 @@ getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
     thetaJack <- L*thetaN - sum((1-weigth) * thetaJStar) #jackknife D statistic       
     meanJack <- mean(thetaJStar)# average D statistics over the blocks
     thetaTilde <- pseudo*thetaN-(pseudo-1) * thetaJStar #intermediate quantity for the variance of the jackknife D statistic
-    varJack <- 1/L * sum( 1/(pseudo-1) * (thetaTilde - thetaJack)^2 ) #variance of the jackknife D     
+    varJack <- 1/L * sum( 1/(pseudo-1) * (thetaTilde - thetaJack)^2 ) #variance of the jackknife D   
     Z <- thetaN / sqrt(varJack) #Z value for standard normal
     pv = 2*min(pnorm(Z,0,1),1-pnorm(Z,0,1)) #pvalue for standard normal
     return(list(thetaN=thetaN,thetaJack=thetaJack,varJack=varJack,Z=Z,pv=pv,nABBA=totAbba,nBABA=totBaba,nBBAA=totBbaa))
 }
 
 angsdFile = paste(angsdFile,".abbababa2",sep="")
-outDataTotal <- read.table(angsdFile,header=T,as.is=T,sep="")
+outDataTotal <- read.table(angsdFile,header=T,as.is=T)
 erCor= (sizeFile != FALSE)
 
-namePop = unlist(read.table(nameFile, header=FALSE))
+if(sizeFile==FALSE && nameFile==FALSE){
+	cat("Error: Define at least one between nameFile and sizeFile!")
+	q("no")
+}	
+
+
+if(sizeFile==FALSE){
+	namePop = unlist(read.table(nameFile, header=FALSE))
+	L = length(namePop)
+	sizePop = rep(1,L)
+} else{	
+	sizePop = unlist(read.table(sizeFile, header=FALSE, as.is=TRUE))
+}
+
+if(nameFile==FALSE){
+	sizePop = unlist(read.table(sizeFile, header=FALSE, as.is=TRUE))
+	L = length(sizePop)
+	namePop = c()
+	for(i in 1:L)
+		namePop = c(namePop,paste("Population",i,sep="_"))
+} else{	
+	namePop = unlist(read.table(nameFile, header=FALSE))
+}
+
 numPop = length(namePop)
 numComb = choose(numPop-2,2)*(numPop-1)
-sizePop = unlist(read.table(sizeFile, header=FALSE, as.is=TRUE))
+#sizePop = unlist(read.table(sizeFile, header=FALSE, as.is=TRUE))
 cumPop = c(0,cumsum(sizePop))
 
 lenList = length(outDataTotal[,1])
@@ -550,7 +583,6 @@ for(idComb in 1:numComb){
         message("Running Observed D\n",appendLF=FALSE)
         flush.console()
         fileOut=paste(out,combNames[ idComb ],".Observed",".txt",sep="",collapse="")
-
         result5 = getJackKnife(outData,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
     if(idComb==1){
         str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
