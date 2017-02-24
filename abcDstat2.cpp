@@ -28,7 +28,7 @@ void abcDstat2::printArg(FILE *argFile){
   fprintf(argFile,"\t-sizeFile\t\t%s\tfile with size of populations\n",sizeFile);
   fprintf(argFile,"\t-enhance\t\t%d\tonly analyze sites where outgroup H4 is non poly\n",enhance);
   fprintf(argFile,"\t-Aanc\t\t\t%d\tset H4 outgroup allele as A in each site\n",Aanc);
-  fprintf(argFile,"\t-useLast\t\t%d\tuse fasta file as outgroup in the D-stat\n",useLast);
+  fprintf(argFile,"\t-useLast\t\t%d\tuse last group of bam files as outgroup in the D-stat\n",useLast);
   fprintf(argFile,"\n");
 }
 
@@ -120,8 +120,11 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
     numPop = nIndFasta;
   }
   
-  if(ancName != NULL && useLast == 1)
+  if(ancName != NULL && useLast == 0){
     nIndFasta += 1;
+    numPop += 1;
+  }
+  
 
   
   /*------ get population sizes and indexes for combinations of populations ------*/
@@ -133,16 +136,15 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
     for(int a=0; a<numPop; a++)
       POPSIZE[a] = sizeMat.matrix[a][0];
   }
-  else if(sizeFile != NULL && ancName != NULL && useLast == 1){
-    numPop += 1;
+  else if(sizeFile != NULL && useLast == 1){
     POPSIZE = new int[numPop];
     for(int a=0; a<numPop-1; a++)
       POPSIZE[a] = sizeMat.matrix[a][0];
     POPSIZE[numPop-1] = 1; 
   }
   else{ //default with no sizeFile: every individual is a population
-    POPSIZE = new int[nIndFasta];
-    for(int i=0; i<nIndFasta; i++)
+    POPSIZE = new int[numPop];
+    for(int i=0; i<numPop; i++)
       POPSIZE[i] = 1;
   }
 
@@ -168,9 +170,9 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   numComb =  (numPop-1)*(numPop-2)*(numPop-3)/2;
  
   //print some information
-  if(useLast==0)
+  if((useLast==1) || (useLast==0 && ancName==NULL))
     fprintf(stderr,"\t-> %d Populations | %lu trees | %d Individuals\n", numPop, numComb, nIndFasta);
-  else if(useLast==1 && ancName!=NULL) 
+  else if(useLast==0 && ancName!=NULL) 
     fprintf(stderr,"\t-> %d Populations | %lu trees | %d Individuals | %s Outgroup\n", numPop, numComb, nIndFasta, ancName);
   
   SIZEABCD = new int*[numComb]; //indexes for reading ABCD2 data  
@@ -489,7 +491,7 @@ void abcDstat2::run(funkyPars *pars){
 	}
       }
       
-      if(ancName != NULL && useLast == 1)
+      if(ancName != NULL && useLast == 0)
 	if(pars->anc[s] < 4)
 	  ABCD[pars->nInd * 4 + pars->anc[s]] = 1;
       
