@@ -1497,11 +1497,12 @@ int main(int argc,char **argv){
   if(bootstrap!=NULL)
     delete [] bootstrap;
 
-  fprintf(stderr,"\t-> Output filenames:\n");
-  for(int i=0;i<(int)dumpedFiles.size();i++){
-    fprintf(stderr,"\t\t->\"%s\"\n",dumpedFiles[i]);
-    free(dumpedFiles[i]);
+  if(dumpedFiles.size()){
+    fprintf(stderr,"\t-> Output filenames:\n");
+    for(int i=0;i<(int)dumpedFiles.size();i++){
+      fprintf(stderr,"\t\t->\"%s\"\n",dumpedFiles[i]);
+      free(dumpedFiles[i]);
+    }
   }
-
   return 0;
 }
