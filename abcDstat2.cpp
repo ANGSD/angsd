@@ -292,7 +292,7 @@ void abcDstat2::clean(funkyPars *pars){
 //print and eventually reset counters
 
 void abcDstat2::printAndEmpty(int blockAddress,int theChr){
-  int denCont=0;
+  double denCont=0;
   for(int m=0; m<numComb; m++)
     denCont += DENprint[m];
   if(denCont != 0){
