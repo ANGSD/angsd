@@ -1,21 +1,5 @@
 /*
-
-  The functionality of this file, has replaced the old emOptim and testfolded.c programs.
-
-  part of ANGSD
-
-  GNU license or whetever its called
-
-  thorfinn@binf.ku.dk
-
-  fixme: minor leaks in structures related to the thread structs, and the append function.
-  
-  Its july 13 2013, it is hot outside
-
-  april 13, safv3 added, safv2 removed for know. Will be reintroduced later.
-  april 20, removed 2dsfs as special scenario
-  april 20, split out the safreader into seperate cpp/h
-  may 5, seems to work well now
+  small utility functions for saf files
 */
 
 const char *SAF = ".saf.gz";
@@ -41,6 +25,7 @@ const char *SAFIDX =".saf.idx";
 #include <libgen.h>
 #include <algorithm>
 #include "safreader.h"
+#include "realSFS_args.h"
 
 int saf_cat(int argc,char **argv){
   fprintf(stderr,"\t-> This will cat together .saf files from angsd\n");
@@ -110,5 +95,27 @@ int saf_cat(int argc,char **argv){
   bgzf_close(outfileSAF);
   bgzf_close(outfileSAFPOS);
   free(outnames);
+  return 0;
+}
+
+
+int saf_check(int argc,char **argv) {
+  fprintf(stderr,"\t-> ./realSFS check your.saf.idx\n\t-> This will check that the positions are ordered correctly\n");
+  if(argc==0)
+    return 0;
+  args *pars = getArgs(argc,argv);
+  assert(pars->saf.size()==1);
+  for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
+    int *ppos = new int[it->second.nSites];
+    my_bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);
+    my_bgzf_read(pars->saf[0]->pos,ppos,sizeof(int)*it->second.nSites);
+    for(int i=1;i<it->second.nSites;i++){
+      if(ppos[i]<=ppos[i-1])
+	fprintf(stderr,"\t-> problems with unsorted saf file chromoname: \'%s\' pos[%d]:%d vs posd[%d-1]:%d\n",it->first,i,ppos[i],i,ppos[i-1]);
+    }
+      
+    delete [] ppos;
+  }
+  destroy_args(pars);
   return 0;
 }

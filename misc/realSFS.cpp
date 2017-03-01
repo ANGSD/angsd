@@ -202,7 +202,7 @@ void delGloc(std::vector<persaf *> &saf,size_t nSites){
 
 template <typename T>
 int printMulti(args *arg){
-  fprintf(stderr,"[%s]\n",__FUNCTION__);
+  //  fprintf(stderr,"[%s]\n",__FUNCTION__);
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
     assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
@@ -1461,6 +1461,7 @@ int main(int argc,char **argv){
     fprintf(stderr,"\t-> NB: You can print data with ./realSFS print afile.saf.idx !!\n");
     fprintf(stderr,"\t-> NB: Higher order SFS's can be estimated by simply supplying multiple .saf.idx files!!\n");
     fprintf(stderr,"\t-> NB: Program uses accelerated EM, to use standard EM supply -m 0 \n");
+    fprintf(stderr,"\t-> Other subfunctions saf2theta, cat, check\n");
     return 0;
   }
   ++argv;
@@ -1473,6 +1474,8 @@ int main(int argc,char **argv){
     fst(--argc,++argv);
   else if(!strcasecmp(*argv,"saf2theta"))
     saf2theta(--argc,++argv);
+  else if(!strcasecmp(*argv,"check"))
+    saf_check(--argc,++argv);
   else if(!strcasecmp(*argv,"print_header"))
     print_header(--argc,++argv);
   else {
