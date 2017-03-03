@@ -7,6 +7,7 @@ class abcFilter : public abc{
 
   char *keepsChr;//<- a char array of length=reflength, used for .keeps
   int minInd;
+  int minIndDepth;
   //  int nInd;
   int curChr;
   int capDepth;
