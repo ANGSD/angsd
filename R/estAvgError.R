@@ -2,6 +2,7 @@ options(warn=-1)
 bases<-c("A","C","G","T")
 b <- c(bases,"N")
 library(pracma)
+library(data.table)
 
 ########### do not change ################
 l<-commandArgs(TRUE)
@@ -49,7 +50,8 @@ args<-list(angsdFile = "out",
            addErr=FALSE,
            nIter=100,
            main="",
-           maxErr=0.02
+           maxErr=0.02,
+           errMean = 0
            )
 
 #if no argument aree given prints the need arguments and the optional ones with default
@@ -60,7 +62,8 @@ des<-list(angsdFile="output angsdFile (no .abbababa2 extension) from 'angsd -doA
           out="Name of the out files",
           addErr="amount of error correction to add with increment and bases for transitions. E.g. -0.005,0.005,0.001;A,C;G,T",
           nIter="Number of optimazation attemps",
-          maxErr="maximum allowed error rate"
+          maxErr="maximum allowed error rate",
+          errMean="TRUE=average errors of multiple individuals"
           )
 
 ####### get arguments and add to workspace
@@ -75,7 +78,7 @@ if(length(args)==0){
 
 ###################################
 
-cat("----------\nangsdFile: ",angsdFile,"  errFile:", errFile," nameFile:",nameFile," sizeFile:",sizeFile," out:", out," addErr:", addErr," nIter:",nIter,"\nmaxErr:",maxErr,"\n-----------\n")
+cat("----------\nangsdFile: ",angsdFile,"  errFile: ", errFile," nameFile: ",nameFile," sizeFile: ",sizeFile," out: ", out," addErr: ", addErr," nIter: ",nIter,"maxErr: ",maxErr,"errMean: ",errMean,"\n-----------\n" )
 
 b<-c("A","C","G","T","N")
 
@@ -83,7 +86,10 @@ nIter<-as.integer(nIter)
 maxErr=as.numeric(maxErr)
 
 readTable <- function(file){
-    r <- colSums(as.matrix(read.table(file)))
+    if(errMean==0)
+        r <- colSums(as.matrix(read.table(file)))
+    else
+        r <- colMeans(as.matrix(read.table(file)))
     r <- matrix(data=r,nrow=1,ncol=length(r))
 }
     
@@ -176,23 +182,44 @@ getErrMat <- function(resMat){
     return(errMat)
 }
 
-ABBA<-c("X0110","X0220","X0330","X1001","X1221","X1331","X2002","X2112","X2332","X3003","X3113","X3223")
-BABA<-c("X0101","X0202","X0303","X1010","X1212","X1313","X2020","X2121","X2323","X3030","X3131","X3232")
-ABBAtr<-c("X0110","X0330","X1001","X1221","X2112","X2332","X3003","X3223")
-BABAtr<-c("X0101","X0303","X1010","X1212","X2121","X2323","X3030","X3232")
-BBAA<-c("X0011","X0022","X0033","X1100","X1122","X1133","X2200","X2211","X2233","X3300","X3311","X3322")
+#ABBA<-c("X0110","X0220","X0330","X1001","X1221","X1331","X2002","X2112","X2332","X3003","X3113","X3223")
+#BABA<-c("X0101","X0202","X0303","X1010","X1212","X1313","X2020","X2121","X2323","X3030","X3131","X3232")
+#ABBAtr<-c("X0110","X0330","X1001","X1221","X2112","X2332","X3003","X3223")
+#BABAtr<-c("X0101","X0303","X1010","X1212","X2121","X2323","X3030","X3232")
+#BBAA<-c("X0011","X0022","X0033","X1100","X1122","X1133","X2200","X2211","X2233","X3300","X3311","X3322")
 
-getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){  
+
+ABBA<-c("0110","0220","0330","1001","1221","1331","2002","2112","2332","3003","3113","3223")
+BABA<-c("0101","0202","0303","1010","1212","1313","2020","2121","2323","3030","3131","3232")
+ABBAtr<-c("0110","0330","1001","1221","2112","2332","3003","3223")
+BABAtr<-c("0101","0303","1010","1212","2121","2323","3030","3232")
+BBAA<-c("0011","0022","0033","1100","1122","1133","2200","2211","2233","3300","3311","3322")
+
+
+getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
+    outData = outData
     zeroIdx <- outData[,6]!=0 
 
     outData <- outData[zeroIdx,]
-    if(dim(outData)[1]==0)
-	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA))
+
+    skipData=FALSE
+    
+    if(is.vector(outData)){
+        skipData = TRUE} else if(nrow(outData)==0){
+        skipData = TRUE}
+    
+    if(skipData)
+	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA,numBlock=NA))
 
     zeroIdx <- outData[,5]!=0
     outData <- outData[zeroIdx,]
-    if(dim(outData)[1]==0)
-	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA))
+    
+    if(is.vector(outData)){
+        skipData = TRUE}  else if(nrow(outData)==0){
+        skipData = TRUE}
+
+    if(skipData)
+	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA,numBlock=NA))
  
     seenSites = sum(as.numeric(outData[,6]))
     weigth = as.numeric(outData[,6])
@@ -254,11 +281,12 @@ getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
     varJack <- 1/L * sum( 1/(pseudo-1) * (thetaTilde - thetaJack)^2 ) #variance of the jackknife D   
     Z <- thetaN / sqrt(varJack) #Z value for standard normal
     pv = 2*min(pnorm(Z,0,1),1-pnorm(Z,0,1)) #pvalue for standard normal
-    return(list(thetaN=thetaN,thetaJack=thetaJack,varJack=varJack,Z=Z,pv=pv,nABBA=totAbba,nBABA=totBaba,nBBAA=totBbaa))
+    return(list(thetaN=thetaN,thetaJack=thetaJack,varJack=varJack,Z=Z,pv=pv,nABBA=totAbba,nBABA=totBaba,nBBAA=totBbaa,numBlock=L))
 }
 
 angsdFile = paste(angsdFile,".abbababa2",sep="")
-outDataTotal <- read.table(angsdFile,header=T,as.is=T)
+#outDataTotal <- read.table(angsdFile,header=T,as.is=T)#old read data
+outDataTotal <- as.matrix(fread(input=angsdFile,sep="\t",showProgress=TRUE,header=TRUE,data.table=TRUE))
 erCor= (errFile != FALSE)
 
 if(sizeFile==FALSE && nameFile==FALSE){
@@ -287,7 +315,6 @@ if(nameFile==FALSE){
 
 numPop = length(namePop)
 numComb = choose(numPop-2,2)*(numPop-1)
-#sizePop = unlist(read.table(sizeFile, header=FALSE, as.is=TRUE))
 cumPop = c(0,cumsum(sizePop))
 
 lenList = length(outDataTotal[,1])
@@ -344,83 +371,77 @@ for(i in 1:(numPop-1)){
     }
 }
 
+
+#get error matrices
+if(erCor==1){
+    errFiles = unlist(read.table(errFile, header=FALSE, as.is=TRUE))
+    cont=1
+    resMat = list();
+    cat("Estimating error matrix from file:\n")
+    for(str in errFiles){    
+        nInd<-1
+        res=NULL
+        resMat[[cont]] = diag(c(1,1,1,1));
+        filez=FALSE;     
+        if(!is.na(str)){
+            r = readTable(str)
+            res = getFromErrFile(r,res,maxErr,nInd,logLike)
+            resMat[[cont]] = buildMat(res)
+            cat(sprintf("\t\"%s\"\n",str))
+        }
+        cont = cont + 1
+    }
+}
+
+
 ptm <- proc.time() #start timer
+FILEOBS<-paste(out,".Observed",".txt",sep="")
+FILEERROR<-paste(out,".ErrorCorr",".txt",sep="")
+FILETRANS<-paste(out,".TransRem",".txt",sep="")
+FILEERRORTRANS<-paste(out,".ErrorCorr.TransRem",".txt",sep="")
+
+
+
 for(idComb in 1:numComb){
     
     idxList = seq(1,lenList,numComb) + (idComb-1)
     outData = outDataTotal[idxList,]
-
-    
+        
     id = combs[idComb,]
     sz = sizes[idComb,]
     nm = nameId[idComb,]
             
     if(erCor==1){#ERROR CORRECTED D
 
-        errFiles = unlist(read.table(errFile, header=FALSE, as.is=TRUE))
-        
-        nInd1<-1; nInd2<-1; nInd3<-1; nInd4<-1;
-        
-        res1=NULL; res2=NULL; res3=NULL; res4=NULL;
-        resMat = list();
-        resMat[[1]] = diag(c(1,1,1,1)); resMat[[2]] = diag(c(1,1,1,1)); resMat[[3]] = diag(c(1,1,1,1)); resMat[[4]] = diag(c(1,1,1,1));
-        file1=FALSE; file2=FALSE; file3=FALSE; file4=FALSE;
-        
-        if(!is.na(errFiles[ id[1] ]))
-            file1 = errFiles[ id[1] ];
-        if(!is.na(errFiles[ id[2] ]))
-            file2 = errFiles[ id[2] ];
-        if(!is.na(errFiles[ id[3] ]))
-            file3 = errFiles[ id[3] ];
-        if(!is.na(errFiles[ id[4] ]))
-            file4 = errFiles[ id[4] ];
-        
-        if(file1!=FALSE){
-            r1 = readTable(file1)
-            res1 = getFromErrFile(r1,res1,maxErr,nInd1,logLike)
-            resMat[[1]] = buildMat(res1)
-        }
-
-        if(file2!=FALSE){
-            r2 = readTable(file2)
-            res2 = getFromErrFile(r2,res2,maxErr,nInd2,logLike)
-            resMat[[2]] = buildMat(res2)
-        }
-        if(file3!=FALSE){
-            r3 = readTable(file3)
-            res3 = getFromErrFile(r3,res3,maxErr,nInd3,logLike)
-            resMat[[3]] = buildMat(res3)
-        }
-        if(file4!=FALSE){
-            r4 = readTable(file4)
-            res4 = getFromErrFile(r4,res4,maxErr,nInd4,logLike)
-            resMat[[4]] = buildMat(res4)
-        }    
-     
-        errMat = getErrMat(resMat)
+        bigMat = list()
+        bigMat[[1]] = resMat[[ id[1] ]]
+        bigMat[[2]] = resMat[[ id[2] ]]
+        bigMat[[3]] = resMat[[ id[3] ]]
+        bigMat[[4]] = resMat[[ id[4] ]]
+      
+        errMat = getErrMat(bigMat)
         
         finalInv = buildInv(errMat)
         
         result1 = getJackKnife(outData,finalInv,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
 
-        fileOut = paste(out,combNames[idComb],".ErrorCorr",".txt",sep="")
         if(idComb==1){
-            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
-            str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s\n",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,nm[1],nm[2],nm[3],nm[4])
-            cat(str2,file=fileOut,sep="\n")} else{
-                str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,nm[1],nm[2],nm[3],nm[4])
-                cat(str2,file=fileOut,sep="\n",append=TRUE)
+            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
+            str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,result1$numBlock,nm[1],nm[2],nm[3],nm[4])
+            cat(str,str2,file=FILEERROR,sep="\n")} else{
+                                                     str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,result1$numBlock,nm[1],nm[2],nm[3],nm[4])
+                                                     cat(str2,file=FILEERROR,sep="\n",append=TRUE)
             }
 
         result3 = getJackKnife(outData,finalInv,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
 
-        fileOut = paste(out, combNames[ idComb ],".TransRem.ErrorCorr",".txt",sep="")
+        #fileOut = paste(out, combNames[ idComb ],".TransRem.ErrorCorr",".txt",sep="")
         if(idComb==1){
-            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
-            str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",result3$thetaN,result3$thetaJack,result3$varJack,result3$Z,result3$pv,result3$nABBA,result3$nBABA,nm[1],nm[2],nm[3],nm[4])
-            cat(str,str2,file=fileOut,sep="\n")} else{
-                str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",result3$thetaN,result3$thetaJack,result3$varJack,result3$Z,result3$pv,result3$nABBA,result3$nBABA,nm[1],nm[2],nm[3],nm[4])
-                cat(str2,file=fileOut,sep="\n",append=TRUE)
+            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
+            str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result3$thetaN,result3$thetaJack,result3$varJack,result3$Z,result3$pv,result3$nABBA,result3$nBABA,result3$numBlock,nm[1],nm[2],nm[3],nm[4])
+            cat(str,str2,file=FILEERRORTRANS,sep="\n")} else{
+                str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result3$thetaN,result3$thetaJack,result3$varJack,result3$Z,result3$pv,result3$nABBA,result3$nBABA,result3$numBlock,nm[1],nm[2],nm[3],nm[4])
+                cat(str2,file=FILEERRORTRANS,sep="\n",append=TRUE)
             }
     }
 
@@ -445,9 +466,9 @@ for(idComb in 1:numComb){
                 if(FROM!=TO){
                     for(id in 1:3){
                         for(er in 1:LErr){
-                            fileOut = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
-                            fileOut = paste(dirName,"/",fileOut,sep="")
-                            newMat = resMat
+                            fileOut1 = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
+                            fileOut1 = paste(dirName,"/",fileOut,sep="")
+                            newMat = bigMat
                             newMat[[id]][FROM,TO] = newMat[[id]][FROM,TO] + addErr[er]
                             newMat[[id]][FROM,FROM] = newMat[[id]][FROM,FROM] - addErr[er]
                             newErrMat = getErrMat(newMat)
@@ -456,7 +477,7 @@ for(idComb in 1:numComb){
                             
                             str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
                             str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,nm[1],nm[2],nm[3],nm[4])
-                            cat(str,str2,file=fileOut,sep="\n")
+                            cat(str,str2,file=fileOut1,sep="\n")
                             setTxtProgressBar(pb, idBar,label="ciao"); idBar=idBar+1;
                             gc()
                         }
@@ -473,9 +494,9 @@ for(idComb in 1:numComb){
                 if(FROM!=TO){
                     for(id in 1:3){
                         for(er in 1:LErr){
-                            fileOut = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
-                            fileOut = paste(dirName,"/",fileOut,sep="")
-                            newMat = resMat
+                            fileOut2 = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
+                            fileOut2 = paste(dirName,"/",fileOut,sep="")
+                            newMat = bigMat
                             newMat[[id]][FROM,TO] = newMat[[id]][FROM,TO] + addErr[er]
                             newMat[[id]][FROM,FROM] = newMat[[id]][FROM,FROM] - addErr[er]
                             newErrMat = getErrMat(newMat)
@@ -483,7 +504,7 @@ for(idComb in 1:numComb){
                             result = getJackKnife(outData,newInv,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
                             str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
                             str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,nm[1],nm[2],nm[3],nm[4])
-                            cat(str,str2,file=fileOut,sep="\n")
+                            cat(str,str2,file=fileOut2,sep="\n")
                             setTxtProgressBar(pb, idBar,label="ciao"); idBar=idBar+1;
                             gc()
                         }
@@ -534,14 +555,52 @@ for(idComb in 1:numComb){
         }        
 
 
-        ###bar plots of errors
+
+#REMOVE FILES
+        for(FROM in addFrom){
+            for(TO in addTo){
+                if(FROM!=TO){
+                    for(id in 1:3){
+                        for(er in 1:LErr){
+                            fileOut1 = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
+                            fileOut1 = paste(dirName,"/",fileOut,sep="")
+                            file.remove(fileOut1)
+                        }
+                    }
+                }  
+            }
+        }
+        close(pb); idBar=0;
+        
+        for(FROM in addFrom){
+            for(TO in addTo){
+                if(FROM!=TO){
+                    for(id in 1:3){
+                        for(er in 1:LErr){
+                            fileOut2 = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
+                            fileOut2 = paste(dirName,"/",fileOut,sep="")
+                            file.remove(fileOut2)
+                        }
+                    }
+                }
+            }     
+        }
+
+
+
+
+
+        
+
+###bar plots of errors
+        if(FALSE){
         if(erCor){
             fileOut = paste(dirName,"/barPlotErrors",combNames[ idComb ],".pdf",sep="")
             pdf(fileOut)
-            err1=as.vector(resMat[[1]])[-c(1,6,11,16)]
-            err2=as.vector(resMat[[2]])[-c(1,6,11,16)]
-            err3=as.vector(resMat[[3]])[-c(1,6,11,16)]
-            err4=as.vector(resMat[[4]])[-c(1,6,11,16)]
+            err1=as.vector(bigMat[[1]])[-c(1,6,11,16)]
+            err2=as.vector(bigMat[[2]])[-c(1,6,11,16)]
+            err3=as.vector(bigMat[[3]])[-c(1,6,11,16)]
+            err4=as.vector(bigMat[[4]])[-c(1,6,11,16)]
 
             tickz=max(err1,err2,err3,err4)
             xLabel=c("A-->C","A-->G","A-->T","C-->A","C-->G","C-->T","G-->A","G-->C","G-->T","T-->A","T-->C","T-->G")
@@ -567,42 +626,47 @@ for(idComb in 1:numComb){
 
             dev.off()
 
-#####Print estimated error rates on a file
+                                        #Print estimated error rates on a file
 
             fileOut = paste(dirName,"/errorRates",combNames[ idComb ],".txt",sep="")
             cat(err1,"\n",err2,"\n",err3,"\n",err4,file=fileOut)
         }
-    }#maybe should move this above?
+        }
 
+
+        
+    }
+
+    
 
 ### D WITH NO ERROR CORRECTION AND USING ALL TRANSITIONS
         message("Running Observed D\n",appendLF=FALSE)
         flush.console()
-        fileOut=paste(out,combNames[ idComb ],".Observed",".txt",sep="",collapse="")
+        #fileOut=paste(out,combNames[ idComb ],".Observed",".txt",sep="",collapse="")
         result5 = getJackKnife(outData,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
     if(idComb==1){
-        str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
-        str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv,result5$nABBA,result5$nBABA,nm[1],nm[2],nm[3],nm[4])
-        cat(str,str2,file=fileOut,sep="\n")
+        str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
+        str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv,result5$nABBA,result5$nBABA,result5$numBlock,nm[1],nm[2],nm[3],nm[4])
+        cat(str,str2,file=FILEOBS,sep="\n")
     }    else{
-        str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv,result5$nABBA,result5$nBABA,nm[1],nm[2],nm[3],nm[4])
-        cat(str2,file=fileOut,sep="\n",append=TRUE)
+        str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv,result5$nABBA,result5$nBABA,result5$numBlock,nm[1],nm[2],nm[3],nm[4])
+        cat(str2,file=FILEOBS,sep="\n",append=TRUE)
     }
 
 ### D WITH NO ERROR CORRECTION AND REMOVING ANCIENT TRANSITIONS
         message("Running Transition Removal\n",appendLF=FALSE)
         flush.console()
 
-        fileOut=paste(out,combNames[ idComb ],".TransRem",".txt",sep="",collapse="")
+        #fileOut=paste(out,combNames[ idComb ],".TransRem",".txt",sep="",collapse="")
 
         result6 = getJackKnife(outData,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
         if(idComb==1){
-            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
-            str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv,result6$nABBA,result6$nBABA,nm[1],nm[2],nm[3],nm[4])
-            cat(str,str2,file=fileOut,sep="\n")
+            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
+            str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv,result6$nABBA,result6$nBABA,result6$numBlock,nm[1],nm[2],nm[3],nm[4])
+            cat(str,str2,file=FILETRANS,sep="\n")
             }  else{
-                str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv,result6$nABBA,result6$nBABA,nm[1],nm[2],nm[3],nm[4])
-                cat(str,str2,file=fileOut,sep="\n",append=TRUE)
+                str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv,result6$nABBA,result6$nBABA,result6$numBlock,nm[1],nm[2],nm[3],nm[4])
+                cat(str2,file=FILETRANS,sep="\n",append=TRUE)
             }
 
 ### output fancy table
