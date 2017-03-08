@@ -8,7 +8,7 @@ private:
   int blockSize;
   double *DENprint;
   double *NUMprint;
-  int NSITEprint;
+  double *NSITEprint;
   int Eprint;
   char *ancName;
   double **COMBprint;

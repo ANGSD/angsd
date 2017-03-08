@@ -12,7 +12,7 @@ typedef struct {
   double **DEN;
   double ***COMB;
   int *BLOCKNUM;
-  int *NSITE;
+  int **NSITE;
   int NUMBLOCK;
 }funkyAbbababa2;
 
@@ -83,7 +83,7 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   enhance = 0;
   maxDepth=1000;
   useLast = 0;
-  NSITEprint=0;
+
  
   // you are starting before chromosome 0
   currentChr=-1;
@@ -216,9 +216,11 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   //numerator and denominator for printing
   NUMprint = new double[numComb];
   DENprint = new double[numComb];
+  NSITEprint = new double[numComb];
   for(int m=0; m<numComb; m++){
     NUMprint[m]=0;
     DENprint[m]=0;
+    NSITEprint[m]=0;
   }
 
   
@@ -297,7 +299,7 @@ void abcDstat2::printAndEmpty(int blockAddress,int theChr){
     denCont += DENprint[m];
   if(denCont != 0){
     for(int m=0; m<numComb; m++){
-      fprintf(outfile,"%s\t%d\t%d\t%f\t%f\t%d",header->target_name[theChr],blockAddress-1,blockAddress+blockSize-2,NUMprint[m],DENprint[m],NSITEprint);
+      fprintf(outfile,"%s\t%d\t%d\t%f\t%f\t%f",header->target_name[theChr],blockAddress-1,blockAddress+blockSize-2,NUMprint[m],DENprint[m],NSITEprint[m]);
       for(int i=0;i<256;i++)
 	fprintf(outfile,"\t%f",COMBprint[m][i]);
       fprintf(outfile,"\n");
@@ -307,9 +309,8 @@ void abcDstat2::printAndEmpty(int blockAddress,int theChr){
   for(int m=0; m<numComb; m++){
     DENprint[m]=0;
     NUMprint[m]=0;
+    NSITEprint[m]=0;
   }
-
-  NSITEprint=0;
 
   for(int m=0; m<numComb; m++)
     for(int i=0; i<256; i++)
@@ -330,6 +331,7 @@ void abcDstat2::print(funkyPars *pars){
     for(int m=0; m<numComb; m++){
       DENprint[m] = 0; //    
       NUMprint[m] = 0; //numerator for current block
+      NSITEprint[m] = 0;
     }
     for(int m=0; m<numComb; m++){
       for(int i=0;i<256;i++)
@@ -363,11 +365,11 @@ void abcDstat2::print(funkyPars *pars){
 	COMBprint[c][pat] += abbababaStruct->COMB[c][b][pat];
 
     for(int c=0;c<numComb;c++){
-      NUMprint[c] = abbababaStruct->NUM[c][b];
-      DENprint[c] = abbababaStruct->DEN[c][b];
+      NUMprint[c] += abbababaStruct->NUM[c][b];
+      DENprint[c] += abbababaStruct->DEN[c][b];
+      NSITEprint[c] += abbababaStruct->NSITE[c][b];
     }
 
-    NSITEprint += abbababaStruct->NSITE[b];
 
   }//---end of for(int s=0;s<pars->numSites;s++)
   
@@ -434,10 +436,13 @@ void abcDstat2::run(funkyPars *pars){
   for(int i=0; i<totBlocks; i++)
     BLOCKNUM[i] = 0;
   
-  int *NSITE;
-  NSITE = new int[totBlocks];
-  for(int i=0; i<totBlocks; i++)
-    NSITE[i] = 0;
+  int **NSITE;
+  NSITE = new int*[numComb];
+  for(int m=0; m<numComb; m++){
+    NSITE[m] = new int[totBlocks];
+    for(int i=0; i<totBlocks; i++)
+      NSITE[m][i] = 0;
+  }
   
 
   //normalizing constants
@@ -505,8 +510,8 @@ void abcDstat2::run(funkyPars *pars){
    }
       for(int i=0;i<pars->nInd;i++){
 	//read the data
-	//if(pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3] == 0) //if no data at site s
-	//continue;
+	if(pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3] == 0)
+	continue;//no data
 	if(pars->counts[s][i*4]<maxDepth && pars->counts[s][i*4+1]<maxDepth && pars->counts[s][i*4+2]<maxDepth && pars->counts[s][i*4+3]<maxDepth){
 	  
 	  if(sample==1){
@@ -531,9 +536,12 @@ void abcDstat2::run(funkyPars *pars){
 	}
       }
       
-      if(ancName != NULL && useLast == 0)
+      if(ancName != NULL && useLast == 0){
 	if(pars->anc[s] < 4)
 	  ABCD[pars->nInd * 4 + pars->anc[s]] = 1;
+	else
+	  continue;
+      }
       
       //------do all the populationss------
       double w[nIndFasta];//weights
@@ -567,6 +575,7 @@ void abcDstat2::run(funkyPars *pars){
 	for(int al=0;al<4;al++)
 	  ABCD2[p*4+al] /= somma;}     
       }
+      
       /*-ENDENDEND--count WEIGHTED normalized allele combinations -----------------------*/
       /*-------------------------------------------------------------------------------- */
 
@@ -588,32 +597,6 @@ void abcDstat2::run(funkyPars *pars){
       /*END-'-enhance' option for analyzing only non-polymorphic sites of the outgroup---*/ 
       /*-------------------------------------------------------------------------------- */
 
-      
-      //SPEEDCHECK
-      /*
-      for(int m=0; m<numComb; m++){
-
-	double abba=0;
-	double baba=0;
-    
-	for(int c=0;c<256;c++){
-	
-	  int i=combIdx[c][0]; int j=combIdx[c][1]; int k=combIdx[c][2]; int l=combIdx[c][3];
-
-	  //if(combIdx[c][4]==1)
-	  //abba += ABCD2[ SIZEABCD[m][0] + i] * ABCD2[ SIZEABCD[m][1] + j] * ABCD2[ SIZEABCD[m][2] + k] * ABCD2[ (numPop-1)*4 + l];
-	  //if(combIdx[c][5]==1)
-	  //baba += ABCD2[ SIZEABCD[m][0] + i] * ABCD2[ SIZEABCD[m][1] + j] * ABCD2[ SIZEABCD[m][2] + k] * ABCD2[ (numPop-1)*4 + l];
-
-	  COMB[m][blockIdx][c] += ABCD2[ SIZEABCD[m][0] + i] * ABCD2[ SIZEABCD[m][1] + j] * ABCD2[ SIZEABCD[m][2] + k] * ABCD2[ (numPop-1)*4 + l];
-
-	}
-
-	//NUM[m][blockIdx] += abba - baba;
-	//DEN[m][blockIdx] += abba + baba;
-      }
-      */
-
       for(int m=0; m<numComb; m++){
 
 	double abba=0;
@@ -624,6 +607,7 @@ void abcDstat2::run(funkyPars *pars){
 	double h4=0;
 	double h1234=0;
 	int pattern=0;
+	double siteCont = 0;
       
 	for(int i=0;i<4;i++){
 	  h1 = ABCD2[ SIZEABCD[m][0] + i];
@@ -646,7 +630,7 @@ void abcDstat2::run(funkyPars *pars){
 		  h1234 = h123 * h4;
 		
 		  COMB[m][blockIdx][pattern] += h1234;
-		
+		  siteCont += h1234;
 		  if(i==l && j==k && i!=j)
 		    abba += h1234;
 		
@@ -661,9 +645,10 @@ void abcDstat2::run(funkyPars *pars){
 	}
 	NUM[m][blockIdx] += abba - baba;
 	DEN[m][blockIdx] += abba + baba;
+	NSITE[m][blockIdx] += siteCont;
       }
       
-      NSITE[blockIdx]++;
+
     
     }//---end for(int s=0;s<pars->numSites;s++)
 

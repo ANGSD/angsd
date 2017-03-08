@@ -290,7 +290,7 @@ outDataTotal <- as.matrix(fread(input=angsdFile,sep="\t",showProgress=TRUE,heade
 erCor= (errFile != FALSE)
 
 if(sizeFile==FALSE && nameFile==FALSE){
-	cat("Error: Define at least one between nameFile and sizeFile!")
+	cat("Error: Define at least one between nameFile and sizeFile!\n")
 	q("no")
 }	
 
@@ -393,6 +393,52 @@ if(erCor==1){
     }
 }
 
+if(FALSE){
+cat("--- Building tree error matrices ---\n ")
+ptm <- proc.time() #start timer
+if(erCor==1){
+    solveMat = list()
+    bigMat = list()
+    cont = 1
+    pb <- txtProgressBar(min=1,max=numComb,initial = 0,style = 3,char=":)", width=20)
+    for(i in 1:(numPop-1)){
+        bigMat[[1]] = resMat[[ i ]]
+        for(j in 1:(numPop-1)){
+            bigMat[[2]] = resMat[[ j ]]
+            for(k in 1:(numPop-1)){
+                bigMat[[3]] = resMat[[ k ]]
+                if(j>i && j!=k && i!=k){
+                    bigMat[[4]] = resMat[[ numPop ]]
+                    errMat = getErrMat(bigMat)
+                    solveMat[[cont]] = buildInv(errMat)
+                    setTxtProgressBar(pb, cont,label="ciaoo")
+                    cont = cont+1
+                }
+            }
+        }
+    }
+}
+}
+
+cat("--- Building tree error matrices ---\n ")
+ptm <- proc.time() #start timer
+if(erCor==1){
+    solveMat = list()
+    bigMat = list()
+    pb <- txtProgressBar(min=1,max=numComb,initial = 0,style = 3,char=":)", width=20)
+    bigMat = list()
+    bigMat[[4]] = resMat[[ numPop ]]
+    for(idComb in 1:numComb){
+        id = combs[idComb,]
+        bigMat[[1]] = resMat[[ id[1] ]]
+        bigMat[[2]] = resMat[[ id[2] ]]
+        bigMat[[3]] = resMat[[ id[3] ]]
+        solveMat[[idComb]] =  buildInv( getErrMat(bigMat) )
+        setTxtProgressBar(pb,idComb,label="ciaooo")
+    }
+}
+cat("--- Time Spent ",(proc.time() - ptm)[3]," sec \n")
+finalptm = (proc.time() - ptm)[3]
 
 ptm <- proc.time() #start timer
 FILEOBS<-paste(out,".Observed",".txt",sep="")
@@ -413,17 +459,17 @@ for(idComb in 1:numComb){
             
     if(erCor==1){#ERROR CORRECTED D
 
-        bigMat = list()
-        bigMat[[1]] = resMat[[ id[1] ]]
-        bigMat[[2]] = resMat[[ id[2] ]]
-        bigMat[[3]] = resMat[[ id[3] ]]
-        bigMat[[4]] = resMat[[ id[4] ]]
+        #bigMat = list()
+        #bigMat[[1]] = resMat[[ id[1] ]]
+        #bigMat[[2]] = resMat[[ id[2] ]]
+        #bigMat[[3]] = resMat[[ id[3] ]]
+        #bigMat[[4]] = resMat[[ id[4] ]]
       
-        errMat = getErrMat(bigMat)
+        #errMat = getErrMat(bigMat)
         
-        finalInv = buildInv(errMat)
+        #finalInv = buildInv(errMat)
         
-        result1 = getJackKnife(outData,finalInv,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
+        result1 = getJackKnife(outData,solveMat[[idComb]],ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
 
         if(idComb==1){
             str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
@@ -433,7 +479,7 @@ for(idComb in 1:numComb){
                                                      cat(str2,file=FILEERROR,sep="\n",append=TRUE)
             }
 
-        result3 = getJackKnife(outData,finalInv,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
+        result3 = getJackKnife(outData,solveMat[[idComb]],ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
 
         #fileOut = paste(out, combNames[ idComb ],".TransRem.ErrorCorr",".txt",sep="")
         if(idComb==1){
@@ -700,6 +746,7 @@ for(idComb in 1:numComb){
         cat(str7)
         cat("---------------------------------------------------------------------------------\n")}
 }
+cat("--- Total time ",(proc.time() - ptm)[3] + finalptm," sec \n"    )
 if(addErrors){
     messageEnd = sprintf("plots with effect of removed errors and D statistic files for all the removed errors are in folder %s\n",dirName)
     cat(messageEnd)
