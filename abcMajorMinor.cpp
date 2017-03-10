@@ -84,7 +84,7 @@ void abcMajorMinor::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> You need to supply -sites for -domajorminor 3 to work. These has to have either 4 og 6 columns\n");
     exit(0);
   }
-  
+  free(sites);
   if(doMajorMinor==4&&ref==NULL){
     fprintf(stderr,"\t-> Must supply reference (-ref) when -doMajorMinor 4\n");
     exit(0);
