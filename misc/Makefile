@@ -68,7 +68,7 @@ smartCount:	smartCount.c
 	$(CC) $(FLAGS) smartCount.c -I$(HTS_INCDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTS_LIBDIR)
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -lz -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lpthread
+	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
 
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
@@ -81,10 +81,10 @@ main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
 ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o
-	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o fpsmc.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
+	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o fpsmc.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lpthread
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
 else
 safreader.o: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp 
