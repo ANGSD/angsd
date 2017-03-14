@@ -84,8 +84,12 @@ public:
   void ComputeFBProbs(std::vector<Site> &data,std::vector<wins> &windows){
     fprintf(stderr,"[%s] start\n",__FUNCTION__ );
     //we first set the initial fwprobs to uniform
-    for(int i=0;i<timePoints.size();i++)
-      fw[i][0] = 1.0/timePoints.size();
+    for(int i=timePoints.size();i>0;i++){
+      double tmp =0;
+      for(int t=timePoints.size()-1;t>=0;t--)
+	tmp += 1;//epsize[t];
+      fw[i][i] = exp(-tmp)*(1-exp(epSize[i]));
+    }
 
     //we now loop over windows.
     //v=0 is above and is the initial distribution, we therefore plug in at v+1
@@ -256,7 +260,6 @@ double addProtect2(double a,double b){
   double maxVal;// = std::max(a,b));
   if(a>b)
     maxVal=a;
-
   else
     maxVal=b;
   double sumVal = exp(a-maxVal)+exp(b-maxVal);

@@ -100,27 +100,34 @@ void print(int argc,char **argv){
   destroy_args(pars);
 }
 
+int makeold(int argc,char **argv){
+
+  return 0;
+}
 
 int main(int argc,char **argv){
   //start of signal handling
   struct sigaction sa;
   sigemptyset (&sa.sa_mask);
-  sa.sa_flags = 0;
-  sa.sa_handler = handler;
+  sa.sa_flags =  0;
+  sa.sa_handl er = handler;
   sigaction(SIGPIPE, &sa, 0);
   sigaction(SIGINT, &sa, 0);  
 
   if(argc==1){
     fprintf(stderr, "\t-> ---./ngsPSMC\n");
-    fprintf(stderr,"\t-> ./ngsPSMC [print print_header] afile.psmc.idx \n");
+    fprintf(stderr,"\t-> ./ngsPSMC [print print_header makeold] afile.psmc.idx \n");
     return 0;
   }
+
   ++argv;
   --argc;
   if(!strcasecmp(*argv,"print"))
     print(--argc,++argv);
   else if(!strcasecmp(*argv,"print_header"))
     print_header(--argc,++argv);
+  else if(!strcasecmp(*argv,"makeold"))
+    makeold(--argc,++argv);
   else {
     if(isatty(fileno(stdout))){
       fprintf(stderr,"\t-> You are printing results to the terminal consider dumping into a file\n");
