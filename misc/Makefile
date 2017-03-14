@@ -65,7 +65,7 @@ header.o: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp -I $(HTS_INCDIR)
 
 smartCount:	smartCount.c  
-	$(CC) $(FLAGS) smartCount.c -I$(HTS_INCDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTS_LIBDIR)
+	$(CC) $(FLAGS) smartCount.c -I$(HTS_INCDIR)/htslib -o smartCount -std=gnu99 $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
 
 thetaStat:	thetaStat.cpp stats.cpp 
 	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
@@ -107,7 +107,7 @@ header.o: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp 
 
 smartCount:	smartCount.c  
-	$(CC) $(FLAGS) smartCount.c -lz -o smartCount -std=gnu99 -lpthread -lhts
+	$(CC) $(FLAGS) smartCount.c -lz -o smartCount -std=gnu99 -lpthread -lhts  
 
 thetaStat:	thetaStat.cpp stats.cpp 
 	$(CXX) $(FLAGS) thetaStat.cpp  -lz -o thetaStat -lpthread -lhts -lz
