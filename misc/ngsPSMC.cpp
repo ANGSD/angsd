@@ -72,6 +72,7 @@ int print_header(int argc,char **argv){
 }
 
 void print(int argc,char **argv){
+  
   if(argc<1){
     fprintf(stderr,"\t-> Must supply afile.saf.idx files \n");
     fprintf(stderr,"\t-> Examples \n");
@@ -84,7 +85,7 @@ void print(int argc,char **argv){
   writepsmc_header(stderr,pars->perc);
   
   for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
-
+    
     if(pars->chooseChr!=NULL)
       it = iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop);
     else
@@ -101,6 +102,13 @@ void print(int argc,char **argv){
 }
 
 int makeold(int argc,char **argv){
+  if(argc<1){
+    fprintf(stderr,"\t-> Must supply afile.saf.idx files \n");
+    fprintf(stderr,"\t-> Examples \n");
+    fprintf(stderr,"\t-> ./ngsPSMC print pop1.saf.idx \n");
+    fprintf(stderr,"\t-> ./ngsPSMC print pop1.saf.idx -r chr1:10000000-12000000\n");
+    return 0; 
+  }
 
   return 0;
 }
@@ -110,7 +118,7 @@ int main(int argc,char **argv){
   struct sigaction sa;
   sigemptyset (&sa.sa_mask);
   sa.sa_flags =  0;
-  sa.sa_handl er = handler;
+  sa.sa_handler = handler;
   sigaction(SIGPIPE, &sa, 0);
   sigaction(SIGINT, &sa, 0);  
 
