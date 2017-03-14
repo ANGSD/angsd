@@ -48,6 +48,7 @@ namespace angsd {
   double addProtect3(double a,double b, double c);
   double addProtectN(double a[],int N);
   Matrix<double> getMatrix(const char *name,int doBinary,int lens);
+  Matrix<int> getMatrixInt(const char *name,int lens);
   int fexists(const char* str);
   double sigm(double x);
   double **get3likes(funkyPars *pars);
@@ -58,6 +59,7 @@ namespace angsd {
   void swapDouble (double& first, double& second);
   int matinv( double x[], int n, int m, double space[]);
   void deleteMatrix(Matrix<double> mat);
+  void deleteMatrixInt(Matrix<int> mat);
   void printMatrix(Matrix<double> mat,FILE *file);
   void logrescale(double *ary,int len);
   int svd_inverse(double mat[],int xLen, int yLen);

@@ -1,9 +1,15 @@
 
 
+typedef struct {
+  int *blockPos;
+  int nBlocks;
+  int ***ABBABABAblocks;
+
+}funkyAbbababa;
 
 
 
-//hello - delete me
+
 class abcDstat:public abc{
 private:
   kstring_t bufstr;
@@ -16,7 +22,8 @@ private:
   char *ancName;
   int *ABBA;
   int *BABA;
-  
+  int printEmpty;
+  int seed;
 public:
   int doAbbababa;
   FILE *outfile;
@@ -36,4 +43,5 @@ public:
   void calcMatCat();
   void printAndEmpty();
   void getBlockNum(int pos);
+  int getNumBlocks(funkyPars *pars);
 };

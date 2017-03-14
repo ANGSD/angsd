@@ -167,13 +167,12 @@ void abcFreq::getOptions(argStruct *arguments){
 	SNP_pval = chisq1->invcdf(1-SNP_pval);
       if(abs(doMaf) ==1)
 	SNP_pval = chisq1->invcdf(1-SNP_pval);
-      if(rmTriallelic)
-	SNP_pval_tri = chisq2->invcdf(1-rmTriallelic);
     }
     doSNP =1 ;
     fprintf(stderr,"\t-> SNP-filter using a pvalue: %e correspond to %f likelihood units\n",pre,SNP_pval);
   }
-
+  if(rmTriallelic)
+    SNP_pval_tri = chisq2->invcdf(1-rmTriallelic);
   refName = angsd::getArg("-ref",refName,arguments);
   ancName = angsd::getArg("-anc",ancName,arguments);
 

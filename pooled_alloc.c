@@ -81,7 +81,7 @@ static tpool_t *new_pool(tpool_alloc_t *p) {
     p->npools++;
 
     if(!(p->npools % 10)){
-      fprintf(stderr,"\n\t-> Allocated ~ %lu Megabytes to the nodepool\n",p->npools);
+      fprintf(stderr,"\n\t-> Allocated ~ %lu million nodes to the nodepool, this is not an estimate of the memory usage\n",p->npools);
     }
 
     return pool;

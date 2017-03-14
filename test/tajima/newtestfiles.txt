@@ -1,0 +1,174 @@
+From version 0.917 i updated to binary theta files. This files describe and compare the two formats.
+
+
+
+
+
+
+
+
+[fvr124@zl08368 angsd]$ make clean
+HTSSRC not defined, assuming systemwide installation -lhts
+rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
+rm  -f *.o *.d angsd angsd.static version.h *~
+^[[Amake -C misc/ clean
+HTSSRC not defined, assuming systemwide installation -lhts
+make[1]: Entering directory `/home/fvr124/angsd/misc'
+rm  -f *.o supersim emOptim emOptim2 msToGlf thetaStat smartCount realSFS printIcounts contamination spitgl NGSadmix splitgl *~
+make[1]: Leaving directory `/home/fvr124/angsd/misc'
+[fvr124@zl08368 angsd]$ make HTSSRC=../hts &>/dev/null
+[fvr124@zl08368 angsd]$ make test &>/dev/null
+[fvr124@zl08368 angsd]$ rm test/tajima/outputOld/
+rm: cannot remove ‘test/tajima/outputOld/’: Is a directory
+[fvr124@zl08368 angsd]$ rm -rf test/tajima/outputOld/
+[fvr124@zl08368 angsd]$ mv test/tajima/output test/tajima/outputOld
+[fvr124@zl08368 angsd]$ git checkout safglAsLog
+Switched to branch 'safglAsLog'
+[fvr124@zl08368 angsd]$ make clean &>/dev/null;make HTSSRC=../hts &>/dev/null
+[fvr124@zl08368 angsd]$ make test &>/dev/null
+[fvr124@zl08368 angsd]$ rm -rf test/tajima/outputNew/
+[fvr124@zl08368 angsd]$ mv test/tajima/output test/tajima/outputNew
+[fvr124@zl08368 angsd]$ git diff
+[fvr124@zl08368 angsd]$ grep tts abcSaf.cpp 
+      int tts=0;
+	tts += prior[i];
+	prior[i] = log(prior[i]/tts);
+[fvr124@zl08368 angsd]$ emacs -nw abcSaf.cpp 
+[fvr124@zl08368 angsd]$ git commit -a -m "changed int to double to avoid int overfload"
+[safglAsLog c2fe5d9] changed int to double to avoid int overfload
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[fvr124@zl08368 angsd]$ make HTSSRC=../hts &>/dev/null
+[fvr124@zl08368 angsd]$ make test &>/dev/null
+[fvr124@zl08368 angsd]$ rm -rf test/tajima/outputNew/
+[fvr124@zl08368 angsd]$ mv test/tajima/output test/tajima/outputNew
+[fvr124@zl08368 angsd]$ cd test
+
+
+[fvr124@zl08368 test]$ ../misc/thetaStat print tajima/outputNew/norm.thetas.idx >/tmp/norm.thetas.new;../misc/thetaStat print tajima/outputNew/fold.thetas.idx >/tmp/fold.thetas.new
+Assuming binfile:tajima/outputNew/norm.thetas.gz and indexfile:tajima/outputNew/norm.thetas.idx
+		Information from index file:
+		0	1	264256	8	40
+pc.chr=1 pc.nSites=264256 pc.nChr=40 firstpos=1 lastpos=264256
+Assuming binfile:tajima/outputNew/fold.thetas.gz and indexfile:tajima/outputNew/fold.thetas.idx
+		Information from index file:
+		0	1	264256	8	20
+pc.chr=1 pc.nSites=264256 pc.nChr=20 firstpos=1 lastpos=264256
+
+
+b<-read.table("/tmp/norm.thetas.new")
+a<-read.table("tajima/outputOld/norm.thetas.gz")
+table(a[,1:2]!=b[,1:2])
+ FALSE 
+528512 
+ a<-exp(a[,-c(1:2)])
+ b<-exp(b[,-c(1:2)])
+
+
+
+range(abs(a-b))
+[1] 0.000000e+00 1.949447e-06
+colSums(a);colSums(b)
+      V3       V4       V5       V6       V7 
+62119.94 55291.98 69243.38 98842.39 77067.18 
+      V3       V4       V5       V6       V7 
+62119.94 55291.98 69243.38 98842.39 77067.18 
+
+
+
+b<-read.table("/tmp/fold.thetas.new")
+a<-read.table("tajima/outputOld/fold.thetas.gz")
+table(a[,1:2]!=b[,1:2])
+ FALSE 
+528512 
+
+
+ a<-exp(a[,-c(1:2)])
+ b<-exp(b[,-c(1:2)])
+
+ range(abs(a-b))
+>  range(abs(a-b))
+[1] 0.000000e+00 5.127061e-07
+
+
+ colSums(b);colSums(a)
+
+
+
+# full comparison:
+git checkout safglAsLog; make clean;make HTSSRC=../hts
+seq 22 >rf;ls ../smallBam/*.bam >list
+./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out new.forprior
+./misc/realSFS  new.forprior.saf.idx  -seed 8 >new.forprior.ml
+./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out new -dothetas 1 -pest new.forprior.ml
+./misc/thetaStat print new.thetas.idx >new.thetas.txt
+
+git checkout master; make clean;make HTSSRC=../hts
+./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out old.forprior
+./misc/realSFS  old.forprior.saf.idx -seed 8  >old.forprior.ml
+./angsd -b list -rf rf -anc ../hg19ancNoChr.fa.gz -gl 1 -dosaf 1 -out old -dothetas 1 -pest old.forprior.ml
+
+
+cmp new.forprior.ml old.forprior.ml
+
+> a<-read.table("old.)
+old.arg                  old.forprior.ml          old.forprior.saf.idx     old.thetas.gz            
+old.forprior.arg         old.forprior.saf.gz      old.forprior.saf.pos.gz  
+> a<-read.table("old.thetas.gz")
+> b<-read.table("new.thetas.txt")
+
+table(a[,1:2]!=b[,1:2])
+  FALSE 
+3334150 
+
+
+ a<-exp(a[,-c(1:2)])
+ b<-exp(b[,-c(1:2)])
+
+ range(abs(a-b))
+
+[1] 0.000000e+00 1.837356e-06
+
+
+ colSums(b);colSums(a)
+
+       V3        V4        V5        V6        V7 
+1154.2414 1478.2943  657.5712 1852.3295 1665.3119 
+       V3        V4        V5        V6        V7 
+1154.2414 1478.2943  657.5712 1852.3295 1665.3119 
+
+
+
+[fvr124@zl08368 angsd]$ cat test/tajima/outputOld/norm.thetas.gz.pestPG 
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
+(0,264255)(1,264256)(0,264256)	1	132128	62119.700924	55291.469137	69243.382862	98841.971147	77066.720164	-0.414251	-0.423020	-0.296850	-0.562553	0.195683	264255
+[fvr124@zl08368 angsd]$ cat test/tajima/outputNew/norm.thetas.idx.pestPG 
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
+(0,264255)(1,264256)(0,264256)	1	132128	62119.686074	55291.469147	69243.382919	98841.971148	77066.720148	-0.414250	-0.423020	-0.296850	-0.562553	0.195683	264255
+[fvr124@zl08368 angsd]$ 
+
+[fvr124@zl08368 angsd]$ cat test/tajima/outputOld/fold.thetas.gz.pestPG 
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
+(0,264255)(1,264256)(0,264256)	1	132128	62121.313815	55291.849810	0.000000	0.000000	0.000000	-0.414315	1.676397	2.588579	0.714201	-0.813258	264255
+[fvr124@zl08368 angsd]$ cat test/tajima/outputNew/fold.thetas.idx.pestPG 
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
+(0,264255)(1,264256)(0,264256)	1	132128	62121.299219	55291.849749	0.000000	0.000000	0.000000	-0.461508	1.632640	2.294013	0.888461	-1.098844	264255
+[fvr124@zl08368 angsd]$ 
+
+
+Difference in pestPG is explained by the -nChr set to 40 instead of 20 in the old fold:
+
+
+[fvr124@zl08368 angsd]$ ./misc/thetaStat do_stat test/tajima/outputNew/fold.thetas.idx -nChr 40
+	Assuming binfile:test/tajima/outputNew/fold.thetas.gz and indexfile:test/tajima/outputNew/fold.thetas.idx
+		Information from index file:
+		0	1	264256	8	20
+	 -r=(null) outnames=(null) step: 0 win: 0
+	Winsize equals zero or step size equals zero. Will use entire chromosome as window
+	pc.chr=1 pc.nSites=264256 firstpos=1 lastpos=264256
+	 nChr:40
+	Dumping file: "test/tajima/outputNew/fold.thetas.idx.pestPG"
+[fvr124@zl08368 angsd]$ cat test/tajima/outputNew/fold.thetas.idx.pestPG
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)	Chr	WinCenter	tW	tP	tF	tH	tL	Tajima	fuf	fud	fayh	zeng	nSites
+(0,264255)(1,264256)(0,264256)	1	132128	62121.299219	55291.849749	0.000000	0.000000	0.000000	-0.414314	1.676398	2.588579	0.714201	-0.813258	264255
+[fvr124@zl08368 angsd]$ 
+

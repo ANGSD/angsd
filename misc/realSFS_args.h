@@ -15,7 +15,7 @@ typedef struct {
   char *fname;
   int onlyOnce;
   int emAccl;
-  char *fstout;
+  char *outname;
   int win;
   int step;
   int type;

@@ -232,6 +232,57 @@ angsd::Matrix<double> angsd::getMatrix(const char *name,int doBinary,int lens){
   return retMat;
 
 }
+angsd::Matrix<int> angsd::getMatrixInt(const char *name,int lens){
+  if(!angsd::fexists(name)){
+    fprintf(stderr,"\t-> Problems opening file: %s\n",name);
+    exit(0);
+  }
+  const char* delims = " \t";
+  std::ifstream pFile(name,std::ios::in);
+  
+  char buffer[lens];
+  std::list<int *> rows;
+  int ncols =0;
+  while(!pFile.eof()){
+    pFile.getline(buffer,lens);
+    if(strlen(buffer)==0)
+      continue;
+    char *tok = strtok(buffer,delims);
+    std::list<int> items;
+    while(tok!=NULL){
+	items.push_back(atoi(tok));
+      tok = strtok(NULL,delims);
+    }
+    //fprintf(stderr,"[%s] ncols:%lu\n",__FUNCTION__,items.size());
+    ncols = items.size();
+    int *drows = new int[items.size()];
+    int i=0;
+    for(std::list<int>::iterator it=items.begin();it!=items.end();it++)
+      drows[i++]  = *it;
+    rows.push_back(drows);
+    
+  }
+  //  fprintf(stderr,"%s nrows:%lu\n",__FUNCTION__,rows.size());
+  int **data = new int*[rows.size()];
+  int i=0;
+  for(std::list<int*>::iterator it=rows.begin();it!=rows.end();it++)
+    data[i++]  = *it;
+  
+  Matrix<int> retMat;
+  retMat.matrix=data;
+  retMat.x = rows.size();
+  retMat.y = ncols;
+  return retMat;
+
+}
+
+void angsd::deleteMatrixInt(Matrix<int> mat){
+  assert(mat.matrix!=NULL);
+  for(int i=0;i<mat.x;i++)
+    delete [] mat.matrix[i];
+  delete[] mat.matrix;
+  mat.matrix =NULL;
+}
 
 void angsd::deleteMatrix(Matrix<double> mat){
   assert(mat.matrix!=NULL);
@@ -240,6 +291,7 @@ void angsd::deleteMatrix(Matrix<double> mat){
   delete[] mat.matrix;
   mat.matrix =NULL;
 }
+
 
 
 void angsd::printMatrix(Matrix<double> mat,FILE *file){

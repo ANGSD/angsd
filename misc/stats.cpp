@@ -77,8 +77,9 @@ double tajd(int nsam, double thetaW, double sumk){
   static double c2 = c2f(nsam, a1, a2, b2);
   static double e1 = e1f(a1, c1);
   static double e2 = e2f(a1, a2, c2);
-
-  return( (sumk - (thetaW))/sqrt((e1*segsites) + ((e2*segsites)*(segsites-1))) ) ;
+  double res =  (sumk - (thetaW))/sqrt((e1*segsites) + ((e2*segsites)*(segsites-1))) ;
+  //  fprintf(stderr,"sumk:%f thetaW:%f e1:%f e2:%f top:%f bot\n",sumk,thetaW,e1,e2,sumk-thetaW);
+  return(res) ;
 }
 
 

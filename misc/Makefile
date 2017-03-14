@@ -68,7 +68,7 @@ smartCount:	smartCount.c
 	$(CC) $(FLAGS) smartCount.c -I$(HTS_INCDIR)/htslib   -lz -o smartCount -std=gnu99 -lpthread $(HTS_LIBDIR)
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -lz -o thetaStat -lpthread $(HTS_LIBDIR)
+	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -lz -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lpthread
 
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
@@ -110,7 +110,7 @@ smartCount:	smartCount.c
 	$(CC) $(FLAGS) smartCount.c -lz -o smartCount -std=gnu99 -lpthread -lhts
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp  -lz -o thetaStat -lpthread -lhts
+	$(CXX) $(FLAGS) thetaStat.cpp  -lz -o thetaStat -lpthread -lhts -lz
 
 msToGlf: msToGlf6.c
 	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm  -lhts

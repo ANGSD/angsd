@@ -250,9 +250,10 @@ void master2(funkyPars *p){
   //  fprintf(stderr,"[%s] Number of threads running=%d\n",__FUNCTION__,curRunning);
   pthread_mutex_lock( &counterMut );
   if(pthread_create( &thread1, NULL, slave2, (void*) p)){
-    fprintf(stderr,"[%s] Problem spawning thread\n%s\n",__FUNCTION__,strerror(errno));
+    fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(errno),p->chunkNumber);
     exit(0);
   }
+  
   pthread_detach(thread1);
 }
 
@@ -270,9 +271,9 @@ void master(funkyPars *p){
   }
   pthread_mutex_unlock( &counterMut );
   if(pthread_create( &thread1, &attr, slave, (void*) p)){
-    fprintf(stderr,"[%s] Problem spawning thread\n%s\n",__FUNCTION__,strerror(errno));
+    fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(errno),p->chunkNumber);
     while(1){
-      fprintf(stderr,"[%s] Problem spawning thread\n%s\n",__FUNCTION__,strerror(errno));
+      fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(errno),p->chunkNumber);
       
     }
     exit(0);

@@ -129,6 +129,8 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
 abcCallGenotypes::~abcCallGenotypes(){
   if(outfileZ!=NULL)     
     bgzf_close(outfileZ);
+  if(bufstr.s)
+    free(bufstr.s);
 }
 
 

@@ -40,5 +40,12 @@ tajima.d <- function(pairwise,S,n){
     top/bot
 }
 
+tajima.d2 <- function(pairwise,S,n){
+    S <- thetaW*a1(n)
+    top <- pairwise-thetaW
+    bot <- sqrt(e1(n)*S+e2(n)*S*(S-1))
+    top/bot
+}
+
 
 ##tajima.d(pair(b,20),sum(b),n=40)

@@ -77,6 +77,7 @@ The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{si
   4 & {\sf OFF1} & long int & CHR offset into the PREFIX.saf.pos.gz \\
   \hline
 \end{tabular}\label{tab2}
+\caption{Content of the PREFIX.fst.idx}
 \end{table}
 \subsubsection{PREFIX.fst.gz}
 \begin{table}[h]
@@ -88,53 +89,69 @@ The fst.idx has a very simple header 8bytes magicheader followed by a \texttt{si
   2 & {\sf acoef1} & double* & $\alpha$ coefficients from either reynolds estimator or Bhatia \\
   3 & {\sf bcoef2} & double* & $\beta$ coeffficients from eithre Reynolds estimator or Bhatia\\
   \hline
-\end{tabular}\label{tab3}
+\end{tabular}\label{tabfstgz}
+\caption{Contents of the PREFIX.fst.gz file}
 \end{table}
 
+\newpage
+\section{theta formats}
+From 0.917 onwards, the -doThetas in angsd wont generate the old ASCII files but rather the indexed file as described below. The original format will not be described in this document.\\
 
-\subsection{fstv2}
-\fixme{This is still under development}
+
+\subsection{thetav2}
+Second iteration of the theta files now contains one raw bgzf compressed data file and an uncompressed index file. First 8 bytes in the (uncompressed) files are 8byte magic numer \emph{char[8] ``thetav2''}. These are generated if the options -dosaf 1 and -doThetas 1 has been selected. This will output the following two files:
 
 \begin{itemize}
-\item[PREFIX.fst.idx] flat file, described in table \ref{tab2}
-\item[PREFIX.fst.gz] bgzf compressed binary file.
+\item[prefix.thetas.idx] Small uncompressed binary file that contains chr,number of sites, number of chromosomes and the offset into the main data file contain the theta estimates. See below
+\item[prefix.thetas.gz] Main file. Does also contain chr, number of sites number of chromsomes.
 \end{itemize}
-\subsubsection{PREFIX.fst.idx}
+
+\subsubsection{Theta definitions}
+Let $\eta$ be the site frequency spectra. Then $\eta_i$ is the posterior probablity of being in frequency $i$. 
+\begin{itemize}
+\item[Watterson] $\sum_{i=1}^{n-1}\eta_i/a^{-1}, a=\sum_{i=1}^{n-1}i$
+\item[$\pi$] $ {{n}\choose{2}}^{-1}\sum_{i=1}^{n-1}i(n-1)\eta_i$
+\item[FuLi] $\eta_1$
+\item[FayH] $ {{n}\choose{2}}^{-1}\sum_{i=1}^{n-1}i^2\eta_i$ 
+\item[L] $ {n-1}^{-1}\sum_{i=1}^{n-1}i\eta_i$ 
+\end{itemize}
+
+\subsubsection{Description of binary files}
+
+
+\begin{table}[ht]
+\begin{tabular}{rllll}
+  \hline
+  {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
+  \hline
+  1 & {\sf CLEN} & size\_t &  Length of CHR (inferred by strlen)\\
+  2 & {\sf CHR} & char* & Reference sequence name. Length is CLEN\\
+  3 & {\sf NSITES} & size\_t & Number of sites with coverage from reference CHR\\
+  4 & {\sf NCHR} & size\_t & number of possible derived/minor allels. (2*nInd for the unfolded, nInd for the folded)\\
+  5 & {\sf OFF} & long int & CHR offset into the thetas.gz \\
+  \hline
+\end{tabular}\label{thetaidx}
+\caption{Content of entry for a single reference name in the PREFIX.thetas.idx file. Note that there exists a 8byte magicnumber in the beginning of the file.}
+\end{table}
+
 \begin{table}[h]
 \begin{tabular}{rllll}
   \hline
   {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
   \hline
-  1 & {\sf MAGIC} & char[8] &  magic nr = fstv2\\
-  2 & {\sf NPOP} & size\_t &  Number of populations\\
-  \hline \hline
-  3 & {\sf NPOP\_LEN\_i} & size\_t &  length of population name\_i\\
-  4 & {\sf NPOP\_i} & char[NPOP\_LEN] &  name of population\_i.\\
-  \hline\hline
-  5 & {\sf NDIM\_j} & size\_t & number of categories for pair $j$   \\
-  6 & {\sf PRIOR\_j} & double[NDIM\_j] &  prior for pair $j$\\
-  \hline\hline
-  6 & {\sf AS\_j} & double[NDIM\_j] &  alfa for pair $j$\\
-  6 & {\sf BS\_j} & double[NDIM\_j] &  beta for pair $j$\\
-  \hline\hline
-  7 & {\sf CLEN} & size\_t &  Length of CHR (not including terminating null)\\
-  8 & {\sf CHR} & char* & Reference sequence name. Length is CLEN\\
-  9 & {\sf NSITES} & size\_t & Number of sites with coverage from reference CHR\\
-  10 & {\sf OFF1} & long int & CHR offset into the PREFIX.saf.pos.gz \\
+  1 & {\sf CLEN} & size\_t &  Length of CHR (inferred by strlen)\\
+  2 & {\sf CHR} & char* & Reference sequence name. Length is CLEN\\
+  3 & {\sf NSITES} & size\_t & Number of sites with coverage from reference CHR\\
+  4 & {\sf NCHR} & size\_t & number of possible derived/minor allels. (2*nInd for the unfolded, nInd for the folded)\\
+  5 & {\sf POSI} & int[NSITES] & zero indexed positions for CHR \\
+  5 & {\sf Watterson} & float[NSITES] & logscaled persite estimates of Watterson theta estimator (number of segregating sites) \\
+  5 & {\sf $\pi$} & float[NSITES] & logscaled persite estimates of the Tajima theta estimator (pairwise differences) \\
+  5 & {\sf FuLi} & float[NSITES] & logscaled persite estimates of the fuli theta estmator (singleton category) \\
+  5 & {\sf FayH} & float[NSITES] & logscaled persite estimates of the FayH theta estimator\\
+  L & {\sf L} & float[NSITES] & logscaled persite estimates of the L theta estimator  \\
   \hline
-\end{tabular}\label{tab4}
-\caption{Format of saf.idx file. $i$ loops over number of populations. $j$ loops over number of combinations, in this order pop1/pop2,pop1/pop3,pop1/pop4,pop2/pop3,$\ldots$.}
+\end{tabular}\label{thetagz}
+\caption{Content of the PREFIX.thetas.gz file. Note that there exists a 8byte magicnumber in the beginning of the file.}
 \end{table}
-\subsubsection{PREFIX.fst.gz}
-\begin{table}[h]
-\begin{tabular}{rllll}
-  \hline
-  {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
-  \hline
-  1 & {\sf POSI} & int &  Length of CHR (not including terminating null)\\
-  2 & {\sf acoef1} & char* & Reference sequence name. Length is CLEN\\
-  3 & {\sf bcoef2} & size\_t & Number of sites with coverage from reference CHR\\
-  \hline
-\end{tabular}\label{tab5}
-\end{table}
+
 \end{document}
