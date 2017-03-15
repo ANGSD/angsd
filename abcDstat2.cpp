@@ -257,6 +257,7 @@ abcDstat2::~abcDstat2(){
   delete[] CUMPOPSIZE;
   delete[] DENprint;
   delete[] NUMprint;
+  delete[] NSITEprint;
 
   for(int m=0; m<numComb; m++)
     delete[] COMBprint[m];
@@ -449,103 +450,62 @@ void abcDstat2::run(funkyPars *pars){
   double somma;
   double normc;
 
-  /*
-  if(doAbbababa2==1){
-    int SIZEABCD[numComb][3]; //indexes for reading ABCD2 data  
-    int cont=0;
-    for(int i=0; i<numPop-1; i++){
-      for(int j=0; j<numPop-1; j++){
-	for(int k=0; k<numPop-1; k++){
-	  if(j>i && j!=k && i!=k){
-	    //SIZEABCD[cont] = new int[3];   
-	    SIZEABCD[cont][0] = 4*i;
-	    SIZEABCD[cont][1] = 4*j;
-	    SIZEABCD[cont][2] = 4*k;
-	    cont += 1;
-	  }
+ 
+  int blockIdx = -1;
+  blockHere = -1;
+  
+  for(int s=0;s<pars->numSites;s++){
+    for(int i = 0; i < 4*nIndFasta; i++)
+      ABCD[i] = 0;
+    for(int i=0;i<numPop * 4;i++)
+      ABCD2[i] = 0;
+    
+    if(pars->keepSites[s]==0)
+      continue;
+    
+    if( pars->posi[s]+1 >= blockHere*blockSize +blockSize ){
+      blockIdx++;
+      blockHere =  (int)((pars->posi[s]+1)/blockSize);
+      BLOCKNUM[blockIdx] = blockHere;
+    }
+    for(int i=0;i<pars->nInd;i++){
+      //read the data
+      if(pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3] == 0)
+	continue;//no data
+      if(pars->counts[s][i*4]<maxDepth && pars->counts[s][i*4+1]<maxDepth && pars->counts[s][i*4+2]<maxDepth && pars->counts[s][i*4+3]<maxDepth){
+	
+	if(sample==1){
+	  int dep=0;
+	  for( int b = 0; b < 4; b++ )
+	    dep+=pars->counts[s][i*4+b];	  	  
+	  int j;
+	  j = std::rand()%dep;
+	  int cumSum=0;
+	  for( int b = 0; b < 4; b++ ){
+	    cumSum+=pars->counts[s][i*4+b];
+	    if(cumSum > j){
+	      ABCD[i*4+b] = 1;
+	      break;
+	    }
+	  }	    
+	}
+	else{
+	  for( int b = 0; b < 4; b++ )//{ //bases
+	    ABCD[i*4+b]=pars->counts[s][i*4+b];
 	}
       }
     }
-  */
     
-    int blockIdx = -1;
-    blockHere = -1;
-    /*
-    int pattern=0;
-    int combIdx[256][6];
-
-      for(int i=0;i<4;i++){
-	for(int j=0;j<4;j++){
-	  for(int k=0;k<4;k++){
-	    for(int l=0;l<4;l++){
-	      combIdx[pattern][0]=i; combIdx[pattern][1]=j; combIdx[pattern][2]=k; combIdx[pattern][3]=l;
-	      if(i==l && j==k && i!=j)
-		combIdx[pattern][4]=1;
-	      else
-		combIdx[pattern][4]=0;
-
-	      if(i==k && j==l && i!=j)
-		combIdx[pattern][5]=1;
-	      else
-		combIdx[pattern][5]=0;
-	      pattern++;
-	    }
-	  }
-	}
-      }
-    */
-    for(int s=0;s<pars->numSites;s++){
-      for(int i = 0; i < 4*nIndFasta; i++)
-	  ABCD[i] = 0;
-	for(int i=0;i<numPop * 4;i++)
-	  ABCD2[i] = 0;
-	      
-      if(pars->keepSites[s]==0)
+    if(ancName != NULL && useLast == 0){
+      if(pars->anc[s] < 4)
+	ABCD[pars->nInd * 4 + pars->anc[s]] = 1;
+      else
 	continue;
-
-      if( pars->posi[s]+1 >= blockHere*blockSize +blockSize ){
-	blockIdx++;
-	blockHere =  (int)((pars->posi[s]+1)/blockSize);
-	BLOCKNUM[blockIdx] = blockHere;
-   }
-      for(int i=0;i<pars->nInd;i++){
-	//read the data
-	if(pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3] == 0)
-	continue;//no data
-	if(pars->counts[s][i*4]<maxDepth && pars->counts[s][i*4+1]<maxDepth && pars->counts[s][i*4+2]<maxDepth && pars->counts[s][i*4+3]<maxDepth){
-	  
-	  if(sample==1){
-	    int dep=0;
-	    for( int b = 0; b < 4; b++ )
-	      dep+=pars->counts[s][i*4+b];	  	  
-	    int j;
-	    j = std::rand()%dep;
-	    int cumSum=0;
-	    for( int b = 0; b < 4; b++ ){
-	      cumSum+=pars->counts[s][i*4+b];
-	      if(cumSum > j){
-		ABCD[i*4+b] = 1;
-		break;
-	      }
-	    }	    
-	  }
-	  else{
-	    for( int b = 0; b < 4; b++ )//{ //bases
-	      ABCD[i*4+b]=pars->counts[s][i*4+b];
-	  }
-	}
-      }
-      
-      if(ancName != NULL && useLast == 0){
-	if(pars->anc[s] < 4)
-	  ABCD[pars->nInd * 4 + pars->anc[s]] = 1;
-	else
-	  continue;
-      }
-      
-      //------do all the populationss------
-      double w[nIndFasta];//weights
-      for(int p=0; p<numPop; p++){
+    }
+    
+    //------do all the populationss------
+    double w[nIndFasta];//weights
+    for(int p=0; p<numPop; p++){
       
       //---------------building weighted individual 1. written in ABCD2.     
       somma = 0;
@@ -561,12 +521,12 @@ void abcDstat2::run(funkyPars *pars){
 	  w[i] = w[i]/normc;
       }
       for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++)
-      //---------------building ABCD2 - weighted (pseudo) individuals
-      for(int al=0;al<4;al++){
-	for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++){
-	  ABCD2[p*4 + al] += w[i]*ABCD[i*4+al];
+	//---------------building ABCD2 - weighted (pseudo) individuals
+	for(int al=0;al<4;al++){
+	  for(int i=CUMPOPSIZE[p];i<CUMPOPSIZE[p+1];i++){
+	    ABCD2[p*4 + al] += w[i]*ABCD[i*4+al];
+	  }
 	}
-      }
       //normalize
       somma = 0;
       for(int al=0;al<4;al++)
@@ -574,90 +534,86 @@ void abcDstat2::run(funkyPars *pars){
       if(somma!=0){
 	for(int al=0;al<4;al++)
 	  ABCD2[p*4+al] /= somma;}     
-      }
+    }
+    
+    /*-ENDENDEND--count WEIGHTED normalized allele combinations -----------------------*/
+    /*-------------------------------------------------------------------------------- */
+        
+    if(enhance==1){
+      int enh=0;
+      for(int j=0;j<4;j++)
+	if(ABCD2[ (numPop-1)*4 + j]==0)
+	  enh++;
+      if(enh!=3)
+	continue;	  
+    }
+	  
+    for(int m=0; m<numComb; m++){
+
+      double abba=0;
+      double baba=0;
+      double h1=0;
+      double h12=0;
+      double h123=0;
+      double h4=0;
+      double h1234=0;
+      int pattern=0;
+      double siteCont = 0;
       
-      /*-ENDENDEND--count WEIGHTED normalized allele combinations -----------------------*/
-      /*-------------------------------------------------------------------------------- */
-
-
-      /*---'-enhance' option for analyzing only non-polymorphic sites of the outgroup----*/ 
-      /*-------------------------------------------------------------------------------- */
-      /*
-      if(enhance==1){
-	int enh=0;
-	for(int j=0;j<4;j++)
-	  if(ABCD2OUT[j]==0)
-	    enh++;
-	if(enh!=3){
-	  DEN[comb][s]=0;
-	  NUM[comb][s]=0;
-	}	  
-      }
-      */
-      /*END-'-enhance' option for analyzing only non-polymorphic sites of the outgroup---*/ 
-      /*-------------------------------------------------------------------------------- */
-
-      for(int m=0; m<numComb; m++){
-
-	double abba=0;
-	double baba=0;
-	double h1=0;
-	double h12=0;
-	double h123=0;
-	double h4=0;
-	double h1234=0;
-	int pattern=0;
-	double siteCont = 0;
-      
-	for(int i=0;i<4;i++){
-	  h1 = ABCD2[ SIZEABCD[m][0] + i];
-	  if(h1==0){
+      for(int i=0;i<4;i++){
+	h1 = ABCD2[ SIZEABCD[m][0] + i];
+	if(h1==0){
 	  pattern+=64; continue;}
-	  for(int j=0;j<4;j++){
-	    h12 = h1 * ABCD2[ SIZEABCD[m][1] + j];
-	    if(h12==0){
+	for(int j=0;j<4;j++){
+	  h12 = h1 * ABCD2[ SIZEABCD[m][1] + j];
+	  if(h12==0){
 	    pattern+=16; continue;}
-	    for(int k=0;k<4;k++){
-	      h123 = h12 * ABCD2[ SIZEABCD[m][2] + k];
-	      if(h123==0){
+	  for(int k=0;k<4;k++){
+	    h123 = h12 * ABCD2[ SIZEABCD[m][2] + k];
+	    if(h123==0){
 	      pattern+=4; continue;}
-	      for(int l=0;l<4;l++){
-		h4=ABCD2[ (numPop-1)*4 + l];
-		if(h4==0){
-		  pattern++;
-		}
-		else{
-		  h1234 = h123 * h4;
+	    for(int l=0;l<4;l++){
+	      if( rmTrans==1 && (pattern==40 || pattern==130 || pattern==34 || pattern==136 ||pattern==125 || pattern==215 || pattern==119 || pattern==221) ){
+		pattern++; continue;}
+	      
+	      h4=ABCD2[ (numPop-1)*4 + l];
+	      if(h4==0){
+		pattern++;
+	      }
+	      else{
+		h1234 = h123 * h4;
 		
-		  COMB[m][blockIdx][pattern] += h1234;
-		  siteCont += h1234;
-		  if(i==l && j==k && i!=j)
-		    abba += h1234;
+		COMB[m][blockIdx][pattern] += h1234;
+		siteCont += h1234;
 		
-		  if(i==k && j==l && i!=j)
-		    baba += h1234;
-		  
-		  pattern++;
-		}
+		if(i==l && j==k && i!=j)
+		  abba += h1234;
+		
+		
+		if(i==k && j==l && i!=j)
+		  baba += h1234;
+		
+		pattern++;
 	      }
 	    }
 	  }
 	}
-	NUM[m][blockIdx] += abba - baba;
-	DEN[m][blockIdx] += abba + baba;
-	NSITE[m][blockIdx] += siteCont;
       }
-      
+      NUM[m][blockIdx] += abba - baba;
+      DEN[m][blockIdx] += abba + baba;
+      NSITE[m][blockIdx] += siteCont;
+    }
+    
 
     
-    }//---end for(int s=0;s<pars->numSites;s++)
-
-      abbababaStruct -> NUM=NUM;
-      abbababaStruct -> DEN=DEN;
-      abbababaStruct -> COMB=COMB;
-      abbababaStruct -> BLOCKNUM = BLOCKNUM;
-      abbababaStruct -> NSITE = NSITE;
-      pars -> extras[index] = abbababaStruct;      
+  }//---end for(int s=0;s<pars->numSites;s++)
+  
+  abbababaStruct -> NUM=NUM;
+  abbababaStruct -> DEN=DEN;
+  abbababaStruct -> COMB=COMB;
+  abbababaStruct -> BLOCKNUM = BLOCKNUM;
+  abbababaStruct -> NSITE = NSITE;
+  pars -> extras[index] = abbababaStruct;      
 }
   
 

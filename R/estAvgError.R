@@ -50,8 +50,7 @@ args<-list(angsdFile = "out",
            addErr=FALSE,
            nIter=100,
            main="",
-           maxErr=0.02,
-           errMean = 0
+           maxErr=0.02
            )
 
 #if no argument aree given prints the need arguments and the optional ones with default
@@ -62,8 +61,7 @@ des<-list(angsdFile="output angsdFile (no .abbababa2 extension) from 'angsd -doA
           out="Name of the out files",
           addErr="amount of error correction to add with increment and bases for transitions. E.g. -0.005,0.005,0.001;A,C;G,T",
           nIter="Number of optimazation attemps",
-          maxErr="maximum allowed error rate",
-          errMean="TRUE=average errors of multiple individuals"
+          maxErr="maximum allowed error rate"
           )
 
 ####### get arguments and add to workspace
@@ -78,19 +76,16 @@ if(length(args)==0){
 
 ###################################
 
-cat("----------\nangsdFile: ",angsdFile,"  errFile: ", errFile," nameFile: ",nameFile," sizeFile: ",sizeFile," out: ", out," addErr: ", addErr," nIter: ",nIter,"maxErr: ",maxErr,"errMean: ",errMean,"\n-----------\n" )
+cat("----------\nangsdFile: ",angsdFile,"  errFile: ", errFile," nameFile: ",nameFile," sizeFile: ",sizeFile," out: ", out," addErr: ", addErr," nIter: ",nIter,"maxErr: ",maxErr,"\n-----------\n" )
 
 b<-c("A","C","G","T","N")
 
 nIter<-as.integer(nIter)
 maxErr=as.numeric(maxErr)
 
-readTable <- function(file){
-    if(errMean==0)
-        r <- colSums(as.matrix(read.table(file)))
-    else
-        r <- colMeans(as.matrix(read.table(file)))
-    r <- matrix(data=r,nrow=1,ncol=length(r))
+readTable <- function(file){   
+    r <- as.matrix(read.table(file, header=FALSE))
+    return(r)
 }
     
 getMat<-function(x){
@@ -112,7 +107,9 @@ logLike<-function(x,Xch,Pch){
 }
 
 getFromErrFile <- function(r,res,maxErr,nInd,logLike){
-    #options(warn=-1)#suppress warnings
+                                        #options(warn=-1)#suppress warnings
+    #print(dim(r))
+    r = t(r)
     for(j in 1:nInd){
         m<-getMat(r[j,])
         
@@ -198,10 +195,12 @@ BBAA<-c("0011","0022","0033","1100","1122","1133","2200","2211","2233","3300","3
 
 getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
     outData = outData
-    zeroIdx <- outData[,6]!=0 
-
+    colWeights = as.vector(rowSums(outData[,-c(1,2,3,4,5,6)]))
+    #zeroIdx <- outData[,6]!=0 
+    zeroIdx <- colWeights!=0
     outData <- outData[zeroIdx,]
-
+    colWeights <- colWeights[zeroIdx]
+    
     skipData=FALSE
     
     if(is.vector(outData)){
@@ -211,8 +210,11 @@ getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
     if(skipData)
 	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA,numBlock=NA))
 
-    zeroIdx <- outData[,5]!=0
+    #zeroIdx <- outData[,5]!=0
+    colDen <- rowSums(outData[,c(ABBAname)]) + rowSums(outData[,c(BABAname)])
+    zeroIdx <- colDen!=0
     outData <- outData[zeroIdx,]
+    colWeights <- colWeights[zeroIdx]
     
     if(is.vector(outData)){
         skipData = TRUE}  else if(nrow(outData)==0){
@@ -221,9 +223,9 @@ getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
     if(skipData)
 	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA,numBlock=NA))
  
-    seenSites = sum(as.numeric(outData[,6]))
-    weigth = as.numeric(outData[,6])
-    weigth = as.numeric( rowSums(outData[,c(ABBAname,BABAname)])  )
+    #seenSites = sum(as.numeric(outData[,6]))
+    weigth = colWeights
+    #weigth = as.numeric( rowSums(outData[,c(ABBAname,BABAname)])  )
     outData = outData[,-c(1,2,3,4,5,6)]
     Edata <- numeric(prod(dim(outData)))
     dim(Edata)<- dim(outData)
@@ -286,7 +288,7 @@ getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
 
 angsdFile = paste(angsdFile,".abbababa2",sep="")
 #outDataTotal <- read.table(angsdFile,header=T,as.is=T)#old read data
-outDataTotal <- as.matrix(fread(input=angsdFile,sep="\t",showProgress=TRUE,header=TRUE,data.table=TRUE))
+#outDataTotal <- as.matrix(fread(input=angsdFile,sep="\t",showProgress=TRUE,header=TRUE,data.table=TRUE))
 erCor= (errFile != FALSE)
 
 if(sizeFile==FALSE && nameFile==FALSE){
@@ -317,7 +319,7 @@ numPop = length(namePop)
 numComb = choose(numPop-2,2)*(numPop-1)
 cumPop = c(0,cumsum(sizePop))
 
-lenList = length(outDataTotal[,1])
+#lenList = length(outDataTotal[,1])
 
 addErrors=(addErr!=FALSE)
 
@@ -384,41 +386,52 @@ if(erCor==1){
         resMat[[cont]] = diag(c(1,1,1,1));
         filez=FALSE;     
         if(!is.na(str)){
+            resMat[[cont]] = diag(c(0,0,0,0));
             r = readTable(str)
-            res = getFromErrFile(r,res,maxErr,nInd,logLike)
-            resMat[[cont]] = buildMat(res)
+            for( n in 1:nrow(r) ){
+                res=NULL
+                res = getFromErrFile(as.matrix(r[n,]),res,maxErr,nInd,logLike)
+                resMat[[cont]] = resMat[[cont]] + buildMat(res)
+                #print(resMat[[cont]])
+            }
+            resMat[[cont]] = resMat[[cont]] / nrow(r)
             cat(sprintf("\t\"%s\"\n",str))
         }
         cont = cont + 1
     }
 }
 
-if(FALSE){
-cat("--- Building tree error matrices ---\n ")
-ptm <- proc.time() #start timer
 if(erCor==1){
-    solveMat = list()
-    bigMat = list()
-    cont = 1
-    pb <- txtProgressBar(min=1,max=numComb,initial = 0,style = 3,char=":)", width=20)
-    for(i in 1:(numPop-1)){
-        bigMat[[1]] = resMat[[ i ]]
-        for(j in 1:(numPop-1)){
-            bigMat[[2]] = resMat[[ j ]]
-            for(k in 1:(numPop-1)){
-                bigMat[[3]] = resMat[[ k ]]
-                if(j>i && j!=k && i!=k){
-                    bigMat[[4]] = resMat[[ numPop ]]
-                    errMat = getErrMat(bigMat)
-                    solveMat[[cont]] = buildInv(errMat)
-                    setTxtProgressBar(pb, cont,label="ciaoo")
-                    cont = cont+1
-                }
-            }
-        }
+    for(ii in 1:numPop){
+        fileOut = paste(out,".barPlotErrors.",namePop[ ii ],".pdf",sep="")
+        pdf(fileOut)
+        errors=as.vector(resMat[[ ii ]])[-c(1,6,11,16)]
+        
+        tickz=max(errors)
+        xLabel=c("A-->C","A-->G","A-->T","C-->A","C-->G","C-->T","G-->A","G-->C","G-->T","T-->A","T-->C","T-->G")
+        
+        par(mar=c(5,5,4.1,2.1))
+        barplot(errors,beside=T,col=c("darkgreen"),border=NA,width=9,xlim=c(0,140),ylim=c(0,1.1*tickz),yaxt="n",main=sprintf("Type-specific errors: %s",namePop[ ii ]))
+        
+        mtext(side=2,line=4,"Error")
+        mtext(side=1,line=4,"Type-specific Error")
+        axis(side=1, at=seq(10,140,11)-6, labels=xLabel, las=2, cex=0.5, tck=0)
+
+        yTickz=seq(0,1.1*tickz,1.1*tickz/20)
+        len=length(yTickz)
+        yLabel=c()
+        for(i in 1:len)
+            yLabel[i]=sprintf("%.1e",yTickz[i])
+        yLabel=toString(yLabel)
+        yLabel = eval(parse(text=paste("c(",yLabel,")",sep="")))
+        yLabel = strtrim(yLabel,7)
+        abline(h=seq(0,1.1*tickz,1.1*tickz/20), lwd=0.5, col="gray" )
+        axis(side=2, at=seq(0,1.1*tickz,1.1*tickz/20), labels=yLabel, las=2, cex=0.3, tck=0)
+        
+        dev.off()
     }
 }
-}
+
 
 cat("--- Building tree error matrices ---\n ")
 ptm <- proc.time() #start timer
@@ -435,18 +448,20 @@ if(erCor==1){
         bigMat[[3]] = resMat[[ id[3] ]]
         solveMat[[idComb]] =  buildInv( getErrMat(bigMat) )
         setTxtProgressBar(pb,idComb,label="ciaooo")
+        flush.console()
     }
 }
 cat("--- Time Spent ",(proc.time() - ptm)[3]," sec \n")
 finalptm = (proc.time() - ptm)[3]
 
-ptm <- proc.time() #start timer
+ptm2 <- proc.time() #start timer
 FILEOBS<-paste(out,".Observed",".txt",sep="")
 FILEERROR<-paste(out,".ErrorCorr",".txt",sep="")
 FILETRANS<-paste(out,".TransRem",".txt",sep="")
 FILEERRORTRANS<-paste(out,".ErrorCorr.TransRem",".txt",sep="")
 
-
+outDataTotal <- as.matrix(fread(input=angsdFile,sep="\t",showProgress=TRUE,header=TRUE,data.table=TRUE))
+lenList = length(outDataTotal[,1])
 
 for(idComb in 1:numComb){
     
@@ -526,6 +541,7 @@ for(idComb in 1:numComb){
                             cat(str,str2,file=fileOut1,sep="\n")
                             setTxtProgressBar(pb, idBar,label="ciao"); idBar=idBar+1;
                             gc()
+                            flush.console()
                         }
                     }
                 }  
@@ -553,6 +569,7 @@ for(idComb in 1:numComb){
                             cat(str,str2,file=fileOut2,sep="\n")
                             setTxtProgressBar(pb, idBar,label="ciao"); idBar=idBar+1;
                             gc()
+                            flush.console()
                         }
                     }
                 }
@@ -640,7 +657,7 @@ for(idComb in 1:numComb){
 
 ###bar plots of errors
         if(FALSE){
-        if(erCor){
+        if(erCor==1){
             fileOut = paste(dirName,"/barPlotErrors",combNames[ idComb ],".pdf",sep="")
             pdf(fileOut)
             err1=as.vector(bigMat[[1]])[-c(1,6,11,16)]
@@ -728,7 +745,7 @@ for(idComb in 1:numComb){
         str7=sprintf("No Trans\t|\t\t|\t\t|\t\t|\t|\t\n")}
 
     cat("--- Table of Results --- Combination ", idComb," out of ", numComb," ---\n")
-    cat("--- Time Spent ",(proc.time() - ptm)[3]," sec --- Estimated time left ", (proc.time() - ptm)[3]*numComb/idComb - proc.time()[3], " sec ---\n"    )
+    cat("--- Time Spent ",(proc.time() - ptm2)[3]," sec --- Estimated time left ", (proc.time() - ptm2)[3]*numComb/idComb - (proc.time()-ptm)[3], " sec ---\n"    )
     cat("--- H1=",nm[1]," H2=",nm[2]," H3=",nm[3]," H4=",nm[4]," ---\n")
     cat("---------------------------------------------------------------------------------\n")
     cat(str1)
@@ -746,7 +763,7 @@ for(idComb in 1:numComb){
         cat(str7)
         cat("---------------------------------------------------------------------------------\n")}
 }
-cat("--- Total time ",(proc.time() - ptm)[3] + finalptm," sec \n"    )
+cat("--- Total time ",(proc.time() - ptm2)[3] + finalptm," sec \n"    )
 if(addErrors){
     messageEnd = sprintf("plots with effect of removed errors and D statistic files for all the removed errors are in folder %s\n",dirName)
     cat(messageEnd)
