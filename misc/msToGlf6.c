@@ -453,7 +453,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  int nder=genotypes[0]+genotypes[1];
 	  if(nder==0)
 	    ksprintf(&kpsmc,"A");
-	  if(nder==0)
+	  if(nder==1)
 	    ksprintf(&kpsmc,"M");
 	  if(nder==2)
 	    ksprintf(&kpsmc,"C");
@@ -488,7 +488,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  int nder=genotypes[0]+genotypes[1];
 	  if(nder==0)
 	    ksprintf(&kpsmc,"A");
-	  if(nder==0)
+	  if(nder==1)
 	    ksprintf(&kpsmc,"M");
 	  if(nder==2)
 	    ksprintf(&kpsmc,"C");
