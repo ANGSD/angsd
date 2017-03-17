@@ -130,11 +130,17 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   /*------------------------------------------------------------------------------*/
   
   // populations sizes from text file
-  if( (sizeFile != NULL && ancName == NULL) || (sizeFile != NULL && ancName != NULL && useLast == 0) ){
+  if( (sizeFile != NULL && ancName == NULL) || (sizeFile != NULL && ancName != NULL && useLast == 1) ){
     POPSIZE = new int[numPop];
     for(int a=0; a<numPop; a++){
       POPSIZE[a] = sizeMat.matrix[a][0];
     }
+  }
+  else if( (sizeFile != NULL && ancName != NULL && useLast == 0) ){
+    POPSIZE = new int[numPop+1];
+    for(int a=0; a<numPop; a++)
+      POPSIZE[a] = sizeMat.matrix[a][0];
+    POPSIZE[numPop] = 1;     
   }
   else if(sizeFile != NULL && useLast == 1){
     POPSIZE = new int[numPop];
@@ -395,14 +401,15 @@ void abcDstat2::run(funkyPars *pars){
   } 
  
   funkyAbbababa2 *abbababaStruct = new funkyAbbababa2; //new structure
+  //fprintf(stderr,"nindfasta %d\n",nIndFasta);
   abbababaStruct->NUMBLOCK = totBlocks;
-  double ABCD[4*nIndFasta];
-  for(int i = 0; i < 4*nIndFasta; i++)
-    ABCD[i] = 0;
+  //double ABCD[4*nIndFasta];
+  //for(int i = 0; i < 4*nIndFasta; i++)
+  //  ABCD[i] = 0;
   
-  double ABCD2[numPop*4];
-  for(int i=0;i<numPop*4;i++)
-    ABCD2[i*4] = 0;
+  //double ABCD2[numPop*4];
+  //for(int i=0;i<numPop*4;i++)
+  //  ABCD2[i*4] = 0;
 
   double ***COMB;
   COMB = new double**[numComb];
@@ -455,9 +462,12 @@ void abcDstat2::run(funkyPars *pars){
   blockHere = -1;
   
   for(int s=0;s<pars->numSites;s++){
+    //fprintf(stderr,"nindFasta2 %d\n",nIndFasta);
+    double ABCD[4*nIndFasta];
+    double ABCD2[4*numPop];
     for(int i = 0; i < 4*nIndFasta; i++)
       ABCD[i] = 0;
-    for(int i=0;i<numPop * 4;i++)
+    for(int i=0; i<numPop*4; i++)
       ABCD2[i] = 0;
     
     if(pars->keepSites[s]==0)
