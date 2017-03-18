@@ -17,7 +17,7 @@ int psmcOut = 0;
 
 
 #define LENS 100000
-#define NBASE_PER_LINE 60
+#define NBASE_PER_LINE 57
 #define PSMC_FOR_WHICH 0
 /*U(0,1): AS 183: Appl. Stat. 31:188-190
 Wichmann BA & Hill ID.  1982.  An efficient and portable
@@ -217,10 +217,7 @@ int sim_invar_site(double errate,int nsam,double *depths,double meandepth,gzFile
 
 
   if(pileup==1){
-
     ksprintf(resultfile,"%d\t%d\tN",chr,pos);
- 
-
     int counter=0;
     for(int ii=0;ii<nInd;ii++){
       kputc('\t',resultfile);
@@ -233,11 +230,8 @@ int sim_invar_site(double errate,int nsam,double *depths,double meandepth,gzFile
 	kputc(ch,resultfile);
 	//	kputc('H',resultfile);
       }
-     
- 
       counter += numreadsInd[ii];
     }
-     
     kputc('\n',resultfile);
     return numreads;
   }
@@ -281,7 +275,6 @@ my %het = (AC=>'M', AG=>'R', AT=>'W', CA=>'M', CG=>'S', CT=>'Y',
 
 
 int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,kstring_t *resultfile){
-
 
   int i, b, numreads;
   numreads = Poisson(meandepth);
@@ -351,24 +344,24 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
 
 //nsam=2*nind
 void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,gzFile gzSeq,int count,int onlyPoly,gzFile gzPsmc){
-  //  fprintf(stderr,"segsites=%d\n",segsites,gzFile gzSeq);
   kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   kstring_t kpsmc;kpsmc.s=NULL;kpsmc.l=kpsmc.m=0;
   int p =0;
   char ** res=malloc(nsam/2*sizeof(char*));
-  if(positInt[0]==0)
+  if(positInt[0]==0)//why
     positInt[0]=1;
   for(int i=1;i<segsites;i++){
     if(positInt[i]<=positInt[i-1])
       positInt[i] = positInt[i-1]+1;
   }
-  //write the positions that are variable to file. First element in length of posit.
-  if(pileup==0)
-    fwrite(&segsites,sizeof(int),1,vSitesFP);
+  for(int i=0;0&&i<segsites;i++){
+    fprintf(stdout,"pos[%d]\t%d\n",i,positInt[i]);
 
-  if(pileup==0)
-    fwrite(positInt,sizeof(int),segsites,vSitesFP);
-  fflush(vSitesFP);
+  }
+
+  //write the positions that are variable to file. First element in length of posit.
+  fwrite(&segsites,sizeof(int),1,vSitesFP);
+  fwrite(positInt,sizeof(int),segsites,vSitesFP);
   //make genotypes
   for(int h=0;h<nsam;h+=2){
     res[p] = malloc(segsites);
@@ -395,8 +388,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  genotypes[0] = 1;
 
 	if(gzPsmc!=Z_NULL&&i==PSMC_FOR_WHICH){
-	  if(s>0 &&(s % NBASE_PER_LINE) ==0){
-	    //fprintf(stderr," s:%d NBA:%d\n",s,NBASE_PER_LINE);
+	  if(s>0 &&((s % NBASE_PER_LINE) ==0)){
 	    ksprintf(&kpsmc,"\n");
 	  }
 	  int nder=genotypes[0]+genotypes[1];
@@ -430,43 +422,46 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	}
       }
     }
-  }else {
+  }else{
     //print for invariable and variable sites
     int s =0;
-    //shifted with one, to match the positions. This shouldbn't matte for correctness
-    for(int i=1;i<=regLen;i++) {
-      
-      if(s<segsites && positInt[s]==i) {
+   
+    for(int i=0;i<regLen;i++) {
+      //  fprintf(stderr,"i:%d s:%d posit:%d",i,s,positInt[s]);
+      if(s<segsites && positInt[s]-1==i) {
 	if(pileup)
 	  ksprintf(&kpl,"%d\t%d\tN\t",count,i);
-  
-	for(int i=0;i<nsam/2;i++){
+	//loop over samples
+	for(int n=0;n<nsam/2;n++) {
 	  int genotypes[2] = {0,0};
-	  if(res[i][s]>=1)
+	  if(res[n][s]>=1)
 	    genotypes[1] = 1;
-	  if(res[i][s]==2)
+	  if(res[n][s]==2)
 	    genotypes[0] = 1;
-	if(gzPsmc!=Z_NULL&&i==PSMC_FOR_WHICH){
-	  //	  fprintf(stderr,"asfadsfads\n");fflush(stderr);
-	  if(((s+1) % NBASE_PER_LINE) ==0)
-	    ksprintf(&kpsmc,"\n");
-	  int nder=genotypes[0]+genotypes[1];
-	  if(nder==0)
-	    ksprintf(&kpsmc,"A");
-	  if(nder==1)
-	    ksprintf(&kpsmc,"M");
-	  if(nder==2)
-	    ksprintf(&kpsmc,"C");
-	  if(kpsmc.l>4096){
-	    gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
-	    kpsmc.l=0;
+
+	  if(gzPsmc!=Z_NULL&&n==PSMC_FOR_WHICH){
+	    if(i>0&&(i % NBASE_PER_LINE) ==0)
+	      ksprintf(&kpsmc,"\n");
+	    
+	    int nder=genotypes[0]+genotypes[1];
+	    if(nder==0)
+	      ksprintf(&kpsmc,"A");
+	    if(nder==1)
+	      ksprintf(&kpsmc,"M");
+	    if(nder==2)
+	      ksprintf(&kpsmc,"C");
+	    if(kpsmc.l>4096){
+	      gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+	      kpsmc.l=0;
+	    }
 	  }
-	}
+
 	  if(depths==NULL)
 	    print_ind_site(errate,meandepth,genotypes,gz,&kpl);
 	  else
-	    print_ind_site(errate,depths[i],genotypes,gz,&kpl);
-	  if(pileup && i<nsam/2-1)
+	    print_ind_site(errate,depths[n],genotypes,gz,&kpl);
+
+	  if(pileup && n<nsam/2-1)
 	    kputc('\t',&kpl);
 	}
 	//after all samples for a site
@@ -480,39 +475,37 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	s++;
       }else{
 	//this 'for' loop is  important, should not be be commented out.
-	for(int i=0;1&&i<nsam/2;i++){
+	for(int n=0;1&&n<nsam/2;n++){
 	  int genotypes[2] = {0,0};
-	if(gzPsmc!=Z_NULL&&i==PSMC_FOR_WHICH){
-	  //  if(((s+1) % NBASE_PER_LINE) ==0)
-	  //  ksprintf(&kpsmc,"\n");
-	  int nder=genotypes[0]+genotypes[1];
-	  if(nder==0)
-	    ksprintf(&kpsmc,"A");
-	  if(nder==1)
-	    ksprintf(&kpsmc,"M");
-	  if(nder==2)
-	    ksprintf(&kpsmc,"C");
-	  if(kpsmc.l>4096){
-	    gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
-	    kpsmc.l=0;
+	  if(gzPsmc!=Z_NULL&&n==PSMC_FOR_WHICH){
+	    if(i>0&& (i % NBASE_PER_LINE) ==0){
+	      ksprintf(&kpsmc,"\n");
+	    }
+	    int nder=genotypes[0]+genotypes[1];
+	    if(nder==0)
+	      ksprintf(&kpsmc,"A");
+	    if(nder==1)
+	      ksprintf(&kpsmc,"M");
+	    if(nder==2)
+	      ksprintf(&kpsmc,"C");
+	    if(kpsmc.l>4096){
+	      gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+	      kpsmc.l=0;
+	    }
+	    
 	  }
-	  
-	}
+
 	  if(depths==NULL)
 	    print_ind_site(errate,meandepth,genotypes,gz,&kpl);
 	  else
-	    print_ind_site(errate,depths[i],genotypes,gz,&kpl);
-	  if(pileup && i<nsam/2-1)
+	    print_ind_site(errate,depths[n],genotypes,gz,&kpl);
+
+	  if(pileup && n<nsam/2-1)
 	    kputc('\t',&kpl);
 	}
 
-	if(pileup)
-	
-	  sim_invar_site(errate,nsam,depths,meandepth,gz,&kpl,count,i,onlyPoly);
-
-	
 	if(pileup){
-	 
+	  sim_invar_site(errate,nsam,depths,meandepth,gz,&kpl,count,i,onlyPoly);
 	  if(kpl.l>4096){
 	    gzwrite(gzSeq,kpl.s,kpl.l);
 	    kpl.l=0;
@@ -521,7 +514,6 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
       }
     }
   }
-  
   if(pileup){
     gzwrite(gzSeq,kpl.s,kpl.l);
     kpl.l=0;free(kpl.s);
@@ -530,13 +522,18 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
       ksprintf(&kpsmc,"\n");
     gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+    kpsmc.l=0;
+
     ksprintf(&kpsmc,"+\n");
-    for(int s=0;s<segsites;s++){
+    int up = segsites;
+    if(regLen>0)
+      up=regLen;
+    for(int s=0;s<up;s++){
       if(s>0 &&(s % NBASE_PER_LINE) ==0){
 	//fprintf(stderr," s:%d NBA:%d\n",s,NBASE_PER_LINE);
 	ksprintf(&kpsmc,"\n");
       }
-      ksprintf(&kpsmc,"5");
+      ksprintf(&kpsmc,"S");
       if(kpsmc.l>4096){
 	gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
 	kpsmc.l=0;
@@ -820,7 +817,7 @@ int main(int argc,char **argv){
   if(pileup)
     gzSeq = openFileGz(prefix,".pileup.gz","w");
   if(psmcOut)
-    gzPsmc = openFileGz(prefix,".fa.gz","w");
+    gzPsmc = openFileGz(prefix,".fq.gz","w");
   
   if(singleOut==1){
     gz = openFileGz(prefix,".glf.gz","w");
@@ -852,7 +849,10 @@ int main(int argc,char **argv){
        }
      }
      sscanf( line, "  segsites: %d", &segsites );
-   
+     if(regLen!=0&&segsites>regLen){
+       fprintf(stderr,"\t-> Must specify a regionsize larger than the number of variable sites\n");
+       exit(0);
+     }
      if( segsites >= maxsites){
        maxsites = segsites + 10 ;
        posit = (double *)realloc( posit, maxsites*sizeof( double) ) ;
