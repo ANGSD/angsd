@@ -70,8 +70,8 @@ smartCount:	smartCount.c
 thetaStat:	thetaStat.cpp stats.cpp 
 	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
 
-msToGlf: msToGlf6.c
-	$(CC) $(FLAGS) msToGlf6.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
+msToGlf: msToGlf.c
+	$(CC) $(FLAGS) msToGlf.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 -lz -lm  $(HTS_LIBDIR)
 
 fpsmc.o: fpsmc.cpp fpsmc.h psmcreader.h main_psmc.h
 	$(CXX) $(FLAGS) -c fpsmc.cpp -I $(HTS_INCDIR)
@@ -112,8 +112,8 @@ smartCount:	smartCount.c
 thetaStat:	thetaStat.cpp stats.cpp 
 	$(CXX) $(FLAGS) thetaStat.cpp  -lz -o thetaStat -lpthread -lhts -lz
 
-msToGlf: msToGlf6.c
-	$(CC) $(FLAGS) msToGlf6.c -O3 -o msToGlf -std=gnu99 -lz -lm  -lhts
+msToGlf: msToGlf.c
+	$(CC) $(FLAGS) msToGlf.c -O3 -o msToGlf -std=gnu99 -lz -lm  -lhts
 
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp
