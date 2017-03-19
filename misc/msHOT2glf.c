@@ -14,7 +14,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zlib.h>
+int block = 100;
 
+#define LENS 100000
+#define NBASE_PER_LINE 60
 
 FILE *getFILE(const char*fname,const char* mode){
   int writeFile = 0;
@@ -97,12 +100,7 @@ size_t fsize(const char* fname){
 int static z_rndu=137;
 
 int simpleRand = 2;
-int psmcOut = 0;
 
-
-
-#define LENS 100000
-#define NBASE_PER_LINE 60
 
 /*U(0,1): AS 183: Appl. Stat. 31:188-190
 Wichmann BA & Hill ID.  1982.  An efficient and portable
@@ -305,59 +303,40 @@ void test (int *positInt,gzFile gz,double errate,double meandepth, int regLen,gz
   kstring_t kpsmc;kpsmc.s=NULL;kpsmc.l=kpsmc.m=0;
   int p =0;
 
-  if(gzPsmc)
-    ksprintf(&kpsmc,"@%d\n",count);
 
   for(int i=0;i<regLen;i++) {
-    //  fprintf(stderr,"i:%d s:%d posit:%d",i,s,positInt[s]);
     int genotypes[2]={0,0};
     if(positInt[i])
       genotypes[1] = 1;
-	//loop over samples
-    if(gzPsmc!=Z_NULL){
-      if(i>0&&(i % NBASE_PER_LINE) ==0)
-	ksprintf(&kpsmc,"\n");
-      
-      int nder=genotypes[0]+genotypes[1];
-      if(nder==0)
-	ksprintf(&kpsmc,"A");
-      if(nder==1)
-	ksprintf(&kpsmc,"M");
-      if(nder==2)
-	ksprintf(&kpsmc,"C");
-      if(kpsmc.l>4096){
-	gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
-	kpsmc.l=0;
-      }
-    }
-    if(do_seq_glf){
+    if(do_seq_glf)
       print_ind_site(errate,meandepth,genotypes,gz,&kpl);
-
-    }
   }
   
-  if(psmcOut){
+
+  if(gzPsmc!=Z_NULL){
+
+    if(gzPsmc)
+      ksprintf(&kpsmc,">%d\n",count+1);
+    int at=0;
+    for(int i=0;i<regLen;i+=block) {
+      int isHet =0;
+      for(int b=0;b<block;b++)
+	if(positInt[i+b])
+	  isHet++;
+      if(at==NBASE_PER_LINE){
+	ksprintf(&kpsmc,"\n");
+	at=0;
+      }
+      if(isHet)
+	ksprintf(&kpsmc,"K");
+      else
+	ksprintf(&kpsmc,"T");
+      at++;
+    }
     if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
       ksprintf(&kpsmc,"\n");
     gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
     kpsmc.l=0;
-    
-    ksprintf(&kpsmc,"+\n");
-    for(int s=0;s<regLen;s++){
-      if(s>0 &&(s % NBASE_PER_LINE) ==0){
-	//fprintf(stderr," s:%d NBA:%d\n",s,NBASE_PER_LINE);
-	ksprintf(&kpsmc,"\n");
-      }
-      ksprintf(&kpsmc,"S");
-      if(kpsmc.l>4096){
-	gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
-	kpsmc.l=0;
-      }
-    }
-    if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
-      ksprintf(&kpsmc,"\n");
-    gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
-    kpsmc.l=0;free(kpsmc.s);
   }
 }
 
@@ -371,15 +350,15 @@ int main(int argc,char **argv){
   argv++;
   int nind = 0;
   char **orig = argv;
-  int seed = -1;
+  int seed = -1;\
   int do_seq_glf = 1;
   int nsam,howmany,theta,rho, regLen;
   int j ,nsites, i;
-  char line[1001], slashline[1001]  ;
+  char line[1001] ;
   FILE *pf, *fopen(), *pfin ;
   int *positInt ;
   int   segsites;
-  
+  int psmcOut = 0;
   while(*argv){
     if(strcasecmp(*argv,"-in")==0) inS = *++argv;
     else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
@@ -444,7 +423,7 @@ int main(int argc,char **argv){
   gzFile gzPsmc = Z_NULL;
 
   if(psmcOut)
-    gzPsmc = openFileGz(prefix,".fq.gz","w");
+    gzPsmc = openFileGz(prefix,".fa.gz","w");
   
   if(singleOut==1){
     if(do_seq_glf)
@@ -510,22 +489,4 @@ int main(int argc,char **argv){
    fclose(in);
    free(positInt);
    return 0;
-}
-
-	
-
-/* allocates space for gametes (character strings) */
-char ** cmatrix(nsam,len)
-	int nsam, len;
-{
-	int i;
-	char **m;
-
-	if( ! ( m = (char **) malloc( (unsigned)( nsam*sizeof( char* )) ) ) )
-	   perror("alloc error in cmatrix") ;
-	for( i=0; i<nsam; i++) {
-		if( ! ( m[i] = (char *) malloc( (unsigned) (len*sizeof( char )) )))
-			perror("alloc error in cmatric. 2");
-		}
-	return( m );
 }
