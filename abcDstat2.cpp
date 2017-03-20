@@ -291,9 +291,12 @@ void abcDstat2::clean(funkyPars *pars){
       delete[] abbababaStruct->COMB[m][j];
     delete[] abbababaStruct->COMB[m];
   }
-  delete[] abbababaStruct->COMB;
-    
+
+  for(int m=0; m<numComb; m++)
+    delete[] abbababaStruct->NSITE[m];
   delete[] abbababaStruct->NSITE;
+  
+  delete[] abbababaStruct->COMB;
   delete[] abbababaStruct->BLOCKNUM;
 
   delete abbababaStruct;
