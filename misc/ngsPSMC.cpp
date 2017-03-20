@@ -100,16 +100,95 @@ void print(int argc,char **argv){
   
   destroy_args(pars);
 }
+double em(double &x,double *gls,int nSites,double tol){
+  fprintf(stderr,"[%s] x:%f gls:%p nSites:%d\n",__FUNCTION__,x,gls,nSites);
+  double llh = 0;
+  double est = 0;
+  double start = x;
+  double lastllh =0;
+  for(int iter=0;iter<20;iter++){
+    fprintf(stderr,"\r %d/%d     ",iter,20);fflush(stderr);
+    for(int i=0;i<nSites;i++) {
+      //  fprintf(stderr,"gls=(%f,%f)\n",gls[2*i],gls[2*i+1]);
+      double tmp[2];
+      tmp[0] = exp(gls[2*i])*(1-start);
+      tmp[1] = exp(gls[2*i+1])*(start);
+      est += tmp[1]/(tmp[0]+tmp[1]);
+      llh -= log(tmp[0]+tmp[1]);
+    }
+    est = est/((double) nSites);
+    fprintf(stderr,"iter:%d est: %f llh: %f diffInLlh:%e diffInPars:%e\n",iter,est,llh,llh-lastllh,est-start);
+    if(llh<lastllh){
+      fprintf(stderr,"\t-> Problem with EM newllh is larger than lastllh, will break\n");
+      break;
+    }
+    if(fabs(est-start)<tol){
+      fprintf(stderr,"\t-> Difference in estimated pars is smaller than tol, convergence achieved\n");
+      start=est;
+      lastllh=llh;
+      break;
+    }
+    start=est;
+    lastllh=llh;
+  }
+  x=start;
+  return lastllh;
+}
+void calcpost(double &x,double *gls,int nSites,double *pp){
+  double start =x;
+  for(int i=0;i<nSites;i++) {
+    //  fprintf(stderr,"gls=(%f,%f)\n",gls[2*i],gls[2*i+1]);
+    double tmp[2];
+    tmp[0] = exp(gls[2*i])*(1-start);
+    tmp[1] = exp(gls[2*i+1])*(start);
+    double est = tmp[1]/(tmp[0]+tmp[1]);
+    pp[i] = est;
+    //    fprintf(stdout,"%f\n",est);
+  }
+
+}
+
+void writefa(FILE *fp,double *pp,int ppl, int ll,double cutoff,char *chrname){
+  fprintf(stdout,">%s\n",chrname);
+  int i;
+  for(i=0;i<ppl;i++){
+    if(i>0&&((i %ll )==0)){
+      // fprintf(stderr,"i:%d\n",i);
+      fprintf(fp,"\n");
+    }
+    if(pp[i]<cutoff)
+      fprintf(fp,"A");
+    else
+      fprintf(fp,"M");
+  }
+  if(i>0&&((i %ll )==0))
+    return;
+  else
+    fprintf(fp,"\n");
+  return;
+}
+
 
 int makeold(int argc,char **argv){
   if(argc<1){
-    fprintf(stderr,"\t-> Must supply afile.saf.idx files \n");
-    fprintf(stderr,"\t-> Examples \n");
-    fprintf(stderr,"\t-> ./ngsPSMC print pop1.saf.idx \n");
-    fprintf(stderr,"\t-> ./ngsPSMC print pop1.saf.idx -r chr1:10000000-12000000\n");
+    fprintf(stderr,"\t-> output is a vcf2fq style file \n");
     return 0; 
   }
-
+  args *pars = getArgs(argc,argv);
+  writepsmc_header(stderr,pars->perc);
+  
+  for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
+    if(pars->chooseChr!=NULL)
+      it = iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop);
+    else
+      it = iter_init(pars->perc,it->first,pars->start,pars->stop);
+    double opt = 0.01;
+    //    double llh = em(opt,pars->perc->gls,pars->perc->last,1e-8);
+    double *pp = new double[pars->perc->last];
+    calcpost(opt,pars->perc->gls,pars->perc->last,pp);
+    writefa(stdout,pp,pars->perc->last,50,0.9,it->first);
+    break;
+  }
   return 0;
 }
 
