@@ -1,5 +1,4 @@
 #include <math.h>
-#define PI 3.141592654
 #include <stdio.h>
 #include <stdlib.h>
 #include <zlib.h>
@@ -8,12 +7,11 @@
 #include <sys/stat.h>
 #include <assert.h>
 #include <htslib/kstring.h>
-
-
+#include <htslib/bgzf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
+
 int block = 100;
 
 #define LENS 100000
@@ -33,7 +31,7 @@ FILE *getFILE(const char*fname,const char* mode){
 }
 
 FILE *openFile(const char* a,const char* b){
-  if(1)
+  if(0)
     fprintf(stderr,"[%s] %s %s\n",__FUNCTION__,a,b);
   //  char *c = new char[strlen(a)+strlen(b)+1];
   char *c = malloc(strlen(a)+strlen(b)+1);
@@ -45,8 +43,8 @@ FILE *openFile(const char* a,const char* b){
   return fp;
 }
 
-gzFile getGz(const char*fname,const char* mode){
-  if(1)
+BGZF *getGz(const char*fname,const char* mode){
+  if(0)
     fprintf(stderr,"doing %s with %s\n",fname,mode);
   int writeFile = 0;
   for(size_t i=0;i<strlen(mode);i++)
@@ -54,29 +52,29 @@ gzFile getGz(const char*fname,const char* mode){
       writeFile = 1;
 
   //  fprintf(stderr,"\t-> opening: %s\n",fname);
-  gzFile fp=Z_NULL;
-  if(NULL==(fp=gzopen(fname,mode))){
+  BGZF *fp=NULL;
+  if(NULL==(fp=bgzf_open(fname,mode))){
     fprintf(stderr,"\t-> Error opening gzFile handle for file:%s exiting\n",fname);
     exit(0);
   }
   return fp;
 }
 
-gzFile openFileGz(const char* a,const char* b,const char *mode){
-  if(1)
+BGZF *openFileGz(const char* a,const char* b,const char *mode){
+  if(0)
     fprintf(stderr,"[%s] %s%s\n",__FUNCTION__,a,b);
   //  char *c = new char[strlen(a)+strlen(b)+1];
   char *c = malloc(strlen(a)+strlen(b)+1);
   strcpy(c,a);
   strncat(c,b,strlen(b));
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
-  gzFile fp = getGz(c,mode);
+  BGZF *fp = getGz(c,mode);
   //delete [] c;
   free(c);
   return fp;
 }
 
-gzFile openFileGzI(const char* a,const char* b,int i,const char*mode){
+BGZF *openFileGzI(const char* a,const char* b,int i,const char*mode){
   char ary[5000];
   snprintf(ary,5000,"%s%d.gz",b,i);
   return openFileGz(a,ary,mode);  
@@ -178,7 +176,7 @@ double Poisson(double xm)
     }
     do {
       do {
-	y=tan(PI*uniform());
+	y=tan(M_PI*uniform());
 	em=sq*y+xm;
       } while (em< 0.0);
       em=floor(em);
@@ -253,7 +251,7 @@ void calclike(int base, double errate, double *like)	{
   
 }
 
-int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,kstring_t *resultfile){
+int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffile,kstring_t *resultfile){
 
   int i, b, numreads;
   numreads = Poisson(meandepth);
@@ -291,14 +289,14 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
       like[i] -= mx;
 
   }
-  gzwrite(glffile,like,sizeof(double)*10); 
+  assert(sizeof(double)*10*bgzf_write(glffile,like,sizeof(double)*10));
   return numreads;
 }
 
 //nsam=2*nind
 //only one individual input
-void test (int *positInt,gzFile gz,double errate,double meandepth, int regLen,gzFile gzSeq,int count,gzFile gzPsmc,int do_seq_glf){
-  fprintf(stderr,"posit:%p errate:%f meandepth:%f regLen:%d count:%d do_seq_glf:%d\n",positInt,errate,meandepth,regLen,count,do_seq_glf);
+void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZF *gzSeq,int count,BGZF *gzPsmc,int do_seq_glf){
+  //  fprintf(stderr,"posit:%p errate:%f meandepth:%f regLen:%d count:%d do_seq_glf:%d\n",positInt,errate,meandepth,regLen,count,do_seq_glf);
   kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   kstring_t kpsmc;kpsmc.s=NULL;kpsmc.l=kpsmc.m=0;
   int p =0;
@@ -335,7 +333,7 @@ void test (int *positInt,gzFile gz,double errate,double meandepth, int regLen,gz
     }
     if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
       ksprintf(&kpsmc,"\n");
-    gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+    assert(kpsmc.l==bgzf_write(gzPsmc,kpsmc.s,kpsmc.l));
     kpsmc.l=0;
   }
 }
@@ -418,9 +416,9 @@ int main(int argc,char **argv){
   positInt = (int *)malloc( regLen*sizeof( int ) ) ;
 
 
-  gzFile gz=Z_NULL;
-  gzFile gzSeq = Z_NULL;
-  gzFile gzPsmc = Z_NULL;
+  BGZF *gz=NULL;
+  BGZF *gzSeq = NULL;
+  BGZF *gzPsmc = NULL;
 
   if(psmcOut)
     gzPsmc = openFileGz(prefix,".fa.gz","w");
@@ -475,16 +473,16 @@ int main(int argc,char **argv){
      test(positInt,gz,errate,meanDepth,regLen,gzSeq,i,gzPsmc,do_seq_glf) ;
      if(singleOut==0){
        if(gz!=Z_NULL){
-	 gzclose(gz);
-	 gz=Z_NULL;
+	 bgzf_close(gz);
+	 gz=NULL;
        }
      }
    }
    
    if(psmcOut)
-     gzclose(gzPsmc);
+     bgzf_close(gzPsmc);
    if(gz!=Z_NULL)
-     gzclose(gz);
+     bgzf_close(gz);
    fclose(pgEst);
    fclose(in);
    free(positInt);
