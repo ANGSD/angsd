@@ -44,6 +44,70 @@ int *psmc_parse_pattern(const char *pattern, int *n_free, int *n_pars)
 }
 
 
+
+void setpars( char *fname,psmc_par *pp){
+  fprintf(stderr,"[%s]:%s\n",__FUNCTION__,fname);
+  FILE *fp = NULL;
+  fp=fopen(fname,"r");
+  if(!fp){
+    fprintf(stderr,"\t-> Problem opening file:%s\n",fname);
+    exit(0);
+  }
+  char *buf = new char[fsize(fname)];
+  fread(buf,sizeof(char),fsize(fname),fp);
+  fclose(fp);
+  char *slashslash[100];
+  
+  //stupid loop below....
+  int n=0;
+  for(int i=0;i<strlen(buf)-1;i++){//offset with one so we dont get the last empty output from PSCMC
+    if(strncmp(buf+i,"\n//\n",4)==0)
+      slashslash[n++] = buf+i;
+  }
+  char *last= slashslash[n-2];
+  char *line = NULL;
+  strtok(last,"\n");
+
+  line=strtok(NULL,"\n");
+  int IT;
+  sscanf(line,"IT\t%d",&IT);
+  int RD;
+  line=strtok(NULL,"\n"); sscanf(line,"RD\t%d",&RD);
+  double LK;
+  line=strtok(NULL,"\n"); sscanf(line,"LK\t%lf",&LK);
+  double QD[2];
+  line=strtok(NULL,"\n"); sscanf(line,"QD\t%lf -> %lf",&QD[0],&QD[1]);
+  double RI;
+  line=strtok(NULL,"\n"); sscanf(line,"RI\t%lf",&RI);
+  double TR[2];
+  line=strtok(NULL,"\n"); sscanf(line,"QD\t%lf -> %lf",&TR[0],&TR[1]);
+  double MT;
+  line=strtok(NULL,"\n"); sscanf(line,"MT\t%lf",&MT);
+  double C_pi,n_recomb;
+  line=strtok(NULL,"\n"); sscanf(line,"MM\tC_pi: %lf, n_recomb: %lf",&C_pi,&n_recomb);
+  std::vector<char *> RS;
+  fprintf(stderr,"IT:%d RD:%d lk:%f qd[0]:%f qd[1]:%f ri:%f tr[0]:%f tr[1]:%f mt:%f c_pi:%f n_rebomc:%f\n",IT,RD,LK,QD[0],QD[1],RI,TR[0],TR[1],MT,C_pi,n_recomb);
+  while(((line=strtok(NULL,"\n")))){
+    if(line[0]=='R'&&line[1]=='S')
+      RS.push_back(line);
+    else{
+      break;
+    }
+  }
+  char *nline = strdup(line);
+  char *tok = strtok(nline,"\n\t ");
+  tok = strtok(NULL,"\n\t ");
+  pp->pattern=strdup(tok);
+
+  pp->par_map= psmc_parse_pattern(pp->pattern,&pp->n_free,&pp->n);
+  assert(RS.size()-1==pp->n);
+  pp->params = new double[RS.size()];
+  pp->times = new double[RS.size()];
+  for(int i=0;i<RS.size();i++)
+    sscanf(RS[i],"RS\t%lf\t%lf\t",&pp->times[i],&pp->params[i]);
+}
+
+
 args * getArgs(int argc,char **argv){
   args *p = new args;
   p->chooseChr=NULL;
@@ -73,6 +137,9 @@ args * getArgs(int argc,char **argv){
       p->nSites = atol(*(++argv));
     else  if(!strcasecmp(*argv,"-seed"))
       p->seed = atol(*(++argv));
+    else  if(!strcasecmp(*argv,"-infile"))
+      setpars(*++argv,p->par);
+    
     else  if(!strcasecmp(*argv,"-r")){
       p->chooseChr = get_region(*(++argv),p->start,p->stop);
       if(!p->chooseChr)
@@ -92,7 +159,8 @@ args * getArgs(int argc,char **argv){
   if(p->par->pattern==NULL)
     p->par->pattern = strdup(DEFAULT_PATTERN);
   //  fprintf(stderr,"par:%p par->pattern:%p DEFAULT_PATTERN:%s\n",p->par,p->par->pattern,DEFAULT_PATTERN);
-  p->par->par_map = psmc_parse_pattern(p->par->pattern, &p->par->n_free, &p->par->n);
+  if(p->par->pattern!=NULL&&p->par->params==NULL)
+    p->par->par_map = psmc_parse_pattern(p->par->pattern, &p->par->n_free, &p->par->n);
   
   return p;
 }
