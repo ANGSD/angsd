@@ -12,10 +12,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 int block = 100;
 
 #define LENS 100000
 #define NBASE_PER_LINE 60
+
+
+double addProtect2(double a,double b){
+  //function does: log(exp(a)+exp(b)) while protecting for underflow
+  double maxVal;// = std::max(a,b));
+  if(a>b)
+    maxVal=a;
+
+  else
+    maxVal=b;
+  double sumVal = exp(a-maxVal)+exp(b-maxVal);
+  return log(sumVal) + maxVal;
+}
+
+
 
 FILE *getFILE(const char*fname,const char* mode){
   int writeFile = 0;
@@ -251,7 +267,7 @@ void calclike(int base, double errate, double *like)	{
   
 }
 
-int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffile,kstring_t *resultfile){
+int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffile,kstring_t *resultfile,BGZF *outfileSAF){
 
   int i, b, numreads;
   numreads = Poisson(meandepth);
@@ -290,12 +306,32 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffil
 
   }
   assert(sizeof(double)*10*bgzf_write(glffile,like,sizeof(double)*10));
+  int noTrans =0;
+  if(outfileSAF){
+    // AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
+    //  0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    //  =. -. *. -. =. -. *. =. -. =
+    const char homoz[] = {0,4,7,9};//=
+    const char transverz[] = {1,3,5,8};//-
+    const char transitz[] ={2,6};//* 
+    double homo =log(0);
+    double het= log(0);
+    for(int i=0;i<4;i++){
+      homo = addProtect2(homo,like[homoz[i]]);
+      het =  addProtect2(het,like[transverz[i]]);
+    }
+    for(int i=0;(noTrans==0&&i<2);i++)
+      het = addProtect2(het,like[transitz[i]]);
+    bgzf_write(outfileSAF,&homo,sizeof(double));
+    bgzf_write(outfileSAF,&het,sizeof(double));
+  }
+  
   return numreads;
 }
 
 //nsam=2*nind
 //only one individual input
-void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZF *gzSeq,int count,BGZF *gzPsmc,int do_seq_glf){
+void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZF *gzSeq,int count,BGZF *gzPsmc,int do_seq_glf,BGZF*outfileSAF,BGZF*outfileSAFPOS){
   //  fprintf(stderr,"posit:%p errate:%f meandepth:%f regLen:%d count:%d do_seq_glf:%d\n",positInt,errate,meandepth,regLen,count,do_seq_glf);
   kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   kstring_t kpsmc;kpsmc.s=NULL;kpsmc.l=kpsmc.m=0;
@@ -306,8 +342,10 @@ void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZ
     int genotypes[2]={0,0};
     if(positInt[i])
       genotypes[1] = 1;
-    if(do_seq_glf)
-      print_ind_site(errate,meandepth,genotypes,gz,&kpl);
+    if(do_seq_glf||outfileSAF!=NULL)
+      print_ind_site(errate,meandepth,genotypes,gz,&kpl,outfileSAF);
+    if(outfileSAFPOS)
+      bgzf_write(outfileSAFPOS,&i,sizeof(int));
   }
   
 
@@ -336,6 +374,7 @@ void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZ
     assert(kpsmc.l==bgzf_write(gzPsmc,kpsmc.s,kpsmc.l));
     kpsmc.l=0;
   }
+  free(kpsmc.s);
 }
 
 int main(int argc,char **argv){
@@ -343,27 +382,28 @@ int main(int argc,char **argv){
   double meanDepth = 4;
   const char *inS = NULL;
   const char *prefix=NULL;
-  int singleOut = 0;
   FILE *in = NULL;
   argv++;
   int nind = 0;
   char **orig = argv;
   int seed = -1;\
   int do_seq_glf = 1;
-  int nsam,howmany,theta,rho, regLen;
+  int nsam,howmany,theta,rho;
+  int regLen=0;
   int j ,nsites, i;
   char line[1001] ;
   FILE *pf, *fopen(), *pfin ;
   int *positInt ;
   int   segsites;
-  int psmcOut = 0;
+  int psmcfa = 0;
+  int psmc2 = 0;
   while(*argv){
     if(strcasecmp(*argv,"-in")==0) inS = *++argv;
     else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
     else if(strcasecmp(*argv,"-err")==0) errate=atof(*++argv); 
     else if(strcasecmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
-    else if(strcasecmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
-    else if(strcasecmp(*argv,"-psmc")==0) psmcOut=atoi(*++argv);
+    else if(strcasecmp(*argv,"-psmcfa")==0) psmcfa=atoi(*++argv);
+    else if(strcasecmp(*argv,"-psmc2")==0) psmc2=atoi(*++argv);
     else if(strcasecmp(*argv,"-seed")==0) seed=atoi(*++argv);
     else if(strcasecmp(*argv,"-simpleRand")==0) simpleRand=atoi(*++argv); 
     else if(strcasecmp(*argv,"-nind")==0) nind=atoi(*++argv); 
@@ -380,17 +420,36 @@ int main(int argc,char **argv){
     srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
-    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen --nind -seed -pileup -Nsites -psmc -do_seq_glf\n");
+    fprintf(stderr,"also -err -depth -depthFile -regLen -nind -seed -pileup -psmc -do_seq_glf\n");
     return 0;
   }
-
-  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -singleOut=%d -regLen=%d -seed %d -nind %d -psmc %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,singleOut,regLen,seed,nind,psmcOut,do_seq_glf);
+  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmcfa %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf);
   //print args file
   FILE *argFP=openFile(prefix,".argg");
-  fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -singleOut=%d -regLen=%d -seed %d -nind %d -psmc %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,singleOut,regLen,seed,nind,psmcOut,do_seq_glf);
+  fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmc %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf);
+  
   for(int i=0;i<argc;i++)
     fprintf(argFP,"%s ",orig[i]);
   fclose(argFP);
+  
+  const char *SAF = ".psmc.gz";
+  const char *SAFPOS =".psmc.pos.gz";
+  const char *SAFIDX =".psmc.idx";
+  int64_t offs[2];
+  BGZF *outfileSAF = NULL;
+  BGZF *outfileSAFPOS = NULL;
+  FILE *outfileSAFIDX = NULL;
+  if(psmc2){
+    outfileSAF = openFileGz(prefix,SAF,"wb");
+    outfileSAFPOS =  openFileGz(prefix,SAFPOS,"wb");
+    outfileSAFIDX = openFile(prefix,SAFIDX);
+    char buf[8]="psmcv1";
+    bgzf_write(outfileSAF,buf,8);
+    bgzf_write(outfileSAFPOS,buf,8);
+    fwrite(buf,1,8,outfileSAFIDX);
+    offs[0] = bgzf_tell(outfileSAFPOS);
+    offs[1] = bgzf_tell(outfileSAF);
+  }
   
   in=getFILE(inS,"r");
   
@@ -420,13 +479,12 @@ int main(int argc,char **argv){
   BGZF *gzSeq = NULL;
   BGZF *gzPsmc = NULL;
 
-  if(psmcOut)
+  if(psmcfa)
     gzPsmc = openFileGz(prefix,".fa.gz","w");
   
-  if(singleOut==1){
-    if(do_seq_glf)
-      gz = openFileGz(prefix,".glf.gz","w");
-  }
+  if(do_seq_glf)
+    gz = openFileGz(prefix,".glf.gz","w");
+
   FILE *pgEst = openFile(prefix,".pgEstH");
 
   fprintf(stderr,"\n");
@@ -444,10 +502,7 @@ int main(int argc,char **argv){
     }
     fprintf(stderr,"\t-> Parsing replicate:%d which should have nseg: %d ",i,segsites);
     memset(positInt,0,sizeof(int)*regLen);
-    if(singleOut==0){
-      if(do_seq_glf)
-	gz = openFileGzI(prefix,".glf",i,"w");
-    }
+
     if( fgets( line, 1000, pfin) == NULL ){
       fprintf(stderr,"\t-> Problem reading file\n");
       break;
@@ -469,22 +524,33 @@ int main(int argc,char **argv){
       assert(ss=1);
       positInt[at]=1;
     }
+    
+    test(positInt,gz,errate,meanDepth,regLen,gzSeq,i,gzPsmc,do_seq_glf,outfileSAF,outfileSAFPOS);
+    if(outfileSAFIDX){
+      char tmpChr[1024];
+      sprintf(tmpChr,"%d",i+1 );
+      size_t clen = strlen(tmpChr);
+      fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);
+      fwrite(tmpChr,1,clen,outfileSAFIDX);
+      size_t tt = regLen;
+      fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
+      fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
+    }
 
-     test(positInt,gz,errate,meanDepth,regLen,gzSeq,i,gzPsmc,do_seq_glf) ;
-     if(singleOut==0){
-       if(gz!=Z_NULL){
-	 bgzf_close(gz);
-	 gz=NULL;
-       }
-     }
    }
    
-   if(psmcOut)
+   if(psmcfa)
      bgzf_close(gzPsmc);
    if(gz!=Z_NULL)
      bgzf_close(gz);
    fclose(pgEst);
    fclose(in);
    free(positInt);
+   if(outfileSAF)
+     bgzf_close(outfileSAF);
+   if(outfileSAFPOS)
+     bgzf_close(outfileSAFPOS);
+   if(outfileSAFIDX)
+     fclose(outfileSAFIDX);
    return 0;
 }
