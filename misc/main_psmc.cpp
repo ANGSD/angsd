@@ -105,6 +105,7 @@ void setpars( char *fname,psmc_par *pp){
   pp->times = new double[RS.size()];
   for(int i=0;i<RS.size();i++)
     sscanf(RS[i],"RS\t%lf\t%lf\t",&pp->times[i],&pp->params[i]);
+  fprintf(stderr,"\t-> Done reading parameters from file: \'%s\'\n",fname);
 }
 
 
@@ -185,7 +186,7 @@ int main_psmc(int argc, char **argv){
 
   if(1){
     psmc_wrapper(pars);
-  }  else{
+  }else{
     //below is old printout, keeping for reference
     for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
       //set perchr iterator, if pars->chooseChr, then we have only use a single chr

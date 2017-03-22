@@ -156,43 +156,75 @@ public:
     fprintf(stderr,"[%s] stop\n",__FUNCTION__ );
   }  
 private:
-  void ComputeP1(){
-    for (unsigned i = 0; i < maxTime; i++){
-      P1[i] = exp( -rho*1*(timePoints[i+1] - timePoints[i]) );
+  double timePoint(){
+
+  }
+  
+  void ComputeP1(){ //TODO: maxTime is in fact the number of time intervals
+    for (unsigned i = 0; i < maxTime-1; i++){
+      P1[i] = 1.0/(1.0+epSize[i]*2.0*rho);
+      P1[i] *= exp( -rho*2.0*timePoints[i] ) - exp(-rho*2.0*timePoints[i+1]-(timePoints[i+1]-timePoints[i])/epSize[i]);
+      P1[i] /= 1.0 - exp( -(timePoints[i+1]-timePoints[i])/epSize[i] );
     }
+    //Last interval ends with +infinity
+    unsigned i = maxTime - 1;
+    P1[i] = 1.0/(1.0+epSize[i]*2.0*rho)* exp( -rho*2.0*timePoints[i] );
+    
   }
   void ComputeP2(){
     for (unsigned i = 0; i < maxTime; i++)
-      P2[i] = 1 - P5[i];
+      P2[i] = 1.0 - P5[i];
   }
   
   void ComputeP3(){
-    for (unsigned i = 0; i < maxTime; i++)
-      P3[i] = exp(-2*rho*timePoints[i]) - exp(-2*rho*timePoints[i+1]) - P6[i];
+    for (unsigned i = 0; i < maxTime - 1; i++){
+      P3[i] = exp(-timePoints[i]*2.0*rho);
+      P3[i] += epSize[i]*2.0*rho/(1.0 - epSize[i]*2.0*rho)*exp(-(timePoints[i+1]-timePoints[i])/epSize[i]-timePoints[i]*2.0*rho);
+      P3[i] -= 1.0/(1.0 - epSize[i]*2.0*rho)*exp(-timePoints[i+1]*2.0*rho);
+    }
+    unsigned i = maxTime - 1;
+    P3[i] = exp(-timePoints[i]*2.0*rho);
   }
 	
   void ComputeP4(){
-    for (unsigned i = 0; i < maxTime; i++)
-      P4[i] = P3[i];
+    for (unsigned i = 0; i < maxTime-1; i++){
+      P4[i] = 1.0/(1.0 - exp(-(timePoints[i+1]-timePoints[i])/epSize[i]) );
+      double tmp = 2.0*rho/(1.0 + 2*rho*epSize[i])*exp(-2*rho*timePoints[i]);
+      tmp -= 2.0*exp(-(timePoints[i+1] - timePoints[i])/epSize[i] - 2.0*rho*timePoints[i] );
+      tmp -= 2.0*rho*epSize[i]/(1.0 - epSize[i]*2.0*rho)*exp(-2.0*rho*timePoints[i]-2.0*(timePoints[i+1]-timePoints[i])/epSize[i]);
+      tmp += 2.0/(1.0-epSize[i]*2.0*rho)/(1.0 + 2.0*rho)*exp(-rho*timePoints[i+1]-(timePoints[i+1]-timePoints[i])/epSize[i]);
+      P4[i] *= tmp;
+    }
+    unsigned i = maxTime - 1;
+    P4[i] = 2.0*rho/(1.0 + 2.0*rho*epSize[i])*exp(-2.0*rho*timePoints[i]);
   }
 	
   void ComputeP5(){
-    for (unsigned i = 0; i < maxTime; i++)
-      P5[i] = exp( -epSize[i]*(timePoints[i+1] - timePoints[i]) );
+    for (unsigned i = 0; i < maxTime-1; i++)
+      P5[i] = exp( -(timePoints[i+1] - timePoints[i])/epSize[i] );
+    P5[maxTime-1] = 0.0;
   }
 	
   void ComputeP6(){
-    for (unsigned i = 0; i < maxTime; i++){
-      double tmp = 0;
-      tmp = exp((epSize[i]-2*rho)*timePoints[i]) - exp((epSize[i]-2*rho)*timePoints[i+1]);
-      tmp = tmp*2*rho*exp(-epSize[i]*timePoints[i+1])/(epSize[i] - 2*rho);
-      P6[i] = tmp;
+    for (unsigned i = 0; i < maxTime-1; i++){
+      P6[i] = 1/(1-exp(-(timePoints[i+1]-timePoints[i])/epSize[i]));
+      P6[i] *= exp(-(timePoints[i+1]-timePoints[i])/epSize[i]);
+      double tmp = exp(-2*rho*timePoints[i]);
+      tmp -= 1/(1-2*rho*epSize[i])*exp(-2*rho*timePoints[i+1]);
+      tmp += 2*rho*epSize[i]/(1 - 2*rho*epSize[i])*exp(-2*rho*timePoints[i]-(timePoints[i+1]-timePoints[i])/epSize[i]);
+      P6[i] *= tmp;
     }
+    P6[maxTime - 1] = 0.0;
   }
 	
   void ComputeP7(){
-    for (unsigned i = 0; i < maxTime; i++)
-      P7[i] = P6[i];
+    for (unsigned i = 0; i < maxTime - 1; i++){
+      P7[i] = 1.0 - exp(-(timePoints[i+1]-timePoints[i])*2.0*rho) - exp(-timePoints[i]*2.0*rho);
+      P7[i] -= epSize[i]*2*rho/(1 - epSize[i]*2.0*rho)*exp(-(timePoints[i+1]-timePoints[i])/epSize[i]-timePoints[i]*2.0*rho);
+      P7[i] += 1.0/(1.0 - epSize[i]*2.0*rho)*exp(-timePoints[i]*2.0*rho);
+    }
+    unsigned i = maxTime - 1;
+    P7[i] = 1.0 - exp(-2.0*rho*timePoints[i]);
   }
 
   void ComputeR1(int v,double **mat){

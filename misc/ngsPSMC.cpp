@@ -218,7 +218,7 @@ int main(int argc,char **argv){
   else {
     if(isatty(fileno(stdout))){
       fprintf(stderr,"\t-> You are printing results to the terminal consider dumping into a file\n");
-      fprintf(stderr,"\t-> E.g.: \'./realSFS");
+      fprintf(stderr,"\t-> E.g.: \'./ngsPSMC ");
       for(int i=0;i<argc;i++)
 	fprintf(stderr," %s",argv[i]);
       fprintf(stderr," >sfs.ml.txt\'\n");   
