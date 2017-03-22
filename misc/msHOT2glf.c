@@ -305,7 +305,8 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffil
       like[i] -= mx;
 
   }
-  assert(sizeof(double)*10*bgzf_write(glffile,like,sizeof(double)*10));
+  if(glffile)
+    assert(sizeof(double)*10*bgzf_write(glffile,like,sizeof(double)*10));
   int noTrans =0;
   if(outfileSAF){
     // AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
@@ -427,7 +428,7 @@ int main(int argc,char **argv){
   //print args file
   FILE *argFP=openFile(prefix,".argg");
   fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmc %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf);
-  
+
   for(int i=0;i<argc;i++)
     fprintf(argFP,"%s ",orig[i]);
   fclose(argFP);
