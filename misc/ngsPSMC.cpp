@@ -25,6 +25,7 @@
 #include <zlib.h>
 #include "safstat.h"
 #include <algorithm>
+#include <htslib/kstring.h>
 #include <libgen.h>
 #include "psmcreader.h"
 #include "header.h"
@@ -148,24 +149,23 @@ void calcpost(double &x,double *gls,int nSites,double *pp){
 
 }
 
-void writefa(FILE *fp,double *pp,int ppl, int ll,double cutoff,char *chrname){
-  fprintf(stdout,">%s\n",chrname);
-  int i;
-  for(i=0;i<ppl;i++){
-    if(i>0&&((i %ll )==0)){
-      // fprintf(stderr,"i:%d\n",i);
-      fprintf(fp,"\n");
+void writefa(kstring_t *kstr,double *positInt,int regLen,int block, int NBASE_PER_LINE,double cutoff){
+  int at=0;
+    for(int i=0;i<regLen;i+=block) {
+      int isHet =0;
+      for(int b=0;b<block;b++)
+	if(positInt[i+b]>cutoff)
+	  isHet++;
+      if(at==NBASE_PER_LINE){
+	ksprintf(kstr,"\n");
+	at=0;
+      }
+      if(isHet)
+	ksprintf(kstr,"K");
+      else
+	ksprintf(kstr,"T");
+      at++;
     }
-    if(pp[i]<cutoff)
-      fprintf(fp,"A");
-    else
-      fprintf(fp,"M");
-  }
-  if(i>0&&((i %ll )==0))
-    return;
-  else
-    fprintf(fp,"\n");
-  return;
 }
 
 
@@ -177,18 +177,50 @@ int makeold(int argc,char **argv){
   args *pars = getArgs(argc,argv);
   writepsmc_header(stderr,pars->perc);
   
+
+  double *gls = new double[2*pars->perc->nSites];
+  size_t at=0;
+  //first pull all the data
   for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
     if(pars->chooseChr!=NULL)
       it = iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop);
     else
       it = iter_init(pars->perc,it->first,pars->start,pars->stop);
-    double opt = 0.01;
-    //    double llh = em(opt,pars->perc->gls,pars->perc->last,1e-8);
+    
+    //    fprintf(stderr,"it->first:%s\tlast:%lu\n",it->first,pars->perc->last);
+    memcpy(gls+at,pars->perc->gls,sizeof(double)*2*pars->perc->last);
+    at += pars->perc->last;
+    if(pars->chooseChr!=NULL)
+      break;
+  }
+  double opt = 0.01;
+  double llh = em(opt,gls,at,1e-8);
+  fprintf(stderr,"estimated het:%f with llh:%f\n",opt,llh);
+  delete [] gls;
+
+  kstring_t kstr;kstr.l=kstr.m=0;kstr.s=NULL;
+  for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
+    if(pars->chooseChr!=NULL)
+      it = iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop);
+    else
+      it = iter_init(pars->perc,it->first,pars->start,pars->stop);
+    ksprintf(&kstr,">%s\n",it->first);
     double *pp = new double[pars->perc->last];
     calcpost(opt,pars->perc->gls,pars->perc->last,pp);
-    writefa(stdout,pp,pars->perc->last,50,0.9,it->first);
-    break;
+    writefa(&kstr,pp,pars->perc->last,100,50,0.9);
+    if(kstr.l>0&&kstr.s[kstr.l-1]!='\n')
+      ksprintf(&kstr,"\n");
+    fwrite(kstr.s,sizeof(char),kstr.l,stdout);
+    kstr.l=0;
+    delete [] pp;
+    if(pars->chooseChr!=NULL)
+      break;
   }
+  free(kstr.s);
+  /*
+ 
+    break;
+  */
   return 0;
 }
 

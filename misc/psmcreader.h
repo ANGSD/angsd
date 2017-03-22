@@ -7,7 +7,7 @@
 #include "header.h"
 
 typedef struct{
-  size_t nSites;//number of sites for the CURRENT chr loaded into ppos, and gls
+  size_t nSites;
   myMap mm;
   BGZF *bgzf_pos;
   BGZF *bgzf_gls;
