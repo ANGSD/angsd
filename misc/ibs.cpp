@@ -51,8 +51,8 @@ void info(){
  fprintf(stderr,"\t-ind2/i2\tindividuals 2:\n");
  fprintf(stderr,"\t-allpairs/-a\tanalyse all pairs:\n");
  fprintf(stderr,"\t-maxSites/-m\tmaximum sites to analyze:\n");
- fprintf(stderr,"\t-model\t\tibs model:0 all 10 genotypes, 1 HO/HE\n");
- fprintf(stderr,"\t-model\t\tibs -seed 0 use seed for random start\n");
+ fprintf(stderr,"\t-model\t\tibs model\n\t\t single:\t0 all 10 genotypes, 1 HO/HE\n\t\t pair:\t\t0 all 10 genotypes, 1 HO/HE, 2 ABCD\n");
+ fprintf(stderr,"\t-seed\t\tibs -seed 0 use seed for random start\n");
  // fprintf(stderr,"\t-\t\t:\n");
 
 
@@ -100,11 +100,11 @@ size_t readGLF(const char* fname,double * &gls,int nInd,size_t maxSites){
   double *tmp_gls = new double[sizeMax];
 
   int temp=0;
-  while( temp = gzread(fp,tmp_gls,sizeof(double)*sizeMax)){
+  while( temp = gzread(fp,tmp_gls,sizeof(double)*sizeMax) ){
 
     //    fprintf(stdout,"%d\n",temp);
     nSites += temp/sizeof(double)/10/nInd;
-    if(nSites>maxSites){
+    if( nSites > maxSites ){
       nSites = maxSites;
       fprintf(stdout,"max sites reached with %lu sites\n",nSites);
       fflush(stdout);
@@ -114,7 +114,6 @@ size_t readGLF(const char* fname,double * &gls,int nInd,size_t maxSites){
 
   gzclose(fp);
   delete[] tmp_gls;
-
 
   gls = new double[nSites*10*nInd];
   fp=gzopen(fname,"r");
@@ -174,7 +173,7 @@ void runEM(double *gl,argu *pars){
     for(int w=0;w<10;w++)
       W[w]=0;
  
-    for(int i=0;i<pars->totalSites;i++){
+    for(size_t i=0;i<pars->totalSites;i++){
 
       if(pars->keepSites[i]==0)
 	continue;
@@ -430,7 +429,7 @@ void runEM2D(double *gl,argu2 *pars){
     sum=0;
     for(int w=0;w<100;w++)
       W[w]=0;
-    for(int i=0;i<pars->totalSites;i++){
+    for(size_t i=0;i<pars->totalSites;i++){
 
       if(pars->keepSites[i]==0)
 	continue;
@@ -569,8 +568,8 @@ int main(int argc, char **argv){
   double *genoLike=NULL;
   fprintf(stderr,"reading data\n");
   size_t totalSites=readGLF(likeFileName,genoLike,nInd,maxSites);
-  fprintf(stdout,"read %d sites\n",totalSites);
-  fprintf(flog,"read %d sites\n",totalSites);
+  fprintf(stdout,"read %lu sites\n",totalSites);
+  fprintf(flog,"read %lu sites\n",totalSites);
   
 
   for(size_t s=0;s<totalSites;s++)
@@ -597,7 +596,7 @@ int main(int argc, char **argv){
      
     
     for(int theInd=0;theInd<nInd;theInd++){
-      
+      fflush(fibs);
       if(p1!=-1 && p1!=theInd)
 	continue;
       fprintf(stdout,"analysing individual %d\n",theInd);
@@ -615,12 +614,12 @@ int main(int argc, char **argv){
 	}
       }  
       myPars->nSites = nSites;
-      fprintf(stdout,"\tusing nSites= %d \n",nSites);
+      fprintf(stdout,"\tusing nSites= %lu \n",nSites);
     
       runEM(genoLike,myPars);
       
       
-      fprintf(fibs,"%d\t%d\t%f",theInd,myPars->nSites,myPars->lres);
+      fprintf(fibs,"%d\t%lu\t%f",theInd,myPars->nSites,myPars->lres);
 
       if(model==0){
 	for(int w=0;w<10;w++){
@@ -669,13 +668,13 @@ int main(int argc, char **argv){
 	 break;
        }
    }
-   fprintf(stdout,"\tUsing nSites= %d \n",nSites);
+   fprintf(stdout,"\tUsing nSites= %lu \n",nSites);
    myPars2D->nSites = nSites;
    
    runEM2D(genoLike,myPars2D);
    
    if(model==0){
-     fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+     fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
      for(int w=0;w<100;w++){
        fprintf(fibspair,"\t%f",myPars2D->pi[w]*100);
      }
@@ -684,19 +683,21 @@ int main(int argc, char **argv){
    else if(model==1){
      
      //   HOHO=1, HEHO=2, aHOHO=5, HOHE=11, HEHE 12 
-     fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+     fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
      fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*24,myPars2D->pi[4]*100*12,myPars2D->pi[10]*100*24,myPars2D->pi[11]*100*36);
      
 
    }
    else if(model==2){ //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51, 
-     fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+     fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
      fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*12,myPars2D->pi[40]*100*12,myPars2D->pi[10]*100*12,myPars2D->pi[11]*100*6,myPars2D->pi[71]*100*12,myPars2D->pi[21]*100*24,myPars2D->pi[81]*100*6,myPars2D->pi[50]*100*12);
      
 
    }
    //    runEM2D(genoLike,myPars2D);
-   
+   delete[] myPars2D->keepSites;
+   delete myPars2D;
+
  }
  else if(all){
    fprintf(fibspair,"ind1\tind2\tnSites\tLlike\t");
@@ -716,7 +717,7 @@ int main(int argc, char **argv){
    
    for(int i1=0;i1<nInd-1;i1++){
      for(int i2=i1+1;i2<nInd;i2++){
-       
+       fflush(fibspair);
        p1=i1;
        p2=i2;
        myPars2D->theInd1 = p1;
@@ -734,30 +735,31 @@ int main(int argc, char **argv){
 	   }
        }  
        myPars2D->nSites = nSites;
-             fprintf(stdout,"\tusing nSites= %d \n",nSites);
+       fprintf(stdout,"\tusing nSites= %lu \n",nSites);
        runEM2D(genoLike,myPars2D);
-       
        if(model==0){
-	 fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+	 fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
 	 for(int w=0;w<100;w++){
 	   fprintf(fibspair,"\t%f",myPars2D->pi[w]);
 	 }
 	 fprintf(fibspair,"\n");
        }
        else if(model==1){
-	 fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+	 fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
 	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*24,myPars2D->pi[4]*100*12,myPars2D->pi[10]*100*24,myPars2D->pi[11]*100*36);
 	 
        }
        else if(model==2){ //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51, 
-	 fprintf(fibspair,"%d\t%d\t%d\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
+	 fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
 	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*12,myPars2D->pi[40]*100*12,myPars2D->pi[10]*100*12,myPars2D->pi[11]*100*6,myPars2D->pi[71]*100*12,myPars2D->pi[21]*100*24,myPars2D->pi[81]*100*6,myPars2D->pi[50]*100*12);
        }
  
      }
    }
    //    runEM2D(genoLike,myPars2D);
-   
+   delete[] myPars2D->keepSites;
+   delete myPars2D;
+
  }
  
  
@@ -774,6 +776,10 @@ int main(int argc, char **argv){
  }
  
  delete[] genoLike;
+
+ delete[] myPars->keepSites;
+ delete myPars;
+ 
  return 0;
  
 }
