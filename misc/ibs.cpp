@@ -20,8 +20,8 @@ typedef struct
 {
   int nInd;
   int theInd;
-  int nSites;
-  int totalSites;
+  size_t nSites;
+  size_t totalSites;
   int *keepSites;
   double lres;//this is the likelihood for a block of data. total likelihood is sum of lres.
   double pi[10];
@@ -33,8 +33,8 @@ typedef struct
   int theInd1;
   int theInd2;
   int nInd;
-  int nSites;
-  int totalSites;
+  size_t nSites;
+  size_t totalSites;
   int *keepSites;
   double lres;//this is the likelihood for a block of data. total likelihood is sum of lres.
   double pi[100];
@@ -87,13 +87,13 @@ FILE *openFile(const char* a,const char* b){
   return fp;
 }
 
-int readGLF(const char* fname,double * &gls,int nInd,int maxSites){
+size_t readGLF(const char* fname,double * &gls,int nInd,size_t maxSites){
   gzFile fp = NULL;
   if(Z_NULL==(fp=gzopen(fname,"r"))){
     fprintf(stderr,"Error opening file: %s\n",fname);
     exit(0);
   }
-  int sizeMax = 100000*nInd;
+  size_t sizeMax = 100000*nInd;
   size_t nSites = 0;
 
   //  double *buf = new double[sizeMax];
@@ -106,6 +106,8 @@ int readGLF(const char* fname,double * &gls,int nInd,int maxSites){
     nSites += temp/sizeof(double)/10/nInd;
     if(nSites>maxSites){
       nSites = maxSites;
+      fprintf(stdout,"max sites reached with %lu sites\n",nSites);
+      fflush(stdout);
       break;
     }
   }
@@ -224,7 +226,7 @@ void runEM(double *gl,argu *pars){
     pars->pi[w]=p[w];
 
   double like=0;
-  for(int i=0;i<pars->totalSites;i++){
+  for(size_t i=0;i<pars->totalSites;i++){
     double sum=0;
     for(int w=0;w<10;w++){
       sum += gl[pars->theInd*10+w+pars->nInd*10*i]*p[w];
@@ -238,7 +240,7 @@ void runEM(double *gl,argu *pars){
 }
 
 
-void model1_2D(double *W,double  pnew[],int Nsites){
+void model1_2D(double *W,double  pnew[],size_t Nsites){
       double HOHO=0;
       double HOHE=0;
       double HEHO=0;
@@ -312,7 +314,7 @@ void model1_2D(double *W,double  pnew[],int Nsites){
 */
 
 
-void model2_2D(double *W,double  pnew[],int Nsites){
+void model2_2D(double *W,double  pnew[],size_t Nsites){
       double AAAA=0;
       double AABA=0;
       double AABB=0;
@@ -481,7 +483,7 @@ void runEM2D(double *gl,argu2 *pars){
     pars->pi[w]=p[w];
   
   double like=0;
-  for(int i=0;i<pars->totalSites;i++){
+  for(size_t i=0;i<pars->totalSites;i++){
     double sum=0;
     if(pars->keepSites[i]==0)
       continue;
@@ -516,7 +518,7 @@ int main(int argc, char **argv){
   int nInd=1;
   int p1=-1;
   int p2=-1;
-  int maxSites=10000000;
+  size_t maxSites=10000000;
   int all=0;
   model=0;
   seed=0;
@@ -566,12 +568,12 @@ int main(int argc, char **argv){
 
   double *genoLike=NULL;
   fprintf(stderr,"reading data\n");
-  int totalSites=readGLF(likeFileName,genoLike,nInd,maxSites);
+  size_t totalSites=readGLF(likeFileName,genoLike,nInd,maxSites);
   fprintf(stdout,"read %d sites\n",totalSites);
   fprintf(flog,"read %d sites\n",totalSites);
   
 
-  for(int s=0;s<totalSites;s++)
+  for(size_t s=0;s<totalSites;s++)
     for(int i=0;i<nInd*10;i++){
       genoLike[s*nInd*10+i]=exp(genoLike[s*nInd*10+i]);
     }
@@ -602,8 +604,8 @@ int main(int argc, char **argv){
        fprintf(flog,"analysing individual %d\n",theInd);
       myPars->theInd = theInd;
       
-      int nSites=0;
-      for(int i=0;i<totalSites;i++){
+      size_t nSites=0;
+      for(size_t i=0;i<totalSites;i++){
 	myPars->keepSites[i] = 0;
 	for(int w=0;w<10;w++)
 	  if(genoLike[myPars->theInd*10+w+myPars->nInd*10*i]<0.9999){
@@ -656,8 +658,8 @@ int main(int argc, char **argv){
    fprintf(stdout,"analysing pair %d %d\n",p1,p2);
    fprintf(flog,"analysing pair %d %d\n",p1,p2);
 
-   int nSites=0;
-   for(int i=0;i<totalSites;i++){
+   size_t nSites=0;
+   for(size_t i=0;i<totalSites;i++){
      myPars2D->keepSites[i] = 0;
      for(int w=0;w<10;w++)
        // if(-genoLike[myPars2D->theInd1*10+w+myPars2D->nInd*10*i] > myPars2D->keepSites[i] && -genoLike[myPars2D->theInd2*10+w+myPars2D->nInd*10*i]>myPars2D->keepSites[i]){
@@ -721,8 +723,8 @@ int main(int argc, char **argv){
        myPars2D->theInd2 = p2;
        fprintf(stdout,"analysing pair %d %d\n",p1,p2);
        fprintf(flog,"analysing pair %d %d\n",p1,p2);
-       int nSites=0;
-       for(int i=0;i<totalSites;i++){
+       size_t nSites=0;
+       for(size_t i=0;i<totalSites;i++){
 	 myPars2D->keepSites[i] = 0;
 	 for(int w=0;w<10;w++)
 	   if(genoLike[myPars2D->theInd1*10+w+myPars2D->nInd*10*i] < 0.9999 && genoLike[myPars2D->theInd2*10+w+myPars2D->nInd*10*i] < 0.9999){
