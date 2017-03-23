@@ -6,11 +6,6 @@
 
 #define PSMC_T_INF 1000.0
 
-
-struct Site{
-  double g0, g1;
-};
-
 struct wins{
   int from;//inclusive
   int to;//inclusive
@@ -37,7 +32,7 @@ void printarray(FILE *fp,double *ary,int l){
 
 void ComputeSW(int maxTime,double W[],double sW[]){
   double tmp = 0;
-  for (unsigned i = maxTime; i >=0 ; i--){
+  for (int i = maxTime; i >=0 ; i--){
     tmp += W[i];
     sW[i] = tmp;
   }
@@ -83,14 +78,14 @@ void calculate_stationary(double *tk,int tk_l,double *lambda,double *results,std
   
   stationary(i) = exp(-sum_{j=0}^{i-1}{tau_j/lambda_j}*P2[i])
  */
-void calculate_emissions(double *tk,int tk_l,std::vector<Site> &data,std::vector<wins> &windows,double mu,double **emis){
+void calculate_emissions(double *tk,int tk_l,double *gls,std::vector<wins> &windows,double mu,double **emis){
   fprintf(stderr,"[Calculating emissions with tk_l:%d and windows.size():%lu ]\n",tk_l,windows.size());fflush(stderr);
   emis[0][167774] =0;//exit(0);
   for(int v=0;v<windows.size();v++){
     for(int j=0;j<tk_l;j++){
       emis[j][v] = 0;
       for(int i=windows[v].from;i<windows[v].to;i++)
-	emis[j][v] += log(exp(data[i].g0)*exp(-2.0*tk[j]*mu) + exp(data[i].g1)*(1-exp(-2.0*tk[j]*mu) ));
+	emis[j][v] += log(exp(gls[i*2])*exp(-2.0*tk[j]*mu) + exp(gls[2*i+1])*(1-exp(-2.0*tk[j]*mu) ));
 
     }
   }
@@ -158,19 +153,17 @@ public:
   }
 
   void init(int numWin,psmc_par *p);
-  double llh(std::vector<Site> &data);
-  
   /*
     initial distribution:
     exp(-sum_{<=k-1} lambda_i*(T_i-T_{i-1}))(1-exp(lambda_k(T_{k-1}-T_k)))
   */
   
   
-  void ComputeFBProbs(std::vector<Site> &data,std::vector<wins> &windows,int n){
+  void ComputeFBProbs(double *gls,std::vector<wins> &windows,int n){
     fprintf(stderr,"[%s] start\n",__FUNCTION__ );
 
     //calculate emissions
-    calculate_emissions(tk,tk_l,data,windows,mu,emis);
+    calculate_emissions(tk,tk_l,gls,windows,mu,emis);
 
     //we first set the initial fwprobs to stationary distribution
     double stationary[tk_l];
@@ -361,30 +354,31 @@ void fastPSMC::init(int numWindows,psmc_par *p){
 }
 
 //function to print the data we need
-int main_analysis(std::vector<Site> &data,std::vector<wins> &windows,psmc_par *p){
+int main_analysis(double *gls,std::vector<wins> &windows,psmc_par *p){
 
   fastPSMC obj;
   //prepare datastructures
   obj.init(windows.size(),p);
   
   //print indices for endpoint of windows
-  for(int w=0;0&w<windows.size();w++)
+  for(int w=0;w<windows.size();w++)
     fprintf(stdout,"win[%d]=(%d,%d)\n",w,windows[w].from,windows[w].to);
 
   //print out data:
-  for(int w=0;0&w<windows.size();w++)
+  for(int w=0;1&&w<windows.size();w++)
     for(int p=windows[w].from;p<windows[w].to;p++)
-      fprintf(stdout,"%d\t%d\t%f\t%f\n",p,w,data[p].g0,data[p].g1);
+      fprintf(stdout,"%d\t%d\t%f\t%f\n",p,w,gls[2*p],gls[2*p+1]);
   //  return 0;
 
-  obj.ComputeFBProbs(data,windows,p->n);
+  obj.ComputeFBProbs(gls,windows,p->n);
+  return 1;
 }
 
 
 int psmc_wrapper(args *pars) {
 
   //  fprintf(stderr,"[%s]\n",__FUNCTION__);
-#if 1 //print pars
+#if 0 //print pars
   psmc_par *p=pars->par;
   fprintf(stderr,"par->n:%d\tpar->n_free:%d\tpar_map:%p\tpar->pattern:%s\tpar->times:%p\tpar->params:%p\n",p->n,p->n_free,p->par_map,p->pattern,p->times,p->params);
   for(int i=0;i<pars->par->n+1;i++)
@@ -399,7 +393,6 @@ int psmc_wrapper(args *pars) {
 
   for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){
     //set perchr iterator, if pars->chooseChr, then we have only use a single chr
-    std::vector<Site> data;//really stupid, but lets go with it for now.
     std::vector<wins> windows;
 
     it = pars->chooseChr?iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop):iter_init(pars->perc,it->first,pars->start,pars->stop);
@@ -411,14 +404,8 @@ int psmc_wrapper(args *pars) {
       int endPos = beginPos+pars->winSize;
       //      fprintf(stderr,"winsize:%d begin:%d,endpos:%d\n",pars->winSize,beginPos,endPos);exit(0);
       int at=beginIndex;
-      Site d;
-      d.g0=0;d.g1=0;
       while(at<pars->perc->last&&pars->perc->pos[at]<endPos){
-	
-	d.g0 = pars->perc->gls[at];
-	d.g1 = pars->perc->gls[at+1];
-	data.push_back(d);
-	at+=2;
+	at++;
       }
       if(at>=pars->perc->last)
 	break;
@@ -429,19 +416,16 @@ int psmc_wrapper(args *pars) {
       beginIndex = at;
       //      fprintf(stdout,"(%d,%d)\n",beginPos,endPos);
     }
-    main_analysis(data,windows,pars->par);
+    main_analysis(pars->perc->gls,windows,pars->par);
     break;
-    //print_psmc_print_windows(data);
-    /*
-    for(size_t s=pars->perc->first;0&&s<pars->perc->last;s++){
+
+    for(size_t s=pars->perc->first;0&&s<pars->perc->last;s++)
       fprintf(stdout,"%s\t%d\t%e\t%e\n",it->first,pars->perc->pos[s]+1,pars->perc->gls[2*s],pars->perc->gls[2*s+1]);
-    }
-    */
     
     if(pars->chooseChr!=NULL)
       break;
   }
-
+  return 1;
 }
 
 
