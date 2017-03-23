@@ -84,12 +84,14 @@ void calculate_emissions(double *tk,int tk_l,double *gls,std::vector<wins> &wind
   for(int v=0;v<windows.size();v++){
     for(int j=0;j<tk_l;j++){
       emis[j][v] = 0;
+      double inner = exp(-2.0*tk[j]*mu)
       for(int i=windows[v].from;i<windows[v].to;i++)
-	emis[j][v] += log(exp(gls[i*2])*exp(-2.0*tk[j]*mu) + exp(gls[2*i+1])*(1-exp(-2.0*tk[j]*mu) ));
+	emis[j][v] += log(exp(gls[i*2])*inner + exp(gls[2*i+1])*(1-inner));
 
     }
   }
   fprintf(stderr,"[Calculating emissions with tk_l:%d and windows.size():%lu ]\n",tk_l,windows.size());fflush(stderr);
+  //exit(0);
 }
 
 
@@ -135,7 +137,6 @@ class fastPSMC {
   double mu;
   double *tk;//tk is tk_l long
   double *epsize;//tk_l long
-  //  std::vector<double> timePoints;//coalescence times. Called T_k in document
   std::vector<double> P1, P2, P3, P4, P5, P6, P7;//each has length of timePoints.size()
   std::vector<double> R1, R2; ////each has length of timePoints.size()
   //  std::vector<double> epSize; //effective population size, S_k in latex
@@ -153,12 +154,7 @@ public:
   }
 
   void init(int numWin,psmc_par *p);
-  /*
-    initial distribution:
-    exp(-sum_{<=k-1} lambda_i*(T_i-T_{i-1}))(1-exp(lambda_k(T_{k-1}-T_k)))
-  */
-  
-  
+ 
   void ComputeFBProbs(double *gls,std::vector<wins> &windows,int n){
     fprintf(stderr,"[%s] start\n",__FUNCTION__ );
 
@@ -359,17 +355,17 @@ int main_analysis(double *gls,std::vector<wins> &windows,psmc_par *p){
   fastPSMC obj;
   //prepare datastructures
   obj.init(windows.size(),p);
-  
+
+#if 0
   //print indices for endpoint of windows
   for(int w=0;w<windows.size();w++)
     fprintf(stdout,"win[%d]=(%d,%d)\n",w,windows[w].from,windows[w].to);
 
   //print out data:
-  for(int w=0;1&&w<windows.size();w++)
+  for(int w=0;w<windows.size();w++)
     for(int p=windows[w].from;p<windows[w].to;p++)
       fprintf(stdout,"%d\t%d\t%f\t%f\n",p,w,gls[2*p],gls[2*p+1]);
-  //  return 0;
-
+#endif
   obj.ComputeFBProbs(gls,windows,p->n);
   return 1;
 }
