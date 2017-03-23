@@ -163,10 +163,9 @@ perpsmc * perpsmc_init(char *fname){
      delete [] pp->pos;
    if(pp->gls)
      delete [] pp->gls;
-   
    pp->pos = new int[it->second.nSites];
    my_bgzf_read(pp->bgzf_pos,pp->pos,sizeof(int)*it->second.nSites);
-   pp->gls = new double[2*it->second.nSites];
+   pp->gls = new double[2*it->second.nSites];//<-valgrind complains about large somthing
    my_bgzf_read(pp->bgzf_gls,pp->gls,2*sizeof(double)*it->second.nSites);
    //   fprintf(stderr," end: %f %f\n",pp->gls[0],pp->gls[1]);
    pp->first=0;
@@ -180,6 +179,5 @@ perpsmc * perpsmc_init(char *fname){
      while(pp->pos[pp->last]<stop) 
        pp->last++;
    }
-      
    return it;
  }

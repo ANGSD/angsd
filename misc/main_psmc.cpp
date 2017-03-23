@@ -45,7 +45,7 @@ int *psmc_parse_pattern(const char *pattern, int *n_free, int *n_pars)
 
 
 
-void setpars( char *fname,psmc_par *pp){
+void setpars( char *fname,psmc_par *pp) {
   fprintf(stderr,"[%s]:%s\n",__FUNCTION__,fname);
   FILE *fp = NULL;
   fp=fopen(fname,"r");
@@ -53,37 +53,41 @@ void setpars( char *fname,psmc_par *pp){
     fprintf(stderr,"\t-> Problem opening file:%s\n",fname);
     exit(0);
   }
-  char *buf = new char[fsize(fname)];
+  char *buf = new char[fsize(fname)+10];
+  memset(buf,0,fsize(fname)+10);
   fread(buf,sizeof(char),fsize(fname),fp);
   fclose(fp);
   char *slashslash[100];
   
   //stupid loop below....
   int n=0;
+
   for(int i=0;i<strlen(buf)-1;i++){//offset with one so we dont get the last empty output from PSCMC
     if(strncmp(buf+i,"\n//\n",4)==0)
       slashslash[n++] = buf+i;
   }
+
   char *last= slashslash[n-2];
   char *line = NULL;
   strtok(last,"\n");
 
   line=strtok(NULL,"\n");
-  int IT;
+  int IT=-1;
   sscanf(line,"IT\t%d",&IT);
-  int RD;
+  int RD=-1;
   line=strtok(NULL,"\n"); sscanf(line,"RD\t%d",&RD);
-  double LK;
+  double LK=-1;
   line=strtok(NULL,"\n"); sscanf(line,"LK\t%lf",&LK);
-  double QD[2];
+  double QD[2]={-1,-1};
   line=strtok(NULL,"\n"); sscanf(line,"QD\t%lf -> %lf",&QD[0],&QD[1]);
-  double RI;
+  double RI=-1;
   line=strtok(NULL,"\n"); sscanf(line,"RI\t%lf",&RI);
-  double TR[2];
-  line=strtok(NULL,"\n"); sscanf(line,"QD\t%lf -> %lf",&TR[0],&TR[1]);
-  double MT;
+  double TR[2]={-1,-1};
+  line=strtok(NULL,"\n"); sscanf(line,"TR\t%lf\t%lf",&TR[0],&TR[1]);
+  double MT={-1};
   line=strtok(NULL,"\n"); sscanf(line,"MT\t%lf",&MT);
-  double C_pi,n_recomb;
+  double C_pi=-1;
+  double n_recomb=-1;
   line=strtok(NULL,"\n"); sscanf(line,"MM\tC_pi: %lf, n_recomb: %lf",&C_pi,&n_recomb);
   std::vector<char *> RS;
   fprintf(stderr,"IT:%d RD:%d lk:%f qd[0]:%f qd[1]:%f ri:%f tr[0]:%f tr[1]:%f mt:%f c_pi:%f n_rebomc:%f\n",IT,RD,LK,QD[0],QD[1],RI,TR[0],TR[1],MT,C_pi,n_recomb);
@@ -94,6 +98,7 @@ void setpars( char *fname,psmc_par *pp){
       break;
     }
   }
+  //  fprintf(stderr,"number of lines with RS:%lu\n",RS.size());exit(0);
   char *nline = strdup(line);
   char *tok = strtok(nline,"\n\t ");
   tok = strtok(NULL,"\n\t ");
@@ -103,8 +108,12 @@ void setpars( char *fname,psmc_par *pp){
   assert(RS.size()-1==pp->n);
   pp->params = new double[RS.size()];
   pp->times = new double[RS.size()];
-  for(int i=0;i<RS.size();i++)
-    sscanf(RS[i],"RS\t%lf\t%lf\t",&pp->times[i],&pp->params[i]);
+
+  for(int i=0;i<RS.size();i++){
+    int val;
+    sscanf(RS[i],"RS\t%d\t%lf\t%lf\t",&val,&pp->times[i],&pp->params[i]);
+    assert(val==i);
+  }
   fprintf(stderr,"\t-> Done reading parameters from file: \'%s\'\n",fname);
 }
 
