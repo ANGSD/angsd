@@ -84,7 +84,7 @@ void calculate_emissions(double *tk,int tk_l,double *gls,std::vector<wins> &wind
   for(int v=0;v<windows.size();v++){
     for(int j=0;j<tk_l;j++){
       emis[j][v] = 0;
-      double inner = exp(-2.0*tk[j]*mu)
+      double inner = exp(-2.0*tk[j]*mu);
       for(int i=windows[v].from;i<windows[v].to;i++)
 	emis[j][v] += log(exp(gls[i*2])*inner + exp(gls[2*i+1])*(1-inner));
 
