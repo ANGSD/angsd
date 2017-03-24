@@ -128,7 +128,7 @@ void calculate_stationary(double *tk,int tk_l,double *lambda,double *results,dou
   stationary(i) = exp(-sum_{j=0}^{i-1}{tau_j/lambda_j}*P2[i])
  */
 void calculate_emissions(double *tk,int tk_l,double *gls,std::vector<wins> &windows,double mu,double **emis){
-  fprintf(stderr,"[Calculating emissions with tk_l:%d and windows.size():%lu:%s ] start\n",tk_l,windows.size(),__TIME__);
+  fprintf(stderr,"\t-> [Calculating emissions with tk_l:%d and windows.size():%lu:%s ] start\n",tk_l,windows.size(),__TIME__);
   //initialize the first:
   for(int j=0;j<tk_l;j++)
     emis[j][0] = 0;
@@ -143,7 +143,7 @@ void calculate_emissions(double *tk,int tk_l,double *gls,std::vector<wins> &wind
 
     }
   }
-  fprintf(stderr,"[Calculating emissions with tk_l:%d and windows.size():%lu:%s ] stop\n",tk_l,windows.size(),__TIME__);
+  fprintf(stderr,"\t-> [Calculating emissions with tk_l:%d and windows.size():%lu:%s ] stop\n",tk_l,windows.size(),__TIME__);
 }
 
 
@@ -176,13 +176,6 @@ void setEPSize(double *ary,int l,double *from_infile){
     memcpy(ary,from_infile,(l-1)*sizeof(double));
 	
 }
-/*
-  pix = 0;
-  for (unsigned i = 0; i < maxTime; i++)
-  pix += fw[i][last_window]; 
-  
-
- */
 
 
 class fastPSMC {
@@ -196,11 +189,7 @@ class fastPSMC {
   double *epsize;//tk_l long
   double **P;
   double **PP;
-  double *stationary;//tk_l long
-  //  std::vector<double> P1, P2, P3, P4, P5, P6, P7;//each has length of timePoints.size()
-  std::vector<double> R1, R2; ////each has length of timePoints.size()
-  //  std::vector<double> epSize; //effective population size, S_k in latex
-  //  std::vector<double> fbProb; //length = timePoints.size()
+  double *stationary,*R1,*R2;//tk_l long
   double **fw;//tk_l x nWindows+1
   double **bw;//tk_l x nWindows+1
   double **pp;//tk_l x nWindows+1
@@ -227,13 +216,12 @@ public:
   }
 
   void ComputeFBProbs(double *gls,std::vector<wins> &windows,int n){
-    fprintf(stderr,"[%s] start\n",__FUNCTION__ );
+    fprintf(stderr,"\t-> [%s] start\n",__FUNCTION__ );
 
     //calculate emissions
-    calculate_emissions(tk,tk_l,gls,windows,mu,emis);exit(0);
+    calculate_emissions(tk,tk_l,gls,windows,mu,emis);
     //    printmatrix(stdout,emis,tk_l,(int)windows.size());exit(0);
     //we first set the initial fwprobs to stationary distribution
-    double stationary[tk_l];
     calculate_stationary(tk,tk_l,epsize,stationary,P[2]);
     for(int i=0;i<tk_l;i++)
       fw[i][0] =stationary[i];
@@ -248,13 +236,13 @@ public:
       for (unsigned i = 1; i < tk_l; i++)
 	fw[i][v+1]= (fw[i][v+1]*P[1][i] + R2[i-1]*P[2][i-1] + R1[i]*P[3][i] + fw[i][v+1]*P[4][i])*emis[i][v+1];
     }
+    printmatrix(stdout,fw,tk_l,windows.size());exit(0);
     double tmp =0;
     for(int i=0;i<tk_l;i++){
       fprintf(stderr,"fw[%d][%lu]:%f\n",i,windows.size(),fw[i][windows.size()]);
       tmp += log(fw[i][windows.size()]);
     }
     fprintf(stderr,"forward llh:%f\n",tmp);
-    exit(0);
 
     pix = 0;
     for (unsigned i = 0; i < tk_l; i++)
@@ -386,6 +374,7 @@ private:
   }
 	
   void ComputeGlobalProbabilities(){
+
     ComputeP1();
     ComputeP5();
     ComputeP6();
@@ -393,7 +382,7 @@ private:
     ComputeP3();
     ComputeP4();
     ComputeP7();
-    //    ComputePigi();
+    ComputeP0();//depends on P5
   }
 
 };
@@ -402,12 +391,15 @@ private:
 
 
 void fastPSMC::init(int numWindows,psmc_par *p){
-  fprintf(stderr,"[%s]: pars->n:%d will allocate tk with length n+2:%d\n",__FUNCTION__,p->n,p->n+2);
+  fprintf(stderr,"\t-> [%s]: pars->n:%d will allocate tk with length n+2:%d\n",__FUNCTION__,p->n,p->n+2);
   tk_l = p->n+2;
   tk = new double[tk_l];
   setTk(tk_l,tk,max_t,0.01,p->times);//<- last position will be infinity
   //  printarray(stderr,tk,tk_l);
   epsize = new double[tk_l];
+  stationary = new double[tk_l];
+  R1 = new double[tk_l];
+  R2 = new double[tk_l];
   setEPSize(epsize,tk_l,p->params);
   epsize[tk_l-1] = 100;//<- set the last element; DRAGON what should last epsize be?
   //  printarray(stderr,epsize,tk_l);exit(0);
@@ -423,7 +415,7 @@ void fastPSMC::init(int numWindows,psmc_par *p){
     pp[i] = new double[numWindows+1];
 
   }
-  fprintf(stderr,"emission allocated with [%d][%d]\n",tk_l,numWindows+1);
+  fprintf(stderr,"\t-> emission allocated with [%d][%d]\n",tk_l,numWindows+1);
   P = new double *[8];
   PP= new double *[8];
   for(int i=0;i<8;i++){
@@ -490,8 +482,10 @@ int psmc_wrapper(args *pars,int block) {
 	beginIndex++;
       while(pars->perc->pos[endIndex]<endPos)
 	endIndex++;
-      //      fprintf(stdout,"endpiadsf:%d\n",pars->perc->pos[endIndex]);
-      //      fprintf(stdout,"winsize:%d bp:%d,ep:%d bi:%d ei:%d ei-bi:%d\n",pars->winSize,beginPos,endPos,beginIndex,endIndex,endIndex-beginIndex);
+#if 0
+      fprintf(stdout,"\t-> endpiadsf:%d\n",pars->perc->pos[endIndex]);
+      fprintf(stdout,"\t-> winsize:%d bp:%d,ep:%d bi:%d ei:%d ei-bi:%d\n",pars->winSize,beginPos,endPos,beginIndex,endIndex,endIndex-beginIndex);
+#endif
       w.from = beginIndex;
       w.to = endIndex+1;
       windows.push_back(w);
