@@ -278,79 +278,6 @@ public:
     fprintf(stderr,"[%s] stop\n",__FUNCTION__ );
   }  
 private:
-  void ComputeP1(){ //TODO: tk_l is in fact the number of time intervals
-    for (unsigned i = 0; i < tk_l-1; i++){
-      P[1][i] = 1.0/(1.0+epsize[i]*2.0*rho);
-      P[1][i] *= exp( -rho*2.0*tk[i] ) - exp(-rho*2.0*tk[i+1]-(tk[i+1]-tk[i])/epsize[i]);
-      P[1][i] /= 1.0 - exp( -(tk[i+1]-tk[i])/epsize[i] );
-    }
-    //Last interval ends with +infinity
-    unsigned i = tk_l - 1;
-    P[1][i] = 1.0/(1.0+epsize[i]*2.0*rho)* exp( -rho*2.0*tk[i] );
-    
-  }
-  void ComputeP2(){
-    for (unsigned i = 0; i < tk_l; i++)
-      P[2][i] = 1.0 - P[5][i];
-  }
-  
-  void ComputeP3(){
-    for (unsigned i = 0; i < tk_l - 1; i++){
-      P[3][i] = exp(-tk[i]*2.0*rho);
-      P[3][i] += epsize[i]*2.0*rho/(1.0 - epsize[i]*2.0*rho)*exp(-(tk[i+1]-tk[i])/epsize[i]-tk[i]*2.0*rho);
-      P[3][i] -= 1.0/(1.0 - epsize[i]*2.0*rho)*exp(-tk[i+1]*2.0*rho);
-    }
-    unsigned i = tk_l - 1;
-    P[3][i] = exp(-tk[i]*2.0*rho);
-  }
-	
-  void ComputeP4(){
-    for (unsigned i = 0; i < tk_l-1; i++){
-      P[4][i] = 1.0/(1.0 - exp(-(tk[i+1]-tk[i])/epsize[i]) );
-      double tmp = 2.0*rho/(1.0 + 2*rho*epsize[i])*exp(-2*rho*tk[i]);
-      tmp -= 2.0*exp(-(tk[i+1] - tk[i])/epsize[i] - 2.0*rho*tk[i] );
-      tmp -= 2.0*rho*epsize[i]/(1.0 - epsize[i]*2.0*rho)*exp(-2.0*rho*tk[i]-2.0*(tk[i+1]-tk[i])/epsize[i]);
-      tmp += 2.0/(1.0-epsize[i]*2.0*rho)/(1.0 + 2.0*rho)*exp(-rho*tk[i+1]-(tk[i+1]-tk[i])/epsize[i]);
-      P[4][i] *= tmp;
-    }
-    unsigned i = tk_l - 1;
-    P[4][i] = 2.0*rho/(1.0 + 2.0*rho*epsize[i])*exp(-2.0*rho*tk[i]);
-  }
-	
-  void ComputeP5(){
-    for (unsigned i = 0; i < tk_l-1; i++)
-      P[5][i] = exp( -(tk[i+1] - tk[i])/epsize[i] );
-    P[5][tk_l-1] = 0.0;
-  }
-	
-  void ComputeP6(){
-    for (unsigned i = 0; i < tk_l-1; i++){
-      P[6][i] = 1/(1-exp(-(tk[i+1]-tk[i])/epsize[i]));
-      P[6][i] *= exp(-(tk[i+1]-tk[i])/epsize[i]);
-      double tmp = exp(-2*rho*tk[i]);
-      tmp -= 1/(1-2*rho*epsize[i])*exp(-2*rho*tk[i+1]);
-      tmp += 2*rho*epsize[i]/(1 - 2*rho*epsize[i])*exp(-2*rho*tk[i]-(tk[i+1]-tk[i])/epsize[i]);
-      P[6][i] *= tmp;
-    }
-    P[6][tk_l - 1] = 0.0;
-  }
-	
-  void ComputeP7(){
-    for (unsigned i = 0; i < tk_l - 1; i++){
-      P[7][i] = 1.0 - exp(-(tk[i+1]-tk[i])*2.0*rho) - exp(-tk[i]*2.0*rho);
-      P[7][i] -= epsize[i]*2*rho/(1 - epsize[i]*2.0*rho)*exp(-(tk[i+1]-tk[i])/epsize[i]-tk[i]*2.0*rho);
-      P[7][i] += 1.0/(1.0 - epsize[i]*2.0*rho)*exp(-tk[i]*2.0*rho);
-    }
-    unsigned i = tk_l - 1;
-    P[7][i] = 1.0 - exp(-2.0*rho*tk[i]);
-  }
-  
-  void ComputeP0(){ //probability P(T > i)
-    P[0][0] = P[5][0];
-    for (unsigned i = 1; i < tk_l; i++)
-      P[0][i] = P[0][i-1]*P[5][i];
-  }
-
   void ComputeR1(int v,double **mat){
     R1[tk_l - 1] = 0;
     for (int i = tk_l - 2; i >= 0 ; i--)
@@ -375,14 +302,14 @@ private:
 	
   void ComputeGlobalProbabilities(){
 
-    ComputeP1();
-    ComputeP5();
-    ComputeP6();
-    ComputeP2();
-    ComputeP3();
-    ComputeP4();
-    ComputeP7();
-    ComputeP0();//depends on P5
+    ComputeP1(tk,tk_l,P[1],epsize,rho);
+    ComputeP5(tk,tk_l,P[5],epsize);
+    ComputeP6(tk,tk_l,P[6],epsize,rho);
+    ComputeP2(tk_l,P[2],P[5]);
+    ComputeP3(tk,tk_l,P[3],epsize,rho);
+    ComputeP4(tk,tk_l,P[4],epsize,rho);
+    ComputeP7(tk,tk_l,P[7],epsize,rho);
+    ComputeP0(tk_l,P[0],P[5]);
   }
 
 };

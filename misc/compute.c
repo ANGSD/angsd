@@ -108,3 +108,82 @@ void ComputeP77(unsigned numWind,int tk_l,double **P,double **PP,double **fw,dou
   }
 }
 
+//TODO: tk_l is in fact the number of time intervals
+void ComputeP1(double *tk,int tk_l,double *P,double *epsize,double rho){ 
+  for (unsigned i = 0; i < tk_l-1; i++){
+    P[i] = 1.0/(1.0+epsize[i]*2.0*rho);
+    P[i] *= exp( -rho*2.0*tk[i] ) - exp(-rho*2.0*tk[i+1]-(tk[i+1]-tk[i])/epsize[i]);
+    P[i] /= 1.0 - exp( -(tk[i+1]-tk[i])/epsize[i] );
+  }
+  //Last interval ends with +infinity
+  unsigned i = tk_l - 1;
+  P[i] = 1.0/(1.0+epsize[i]*2.0*rho)* exp( -rho*2.0*tk[i] );
+}
+
+void ComputeP5(double *tk,int tk_l,double *P,double *epsize){
+  for (unsigned i = 0; i < tk_l-1; i++)
+    P[i] = exp( -(tk[i+1] - tk[i])/epsize[i] );
+  P[tk_l-1] = 0.0;
+}
+
+
+void ComputeP6(double *tk,int tk_l,double *P,double *epsize,double rho){
+    for (unsigned i = 0; i < tk_l-1; i++){
+      P[i] = 1/(1-exp(-(tk[i+1]-tk[i])/epsize[i]));
+      P[i] *= exp(-(tk[i+1]-tk[i])/epsize[i]);
+      double tmp = exp(-2*rho*tk[i]);
+      tmp -= 1/(1-2*rho*epsize[i])*exp(-2*rho*tk[i+1]);
+      tmp += 2*rho*epsize[i]/(1 - 2*rho*epsize[i])*exp(-2*rho*tk[i]-(tk[i+1]-tk[i])/epsize[i]);
+      P[i] *= tmp;
+    }
+    P[tk_l - 1] = 0.0;
+  }
+
+
+void ComputeP2(int tk_l,double *P2,double *P5){
+    for (unsigned i = 0; i < tk_l; i++)
+      P2[i] = 1.0 - P5[i];
+  }
+
+
+
+void ComputeP3(double *tk,int tk_l,double *P3,double *epsize,double rho){
+  for (unsigned i = 0; i < tk_l - 1; i++){
+    P3[i] = exp(-tk[i]*2.0*rho);
+    P3[i] += epsize[i]*2.0*rho/(1.0 - epsize[i]*2.0*rho)*exp(-(tk[i+1]-tk[i])/epsize[i]-tk[i]*2.0*rho);
+    P3[i] -= 1.0/(1.0 - epsize[i]*2.0*rho)*exp(-tk[i+1]*2.0*rho);
+  }
+  unsigned i = tk_l - 1;
+  P3[i] = exp(-tk[i]*2.0*rho);
+}
+
+
+void ComputeP4(double *tk,int tk_l,double *P4,double *epsize,double rho){
+  for (unsigned i = 0; i < tk_l-1; i++){
+    P4[i] = 1.0/(1.0 - exp(-(tk[i+1]-tk[i])/epsize[i]) );
+    double tmp = 2.0*rho/(1.0 + 2*rho*epsize[i])*exp(-2*rho*tk[i]);
+    tmp -= 2.0*exp(-(tk[i+1] - tk[i])/epsize[i] - 2.0*rho*tk[i] );
+    tmp -= 2.0*rho*epsize[i]/(1.0 - epsize[i]*2.0*rho)*exp(-2.0*rho*tk[i]-2.0*(tk[i+1]-tk[i])/epsize[i]);
+    tmp += 2.0/(1.0-epsize[i]*2.0*rho)/(1.0 + 2.0*rho)*exp(-rho*tk[i+1]-(tk[i+1]-tk[i])/epsize[i]);
+    P4[i] *= tmp;
+  }
+  unsigned i = tk_l - 1;
+  P4[i] = 2.0*rho/(1.0 + 2.0*rho*epsize[i])*exp(-2.0*rho*tk[i]);
+}
+	
+  
+void ComputeP7(double *tk,int tk_l,double *P7,double *epsize,double rho){
+  for (unsigned i = 0; i < tk_l - 1; i++){
+    P7[i] = 1.0 - exp(-(tk[i+1]-tk[i])*2.0*rho) - exp(-tk[i]*2.0*rho);
+    P7[i] -= epsize[i]*2*rho/(1 - epsize[i]*2.0*rho)*exp(-(tk[i+1]-tk[i])/epsize[i]-tk[i]*2.0*rho);
+    P7[i] += 1.0/(1.0 - epsize[i]*2.0*rho)*exp(-tk[i]*2.0*rho);
+  }
+  unsigned i = tk_l - 1;
+  P7[i] = 1.0 - exp(-2.0*rho*tk[i]);
+}
+  
+void ComputeP0(int tk_l,double *P0,double *P5){ //probability P(T > i)
+  P0[0] = P5[0];
+  for (unsigned i = 1; i < tk_l; i++)
+    P0[i] = P0[i-1]*P5[i];
+}
