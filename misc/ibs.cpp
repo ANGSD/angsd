@@ -100,7 +100,7 @@ size_t readGLF(const char* fname,double * &gls,int nInd,size_t maxSites){
   double *tmp_gls = new double[sizeMax];
 
   int temp=0;
-  while( temp = gzread(fp,tmp_gls,sizeof(double)*sizeMax) ){
+  while( (temp = gzread(fp,tmp_gls,sizeof(double)*sizeMax)) ){
 
     //    fprintf(stdout,"%d\n",temp);
     nSites += temp/sizeof(double)/10/nInd;
