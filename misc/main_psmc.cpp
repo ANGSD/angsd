@@ -194,7 +194,7 @@ int main_psmc(int argc, char **argv){
   writepsmc_header(stderr,pars->perc);
 
   if(1){
-    psmc_wrapper(pars);
+    psmc_wrapper(pars,100);
   }else{
     //below is old printout, keeping for reference
     for(myMap::iterator it=pars->perc->mm.begin();it!=pars->perc->mm.end();++it){

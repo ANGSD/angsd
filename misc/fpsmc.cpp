@@ -3,9 +3,48 @@
 #include <cmath>
 #include "psmcreader.h"
 #include "main_psmc.h"
-
+#include "compute.c"
 #define PSMC_T_INF 1000.0
 
+typedef struct{
+  double **P;
+  double **PP;
+}oPars;
+
+
+
+double qkFunction(unsigned K, double pix, unsigned numWind,double **P,double **PP){
+
+  /*
+  for (unsigned l = 1; l < numWind + 1; l++) //This block is needed if eimission probabilities depend on estimated parameters, e.g. on time disctretisation 
+    qi += log(emis[K][l])*fw[K][l]*bw[K][l];
+    qi /= pix;
+  */
+  double qi = 0;
+  //qi += nP1[i]*PP[1][i] + nP2[i]*PP[2][i] + nP3[i]*PP[3][i] + nP4[i]*PP[4][i] + nP5[i]*PP[5][i] + nP6[i]*PP[6][i] + nP7[i]*PP[7][i];
+  return qi;
+}
+
+
+/*
+  objective function. Function to be optimized
+
+
+double qFunction(double *params , void *d){
+  oPars *data = (oPars*) d;
+
+  double Q = 0;
+  //Compute new values of probabilities P_i with parameters params
+  cout << "COMPUTE THEM HERE" << enld;
+  //Compute P_ii
+  ComputePii(numWind);//pull before optimization
+  
+  for (unsigned i = 0; i < maxTime; i++)
+    Q += qkFunction(i, pix);
+  return Q;
+}
+
+*/
 struct wins{
   int from;//inclusive
   int to;//inclusive
@@ -29,6 +68,16 @@ void printarray(FILE *fp,double *ary,int l){
     fprintf(fp,"%d)\t%f\n",i,ary[i]);
 
 }
+void printmatrix(FILE *fp,double **mat,int x,int y){
+  fprintf(fp,"#printmatrix with x:%d y:%d\n",x,y);
+  for(int i=0;i<y;i++){
+    for(int j=0;j<x-1;j++)
+      fprintf(fp,"%f\t",mat[j][i]);
+    fprintf(fp,"%f\n",mat[x-1][i]);
+  }
+
+}
+
 
 void ComputeSW(int maxTime,double W[],double sW[]){
   double tmp = 0;
@@ -57,7 +106,7 @@ void UpdateEPSize(int maxTime, double W[],double sW[],double epSize[],double T[]
   
   stationary(i) = exp(-sum_{j=0}^{i-1}{tau_j/lambda_j}*P2[i])
  */
-void calculate_stationary(double *tk,int tk_l,double *lambda,double *results,std::vector<double> &P2){
+void calculate_stationary(double *tk,int tk_l,double *lambda,double *results,double *P2){
   results[0] = 1;//fix this
   for(int i=1;i<tk_l;i++){
     double tmp =0;
@@ -79,22 +128,23 @@ void calculate_stationary(double *tk,int tk_l,double *lambda,double *results,std
   stationary(i) = exp(-sum_{j=0}^{i-1}{tau_j/lambda_j}*P2[i])
  */
 void calculate_emissions(double *tk,int tk_l,double *gls,std::vector<wins> &windows,double mu,double **emis){
-  fprintf(stderr,"[Calculating emissions with tk_l:%d and windows.size():%lu ]\n",tk_l,windows.size());fflush(stderr);
-  emis[0][167774] =0;//exit(0);
+  fprintf(stderr,"[Calculating emissions with tk_l:%d and windows.size():%lu:%s ] start\n",tk_l,windows.size(),__TIME__);
+  //initialize the first:
+  for(int j=0;j<tk_l;j++)
+    emis[j][0] = 0;
+ 
+
   for(int v=0;v<windows.size();v++){
     for(int j=0;j<tk_l;j++){
-      emis[j][v] = 0;
+      emis[j][v+1] = 0;
       double inner = exp(-2.0*tk[j]*mu);
       for(int i=windows[v].from;i<windows[v].to;i++)
-	emis[j][v] += log(exp(gls[i*2])*inner + exp(gls[2*i+1])*(1-inner));
+	emis[j][v+1] += log(exp(gls[i*2])*inner + exp(gls[2*i+1])*(1-inner));
 
     }
   }
-  fprintf(stderr,"[Calculating emissions with tk_l:%d and windows.size():%lu ]\n",tk_l,windows.size());fflush(stderr);
-  //exit(0);
+  fprintf(stderr,"[Calculating emissions with tk_l:%d and windows.size():%lu:%s ] stop\n",tk_l,windows.size(),__TIME__);
 }
-
-
 
 
 /*
@@ -126,10 +176,17 @@ void setEPSize(double *ary,int l,double *from_infile){
     memcpy(ary,from_infile,(l-1)*sizeof(double));
 	
 }
+/*
+  pix = 0;
+  for (unsigned i = 0; i < maxTime; i++)
+  pix += fw[i][last_window]; 
+  
 
+ */
 
 
 class fastPSMC {
+  double pix;
   int tk_l;
   double max_t;
   //  unsigned maxTime; //number of time intervals
@@ -137,7 +194,10 @@ class fastPSMC {
   double mu;
   double *tk;//tk is tk_l long
   double *epsize;//tk_l long
-  std::vector<double> P1, P2, P3, P4, P5, P6, P7;//each has length of timePoints.size()
+  double **P;
+  double **PP;
+  double *stationary;//tk_l long
+  //  std::vector<double> P1, P2, P3, P4, P5, P6, P7;//each has length of timePoints.size()
   std::vector<double> R1, R2; ////each has length of timePoints.size()
   //  std::vector<double> epSize; //effective population size, S_k in latex
   //  std::vector<double> fbProb; //length = timePoints.size()
@@ -147,6 +207,7 @@ class fastPSMC {
   double **emis;//tk_l x nWindows+1
 public:
   fastPSMC(){
+    pix = -666;
     max_t = 15;
     rho = 0.207;
     mu = 0.0001;
@@ -155,43 +216,62 @@ public:
 
   void init(int numWin,psmc_par *p);
  
+  void ComputePii(unsigned numWind){
+    ComputeP11(numWind,tk_l,P,PP,fw,bw,stationary);
+    ComputeP22(numWind,tk_l,P,PP,fw,bw,stationary);
+    ComputeP33(numWind,tk_l,P,PP,fw,bw,stationary);
+    ComputeP44(numWind,tk_l,P,PP,fw,bw,stationary);
+    ComputeP55(numWind,tk_l,P,PP,fw,bw,stationary);
+    ComputeP66(numWind,tk_l,P,PP,fw,bw,stationary);
+    ComputeP77(numWind,tk_l,P,PP,fw,bw,stationary);
+  }
+
   void ComputeFBProbs(double *gls,std::vector<wins> &windows,int n){
     fprintf(stderr,"[%s] start\n",__FUNCTION__ );
 
     //calculate emissions
-    calculate_emissions(tk,tk_l,gls,windows,mu,emis);
-
+    calculate_emissions(tk,tk_l,gls,windows,mu,emis);exit(0);
+    //    printmatrix(stdout,emis,tk_l,(int)windows.size());exit(0);
     //we first set the initial fwprobs to stationary distribution
     double stationary[tk_l];
-    calculate_stationary(tk,tk_l,epsize,stationary,P2);
+    calculate_stationary(tk,tk_l,epsize,stationary,P[2]);
     for(int i=0;i<tk_l;i++)
       fw[i][0] =stationary[i];
 
+  
 
     //we now loop over windows.
     //v=0 is above and is the initial distribution, we therefore plug in at v+1
     for(int v=0;v<windows.size();v++){
       ComputeRs(v,fw);//<-prepare R1,R2
-      fw[0][v+1] = (fw[0][v]*P1[0] + R1[0]*P3[0] + fw[0][v]*P4[0])*emis[0][v+1] ;
+      fw[0][v+1] = (fw[0][v]*P[1][0] + R1[0]*P[3][0] + fw[0][v]*P[4][0])*emis[0][v+1] ;
       for (unsigned i = 1; i < tk_l; i++)
-	fw[i][v+1]= (fw[i][v+1]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + fw[i][v+1]*P4[i])*emis[i][v+1];
+	fw[i][v+1]= (fw[i][v+1]*P[1][i] + R2[i-1]*P[2][i-1] + R1[i]*P[3][i] + fw[i][v+1]*P[4][i])*emis[i][v+1];
     }
     double tmp =0;
-    for(int i=0;i<tk_l;i++)
+    for(int i=0;i<tk_l;i++){
+      fprintf(stderr,"fw[%d][%lu]:%f\n",i,windows.size(),fw[i][windows.size()]);
       tmp += log(fw[i][windows.size()]);
+    }
     fprintf(stderr,"forward llh:%f\n",tmp);
+    exit(0);
+
+    pix = 0;
+    for (unsigned i = 0; i < tk_l; i++)
+      pix += fw[i][windows.size()-1]; 
+ 
 
 
     //now do backward algorithm
-    for(int i=0;i<n;bw++)
+    for(int i=0;i<n;i++)
       bw[i][windows.size()] = stationary[i];
 
     //we plug in values at v-1, therefore we break at v==1
     for(int v=windows.size();v>0;v--){
       ComputeRs(v,bw);//<-prepare R1,R2
-      bw[0][v-1] = (bw[0][v]*P1[0] + R1[0]*P3[0] + bw[0][v]*P4[0])*emis[0][v] ;
+      bw[0][v-1] = (bw[0][v]*P[1][0] + R1[0]*P[3][0] + bw[0][v]*P[4][0])*emis[0][v] ;
       for (unsigned i = 1; i < tk_l; i++)
-	bw[i][v-1] = (stationary[i]*bw[i][v]*emis[i][v]*P1[i] + R2[i-1]*P2[i-1] + R1[i]*P3[i] + stationary[i]*bw[i][v]*emis[i][v]*P4[i])/stationary[i];
+	bw[i][v-1] = (stationary[i]*bw[i][v]*emis[i][v]*P[1][i] + R2[i-1]*P[2][i-1] + R1[i]*P[3][i] + stationary[i]*bw[i][v]*emis[i][v]*P[4][i])/stationary[i];
     }
     
     tmp =0;
@@ -212,83 +292,89 @@ public:
 private:
   void ComputeP1(){ //TODO: tk_l is in fact the number of time intervals
     for (unsigned i = 0; i < tk_l-1; i++){
-      P1[i] = 1.0/(1.0+epsize[i]*2.0*rho);
-      P1[i] *= exp( -rho*2.0*tk[i] ) - exp(-rho*2.0*tk[i+1]-(tk[i+1]-tk[i])/epsize[i]);
-      P1[i] /= 1.0 - exp( -(tk[i+1]-tk[i])/epsize[i] );
+      P[1][i] = 1.0/(1.0+epsize[i]*2.0*rho);
+      P[1][i] *= exp( -rho*2.0*tk[i] ) - exp(-rho*2.0*tk[i+1]-(tk[i+1]-tk[i])/epsize[i]);
+      P[1][i] /= 1.0 - exp( -(tk[i+1]-tk[i])/epsize[i] );
     }
     //Last interval ends with +infinity
     unsigned i = tk_l - 1;
-    P1[i] = 1.0/(1.0+epsize[i]*2.0*rho)* exp( -rho*2.0*tk[i] );
+    P[1][i] = 1.0/(1.0+epsize[i]*2.0*rho)* exp( -rho*2.0*tk[i] );
     
   }
   void ComputeP2(){
     for (unsigned i = 0; i < tk_l; i++)
-      P2[i] = 1.0 - P5[i];
+      P[2][i] = 1.0 - P[5][i];
   }
   
   void ComputeP3(){
     for (unsigned i = 0; i < tk_l - 1; i++){
-      P3[i] = exp(-tk[i]*2.0*rho);
-      P3[i] += epsize[i]*2.0*rho/(1.0 - epsize[i]*2.0*rho)*exp(-(tk[i+1]-tk[i])/epsize[i]-tk[i]*2.0*rho);
-      P3[i] -= 1.0/(1.0 - epsize[i]*2.0*rho)*exp(-tk[i+1]*2.0*rho);
+      P[3][i] = exp(-tk[i]*2.0*rho);
+      P[3][i] += epsize[i]*2.0*rho/(1.0 - epsize[i]*2.0*rho)*exp(-(tk[i+1]-tk[i])/epsize[i]-tk[i]*2.0*rho);
+      P[3][i] -= 1.0/(1.0 - epsize[i]*2.0*rho)*exp(-tk[i+1]*2.0*rho);
     }
     unsigned i = tk_l - 1;
-    P3[i] = exp(-tk[i]*2.0*rho);
+    P[3][i] = exp(-tk[i]*2.0*rho);
   }
 	
   void ComputeP4(){
     for (unsigned i = 0; i < tk_l-1; i++){
-      P4[i] = 1.0/(1.0 - exp(-(tk[i+1]-tk[i])/epsize[i]) );
+      P[4][i] = 1.0/(1.0 - exp(-(tk[i+1]-tk[i])/epsize[i]) );
       double tmp = 2.0*rho/(1.0 + 2*rho*epsize[i])*exp(-2*rho*tk[i]);
       tmp -= 2.0*exp(-(tk[i+1] - tk[i])/epsize[i] - 2.0*rho*tk[i] );
       tmp -= 2.0*rho*epsize[i]/(1.0 - epsize[i]*2.0*rho)*exp(-2.0*rho*tk[i]-2.0*(tk[i+1]-tk[i])/epsize[i]);
       tmp += 2.0/(1.0-epsize[i]*2.0*rho)/(1.0 + 2.0*rho)*exp(-rho*tk[i+1]-(tk[i+1]-tk[i])/epsize[i]);
-      P4[i] *= tmp;
+      P[4][i] *= tmp;
     }
     unsigned i = tk_l - 1;
-    P4[i] = 2.0*rho/(1.0 + 2.0*rho*epsize[i])*exp(-2.0*rho*tk[i]);
+    P[4][i] = 2.0*rho/(1.0 + 2.0*rho*epsize[i])*exp(-2.0*rho*tk[i]);
   }
 	
   void ComputeP5(){
     for (unsigned i = 0; i < tk_l-1; i++)
-      P5[i] = exp( -(tk[i+1] - tk[i])/epsize[i] );
-    P5[tk_l-1] = 0.0;
+      P[5][i] = exp( -(tk[i+1] - tk[i])/epsize[i] );
+    P[5][tk_l-1] = 0.0;
   }
 	
   void ComputeP6(){
     for (unsigned i = 0; i < tk_l-1; i++){
-      P6[i] = 1/(1-exp(-(tk[i+1]-tk[i])/epsize[i]));
-      P6[i] *= exp(-(tk[i+1]-tk[i])/epsize[i]);
+      P[6][i] = 1/(1-exp(-(tk[i+1]-tk[i])/epsize[i]));
+      P[6][i] *= exp(-(tk[i+1]-tk[i])/epsize[i]);
       double tmp = exp(-2*rho*tk[i]);
       tmp -= 1/(1-2*rho*epsize[i])*exp(-2*rho*tk[i+1]);
       tmp += 2*rho*epsize[i]/(1 - 2*rho*epsize[i])*exp(-2*rho*tk[i]-(tk[i+1]-tk[i])/epsize[i]);
-      P6[i] *= tmp;
+      P[6][i] *= tmp;
     }
-    P6[tk_l - 1] = 0.0;
+    P[6][tk_l - 1] = 0.0;
   }
 	
   void ComputeP7(){
     for (unsigned i = 0; i < tk_l - 1; i++){
-      P7[i] = 1.0 - exp(-(tk[i+1]-tk[i])*2.0*rho) - exp(-tk[i]*2.0*rho);
-      P7[i] -= epsize[i]*2*rho/(1 - epsize[i]*2.0*rho)*exp(-(tk[i+1]-tk[i])/epsize[i]-tk[i]*2.0*rho);
-      P7[i] += 1.0/(1.0 - epsize[i]*2.0*rho)*exp(-tk[i]*2.0*rho);
+      P[7][i] = 1.0 - exp(-(tk[i+1]-tk[i])*2.0*rho) - exp(-tk[i]*2.0*rho);
+      P[7][i] -= epsize[i]*2*rho/(1 - epsize[i]*2.0*rho)*exp(-(tk[i+1]-tk[i])/epsize[i]-tk[i]*2.0*rho);
+      P[7][i] += 1.0/(1.0 - epsize[i]*2.0*rho)*exp(-tk[i]*2.0*rho);
     }
     unsigned i = tk_l - 1;
-    P7[i] = 1.0 - exp(-2.0*rho*tk[i]);
+    P[7][i] = 1.0 - exp(-2.0*rho*tk[i]);
+  }
+  
+  void ComputeP0(){ //probability P(T > i)
+    P[0][0] = P[5][0];
+    for (unsigned i = 1; i < tk_l; i++)
+      P[0][i] = P[0][i-1]*P[5][i];
   }
 
   void ComputeR1(int v,double **mat){
-    double tmp = 0;
-    for (unsigned i = tk_l - 1; i > 0 ; i--){
-      R1[i] = tmp + mat[i][v];
-      tmp = R1[i];
-    }
+    R1[tk_l - 1] = 0;
+    for (int i = tk_l - 2; i >= 0 ; i--)
+      R1[i] = R1[i+1] + mat[i+1][v];
+
   }
 	
   void ComputeR2(int v,double **mat){
+    //    fprintf(stderr,"tk_l:%d\n",tk_l);
     double tmp = 0;
     for (unsigned i = 0; i < tk_l ; i++){
-      R2[i] = tmp*P2[i]+mat[v][i]*P6[i]+R1[i]*P7[i];
+      R2[i] = tmp*P[2][i]+mat[i][v]*P[6][i]+R1[i]*P[7][i];
       tmp = R2[i];
     }
   }
@@ -307,9 +393,11 @@ private:
     ComputeP3();
     ComputeP4();
     ComputeP7();
+    //    ComputePigi();
   }
 
 };
+
 
 
 
@@ -329,23 +417,19 @@ void fastPSMC::init(int numWindows,psmc_par *p){
   pp = new double *[tk_l];
   emis = new double *[tk_l];
   for(int i=0;i<tk_l;i++){
+    emis[i] = new double[numWindows+1];
     fw[i] = new double[numWindows+1];
     bw[i] = new double[numWindows+1];
     pp[i] = new double[numWindows+1];
-    emis[i] = new double[numWindows+1];
+
   }
   fprintf(stderr,"emission allocated with [%d][%d]\n",tk_l,numWindows+1);
-  P1.reserve(tk_l);
-  P2.reserve(tk_l);
-  P2.reserve(tk_l);
-  P3.reserve(tk_l);
-  P4.reserve(tk_l);
-  P5.reserve(tk_l);
-  P6.reserve(tk_l);
-  P7.reserve(tk_l);
-  R1.reserve(tk_l);
-  R2.reserve(tk_l);
-  
+  P = new double *[8];
+  PP= new double *[8];
+  for(int i=0;i<8;i++){
+    P[i] = new double[tk_l];
+    PP[i]= new double[tk_l];
+  }
   ComputeGlobalProbabilities();//only the P* ones
 }
 
@@ -360,9 +444,9 @@ int main_analysis(double *gls,std::vector<wins> &windows,psmc_par *p){
   //print indices for endpoint of windows
   for(int w=0;w<windows.size();w++)
     fprintf(stdout,"win[%d]=(%d,%d)\n",w,windows[w].from,windows[w].to);
-
+  exit(0);
   //print out data:
-  for(int w=0;w<windows.size();w++)
+  for(int w=0;0&&w<windows.size();w++)
     for(int p=windows[w].from;p<windows[w].to;p++)
       fprintf(stdout,"%d\t%d\t%f\t%f\n",p,w,gls[2*p],gls[2*p+1]);
 #endif
@@ -371,7 +455,7 @@ int main_analysis(double *gls,std::vector<wins> &windows,psmc_par *p){
 }
 
 
-int psmc_wrapper(args *pars) {
+int psmc_wrapper(args *pars,int block) {
 
   //  fprintf(stderr,"[%s]\n",__FUNCTION__);
 #if 0 //print pars
@@ -382,8 +466,7 @@ int psmc_wrapper(args *pars) {
   
 #endif
   
-  
-
+ 
 
   //loop over chrs;
 
@@ -393,25 +476,30 @@ int psmc_wrapper(args *pars) {
 
     it = pars->chooseChr?iter_init(pars->perc,pars->chooseChr,pars->start,pars->stop):iter_init(pars->perc,it->first,pars->start,pars->stop);
 
-    //generate window data
-    int beginIndex = pars->perc->first;
+    int beginIndex =0;
+    int endIndex=0;
+    int beginPos = 1;
+    int endPos = beginPos+block-1;
+
     while(1){
-      int beginPos=pars->perc->pos[beginIndex];//add one due to positions being offset with one.
-      int endPos = beginPos+pars->winSize;
-      //      fprintf(stderr,"winsize:%d begin:%d,endpos:%d\n",pars->winSize,beginPos,endPos);exit(0);
-      int at=beginIndex;
-      while(at<pars->perc->last&&pars->perc->pos[at]<endPos){
-	at++;
-      }
-      if(at>=pars->perc->last)
-	break;
       wins w;
-      w.from=beginIndex;
-      w.to=at;
+      if(endPos>pars->perc->pos[pars->perc->last-1])
+	break;
+
+      while(pars->perc->pos[beginIndex]<beginPos)
+	beginIndex++;
+      while(pars->perc->pos[endIndex]<endPos)
+	endIndex++;
+      //      fprintf(stdout,"endpiadsf:%d\n",pars->perc->pos[endIndex]);
+      //      fprintf(stdout,"winsize:%d bp:%d,ep:%d bi:%d ei:%d ei-bi:%d\n",pars->winSize,beginPos,endPos,beginIndex,endIndex,endIndex-beginIndex);
+      w.from = beginIndex;
+      w.to = endIndex+1;
       windows.push_back(w);
-      beginIndex = at;
-      //      fprintf(stdout,"(%d,%d)\n",beginPos,endPos);
+      beginPos+=block;
+      endPos+=block;
+
     }
+    fprintf(stderr,"\t->[%s] number of windows:%lu\n",__FUNCTION__,windows.size());
     main_analysis(pars->perc->gls,windows,pars->par);
     break;
 
