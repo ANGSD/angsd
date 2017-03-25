@@ -128,7 +128,7 @@ args * getArgs(int argc,char **argv){
   p->fname = NULL;
   p->onlyOnce = 0;
   p->seed =0;
-  p->winSize = 100;//default 100bp
+  p->block = 100;//default 100bp
   p->par =(psmc_par*) calloc(1,sizeof(psmc_par));
   if(argc==0)
     return p;
@@ -140,7 +140,7 @@ args * getArgs(int argc,char **argv){
     else  if(!strcasecmp(*argv,"-maxIter"))
       p->maxIter = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-winSize"))
-      p->winSize = atoi(*(++argv));
+      p->block = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-p"))
       p->par->pattern =  strdup(*(++argv));
     else  if(!strcasecmp(*argv,"-nSites"))
@@ -164,7 +164,7 @@ args * getArgs(int argc,char **argv){
   if(p->seed==0)
     p->seed = time(NULL);
   srand48(p->seed);
-  fprintf(stderr,"\t-> args: tole:%f maxiter:%d chr:%s start:%d stop:%d fname:%s seed:%ld winsize:%d\n",p->tole,p->maxIter,p->chooseChr,p->start,p->stop,p->fname,p->seed,p->winSize);
+  fprintf(stderr,"\t-> args: tole:%f maxiter:%d chr:%s start:%d stop:%d fname:%s seed:%ld winsize:%d\n",p->tole,p->maxIter,p->chooseChr,p->start,p->stop,p->fname,p->seed,p->block);
   //  fprintf(stderr,"par:%p par->pattern:%p DEFAULT_PATTERN:%s\n",p->par,p->par->pattern,DEFAULT_PATTERN);
   if(p->par->pattern==NULL)
     p->par->pattern = strdup(DEFAULT_PATTERN);

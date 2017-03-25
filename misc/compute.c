@@ -1,4 +1,3 @@
-
 void ComputeP11(unsigned numWind,int tk_l,double *P1,double *PP1,double **fw,double **bw,double *stationary){
   for (unsigned i = 0; i < tk_l; i++){
     PP1[i] = 0;

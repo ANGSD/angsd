@@ -76,12 +76,15 @@ msToGlf: msToGlf.c
 fpsmc.o: fpsmc.cpp fpsmc.h psmcreader.h main_psmc.h
 	$(CXX) $(FLAGS) -c fpsmc.cpp -I $(HTS_INCDIR)
 
+hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
+	$(CXX) $(FLAGS) -c hmm_psmc.cpp -I $(HTS_INCDIR)
+
 
 main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
-ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o
-	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o fpsmc.o ../bfgs.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
+ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o hmm_psmc.o
+	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o hmm_psmc.o fpsmc.o ../bfgs.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
@@ -119,14 +122,17 @@ msToGlf: msToGlf.c
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -lhts -lz -lpthread
 
+hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
+	$(CXX) $(FLAGS) -c hmm_psmc.cpp
+
 fpsmc.o: fpsmc.cpp fpsmc.h psmcreader.h main_psmc.h
 	$(CXX) $(FLAGS) -c fpsmc.cpp
 
 main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h
 	$(CXX) $(FLAGS) -c main_psmc.cpp 
 
-ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o
-	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o fpsmc.o main_psmc.o ../bfgs.o -lhts -lz
+ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o
+	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o fpsmc.o main_psmc.o hmm_psmc.o ../bfgs.o -lhts -lz
 
 endif
 
