@@ -1,9 +1,9 @@
 
-void ComputeP11(unsigned numWind,int tk_l,double **P,double **PP,double **fw,double **bw,double *stationary){
+void ComputeP11(unsigned numWind,int tk_l,double *P1,double *PP1,double **fw,double **bw,double *stationary){
   for (unsigned i = 0; i < tk_l; i++){
-    PP[1][i] = 0;
+    PP1[i] = 0;
     for (unsigned l = 1; l < numWind; l++)
-      PP[1][i] += fw[i][l]*P[1][i]*bw[l+1][i]/stationary[i];//NOTE: In appendix of K.H. paper it seems to be an extra emission probability for site l+1, it is already inside bw[]
+      PP1[i] += fw[i][l]*P1[i]*bw[l+1][i]/stationary[i];//NOTE: In appendix of K.H. paper it seems to be an extra emission probability for site l+1, it is already inside bw[]
   }
 }
 
@@ -29,24 +29,24 @@ void ComputeP22(unsigned numWind,int tk_l,double **P,double **PP,double **fw,dou
   }
 }
 
-void ComputeP33(unsigned numWind,int tk_l,double **P,double **PP,double **fw,double **bw,double *stationary){
+void ComputeP33(unsigned numWind,int tk_l,double *P3,double *PP3,double **fw,double **bw,double *stationary){
   double R1[tk_l];
   for (unsigned i = 0; i < tk_l; i++)
-    PP[3][i] = 0;
+    PP3[i] = 0;
   for (unsigned l = 1; l < numWind; l++){
     R1[tk_l - 1] = 0;
     for (int i = tk_l - 2; i >= 0 ; i--)
       R1[i] = R1[i+1] + fw[i+1][l];
     for (unsigned i = 0; i < tk_l - 1; i++)
-      PP[3][i] += R1[i]*P[3][i]*bw[i][l]/stationary[i];
+      PP3[i] += R1[i]*P3[i]*bw[i][l]/stationary[i];
   }
 }
 
-void ComputeP44(unsigned numWind,int tk_l,double **P,double **PP,double **fw,double **bw,double *stationary){
+void ComputeP44(unsigned numWind,int tk_l,double *P4,double *PP4,double **fw,double **bw,double *stationary){
   for (unsigned i = 0; i < tk_l; i++){
-    PP[4][i] = 0;
+    PP4[i] = 0;
     for (unsigned l = 1; l < numWind; l++)
-      PP[4][i] += fw[i][l]*P[4][i]*bw[i][l+1]/stationary[i];
+      PP4[i] += fw[i][l]*P4[i]*bw[i][l+1]/stationary[i];
   }
 }
 
