@@ -80,7 +80,7 @@ hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
 	$(CXX) $(FLAGS) -c hmm_psmc.cpp -I $(HTS_INCDIR)
 
 
-main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h
+main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h hmm_psmc.o
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
 ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o hmm_psmc.o
@@ -128,7 +128,7 @@ hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
 fpsmc.o: fpsmc.cpp fpsmc.h psmcreader.h main_psmc.h
 	$(CXX) $(FLAGS) -c fpsmc.cpp
 
-main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h
+main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h fpsmc.o
 	$(CXX) $(FLAGS) -c main_psmc.cpp 
 
 ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o

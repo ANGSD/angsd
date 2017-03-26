@@ -15,6 +15,7 @@ double qkFunction(unsigned i, double pix, unsigned numWind,double **nP,double **
   */
   double qi = 0;
   qi += nP[1][i]*PP[1][i] + nP[2][i]*PP[2][i] + nP[3][i]*PP[3][i] + nP[4][i]*PP[4][i] + nP[5][i]*PP[5][i] + nP[6][i]*PP[6][i] + nP[7][i]*PP[7][i];
+
   return qi;
 }
 
@@ -102,13 +103,15 @@ void setEPSize(double *ary,int l,double *from_infile){
   if(!from_infile)
     for (int i = 0; i <l; i++)
       ary[l]=1;
-  else
+  else{
     memcpy(ary,from_infile,(l-1)*sizeof(double));
+    ary[l-1] = 100;//<- set the last element; DRAGON what should last epsize be?
+  }
 	
 }
 
 
-void fastPSMC::calculate_FW_BW_PP_Probs(double *gls,std::vector<wins> &windows){
+void fastPSMC::calculate_FW_BW_PP_Probs(){
     //we first set the initial fwprobs to stationary distribution
     for(int i=0;i<tk_l;i++)
       fw[i][0] =stationary[i];
@@ -120,12 +123,15 @@ void fastPSMC::calculate_FW_BW_PP_Probs(double *gls,std::vector<wins> &windows){
     for(int v=0;v<windows.size();v++){
       ComputeRs(v,fw);//<-prepare R1,R2
       fw[0][v+1] = (fw[0][v]*P[1][0] + R1[0]*P[3][0] + fw[0][v]*P[4][0])*emis[0][v+1] ;
-      for (unsigned i = 1; i < tk_l; i++)
-	fw[i][v+1]= (fw[i][v+1]*P[1][i] + R2[i-1]*P[2][i-1] + R1[i]*P[3][i] + fw[i][v+1]*P[4][i])*emis[i][v+1];
+      for (unsigned i = 1; i < tk_l; i++){
+	fw[i][v+1] = -777;
+	fw[i][v+1]= (fw[i][v]*P[1][i] + R2[i-1]*P[2][i-1] + R1[i]*P[3][i] + fw[i][v]*P[4][i])*emis[i][v+1];
+      }
     }
-    printmatrix(stdout,fw,tk_l,windows.size());exit(0);
+    printmatrix(stdout,fw,tk_l,windows.size()+1);exit(0);
     double tmp =0;
     for(int i=0;i<tk_l;i++){
+      //      fprintf(stderr,"extracing at windows.size()-1:%d\n",windows.size()-1);
       fprintf(stderr,"fw[%d][%lu]:%f\n",i,windows.size(),fw[i][windows.size()]);
       tmp += log(fw[i][windows.size()]);
     }
@@ -167,19 +173,16 @@ void fastPSMC::calculate_FW_BW_PP_Probs(double *gls,std::vector<wins> &windows){
 
 
 
-void fastPSMC::allocate(psmc_par *p){
+void fastPSMC::allocate(int tk_l_arg){
   int numWindows = windows.size();
-  fprintf(stderr,"\t-> [%s]: pars->n:%d will allocate tk with length n+2:%d\n",__FUNCTION__,p->n,p->n+2);
-  tk_l = p->n+2;
-  tk = new double[tk_l];
-  setTk(tk_l,tk,max_t,0.01,p->times);//<- last position will be infinity
+  fprintf(stderr,"\t-> [%s]: will allocate tk with length: %d\n",__FUNCTION__,tk_l_arg);
+  tk_l = tk_l_arg;
+  //tk = new double[tk_l];
+ 
   //  printarray(stderr,tk,tk_l);
-  epsize = new double[tk_l];
   stationary = new double[tk_l];
   R1 = new double[tk_l];
   R2 = new double[tk_l];
-  setEPSize(epsize,tk_l,p->params);
-  epsize[tk_l-1] = 100;//<- set the last element; DRAGON what should last epsize be?
   //  printarray(stderr,epsize,tk_l);exit(0);
   //  exit(0);
   fw = new double *[tk_l];
@@ -200,14 +203,13 @@ void fastPSMC::allocate(psmc_par *p){
     P[i] = new double[tk_l];
     PP[i]= new double[tk_l];
   }
-  ComputeGlobalProbabilities(tk,tk_l,P,epsize,rho);//only the P* ones
+ 
 }
 /*
   Function will set the indices for the windows
  */
 void fastPSMC::setWindows(perpsmc *perc,char *chooseChr,int start,int stop,int block){
   myMap::const_iterator it = iter_init(perc,chooseChr,start,stop);
-  gls = perc->gls;
   int beginIndex =0;
   int endIndex=0;
   int beginPos = 1;
@@ -223,17 +225,16 @@ void fastPSMC::setWindows(perpsmc *perc,char *chooseChr,int start,int stop,int b
     while(perc->pos[endIndex]<endPos)
       endIndex++;
 #if 0
-      fprintf(stdout,"\t-> endpiadsf:%d\n",perc->pos[endIndex]);
-      fprintf(stdout,"\t-> winsize:%d bp:%d,ep:%d bi:%d ei:%d ei-bi:%d\n",winSize,beginPos,endPos,beginIndex,endIndex,endIndex-beginIndex);
+    fprintf(stdout,"\t-> endpiadsf:%d\n",perc->pos[endIndex]);
+    fprintf(stdout,"\t-> winsize:%d bp:%d,ep:%d bi:%d ei:%d ei-bi:%d\n",block,beginPos,endPos,beginIndex,endIndex,endIndex-beginIndex);
 #endif
-      w.from = beginIndex;
-      w.to = endIndex+1;
-      windows.push_back(w);
-      beginPos+=block;
-      endPos+=block;
-      
+    w.from = beginIndex;
+    w.to = endIndex+1;
+    windows.push_back(w);
+    beginPos+=block;
+    endPos+=block;
   }
-  fprintf(stderr,"\t->[%s] chr: \'%s\' has number of windows:%lu\n",__FUNCTION__,chooseChr,windows.size());
+  fprintf(stderr,"\t-> [%s] chr: \'%s\' has number of windows:%lu\n",__FUNCTION__,chooseChr,windows.size());
 }
 
 
@@ -247,7 +248,7 @@ void fastPSMC::setWindows(perpsmc *perc,char *chooseChr,int start,int stop,int b
   
   stationary(i) = exp(-sum_{j=0}^{i-1}{tau_j/lambda_j}*P2[i])
  */
-void fastPSMC::calculate_emissions(double *tk,int tk_l,double *gls,std::vector<wins> &windows,double mu,double **emis){
+void calculate_emissions(double *tk,int tk_l,double *gls,std::vector<wins> &windows,double mu,double **emis){
   fprintf(stderr,"\t-> [Calculating emissions with tk_l:%d and windows.size():%lu:%s ] start\n",tk_l,windows.size(),__TIME__);
   //initialize the first:
   for(int j=0;j<tk_l;j++)
@@ -259,7 +260,7 @@ void fastPSMC::calculate_emissions(double *tk,int tk_l,double *gls,std::vector<w
       emis[j][v+1] = 0;
       double inner = exp(-2.0*tk[j]*mu);
       for(int i=windows[v].from;i<windows[v].to;i++)
-	emis[j][v+1] += log(exp(gls[i*2])*inner + exp(gls[2*i+1])*(1-inner));
+	emis[j][v+1] += log((exp(gls[i*2])/4.0) *inner + (exp(gls[2*i+1])/6)*(1-inner));
 
     }
   }
@@ -296,3 +297,17 @@ void fastPSMC::ComputePii(unsigned numWind,int tk_l,double **P,double **PP,doubl
     ComputeP66(numWind,tk_l,P,PP,fw,bw,stationary);
     ComputeP77(numWind,tk_l,P,PP,fw,bw,stationary);
   }
+
+
+void fastPSMC::make_hmm(double *tk,int tk_l,double *gls,double *epsize){
+  fprintf(stderr,"\t-> [%s] start\n",__FUNCTION__ );
+  //prepare global probs
+  ComputeGlobalProbabilities(tk,tk_l,P,epsize,rho);//only the P* ones
+  //calculate emissions
+  calculate_emissions(tk,tk_l,gls,windows,mu,emis);
+  //    printmatrix(stdout,emis,tk_l,(int)windows.size());exit(0);
+  calculate_stationary(tk,tk_l,epsize,stationary,P[2]);
+  //    printarray(stderr,stationary,tk_l);
+  calculate_FW_BW_PP_Probs();
+  fprintf(stderr,"\t-> [%s] stop\n",__FUNCTION__ );
+}
