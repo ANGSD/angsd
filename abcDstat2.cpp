@@ -270,6 +270,31 @@ abcDstat2::~abcDstat2(){
   delete[] COMBprint;
 }
 
+void abcDstat2::getBlockNum(int pos){
+  block=(int)((pos+1)/blockSize);
+}
+
+
+// returns number of blocks in chunk
+int abcDstat2::getNumBlocks(funkyPars *pars){
+
+  int nBlocks = 1;
+  int blockHere = -1;// (int)((pars->posi[0]+1)/blockSize);
+  for(int s = 0 ; s < pars->numSites; s++){
+    if( pars->keepSites[s]==0 )
+      continue;
+
+    if( pars->posi[s]+1 >= blockHere*blockSize+blockSize ){
+      nBlocks++;
+      blockHere =  (int)((pars->posi[s]+1)/blockSize);
+    }
+  }
+  return(nBlocks);
+}
+
+
+
+
 //clean after yourself
 void abcDstat2::clean(funkyPars *pars){
   if(doAbbababa2==0)
@@ -347,12 +372,14 @@ void abcDstat2::print(funkyPars *pars){
       for(int i=0;i<256;i++)
     	COMBprint[m][i]=0;
     }
-
-    
+    getBlockNum(pars->posi[0]);
+    if(currentChr > pars->refId)
+      fprintf(stdout,"Warning. Your regions are not sorted. Becarefull...\n");
+    currentChr=pars->refId;
     //start new block
     
-    currentChr=0;
-    block = abbababaStruct->BLOCKNUM[0];
+    
+    //block = abbababaStruct->BLOCKNUM[0];
   }
 
   while(currentChr!=pars->refId){ //if new chr (not first)
@@ -360,6 +387,7 @@ void abcDstat2::print(funkyPars *pars){
     printAndEmpty(block*blockSize+1,currentChr);
     currentChr=pars->refId;
     block = abbababaStruct->BLOCKNUM[0];
+    //block = (int)((pars->posi[s]+1)/blockSize);
   }
   
   for(int b=0;b<abbababaStruct->NUMBLOCK;b++){
@@ -405,6 +433,7 @@ void abcDstat2::run(funkyPars *pars){
  
   funkyAbbababa2 *abbababaStruct = new funkyAbbababa2; //new structure
   //fprintf(stderr,"nindfasta %d\n",nIndFasta);
+  //abbababaStruct->NUMBLOCK = totBlocks;
   abbababaStruct->NUMBLOCK = totBlocks;
   //double ABCD[4*nIndFasta];
   //for(int i = 0; i < 4*nIndFasta; i++)
@@ -476,7 +505,7 @@ void abcDstat2::run(funkyPars *pars){
     if(pars->keepSites[s]==0)
       continue;
     
-    if( pars->posi[s]+1 >= blockHere*blockSize +blockSize ){
+    if( pars->posi[s]+1 >= blockHere*blockSize + blockSize ){
       blockIdx++;
       blockHere =  (int)((pars->posi[s]+1)/blockSize);
       BLOCKNUM[blockIdx] = blockHere;
