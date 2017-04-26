@@ -1,4 +1,3 @@
-
 /*
   copyright (gpl)   19 sep 2012.
   Thorfinn Sand Korneliussen thorfinn@binf.ku.dk
