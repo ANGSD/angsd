@@ -1,1 +1,1 @@
-int psmc_wrapper(args *pars);
+int psmc_wrapper(args *pars,int block);

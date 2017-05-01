@@ -37,11 +37,11 @@ public:
   abcDstat2(const char *outfiles, argStruct *arguments,int inputtype);
   ~abcDstat2();
   void getOptions(argStruct *arguments);
-  int getNumBlocks();
   void run(funkyPars  *pars);  //not protected
   void print(funkyPars *pars); // protect (MUTEX)
   void clean(funkyPars *pars); //
   void printArg(FILE *argFile);
   void printAndEmpty(int blockAddress,int theChr);
   void getBlockNum(int pos);
+  int getNumBlocks(funkyPars *pars);
 };

@@ -745,7 +745,7 @@ for(idComb in 1:numComb){
         str7=sprintf("No Trans\t|\t\t|\t\t|\t\t|\t|\t\n")}
 
     cat("--- Table of Results --- Combination ", idComb," out of ", numComb," ---\n")
-    cat("--- Time Spent ",(proc.time() - ptm2)[3]," sec --- Estimated time left ", (proc.time() - ptm2)[3]*numComb/idComb - (proc.time()-ptm)[3], " sec ---\n"    )
+    #cat("--- Time Spent ",(proc.time() - ptm2)[3]," sec --- Estimated time left ", (proc.time() - ptm2)[3]*numComb/idComb - (proc.time()-ptm)[3], " sec ---\n"    )
     cat("--- H1=",nm[1]," H2=",nm[2]," H3=",nm[3]," H4=",nm[4]," ---\n")
     cat("---------------------------------------------------------------------------------\n")
     cat(str1)

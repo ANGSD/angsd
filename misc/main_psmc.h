@@ -23,7 +23,7 @@ typedef struct {
   char *fname;
   int onlyOnce;
   long seed;//<-seed=-1 old version;seed=0 means time; othervise it will be used as seed
-  int winSize;
+  int block;
   psmc_par *par;
 }args;
 args * getArgs(int argc,char **argv);
