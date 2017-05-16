@@ -122,7 +122,8 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   
   if(ancName != NULL && useLast == 0){
     nIndFasta += 1;
-    numPop = nIndFasta;
+    if(sizeFile == NULL)
+      numPop = nIndFasta;
   }
   
 

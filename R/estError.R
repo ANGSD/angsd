@@ -45,9 +45,8 @@ args<-list(file=NULL,
            nIter=100,
            subset=NA,
            main="Error rate using an outgroup and a high quality genome",
-           maxErr=0.02,
            height=7,
-           width=7,
+           width=12,
            srt=90,
            cex=1,
            doPng=FALSE,
@@ -60,7 +59,6 @@ des<-list(file="the ancError File",
           indNames="postFix, file with names or comma seperated names of individuals",
           nIter="Numer of optimazation attemps",
           subset="comma seperated numbers of the individuals to include",
-          maxErr="maximum allowed error rate",
           width="width of the pdf",
           height="height of the pdf",
           srt="angle of ind names",
@@ -99,9 +97,8 @@ srt<-as.numeric(srt)
 
 
 nIter<-as.integer(nIter)
-maxErr=as.numeric(maxErr)
 cex=as.numeric(cex)
-cat("----------\nfile: ",file," out: ",out," nIter: ",nIter," subset: ",subset,"\nmaxErr: ",maxErr," width: ",width," height: ",height," srt: ",srt," cex: ",cex," doPng: ",doPng,"\n-----------\n")
+cat("----------\nfile: ",file," out: ",out," nIter: ",nIter," subset: ",subset,"\n width: ",width," height: ",height," srt: ",srt," cex: ",cex," doPng: ",doPng,"\n-----------\n")
 
 r<-as.matrix(read.table(file))
 
@@ -172,13 +169,18 @@ for(j in 1:nInd){
   for(i in 1:4)
     Xch<-Xch+m[,i,]
 
-  conv <- nlminb(runif(12)/100,logLike,upper=rep(maxErr,12),lower=rep(1e-10,12),Xch=Xch,Pch=Pch)
-  for(i in 1:nIter){
-    Tempconv <- nlminb(runif(12)/100,logLike,upper=rep(maxErr,12),lower=rep(1e-10,12),Xch=Xch,Pch=Pch)
-    if(Tempconv$objective<conv$objective){
-      conv<-Tempconv
+  maxErr=0.02;
+
+  conv<-list(par=1,objective=Inf)
       
-    }
+  for(i in 1:nIter){
+      Tempconv <- nlminb(runif(12)/100,logLike,upper=rep(maxErr,12),lower=rep(1e-10,12),Xch=Xch,Pch=Pch)
+      if( Tempconv$par > maxErr*0.99 )
+          maxErr<-min(1,maxErr*10);
+      if(Tempconv$objective<conv$objective){
+          conv<-Tempconv
+      
+      }
   }
   
   res<-rbind(res,conv$par)
@@ -285,9 +287,13 @@ if(file.info(chrFile)$size!=0 & !is.na(file.info(chrFile)$size)){
     }
     res<-rbind.list(overList)
     chrNames<-names(overList)
+    rownames(res) <- chrNames
+    colnames(res) <- indNames
     pdf(paste(out,"OverChr.pdf",sep=""),w=width,h=height)
     for(i in 1:nInd){
         dotchart(res[,i],chrNames,xlab="Error rates",col=3,main=indNames[i])
+        dotchart(res[res[,i]>0,i],chrNames,xlab="Error rates (positive)",col=3,main=indNames[i])
     }
     dev.off()
+    write.table(res,file=paste(out,"OverChr.txt",sep=""),qu=F,row=T,col=T)
 }
