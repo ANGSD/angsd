@@ -17,6 +17,29 @@ typedef struct{
   uchar T:2;    
 }counts;
 
+typedef std::map<int, char *> bMap;
+
+bMap readvcf(const char *fname){
+  gzFile gz = Z_NULL;
+  gz=gzopen(fname,"rb");
+  if(gz==Z_NULL){
+    fprintf(stderr,"\t-> Problem opening file: %s\n",fname);
+    exit(0);
+  }
+  int at=0;
+  bMap bm;
+  char buf[1024];
+  while(gzgets(gz,buf,1024)){
+    char *line = strtok(buf,"\n");
+    bm[at++]= strdup(line);
+  }
+  fprintf(stderr,"\t-> read nsites from vcf:%lu\n",bm.size());
+  return bm;
+}
+
+
+
+
 void set(counts &cnt,int type,int val){
   if(type==0)
     cnt.A=val;
@@ -96,7 +119,7 @@ int main(int argc,char **argv){
   unsigned nsites = 70e6;
   
   if(argc==1){
-    fprintf(stderr,"./a.out filelist population \n");
+    fprintf(stderr,"1) ./scounts print file.scounts.gz \n2) ./scounts scounts.list POP vcf [seed]\n");
     return 0;
   }
   if(0==strcmp(argv[1],"print")){
@@ -109,10 +132,12 @@ int main(int argc,char **argv){
     fprintf(stderr,"done printing\n");
   }
   
-  if(argc==4){
+  if(argc==5){
     fprintf(stderr,"\t-> Setting seed: \n");
-    seed = atol(argv[3]);
+    seed = atol(argv[4]);
   }
+  bMap bm = readvcf(argv[3]);
+  
   srand48(seed);
   char *c=argv[1];
   smap sm;
@@ -128,7 +153,7 @@ int main(int argc,char **argv){
   }
   for(smap::iterator it=sm.begin();it!=sm.end();it++){
     int *ary = it->second;
-    fprintf(stdout,"%d\t%d\t%d\t%d\t%d\n",it->first,ary[0],ary[1],ary[2],ary[3]);
+    fprintf(stdout,"%s\t%d\t%d\t%d\t%d\n",bm[it->first],ary[0],ary[1],ary[2],ary[3]);
   }
   return 0;
 }
