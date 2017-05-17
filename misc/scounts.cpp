@@ -220,10 +220,11 @@ int get(char c){
   if(c=='T')
     return 3;
   fprintf(stderr,"unknown base:%c\n",c);
+  return 0;
 }
 
 void helper(char *fname,std::map<int,double *> &freq,std::map<int,int*> &nHap,bMap2 &bm2,int total,int at){
-  fprintf(stderr,"fname:%s\n",fname);
+  // fprintf(stderr,"fname:%s\n",fname);
   gzFile gz = mygzopen(fname,(char*)"rb");
   char buf[4096];
   while(gzgets(gz,buf,4096)){
@@ -281,14 +282,20 @@ void merge2(char *flist,bMap2 &bm2){
     }
     char *pop1 = strtok(file,".\n");
     int nind_pop = atoi(strtok(NULL,".\n"));
-    fprintf(stderr,"pop: %s has:%d\n",pop1,nind_pop);
+    //    fprintf(stderr,"\npop: %s has:%d\n",pop1,nind_pop);
     nind.push_back(nind_pop);
     popnames.push_back(strdup(pop1));
     helper(dup,freqs,nHap,bm2,npops,at++);
   }
-  
+  //  fprintf(stderr,"number of popnames:%lu\n",popnames.size());
   fprintf(stderr,"\t-> end merge2\n");
+  
   FILE *fp = myfopen("freqs.txt",(char*)"wb");
+  fprintf(fp,"#chr\tpos");
+  for(int i=0;i<popnames.size();i++)
+    fprintf(fp,"\t%s",popnames[i]);
+  fprintf(fp,"\n");
+ 
   for(std::map<int, double *>::iterator fit=freqs.begin();fit!=freqs.end();fit++){
     fprintf(fp,"%d",fit->first);
     double *ff=fit->second;
@@ -299,13 +306,32 @@ void merge2(char *flist,bMap2 &bm2){
   fclose(fp);
 
   fp = myfopen("nhap.txt",(char*)"wb");
+  fprintf(fp,"#chr\tpos");
+  for(int i=0;i<popnames.size();i++)
+    fprintf(fp,"\t%s",popnames[i]);
+  fprintf(fp,"\n");
   for(std::map<int, int *>::iterator hit=nHap.begin();hit!=nHap.end();hit++){
-    fprintf(fp,"%d",hit->first);
+    bMap2::iterator it = bm2.find(hit->first);
+    //    fprintf(fp,"%d",hit->first);
+    fprintf(fp,"%s\t%d",it->second.chr,it->second.pos);
     int *ff=hit->second;
     for(int i=0;i<npops;i++)
       fprintf(fp,"\t%d",ff[i]);
     fprintf(fp,"\n");
   }
+  fclose(fp);
+
+
+  fp = myfopen("siteinfo.txt",(char*)"wb");
+  fprintf(fp,"#chromo\tposition\ttype\n");
+  for(std::map<int,double *>::iterator fit=freqs.begin();fit!=freqs.end();fit++){
+    bMap2::iterator it = bm2.find(fit->first); 
+    fprintf(fp,"%s\t%d\t%c%c\n",it->second.chr,it->second.pos,it->second.al1,it->second.al2);
+  }
+  fclose(fp);
+  fp = myfopen("nind.txt",(char*)"wb");
+  for(int i=0;i<popnames.size();i++)
+    fprintf(fp,"%s\t%d\n",popnames[i],nind[i]);
   fclose(fp);
 }
 
