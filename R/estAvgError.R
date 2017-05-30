@@ -194,8 +194,9 @@ BBAA<-c("0011","0022","0033","1100","1122","1133","2200","2211","2233","3300","3
 
 
 getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
-    outData = outData
-    colWeights = as.vector(rowSums(outData[,-c(1,2,3,4,5,6)]))
+    if(sum(as.numeric(outData[,5])==0) == dim(outData)[1])
+        return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA,numBlock=NA))  
+    colWeights = as.vector(as.numeric(rowSums(outData[,-c(1:6)])))
     #zeroIdx <- outData[,6]!=0 
     zeroIdx <- colWeights!=0
     outData <- outData[zeroIdx,]
@@ -467,13 +468,18 @@ for(idComb in 1:numComb){
     
     idxList = seq(1,lenList,numComb) + (idComb-1)
     outData = outDataTotal[idxList,]
-        
+    dims <- dim(outData)
+    outData <- as.numeric(outData)
+    dim(outData) <- dims
+    colnames(outData) <- colnames(outDataTotal)
+    
+    
     id = combs[idComb,]
     sz = sizes[idComb,]
     nm = nameId[idComb,]
             
     if(erCor==1){#ERROR CORRECTED D
-
+        
         #bigMat = list()
         #bigMat[[1]] = resMat[[ id[1] ]]
         #bigMat[[2]] = resMat[[ id[2] ]]
