@@ -187,6 +187,10 @@ void setArgsBam(argStruct *arguments){
   trim3 = angsd::getArg("-trim3",trim3,arguments);
   adjustMapQ = angsd::getArg("-C",adjustMapQ,arguments);
   baq = angsd::getArg("-baq",baq,arguments);
+  if(baq==1)
+    baq=3;
+  else if(baq==2)
+    baq=7;
   regfile =angsd::getArg("-r",regfile,arguments);
   regfiles = angsd::getArg("-rf",regfiles,arguments);
   MAX_SEQ_LEN = angsd::getArg("-setMinChunkSize",MAX_SEQ_LEN,arguments);
