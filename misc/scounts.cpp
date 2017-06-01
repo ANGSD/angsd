@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <vector>
 #include <map>
-
+#include <libgen.h>
 typedef unsigned char uchar;
 
 typedef struct{
@@ -165,7 +165,7 @@ int nlines(char *fname,char *popname){
 }
 
 
-void merge1(char *flist,bMap &bm, char *pop){
+void merge1(char *flist,bMap &bm, char *pop,char *odir){
   fprintf(stderr,"\t-> printing merge1\n");
   smap sm;
   int nind = nlines(flist,pop);
@@ -174,7 +174,10 @@ void merge1(char *flist,bMap &bm, char *pop){
   char buf[4096];
 
   char oname[1024];
-  sprintf(oname,"%s.%d.txt",pop,nind);
+  if(odir==NULL)
+    sprintf(oname,"%s.%d.txt",pop,nind);
+  else
+    sprintf(oname,"%s/%s.%d.txt",odir,pop,nind);
   FILE *fp = myfopen(oname,(char*)"wb");
   
   while(gzgets(gz,buf,4096)){
@@ -250,7 +253,7 @@ void helper(char *fname,std::map<int,double *> &freq,std::map<int,int*> &nHap,bM
   
 }
 
-void merge2(char *flist,bMap2 &bm2){
+void merge2(char *flist,bMap2 &bm2,char *odir){
   fprintf(stderr,"\t-> printing merge2 flist:%s\n",flist);
   int npops = nlines(flist,NULL);
   fprintf(stderr,"\t-> npops: %d\n",npops);
@@ -269,7 +272,9 @@ void merge2(char *flist,bMap2 &bm2){
       fprintf(stderr,"file: %s doesnt exists\n",file);
       exit(0);
     }
-    char *pop1 = strtok(file,".\n");
+    char *bname=basename(file);
+    //    fprintf(stderr,"tmpdup:%s\n",bname);
+    char *pop1 = strtok(bname,".\n");
     int nind_pop = atoi(strtok(NULL,".\n"));
     //    fprintf(stderr,"\npop: %s has:%d\n",pop1,nind_pop);
     nind.push_back(nind_pop);
@@ -278,23 +283,33 @@ void merge2(char *flist,bMap2 &bm2){
   }
   //  fprintf(stderr,"number of popnames:%lu\n",popnames.size());
   fprintf(stderr,"\t-> end merge2\n");
-  
-  FILE *fp = myfopen("freqs.txt",(char*)"wb");
+
+  char oname[1024];
+  if(odir==NULL)
+    sprintf(oname,"freqs.txt");
+  else
+    sprintf(oname,"%s/freqs.txt",odir);
+  FILE *fp = myfopen(oname,(char*)"wb");
   fprintf(fp,"#chr\tpos");
   for(int i=0;i<popnames.size();i++)
     fprintf(fp,"\t%s",popnames[i]);
   fprintf(fp,"\n");
  
   for(std::map<int, double *>::iterator fit=freqs.begin();fit!=freqs.end();fit++){
-    fprintf(fp,"%d",fit->first);
+    //    fprintf(fp,"%d",fit->first);
+    bMap2::iterator it = bm2.find(fit->first);
+    fprintf(fp,"%s\t%d",it->second.chr,it->second.pos);
     double *ff=fit->second;
     for(int i=0;i<npops;i++)
       fprintf(fp,"\t%f",ff[i]);
     fprintf(fp,"\n");
   }
   fclose(fp);
-
-  fp = myfopen("nhap.txt",(char*)"wb");
+  if(odir==NULL)
+    sprintf(oname,"nhap.txt");
+  else
+    sprintf(oname,"%s/nhap.txt",odir);
+  fp = myfopen(oname,(char*)"wb");
   fprintf(fp,"#chr\tpos");
   for(int i=0;i<popnames.size();i++)
     fprintf(fp,"\t%s",popnames[i]);
@@ -309,16 +324,24 @@ void merge2(char *flist,bMap2 &bm2){
     fprintf(fp,"\n");
   }
   fclose(fp);
+  if(odir==NULL)
+    sprintf(oname,"siteinfo.txt");
+  else
+    sprintf(oname,"%s/siteinfo.txt",odir);
 
-
-  fp = myfopen("siteinfo.txt",(char*)"wb");
+  fp = myfopen(oname,(char*)"wb");
   fprintf(fp,"#chromo\tposition\ttype\n");
   for(std::map<int,double *>::iterator fit=freqs.begin();fit!=freqs.end();fit++){
     bMap2::iterator it = bm2.find(fit->first); 
     fprintf(fp,"%s\t%d\t%c%c\n",it->second.chr,it->second.pos,it->second.al1,it->second.al2);
   }
   fclose(fp);
-  fp = myfopen("nind.txt",(char*)"wb");
+  if(odir==NULL)
+    sprintf(oname,"nind.txt");
+  else
+    sprintf(oname,"%s/nind.txt",odir);
+
+  fp = myfopen(oname,(char*)"wb");
   for(int i=0;i<popnames.size();i++)
     fprintf(fp,"%s\t%d\n",popnames[i],nind[i]);
   fclose(fp);
@@ -330,7 +353,7 @@ int main(int argc,char **argv){
   unsigned nsites = 70e6;
   
   if(argc==1){
-    fprintf(stderr,"1) ./scounts print file.scounts.gz \n2) ./scounts scounts.list POP vcf [seed]\n");
+    fprintf(stderr,"Examples:\ninputfiles are)\n ./angsd  -doscounts 1 -i file.bam -vcfname all.ceu.sites.gz -docounts 1 -sites all.ceu.sites.gz\n\n1) ./scounts -seed 10 -list scounts.list -mergeSingle -pop CEU \n  (output are CEU.NSAMPLES.txt)(intputfiles are filelist of the angsd outputfiles)\n2)./scounts -list flist -mergeMulti -info all.ceu.sites.gz\n (inputfiles are from step1 above)(outputfiles are: \'siteinfo.txt\',\'nind.txt\',\'nhap.txt\',\'freqs.txt\')\n\nPrinting textversion of binary files)\n\ta)./scounts print CEU.16.txt\n");
     return 0;
   }
   if(0==strcmp(argv[1],"print")){
@@ -347,6 +370,7 @@ int main(int argc,char **argv){
   char *pop = NULL;
   int mergeSingle =0;
   int mergeMulti =0;
+  char *odir = NULL;
   ++argv;
   while(*argv){
     // fprintf(stderr,"argv:%s\n",*argv);
@@ -360,6 +384,8 @@ int main(int argc,char **argv){
       mergeSingle = 1;
     else if(!strcmp(*argv,"-mergeMulti"))
       mergeMulti = 1;
+    else if(!strcmp(*argv,"-odir"))
+      odir = strdup(*(++argv));
     else if(!strcmp(*argv,"-pop"))
        pop = *(++argv);
     else {
@@ -368,7 +394,7 @@ int main(int argc,char **argv){
     }
     argv++;
   }
-  fprintf(stderr,"seed:%ld filelist:%s info:%s mergeSingle:%d mergeMulti:%d pop:%s\n",seed,flist,info,mergeSingle,mergeMulti,pop);
+  fprintf(stderr,"seed:%ld filelist:%s info:%s mergeSingle:%d mergeMulti:%d pop:%s odir:%s\n",seed,flist,info,mergeSingle,mergeMulti,pop,odir);
   if(mergeSingle&&info)
     fprintf(stderr,"\t-> remove -info vcffile if you want to merge population files\n");
   
@@ -394,9 +420,9 @@ int main(int argc,char **argv){
     bm2 = readvcf2(info);
 
   if(mergeSingle)
-    merge1(flist,bm,pop);
+    merge1(flist,bm,pop,odir);
   if(mergeMulti)
-    merge2(flist,bm2);
+    merge2(flist,bm2,odir);
   
   return 0;
 }
