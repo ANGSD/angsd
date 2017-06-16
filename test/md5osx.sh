@@ -1,4 +1,5 @@
 #!/bin/bash
+
 while read storedhash file
 do
     generatedhash=$(md5 -q "$file")

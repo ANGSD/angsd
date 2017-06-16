@@ -1,8 +1,15 @@
 #!/bin/bash
+MD5=md5sum
+
 if [ $# -eq 1 ] 
 then
     WDIR=$1
 fi
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    MD5=./md5osx.sh
+fi
+
 
 LOG=${0}.log
 echo "Cleaning old output dir taj/" &>${LOG}
@@ -47,4 +54,4 @@ echo "You should eyeball the above and see if they are comparable column (1-5,9)
 
 ##when generated the results:
 ##md5sum tajima/output/*pestPG tajima/output/*.ml tajima/output/*.saf tajima/output/*.gz  >tajima/md5/pestPG.md5sum
-md5sum  -c tajima/md5/pestPG.md5sum >>${LOG} 2>&1 || exit 1
+${MD5}  -c tajima/md5/pestPG.md5sum >>${LOG} 2>&1 || exit 1
