@@ -1,8 +1,16 @@
 #!/bin/bash
+MD5=md5sum
+
 if [ $# -eq 1 ] 
 then
     WDIR=$1
 fi
+
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    MD5=./md5osx.sh
+fi
+
 
 LOG=${0}.log
 echo "Cleaning old output dir fst/output/" &>${LOG}
@@ -52,4 +60,4 @@ ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.pop3.fst.idx >${ODIR}/pop1.pop2
 
 ##when generated the results:
 ##md5sum tajima/output/*pestPG tajima/output/*.ml tajima/output/*.saf tajima/output/*.gz  >tajima/md5/pestPG.md5sum
-md5sum  -c fst/md5/fst.md5sum >>${LOG} 2>&1 || exit 1
+${MD5}  -c fst/md5/fst.md5sum >>${LOG} 2>&1 || exit 1
