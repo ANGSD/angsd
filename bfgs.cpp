@@ -1282,7 +1282,7 @@ logical *prjctd, *cnstnd, *boxed;*/
     integer i__1;
 
     /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle(), s_wsfe(), do_fio(), e_wsfe();
+    //    integer s_wsle(), do_lio(), e_wsle(), s_wsfe(), do_fio(), e_wsfe();
 
     /* Local variables */
      integer nbdd, i__;
@@ -1591,7 +1591,7 @@ oint \002,1p,2(1x,d11.4))";
     doublereal d__1;
 
     /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle(), s_wsfe(), e_wsfe(), do_fio();
+    //    integer s_wsle(), do_lio(), e_wsle(), s_wsfe(), e_wsfe(), do_fio();
 
     /* Local variables */
      doublereal dibp;
@@ -2878,7 +2878,7 @@ integer *iprint, *iter;*/
     integer i__1;
 
     /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
+    //    integer s_wsle(), do_lio(), e_wsle();
 
     /* Local variables */
      integer iact, i__, k;
@@ -3428,7 +3428,7 @@ the projected gradient\002,/,\002f     = function value\002,/,/,\002        \
   //    integer i__1;
 
     /* Builtin functions */
-    integer s_wsfe(), do_fio(), e_wsfe(), s_wsle(), do_lio(), e_wsle();
+  //    integer s_wsfe(), do_fio(), e_wsfe(), s_wsle(), do_lio(), e_wsle();
 
     /* Local variables */
     //     integer i__;
@@ -3557,7 +3557,7 @@ ftnlen word_len;*/
 
     /* Builtin functions */
     //    /* Subroutine */ int s_copy();
-    integer s_wsle(), do_lio(), e_wsle(), s_wsfe(), do_fio(), e_wsfe();
+    //    integer s_wsle(), do_lio(), e_wsle(), s_wsfe(), do_fio(), e_wsfe();
 
     /* Local variables */
      integer imod, i__;
@@ -4090,7 +4090,7 @@ OX\002)";
 	    i__2;
 
     /* Builtin functions */
-    integer s_wsfe(), e_wsfe(), do_fio(), s_wsle(), do_lio(), e_wsle();
+    //    integer s_wsfe(), e_wsfe(), do_fio(), s_wsle(), do_lio(), e_wsle();
 
     /* Local variables */
      doublereal temp1, temp2;
