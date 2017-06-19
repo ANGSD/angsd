@@ -147,29 +147,6 @@ void abcAncError::clean(funkyPars *pars){
 
 }
 
-
-
-void abcAncError::model2(funkyPars *pars){
-
-  for(int s=0;s<pars->numSites;s++){
-    if(pars->keepSites[s]==0)
-      continue;
-    
-    fprintf(outfile,"%d\t%c",pars->posi[s]+1,intToRef[pars->anc[s]]);
-    fprintf(outfile,"\t%c",intToRef[pars->ref[s]]);
-    
-    for(int i=0;i<pars->nInd;i++){
-      int allele=4;
-      if(pars->chk->nd[s][i]&&pars->chk->nd[s][i]->l!=0)
-	refToInt[pars->chk->nd[s][i]->seq[0]];
-      fprintf(outfile,"\t%c",intToRef[allele]);
-    }
-      fprintf(outfile,"\n");
-    }
-
-}
-
-
 void abcAncError::model1(funkyPars *pars){
     if(doAncError==1){//use all bases
       for(int s=0;s<pars->numSites;s++){
