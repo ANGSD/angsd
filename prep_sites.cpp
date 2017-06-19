@@ -66,7 +66,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     return;
   }
 
-  bgzf_seek(fl->bg,it->second.offs,SEEK_SET);
+  assert(0==bgzf_seek(fl->bg,it->second.offs,SEEK_SET));
 
   size_t nsize = std::max(fl->curLen,hint);//this is not the number of elements, but the last position on the reference
   nsize = std::max(nsize,it->second.len)+1;//not sure if '+1' this is needed, but it doesnt hurt...
@@ -75,7 +75,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     fl->keeps=(char*) realloc(fl->keeps,nsize);
   memset(fl->keeps,0,nsize);
   //fprintf(stderr,"it->second.len:%lu fl->curLen:%lu fl->keeps:%p\n",it->second.len,fl->curLen,fl->keeps);
-  bgzf_read(fl->bg,fl->keeps,it->second.len);
+  assert(it->second.len==bgzf_read(fl->bg,fl->keeps,it->second.len));
 
   if(fl->hasExtra>0){
     if(nsize>fl->curLen) {
@@ -84,8 +84,8 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
       memset(fl->major,0,nsize);
       memset(fl->minor,0,nsize);
     }
-    bgzf_read(fl->bg,fl->major,it->second.len);
-    bgzf_read(fl->bg,fl->minor,it->second.len);
+    assert(it->second.len==bgzf_read(fl->bg,fl->major,it->second.len));
+    assert(it->second.len==bgzf_read(fl->bg,fl->minor,it->second.len));
   }
   if(fl->hasExtra>1){
     if(nsize>fl->curLen) {
@@ -96,9 +96,9 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
       memset(fl->an,0,nsize*sizeof(int));
       memset(fl->ac,0,nsize*sizeof(int));
     }
-    bgzf_read(fl->bg,fl->af,it->second.len*sizeof(float));
-    bgzf_read(fl->bg,fl->ac,it->second.len*sizeof(int));
-    bgzf_read(fl->bg,fl->an,it->second.len*sizeof(int));
+    assert(it->second.len*sizeof(float)==bgzf_read(fl->bg,fl->af,it->second.len*sizeof(float)));
+    assert(it->second.len*sizeof(int)==bgzf_read(fl->bg,fl->ac,it->second.len*sizeof(int)));
+    assert(it->second.len*sizeof(int)==bgzf_read(fl->bg,fl->an,it->second.len*sizeof(int)));
   }
 
   fl->curNam=chr;

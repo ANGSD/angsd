@@ -47,7 +47,7 @@ void abcWriteFasta::getOptions(argStruct *arguments){
       fprintf(stderr,"Error: -doFasta 3 only works for a single individual\n");
       exit(0);
     }
-    if((doFasta==2||doFasta==1) & doCount==0){
+    if((doFasta==2||doFasta==1) && doCount==0){
       fprintf(stderr,"Error: -doFasta 1 or 2 needs allele counts (use -doCounts 1)\n");
       exit(0);
     }
