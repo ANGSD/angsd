@@ -109,6 +109,11 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     myMap::iterator it = iter_init(saf[i],chooseChr,start,stop);
     if(fl!=NULL&&i==0){
       filt_readSites(fl,chooseChr,saf[0]->ppos[it->second.nSites-1]);
+      if(fl!=NULL&&fl->keeps==NULL){
+	chooseChr=NULL;
+	goto aGotoHereIsTheEasiest;
+      }
+
     }
     
     //    fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
