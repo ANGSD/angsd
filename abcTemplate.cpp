@@ -308,10 +308,10 @@ abcTemplate::~abcTemplate(){
 	eErrFreq[j] = sqrt(ErrFreq[j] * (1.0-ErrFreq[j]) / double(QscoreVsErrorFreq[i][j][0]));
       }
       fprintf(outfile,"\t  Qscore: %2d    \tA: %7.5f (%5d/%7d)   \tC: %7.5f (%5d/%7d)   \tG: %7.5f (%5d/%7d)   \tT: %7.5f (%5d/%7d) \n", i,
-	      ErrFreq[0], QscoreVsErrorFreq[i][0][1], QscoreVsErrorFreq[i][0][0],
-	      ErrFreq[1], QscoreVsErrorFreq[i][1][1], QscoreVsErrorFreq[i][1][0],
-	      ErrFreq[2], QscoreVsErrorFreq[i][2][1], QscoreVsErrorFreq[i][2][0],
-	      ErrFreq[3], QscoreVsErrorFreq[i][3][1], QscoreVsErrorFreq[i][3][0]);
+	      ErrFreq[0],(int) QscoreVsErrorFreq[i][0][1],(int) QscoreVsErrorFreq[i][0][0],
+	      ErrFreq[1],(int) QscoreVsErrorFreq[i][1][1],(int) QscoreVsErrorFreq[i][1][0],
+	      ErrFreq[2],(int) QscoreVsErrorFreq[i][2][1],(int) QscoreVsErrorFreq[i][2][0],
+	      ErrFreq[3],(int) QscoreVsErrorFreq[i][3][1],(int) QscoreVsErrorFreq[i][3][0]);
     }
   }
 
@@ -326,15 +326,15 @@ abcTemplate::~abcTemplate(){
   // Number of times, that the read combination matches the reference base:
   fprintf(outfile,"\n\n Read correctness:\n");
   double fracWrong = double(ReadsVsRef[1]) / double(ReadsVsRef[0]);
-  fprintf(outfile,"  Nwrong: %d   Ntotal: %d    frac = %8.6f \n", ReadsVsRef[1], ReadsVsRef[0], fracWrong);
+  fprintf(outfile,"  Nwrong: %d   Ntotal: %d    frac = %8.6f \n",(int) ReadsVsRef[1],(int) ReadsVsRef[0], fracWrong);
 
   // Number of times, that the read combination matches the reference base:
   fprintf(outfile,"\n\n Genotype frequencies (and undetermined sites):\n");
-  char* GTnames[10] = {"AA", "AC", "AG", "AT", "CC", "CG", "CT", "GG", "GT", "TT"};
+  char* GTnames[10] = {(char*)"AA",(char*) "AC",(char*) "AG",(char*) "AT",(char*) "CC",(char*) "CG",(char*) "CT",(char*) "GG",(char*) "GT",(char*) "TT"};
   for (int i=0; i<10; i++) {
-    fprintf(outfile, "  Genotype %s:  %8d \n", GTnames[i], GenotypeFreq[i]);
+    fprintf(outfile, "  Genotype %s:  %8d \n", GTnames[i], (int)GenotypeFreq[i]);
   }
-  fprintf(outfile, "  Genotype not determined:  %8d \n", GenotypeFreq[10]);
+  fprintf(outfile, "  Genotype not determined:  %8d \n",(int) GenotypeFreq[10]);
 
 
 
