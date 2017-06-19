@@ -65,20 +65,19 @@ return 0;
 }
 int cigstat_close(){
   fprintf(stderr,"\t-> %s.%s():%d\n",__FILE__,__FUNCTION__,__LINE__);
-kstring_t *ks=(kstring_t*)calloc(1,sizeof(kstring_t));
-ksprintf(ks,"CIGAR");
-for(int i=0;i<max_rlen;i++)
-  ksprintf(ks,"\tPos%d",i);
-//ksprintf(ks,"\n");
-char **bam_nam=popnams();
-for(int ncig=0;ncig<10;ncig++){
-ksprintf(ks,"\n%s",bam_nam[ncig]);
-for(int p=0;p<1024;p++)
-  ksprintf(ks,"\t%lu",cig_counts[ncig][p]);
-
-}
-ksprintf(ks,"\n");
- bgzf_write(bg,ks->s,ks->l);
-bgzf_close(bg);
-return 0;
+  kstring_t *ks=(kstring_t*)calloc(1,sizeof(kstring_t));
+  ksprintf(ks,"CIGAR");
+  for(int i=0;i<max_rlen;i++)
+    ksprintf(ks,"\tPos%d",i);
+  //ksprintf(ks,"\n");
+  char **bam_nam=popnams();
+  for(int ncig=0;ncig<10;ncig++){
+    ksprintf(ks,"\n%s",bam_nam[ncig]);
+    for(int p=0;p<1024;p++)
+      ksprintf(ks,"\t%lu",cig_counts[ncig][p]);
+  }
+  ksprintf(ks,"\n");
+  assert(ks->l==bgzf_write(bg,ks->s,ks->l));
+  bgzf_close(bg);
+  return 0;
 }
