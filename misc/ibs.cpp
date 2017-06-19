@@ -120,7 +120,7 @@ size_t readGLF(const char* fname,double * &gls,int nInd,size_t maxSites){
 
   size_t nSites2=0;
   size_t offset=0;
-  while( temp = gzread(fp,gls+offset,sizeof(double)*sizeMax) ){
+  while(( temp = gzread(fp,gls+offset,sizeof(double)*sizeMax) )){
     nSites2 += temp/sizeof(double)/10/nInd; 
     offset+=sizeMax;
     if(nSites2>=maxSites)
