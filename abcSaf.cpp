@@ -28,16 +28,16 @@ void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<i
     size_t clen = strlen(tmpChr);
     fwrite(&clen,sizeof(size_t),1,idx);
     fwrite(tmpChr,1,clen,idx);
-    bgzf_write(dat,&clen,sizeof(size_t));
-    bgzf_write(dat,tmpChr,clen);
+    assert(sizeof(size_t)==bgzf_write(dat,&clen,sizeof(size_t)));
+    assert(clen==bgzf_write(dat,tmpChr,clen));
 
     //write number of sites for both index and bgzf
     size_t tt = p.size();
     fwrite(&tt,sizeof(size_t),1,idx);
-    bgzf_write(dat,&tt,sizeof(size_t));
+    assert(sizeof(size_t)==bgzf_write(dat,&tt,sizeof(size_t)));
     //write nChr for both index and bgzf
     fwrite(&nChr,sizeof(int),1,idx);
-    bgzf_write(dat,&nChr,sizeof(int));
+    assert(sizeof(int)==bgzf_write(dat,&nChr,sizeof(int)));
 
     //write bgzf offset into idx
     fwrite(&offs,sizeof(int64_t),1,idx);

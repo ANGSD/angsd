@@ -135,7 +135,7 @@ void abcScounts::print(funkyPars *pars){
       cnts.C = pars->counts[s][1];
       cnts.G = pars->counts[s][2];
       cnts.T = pars->counts[s][3];
-      bgzf_write(outfile,&cnts,sizeof(counts)*1);
+      assert(sizeof(counts)==bgzf_write(outfile,&cnts,sizeof(counts)*1));
       
     }
   }
