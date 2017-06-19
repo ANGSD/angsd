@@ -55,7 +55,7 @@ void setpars( char *fname,psmc_par *pp) {
   }
   char *buf = new char[fsize(fname)+10];
   memset(buf,0,fsize(fname)+10);
-  fread(buf,sizeof(char),fsize(fname),fp);
+  assert(fsize(fname)==fread(buf,sizeof(char),fsize(fname),fp));
   fclose(fp);
   char *slashslash[100];
   

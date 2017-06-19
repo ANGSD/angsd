@@ -109,7 +109,7 @@ myMap getMap(const char *fname){
   }
   FILE *fp = fopen(fname,"r");
   char tmp[8];
-  fread(tmp,1,8,fp);
+  assert(8==fread(tmp,1,8,fp));
   while(fread(&clen,sizeof(size_t),1,fp)){
     char *chr = new char[clen+1];
     assert(clen==fread(chr,1,clen,fp));
