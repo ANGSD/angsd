@@ -461,7 +461,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       //      fprintf(stderr,"This is the maj/min style\n");
       if(strlen(parsed[2])>1||strlen(parsed[3])>1){
 	if(printInfo>0){
-	  fprintf(stderr,"\t-> major and major are not allowed to be insertions chr:%s posS+1:%d will only print this msg three times\n",last,posS+1);
+	  fprintf(stderr,"\t-> major and major are not allowed to be insertions chr:%s posS+1:%d will only print this msg three times\n",last,(int)posS+1);
 	  printInfo--;
 	}
 	continue;
