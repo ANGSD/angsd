@@ -125,8 +125,8 @@ funkyPars *mpileup::fetch(int chunksize){
     myfunky->refId = lastRefId;
     myfunky->posi[nSites] = atoi(strtok_r(NULL,delims,&buffer))-1;
     myfunky->ref[nSites] = refToInt[strtok_r(NULL,delims,&buffer)[0]];
-    myfunky->chk->nd[nSites++] = parseNd(buffer,nInd,delims,minQ,myfunky->ref[nSites]);
-    
+    myfunky->chk->nd[nSites] = parseNd(buffer,nInd,delims,minQ,myfunky->ref[nSites]);
+    nsites++;
     changed =0;
   }
   buffer=original;
