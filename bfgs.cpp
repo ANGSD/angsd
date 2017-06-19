@@ -103,7 +103,7 @@ double findmax_bfgs(int numpars, double *invec,const void*dats, double (*fun)(co
   grad =(double *) calloc(numpars,sizeof(double));
   wa =(double *) calloc(((2*m+4)*numpars + 12*m*m + 12*m),sizeof(double));
   iwa =(int *) calloc(3*numpars,sizeof(int));
-  my_strcpy(task, "START");
+  my_strcpy(task,(char*) "START");
   for (i=5; i<60; i++) task[i]=' ';
   like = (*fun)(invec,dats);
   if(dfun!=NULL)
@@ -817,7 +817,7 @@ int projgr_(integer *n, doublereal *l, doublereal *u, integer *nbd, doublereal *
 	sbtime = 0.;
 	lnscht = 0.;
 /*           'word' records the status of subspace solutions. */
-	my_strcpy(word, "---");
+	my_strcpy(word,(char*) "---");
 	//	s_copy(word, "---", (ftnlen)3, (ftnlen)3);
 /*           'info' records the termination information. */
 	info = 0;
@@ -898,7 +898,7 @@ int projgr_(integer *n, doublereal *l, doublereal *u, integer *nbd, doublereal *
 	}
     }
 /*     Compute f0 and g0. */
-    my_strcpy(task, "FG_START");
+    my_strcpy(task,(char*) "FG_START");
 /*          return to the driver to calculate f and g; reenter at 111. */
     goto L1000;
 L111:
@@ -923,7 +923,7 @@ L111:
     }
     if (sbgnrm <= *pgtol) {
 /*                                terminate the algorithm. */
-      my_strcpy(task, "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL");
+      my_strcpy(task,(char*) "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL");
       //	s_copy(task, "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL", (
       //		ftnlen)60, (ftnlen)48);
 	goto L999;
@@ -1088,7 +1088,7 @@ L666:
 		--ifun;
 		--iback;
 	    }
-	    my_strcpy(task, "ABNORMAL_TERMINATION_IN_LNSRCH");
+	    my_strcpy(task,(char*) "ABNORMAL_TERMINATION_IN_LNSRCH");
 	    //	    s_copy(task, "ABNORMAL_TERMINATION_IN_LNSRCH", (ftnlen)60, (
 	    //		    ftnlen)30);
 	    ++iter;
@@ -1109,7 +1109,7 @@ L666:
 	    theta = 1.;
 	    iupdat = 0;
 	    updatd = FALSE_;
-	    my_strcpy(task, "RESTART_FROM_LNSRCH");
+	    my_strcpy(task,(char*) "RESTART_FROM_LNSRCH");
 	    //	    s_copy(task, "RESTART_FROM_LNSRCH", (ftnlen)60, (ftnlen)19);
 	    timer_(&cpu2);
 	    lnscht = lnscht + cpu2 - cpu1;
@@ -1134,7 +1134,7 @@ L777:
 /*     Test for termination. */
     if (sbgnrm <= *pgtol) {
 /*                                terminate the algorithm. */
-      my_strcpy(task, "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL");
+      my_strcpy(task,(char*) "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL");
 	goto L999;
     }
 /* Computing MAX */
@@ -1142,7 +1142,7 @@ L777:
     ddum = max(d__1,1.);
     if (fold - *f <= tol * ddum) {
 /*                                        terminate the algorithm. */
-      my_strcpy(task, "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH");
+      my_strcpy(task,(char*) "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH");
 	if (iback >= 10) {
 	    info = -5;
 	}
@@ -2349,15 +2349,15 @@ ftnlen task_len;*/
 
     /* Function Body */
     if (*n <= 0) {
-      my_strcpy(task, "ERROR: N .LE. 0");
+      my_strcpy(task, (char*) "ERROR: N .LE. 0");
       //	s_copy(task, "ERROR: N .LE. 0", (ftnlen)60, (ftnlen)15);
     }
     if (*m <= 0) {
-      my_strcpy(task, "ERROR: M .LE. 0");
+      my_strcpy(task, (char*) "ERROR: M .LE. 0");
       //	s_copy(task, "ERROR: M .LE. 0", (ftnlen)60, (ftnlen)15);
     }
     if (*factr < 0.) {
-      my_strcpy(task, "ERROR: FACTR .LT. 0");
+      my_strcpy(task, (char*) "ERROR: FACTR .LT. 0");
       //	s_copy(task, "ERROR: FACTR .LT. 0", (ftnlen)60, (ftnlen)19);
     }
 /*     Check the validity of the arrays nbd(i), u(i), and l(i). */
@@ -2365,7 +2365,7 @@ ftnlen task_len;*/
     for (i__ = 1; i__ <= i__1; ++i__) {
 	if (nbd[i__] < 0 || nbd[i__] > 3) {
 /*                                                   return */
-	  my_strcpy(task, "ERROR: INVALID NBD");
+	  my_strcpy(task,(char*) "ERROR: INVALID NBD");
 	  //	    s_copy(task, "ERROR: INVALID NBD", (ftnlen)60, (ftnlen)18);
 	    *info = -6;
 	    *k = i__;
@@ -2373,7 +2373,7 @@ ftnlen task_len;*/
 	if (nbd[i__] == 2) {
 	    if (l[i__] > u[i__]) {
 /*                                    return */
-	      my_strcpy(task, "ERROR: NO FEASIBLE SOLUTION");
+	      my_strcpy(task,(char*) "ERROR: NO FEASIBLE SOLUTION");
 	      //		s_copy(task, "ERROR: NO FEASIBLE SOLUTION", (ftnlen)60, (
 	      //			ftnlen)27);
 		*info = -7;
@@ -3254,7 +3254,7 @@ int dcsrch_(doublereal *f, doublereal *g, doublereal *stp, doublereal *ftol, dou
     *fold = *f;
     *ifun = 0;
     *iback = 0;
-    my_strcpy(csave, "START");
+    my_strcpy(csave, (char*) "START");
     //    s_copy(csave, "START", (ftnlen)60, (ftnlen)5);
 L556:
     *gd = ddot_(n, &g[1], &c__1, &d__[1], &c__1);
@@ -3271,7 +3271,7 @@ L556:
 	    isave[1], &dsave[1], (ftnlen)60);
     *xstep = *stp * *dnorm;
     if (strncmp(csave, "CONV", 4) != 0 && strncmp(csave, "WARN", 4)!=0) {
-	my_strcpy(task, "FG_LNSRCH");
+	my_strcpy(task, (char*) "FG_LNSRCH");
 	++(*ifun);
 	++(*nfgv);
 	*iback = *ifun - 1;
@@ -3285,7 +3285,7 @@ L556:
 	    }
 	}
     } else {
-	my_strcpy(task, "NEW_X");
+	my_strcpy(task,(char*) "NEW_X");
     }
     return 0;
 } /* lnsrlb_ */
@@ -3598,18 +3598,18 @@ ftnlen word_len;*/
     /* Function Body */
     if (*iword == 0) {
 /*                            the subspace minimization converged. */
-      my_strcpy(word, "con");
+      my_strcpy(word, (char*) "con");
       //	s_copy(word, "con", (ftnlen)3, (ftnlen)3);
     } else if (*iword == 1) {
       /*                          the subspace minimization stopped at a bound. */
-      my_strcpy(word, "bnd");
+      my_strcpy(word, (char*) "bnd");
       //	s_copy(word, "bnd", (ftnlen)3, (ftnlen)3);
     } else if (*iword == 5) {
 /*                             the truncated Newton step has been used. */
-      my_strcpy(word, "TNT");
+      my_strcpy(word, (char*) "TNT");
       //	s_copy(word, "TNT", (ftnlen)3, (ftnlen)3);
     } else {
-      my_strcpy(word, "---");
+      my_strcpy(word, (char*) "---");
       //	s_copy(word, "---", (ftnlen)3, (ftnlen)3);
     }
     if (*iprint >= 99) {
@@ -4591,28 +4591,28 @@ int dcstep_(doublereal *stx, doublereal *fx, doublereal *dx, doublereal *sty, do
     if (strncmp(task, "START", 5) == 0) {
 /*        Check the input arguments for errors. */
 	if (*stp < *stpmin) {
-	    my_strcpy(task, "ERROR: STP .LT. STPMIN");
+	    my_strcpy(task,(char*) "ERROR: STP .LT. STPMIN");
 	}
 	if (*stp > *stpmax) {
-	    my_strcpy(task, "ERROR: STP .GT. STPMAX");
+	    my_strcpy(task,(char*) "ERROR: STP .GT. STPMAX");
 	}
 	if (*g >= 0.) {
-	    my_strcpy(task, "ERROR: INITIAL G .GE. ZERO");
+	    my_strcpy(task,(char*) "ERROR: INITIAL G .GE. ZERO");
 	}
 	if (*ftol < 0.) {
-	    my_strcpy(task, "ERROR: FTOL .LT. ZERO");
+	    my_strcpy(task,(char*) "ERROR: FTOL .LT. ZERO");
 	}
 	if (*gtol < 0.) {
-	    my_strcpy(task, "ERROR: GTOL .LT. ZERO");
+	    my_strcpy(task,(char*) "ERROR: GTOL .LT. ZERO");
 	}
 	if (*xtol < 0.) {
-	  my_strcpy(task, "ERROR: XTOL .LT. ZERO");
+	  my_strcpy(task,(char*) "ERROR: XTOL .LT. ZERO");
 	}
 	if (*stpmin < 0.) {
-	  my_strcpy(task, "ERROR: STPMIN .LT. ZERO");
+	  my_strcpy(task,(char*) "ERROR: STPMIN .LT. ZERO");
 	}
 	if (*stpmax < *stpmin) {
-	  my_strcpy(task, "ERROR: STPMAX .LT. STPMIN");
+	  my_strcpy(task,(char*) "ERROR: STPMAX .LT. STPMIN");
 	}
 	/*        Exit if there are errors on input. */
 	if (strncmp(task, "ERROR", 5) == 0) {
@@ -4673,20 +4673,20 @@ int dcstep_(doublereal *stx, doublereal *fx, doublereal *dx, doublereal *sty, do
     }
 /*     Test for warnings. */
     if (brackt && (*stp <= stmin || *stp >= stmax)) {
-      my_strcpy(task, "WARNING: ROUNDING ERRORS PREVENT PROGRESS");
+      my_strcpy(task,(char*) "WARNING: ROUNDING ERRORS PREVENT PROGRESS");
     }
     if (brackt && stmax - stmin <= *xtol * stmax) {
-	my_strcpy(task, "WARNING: XTOL TEST SATISFIED");
+	my_strcpy(task,(char*) "WARNING: XTOL TEST SATISFIED");
     }
     if (*stp == *stpmax && *f <= ftest && *g <= gtest) {
-	my_strcpy(task, "WARNING: STP = STPMAX");
+	my_strcpy(task,(char*) "WARNING: STP = STPMAX");
     }
     if (*stp == *stpmin && (*f > ftest || *g >= gtest)) {
-	my_strcpy(task, "WARNING: STP = STPMIN");
+	my_strcpy(task,(char*) "WARNING: STP = STPMIN");
     }
 /*     Test for convergence. */
     if (*f <= ftest && abs(*g) <= *gtol * (-ginit)) {
-	my_strcpy(task, "CONVERGENCE");
+	my_strcpy(task,(char*) "CONVERGENCE");
     }
 /*     Test for termination. */
     if (strncmp(task, "WARN", 4) == 0 || strncmp(task, "CONV", 4)==0) {
