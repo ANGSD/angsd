@@ -27,6 +27,7 @@ char *regfiles = NULL;
 char *fai_fname = NULL;
 unsigned int includeflags = 2;
 unsigned int discardflags = 4;
+int redo_baq =0;
 int cigstat =0;
 
 int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,const aMap *revMap) {
@@ -147,7 +148,8 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-trim\t\t%d\tNumber of based to discard at 3' ends of the reads\n",trim3);
   fprintf(argFile,"\t-only_proper_pairs %d\tOnly use reads where the mate could be mapped\n",only_proper_pairs);
   fprintf(argFile,"\t-C\t\t%d\tadjust mapQ for excessive mismatches (as SAMtools), supply -ref\n",adjustMapQ);
-  fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (as SAMtools), supply -ref\n",baq);
+  fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (1=normal baq 2= extended(as SAMtools)), supply -ref\n",baq);
+  fprintf(argFile,"\t-redo-baq\t\t%d (recompute baq, instead of using BQ tag)\n",redo_baq);
   //  fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   // fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders %d\tExit if difference in BAM headers\n",checkBamHeaders);
@@ -187,10 +189,18 @@ void setArgsBam(argStruct *arguments){
   trim3 = angsd::getArg("-trim3",trim3,arguments);
   adjustMapQ = angsd::getArg("-C",adjustMapQ,arguments);
   baq = angsd::getArg("-baq",baq,arguments);
+  redo_baq = angsd::getArg("-redo-baq",redo_baq,arguments);
   if(baq==1)
-    baq=3;
+    baq=1; //wauv
   else if(baq==2)
-    baq=7;
+    baq=3;
+  else{
+    fprintf(stderr,"\t-> only supported options for -baq is: 1 (normal baq) and 2 (extended baq (SAMtools default))\n");
+    exit(0);//ly su
+  }
+  if(redo_baq==1)
+    baq |=4;
+  //  fprintf(stderr,"baq:%d redobaq:%d\n",baq,redo_baq);exit(0);
   regfile =angsd::getArg("-r",regfile,arguments);
   regfiles = angsd::getArg("-rf",regfiles,arguments);
   MAX_SEQ_LEN = angsd::getArg("-setMinChunkSize",MAX_SEQ_LEN,arguments);
