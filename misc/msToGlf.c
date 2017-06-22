@@ -2,7 +2,7 @@
 #define PI 3.141592654
 #include <stdio.h>
 #include <stdlib.h>
-#include <zlib.h>
+#include <htslib/bgzf.h>
 #include <math.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -14,6 +14,13 @@ int simpleRand = 2;
 int pileup;
 int psmcOut = 0;
 
+void mbgzf_write(BGZF* fp,const void *data,size_t length){
+  if(length!=bgzf_write(fp,data,length)){
+    fprintf(stderr,"\t-> Problem writing data\n");
+    exit(0);
+  }
+
+}
 
 
 #define LENS 100000
@@ -169,7 +176,7 @@ void calclike(int base, double errate, double *like)	{
     like[offsets[base][o]] += homFalse;
   
 }
-int sim_invar_site(double errate,int nsam,double *depths,double meandepth,gzFile glffile,kstring_t *resultfile,int chr, int pos,int onlyPoly){
+int sim_invar_site(double errate,int nsam,double *depths,double meandepth,BGZF* glffile,kstring_t *resultfile,int chr, int pos,int onlyPoly){
   //int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,kstring_t *resultfile){
   int genotype[2];
   int i,b, numreads;
@@ -257,7 +264,7 @@ int sim_invar_site(double errate,int nsam,double *depths,double meandepth,gzFile
     for(int i=0;i<10;i++)
       like[i] -= mx;
     if(pileup==0)  
-      gzwrite(glffile,like,sizeof(double)*10);
+      mbgzf_write(glffile,like,sizeof(double)*10);
     
   }
   return numreads;
@@ -274,7 +281,7 @@ my %het = (AC=>'M', AG=>'R', AT=>'W', CA=>'M', CG=>'S', CT=>'Y',
 
 
 
-int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffile,kstring_t *resultfile){
+int print_ind_site(double errate, double meandepth, int genotype[2],BGZF* glffile,kstring_t *resultfile){
 
   int i, b, numreads;
   numreads = Poisson(meandepth);
@@ -337,13 +344,13 @@ int print_ind_site(double errate, double meandepth, int genotype[2],gzFile glffi
   //exit(0);
  
   if(pileup==0)  
-    gzwrite(glffile,like,sizeof(double)*10);
+    mbgzf_write(glffile,like,sizeof(double)*10);
  
   return numreads;
 }
 
 //nsam=2*nind
-void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,gzFile gzSeq,int count,int onlyPoly,gzFile gzPsmc,int do_seq_glf){
+void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,BGZF* gzSeq,int count,int onlyPoly,BGZF* gzPsmc,int do_seq_glf){
   kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   kstring_t kpsmc;kpsmc.s=NULL;kpsmc.l=kpsmc.m=0;
   int p =0;
@@ -387,7 +394,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	if(res[i][s]==2)
 	  genotypes[0] = 1;
 
-	if(gzPsmc!=Z_NULL&&i==PSMC_FOR_WHICH){
+	if(gzPsmc!=NULL&&i==PSMC_FOR_WHICH){
 	  if(s>0 &&((s % NBASE_PER_LINE) ==0)){
 	    ksprintf(&kpsmc,"\n");
 	  }
@@ -399,7 +406,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  if(nder==2)
 	    ksprintf(&kpsmc,"C");
 	  if(kpsmc.l>4096){
-	    gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+	    mbgzf_write(gzPsmc,kpsmc.s,kpsmc.l);
 	    kpsmc.l=0;
 	  }
 
@@ -418,7 +425,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
       if(pileup){
 	kputc('\n',&kpl);
 	if(kpl.l>4096){
-	  gzwrite(gzSeq,kpl.s,kpl.l);
+	  mbgzf_write(gzSeq,kpl.s,kpl.l);
 	  kpl.l=0;
 	}
       }
@@ -440,7 +447,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	  if(res[n][s]==2)
 	    genotypes[0] = 1;
 
-	  if(gzPsmc!=Z_NULL&&n==PSMC_FOR_WHICH){
+	  if(gzPsmc!=NULL&&n==PSMC_FOR_WHICH){
 	    if(i>0&&(i % NBASE_PER_LINE) ==0)
 	      ksprintf(&kpsmc,"\n");
 	    
@@ -452,7 +459,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	    if(nder==2)
 	      ksprintf(&kpsmc,"C");
 	    if(kpsmc.l>4096){
-	      gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+	      mbgzf_write(gzPsmc,kpsmc.s,kpsmc.l);
 	      kpsmc.l=0;
 	    }
 	  }
@@ -470,7 +477,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	if(pileup){
 	  kputc('\n',&kpl);
 	  if(kpl.l>4096){
-	    gzwrite(gzSeq,kpl.s,kpl.l);
+	    mbgzf_write(gzSeq,kpl.s,kpl.l);
 	    kpl.l=0;
 	  }
 	}
@@ -479,7 +486,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	//this 'for' loop is  important, should not be be commented out.
 	for(int n=0;1&&n<nsam/2;n++){
 	  int genotypes[2] = {0,0};
-	  if(gzPsmc!=Z_NULL&&n==PSMC_FOR_WHICH){
+	  if(gzPsmc!=NULL&&n==PSMC_FOR_WHICH){
 	    if(i>0&& (i % NBASE_PER_LINE) ==0){
 	      ksprintf(&kpsmc,"\n");
 	    }
@@ -491,7 +498,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	    if(nder==2)
 	      ksprintf(&kpsmc,"C");
 	    if(kpsmc.l>4096){
-	      gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+	      mbgzf_write(gzPsmc,kpsmc.s,kpsmc.l);
 	      kpsmc.l=0;
 	    }
 	    
@@ -510,7 +517,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
 	if(pileup){
 	  sim_invar_site(errate,nsam,depths,meandepth,gz,&kpl,count,i,onlyPoly);
 	  if(kpl.l>4096){
-	    gzwrite(gzSeq,kpl.s,kpl.l);
+	    mbgzf_write(gzSeq,kpl.s,kpl.l);
 	    kpl.l=0;
 	  }
 	}
@@ -518,13 +525,13 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
     }
   }
   if(pileup){
-    gzwrite(gzSeq,kpl.s,kpl.l);
+    mbgzf_write(gzSeq,kpl.s,kpl.l);
     kpl.l=0;free(kpl.s);
   }
   if(psmcOut){
     if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
       ksprintf(&kpsmc,"\n");
-    gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+    mbgzf_write(gzPsmc,kpsmc.s,kpsmc.l);
     kpsmc.l=0;
 
     ksprintf(&kpsmc,"+\n");
@@ -538,13 +545,13 @@ void test ( int nsam, int segsites, char **list,int *positInt,gzFile gz,double e
       }
       ksprintf(&kpsmc,"S");
       if(kpsmc.l>4096){
-	gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+	mbgzf_write(gzPsmc,kpsmc.s,kpsmc.l);
 	kpsmc.l=0;
       }
     }
     if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
       ksprintf(&kpsmc,"\n");
-    gzwrite(gzPsmc,kpsmc.s,kpsmc.l);
+    mbgzf_write(gzPsmc,kpsmc.s,kpsmc.l);
     kpsmc.l=0;free(kpsmc.s);
   }
   for(int h=0;h<nsam/2;h++)
@@ -602,7 +609,7 @@ FILE *openFile(const char* a,const char* b){
   return fp;
 }
 
-gzFile getGz(const char*fname,const char* mode){
+BGZF* getGz(const char*fname,const char* mode){
   if(1)
     fprintf(stderr,"doing %s with %s\n",fname,mode);
   int writeFile = 0;
@@ -611,15 +618,15 @@ gzFile getGz(const char*fname,const char* mode){
       writeFile = 1;
 
   //  fprintf(stderr,"\t-> opening: %s\n",fname);
-  gzFile fp=Z_NULL;
-  if(NULL==(fp=gzopen(fname,mode))){
+  BGZF *fp=NULL;
+  if(NULL==(fp=bgzf_open(fname,mode))){
     fprintf(stderr,"\t-> Error opening gzFile handle for file:%s exiting\n",fname);
     exit(0);
   }
   return fp;
 }
 
-gzFile openFileGz(const char* a,const char* b,const char *mode){
+BGZF* openFileGz(const char* a,const char* b,const char *mode){
   if(1)
     fprintf(stderr,"[%s] %s%s\n",__FUNCTION__,a,b);
   //  char *c = new char[strlen(a)+strlen(b)+1];
@@ -627,13 +634,13 @@ gzFile openFileGz(const char* a,const char* b,const char *mode){
   strcpy(c,a);
   strncat(c,b,strlen(b));
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
-  gzFile fp = getGz(c,mode);
+  BGZF *fp = getGz(c,mode);
   //delete [] c;
   free(c);
   return fp;
 }
 
-gzFile openFileGzI(const char* a,const char* b,int i,const char*mode){
+BGZF* openFileGzI(const char* a,const char* b,int i,const char*mode){
   char ary[5000];
   snprintf(ary,5000,"%s%d.gz",b,i);
   return openFileGz(a,ary,mode);  
@@ -814,9 +821,9 @@ int main(int argc,char **argv){
   count=0;
   probflag = 0 ;
 
-  gzFile gz=Z_NULL;
-  gzFile gzSeq = Z_NULL;
-  gzFile gzPsmc = Z_NULL;
+  BGZF* gz=NULL;
+  BGZF* gzSeq = NULL;
+  BGZF* gzPsmc = NULL;
   FILE *vPosFP = NULL;
   //  infoFp = openFile(prefix,".info");
   if(pileup)
@@ -888,9 +895,9 @@ int main(int argc,char **argv){
      
      test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count,onlyPoly,gzPsmc,do_seq_glf) ;
      if(singleOut==0){
-       if(gz!=Z_NULL){
-	 gzclose(gz);
-	 gz=Z_NULL;
+       if(gz!=NULL){
+	 bgzf_close(gz);
+	 gz=NULL;
        }
        fclose(vPosFP);
        vPosFP=NULL;
@@ -911,11 +918,11 @@ int main(int argc,char **argv){
    }
    count--;
    if(pileup)
-     gzclose(gzSeq);
+     bgzf_close(gzSeq);
    if(psmcOut)
-     gzclose(gzPsmc);
-   if(gz!=Z_NULL)
-     gzclose(gz);
+     bgzf_close(gzPsmc);
+   if(gz!=NULL)
+     bgzf_close(gz);
    if(vPosFP!=NULL)
      fclose(vPosFP);
    fclose(pgEst);
