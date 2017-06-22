@@ -190,16 +190,18 @@ void setArgsBam(argStruct *arguments){
   adjustMapQ = angsd::getArg("-C",adjustMapQ,arguments);
   baq = angsd::getArg("-baq",baq,arguments);
   redo_baq = angsd::getArg("-redo-baq",redo_baq,arguments);
-  if(baq==1)
-    baq=1; //wauv
-  else if(baq==2)
-    baq=3;
-  else{
-    fprintf(stderr,"\t-> only supported options for -baq is: 1 (normal baq) and 2 (extended baq (SAMtools default))\n");
-    exit(0);//ly su
+  if(baq){
+    if(baq==1)
+      baq=1; //wauv
+    else if(baq==2)
+      baq=3;
+    else{
+      fprintf(stderr,"\t-> only supported options for -baq is: 1 (normal baq) and 2 (extended baq (SAMtools default)). Value supplied:%d\n",baq);
+      exit(0);//ly su
+    }
+    if(redo_baq==1)
+      baq |=4;
   }
-  if(redo_baq==1)
-    baq |=4;
   //  fprintf(stderr,"baq:%d redobaq:%d\n",baq,redo_baq);exit(0);
   regfile =angsd::getArg("-r",regfile,arguments);
   regfiles = angsd::getArg("-rf",regfiles,arguments);
