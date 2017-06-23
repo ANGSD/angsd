@@ -96,7 +96,7 @@ int fexists(const char* str){///@param str Filename given as a string.
 
 // functions to get gz files
 gzFile getGz(const char*fname,const char* mode){
-  if(fexists(fname)){
+  if(0&&fexists(fname)){
     fprintf(stderr,"\t->File exists: %s exiting...\n",fname);
     exit(0);
   }
@@ -110,7 +110,7 @@ gzFile getGz(const char*fname,const char* mode){
 
 FILE *getFile(const char*fname,const char *mode){
   if(0&&fexists(fname)){
-    fprintf(stderr,"\t-> File exists: %s exiting... Terminate\n",fname);
+    fprintf(stderr,"\t-> File exists: %s Exiting... Terminate\n",fname);
     exit(0);
   }
   FILE *fp=NULL;
