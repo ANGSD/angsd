@@ -333,9 +333,10 @@ void selector(funkyPars *p){
   if(p==NULL){
     p = allocFunkyPars();
     p->killSig = 1;
-  }else
+  }else{
     p->extras = new void*[andersSux];//funky
-  
+    memset(p->extras,0,sizeof(void*)*andersSux);
+  }
   p->chunkNumber = chunkNumber++;
 
   if(maxThreads==1)
