@@ -36,9 +36,9 @@ int main(int argc,char**argv){
   int nsites =0;
   while(1){
     int br=gzread(gz,lk,10*sizeof(double)*tot);
-    nsites++;
     if(br==0)
       break;
+    nsites++;
     assert(br==10*sizeof(double)*tot);
     int beg=10*first;
     int nDoubles=(last-first+1)*10;
