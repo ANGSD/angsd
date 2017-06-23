@@ -1,7 +1,13 @@
 #pragma once
 #include "abc.h"
 
-
+/*
+  contains -1,0,1,2.
+  -1 no call
+  0 AA
+  1 Aa
+  2 aa
+ */
 typedef struct{
   int **dat;
 }genoCalls;
