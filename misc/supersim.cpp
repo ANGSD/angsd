@@ -109,7 +109,7 @@ gzFile getGz(const char*fname,const char* mode){
 }
 
 FILE *getFile(const char*fname,const char *mode){
-  if(fexists(fname)){
+  if(0&&fexists(fname)){
     fprintf(stderr,"\t-> File exists: %s exiting... Terminate\n",fname);
     exit(0);
   }
