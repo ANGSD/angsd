@@ -20,6 +20,7 @@
 #include "abc.h"
 #include "abcFilterSNP.h"
 #include "abcHWE.h"
+#include "abcCallGenotypes.h"
 #include <htslib/kstring.h>
 
 /*
@@ -184,6 +185,7 @@ void abcFilterSNP::printArg(FILE *argFile){
   fprintf(argFile,"\t-sb_pval %f\n",sb_pval);
   fprintf(argFile,"\t-hwe_pval %f\n",hwe_pval);
   fprintf(argFile,"\t-qscore_pval %f\n",qscore_pval);
+  fprintf(argFile,"\t-hetbias_pval %f\n",hetbias_pval);
 
 }
 void abcFilterSNP::run(funkyPars *pars){
@@ -197,8 +199,9 @@ void abcFilterSNP::run(funkyPars *pars){
     //loop over sites;
     kstring_t persite;
     persite.s=NULL;persite.l=persite.m=0;
-
-    for(int s=0;s<pars->numSites;s++){
+    //pull 
+   
+    for(int s=0;s<pars->numSites;s++) {
       if(pars->keepSites[s]==0)
 	continue;
       //loop over samples
@@ -238,7 +241,7 @@ void abcFilterSNP::run(funkyPars *pars){
       else
 	pval =1- chi.cdf(lrt);
       ksprintf(&persite,"%f:%e\t",lrt,pval);
-      ksprintf(&persite,"%f:%e\t",lrt,pval);
+      //   ksprintf(&persite,"%f:%e\t",lrt,pval);
       if(hwe_pval!=-1 && pval<hwe_pval)
 	pars->keepSites[s] = 0;
 
@@ -255,12 +258,65 @@ void abcFilterSNP::run(funkyPars *pars){
 	pars->keepSites[s] = 0;
 
       Z = edgebias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
-      ksprintf(&persite,"%f:%e\n",Z,2*phi(Z));
+      ksprintf(&persite,"%f:%e",Z,2*phi(Z));
       if(2*phi(Z)<edge_pval)
 	pars->keepSites[s] = 0;
+
+      genoCalls *gcw =(genoCalls *) pars->extras[10];
+      int **gc=NULL;
+      if(gcw)
+	gc = gcw->dat;
+      if(gc){
+	cnts[0]=cnts[1]=cnts[2]=cnts[3]=0;
+
+	int nsampleswithdata =0;
+	for(int i=0;i<pars->nInd;i++){
+	  if(gc[s][i]!=1)
+	    continue;
+	  tNode *nd = chk->nd[s][i];
+	  if(nd==NULL)
+	    continue;
+	  nsampleswithdata++;
+	  for(int l=0;l<nd->l;l++){
+	    int obB = refToInt[nd->seq[l]];
+	    //	    fprintf(stderr,"%c ",nd.seq[l]);
+	    int strand = (isupper(nd->seq[l])==0)<<1;
+	    //  fprintf(stderr,"strand:%d\n",strand);
+	    if(obB==4)
+	      continue;
+	    if((obB!=pars->major[s] && obB!=pars->minor[s]) )
+	      continue;
+	    if(obB!=pars->major[s])
+	      strand +=1;
+	    //fprintf(stderr,"strand=%d\n",strand);
+	    cnts[strand]++;
+	  }
+	}
+
+	double tsum= cnts[0]+cnts[1]+cnts[2]+cnts[3];
+	double fA=(cnts[0]+cnts[2])/tsum;
+	double fa=(cnts[1]+cnts[3])/tsum;
+	int n = tsum;
+	ksprintf(&persite,"\t%d %d %d %d %d\t",cnts[0],cnts[1],cnts[2],cnts[3],n);
+
+	double lrt = 2*tsum*(fA-0.5)*(fA-0.5) + 2*tsum*(fa-0.5)*(fa-0.5);
+	double pval;
+	if(std::isnan(lrt))
+	  pval=lrt;
+	else if(lrt<0)
+	  pval =1;
+	else
+	  pval =1- chi.cdf(lrt);
+	ksprintf(&persite,"%f:%e\t",lrt,pval);
+	if(hetbias_pval!=-1&&pval<hetbias_pval)
+	  pars->keepSites[s]=0;
+      }
+
       
-      if(pars->keepSites[s]!=0)
+      if(pars->keepSites[s]!=0&&persite.l>0){
+	ksprintf(&persite,"\n");
 	ksprintf(bufstr,"%s",persite.s);
+      }
       persite.l=0;
    }
     free(persite.s);
@@ -307,7 +363,8 @@ void abcFilterSNP::getOptions(argStruct *arguments){
   mapQ_pval=angsd::getArg("-mapQ_pval",mapQ_pval,arguments);      
   sb_pval=angsd::getArg("-sb_pval",sb_pval,arguments);    
   hwe_pval=angsd::getArg("-hwe_pval",hwe_pval,arguments);    
-  qscore_pval=angsd::getArg("-qscore_pval",hwe_pval,arguments);    
+  qscore_pval=angsd::getArg("-qscore_pval",qscore_pval,arguments);
+  hetbias_pval=angsd::getArg("-hetbias_pval",hetbias_pval,arguments);    
   
 
 }
@@ -316,7 +373,7 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputtype){
   doSnpStat=0;
   outfileZ = NULL;
-  edge_pval=mapQ_pval=sb_pval=hwe_pval=qscore_pval=-1;
+  edge_pval=mapQ_pval=sb_pval=hwe_pval=qscore_pval=hetbias_pval-1;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSnpStat")||!strcasecmp(arguments->argv[1],"-doPost")){
       printArg(stdout);
@@ -332,13 +389,19 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
     return;
   }
   printArg(arguments->argumentFile);  
-
+  int dogeno=0;
+  dogeno=angsd::getArg("-dogeno",dogeno,arguments);
   if(doSnpStat){
     //    fprintf(stderr,"running doSnpStat=%d\n",doSnpStat);
     const char *postfix=".snpStat.gz";
     outfileZ = aio::openFileBG(outfiles,postfix);
     kstring_t bufstr;bufstr.s=NULL;bufstr.l=bufstr.m=0;
-    ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\tmapQ_Z:mapQ_pval\tedge_z:edge_pval\n");
+    ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\tmapQ_Z:mapQ_pval\tedge_z:edge_pval");
+    if(dogeno){
+      ksprintf(&bufstr,"\t+MajorHet +MinorHet -MajorHet -MinorHet nHet\thetStat:hetStat_pval");
+
+    }
+    ksprintf(&bufstr,"\n");
     aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
     free(bufstr.s);
   }
