@@ -145,7 +145,7 @@ buildMat <- function(res){
     resMat[2,c(1,3,4)]=res[4:6]
     resMat[3,c(1,2,4)]=res[7:9]
     resMat[4,c(1:3)]=res[10:12]
-    diag(resMat)=c(1-sum(res[1:3]),1-sum(res[4:6]),1-sum(res[7:9]),1-sum(res[10:12]))
+    diag(resMat)=c(1-sum(res[c(4,7,10)]),1-sum(res[c(1,8,11)]),1-sum(res[c(2,5,12)]),1-sum(res[c(3,6,9)]))
     
     return(resMat)
 }
@@ -493,7 +493,7 @@ for(idComb in 1:numComb){
         result1 = getJackKnife(outData,solveMat[[idComb]],ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
 
         if(idComb==1){
-            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
+            str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
             str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,result1$numBlock,nm[1],nm[2],nm[3],nm[4])
             cat(str,str2,file=FILEERROR,sep="\n")} else{
                                                      str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result1$thetaN,result1$thetaJack,result1$varJack,result1$Z,result1$pv,result1$nABBA,result1$nBABA,result1$numBlock,nm[1],nm[2],nm[3],nm[4])
@@ -504,7 +504,7 @@ for(idComb in 1:numComb){
 
         #fileOut = paste(out, combNames[ idComb ],".TransRem.ErrorCorr",".txt",sep="")
         if(idComb==1){
-            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
+            str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
             str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result3$thetaN,result3$thetaJack,result3$varJack,result3$Z,result3$pv,result3$nABBA,result3$nBABA,result3$numBlock,nm[1],nm[2],nm[3],nm[4])
             cat(str,str2,file=FILEERRORTRANS,sep="\n")} else{
                 str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result3$thetaN,result3$thetaJack,result3$varJack,result3$Z,result3$pv,result3$nABBA,result3$nBABA,result3$numBlock,nm[1],nm[2],nm[3],nm[4])
@@ -714,7 +714,7 @@ for(idComb in 1:numComb){
         #fileOut=paste(out,combNames[ idComb ],".Observed",".txt",sep="",collapse="")
         result5 = getJackKnife(outData,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
     if(idComb==1){
-        str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
+        str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
         str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result5$thetaN,result5$thetaJack,result5$varJack,result5$Z,result5$pv,result5$nABBA,result5$nBABA,result5$numBlock,nm[1],nm[2],nm[3],nm[4])
         cat(str,str2,file=FILEOBS,sep="\n")
     }    else{
@@ -730,7 +730,7 @@ for(idComb in 1:numComb){
 
         result6 = getJackKnife(outData,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
         if(idComb==1){
-            str = sprintf("mean(D)\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
+            str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
             str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result6$thetaN,result6$thetaJack,result6$varJack,result6$Z,result6$pv,result6$nABBA,result6$nBABA,result6$numBlock,nm[1],nm[2],nm[3],nm[4])
             cat(str,str2,file=FILETRANS,sep="\n")
             }  else{
