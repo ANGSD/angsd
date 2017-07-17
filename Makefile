@@ -61,7 +61,7 @@ ifdef HTSSRC
 	$(CXX) -MM $(CXXFLAGS)  -I$(HTS_INCDIR) $*.cpp >$*.d
 
 angsd: version.h $(OBJ)
-	$(CXX) $(FLAGS)  -o angsd *.o $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
+	$(CXX) $(FLAGS)  -o angsd *.o $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
 else
 %.o: %.c
 	$(CC) -c  $(CFLAGS)  $*.c
