@@ -67,13 +67,13 @@ header.o: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp -I $(HTS_INCDIR)
 
 smartCount:	smartCount.c  
-	$(CC) $(FLAGS) smartCount.c -I$(HTS_INCDIR)/htslib -o smartCount -std=gnu99 $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
+	$(CC) $(FLAGS) smartCount.c -I$(HTS_INCDIR)/htslib -o smartCount -std=gnu99 $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
+	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
 
 msToGlf: msToGlf.c
-	$(CC) $(FLAGS) msToGlf.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 $(HTS_LIBDIR)  -lz -lm -lbz2 -llzma -lpthread
+	$(CC) $(FLAGS) msToGlf.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 $(HTS_LIBDIR)  -lz -lm -lbz2 -llzma -lpthread -lcurl
 
 fpsmc.o: fpsmc.cpp fpsmc.h psmcreader.h main_psmc.h
 	$(CXX) $(FLAGS) -c fpsmc.cpp -I $(HTS_INCDIR)
@@ -86,7 +86,7 @@ main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h hmm_psmc.o
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
 ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o hmm_psmc.o
-	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o hmm_psmc.o fpsmc.o ../bfgs.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
+	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o hmm_psmc.o fpsmc.o ../bfgs.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread

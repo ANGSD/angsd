@@ -8,6 +8,19 @@ CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
+prefix      = /usr/local
+exec_prefix = $(prefix)
+bindir      = $(exec_prefix)/bin
+
+MKDIR_P = mkdir -p
+INSTALL = install -p
+INSTALL_DIR     = $(MKDIR_P) -m 755
+INSTALL_PROGRAM = $(INSTALL)
+
+
+PROGRAMS = angsd
+
+
 all: angsd misc
 
 BAMDIR=""
@@ -48,7 +61,7 @@ ifdef HTSSRC
 	$(CXX) -MM $(CXXFLAGS)  -I$(HTS_INCDIR) $*.cpp >$*.d
 
 angsd: version.h $(OBJ)
-	$(CXX) $(FLAGS)  -o angsd *.o $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
+	$(CXX) $(FLAGS)  -o angsd *.o $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
 else
 %.o: %.c
 	$(CC) -c  $(CFLAGS)  $*.c
@@ -73,3 +86,7 @@ test:
 	echo "Only subset of analyses is being tested"
 	cd test;./testAll.sh ../angsd $(BDIR)
 force:
+
+install: all
+	$(INSTALL_DIR) $(DESTDIR)$(bindir) $(DESTDIR)$(misc_bindir)
+	$(INSTALL_PROGRAM) $(PROGRAMS) $(DESTDIR)$(bindir)
