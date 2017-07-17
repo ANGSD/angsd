@@ -61,7 +61,8 @@ des<-list(angsdFile="output angsdFile (no .abbababa2 extension) from 'angsd -doA
           out="Name of the out files",
           addErr="amount of error correction to add with increment and bases for transitions. E.g. -0.005,0.005,0.001;A,C;G,T",
           nIter="Number of optimazation attemps",
-          maxErr="maximum allowed error rate"
+          maxErr="maximum allowed error rate",
+          main="Title for the plots"
           )
 
 ####### get arguments and add to workspace
@@ -139,14 +140,12 @@ getFromErrFile <- function(r,res,maxErr,nInd,logLike){
 }
 
 buildMat <- function(res){
-    cont=1;
-    resMat=matrix(nrow=4,ncol=4)
-    resMat[1,2:4]=res[1:3]
-    resMat[2,c(1,3,4)]=res[4:6]
-    resMat[3,c(1,2,4)]=res[7:9]
-    resMat[4,c(1:3)]=res[10:12]
-    diag(resMat)=c(1-sum(res[c(4,7,10)]),1-sum(res[c(1,8,11)]),1-sum(res[c(2,5,12)]),1-sum(res[c(3,6,9)]))
-    
+    resMat <- matrix(nrow=4,ncol=4)
+    resMat[2:4,1] <- res[1:3]
+    resMat[c(1,3,4),2] <- res[4:6]
+    resMat[c(1,2,4),3] <- res[7:9]
+    resMat[1:3,4] <- res[10:12]
+    diag(resMat) <- c( 1-sum(res[1:3]),1-sum(res[4:6]),1-sum(res[7:9]),1-sum(res[10:12]) )
     return(resMat)
 }
 
@@ -225,8 +224,8 @@ getJackKnife <- function(outData,finalInv=FALSE,ABBAname,BABAname,BBAAname){
 	return(list(thetaN=NA,thetaJack=NA,varJack=NA,Z=NA,pv=NA,nABBA=NA,nBABA=NA,nBBAA=NA,numBlock=NA))
  
     #seenSites = sum(as.numeric(outData[,6]))
-    weigth = colWeights
-    #weigth = as.numeric( rowSums(outData[,c(ABBAname,BABAname)])  )
+    #weigth = colWeights
+    weigth = as.numeric( rowSums(outData[,c(ABBAname,BABAname)])  )
     outData = outData[,-c(1,2,3,4,5,6)]
     Edata <- numeric(prod(dim(outData)))
     dim(Edata)<- dim(outData)
@@ -480,16 +479,6 @@ for(idComb in 1:numComb){
             
     if(erCor==1){#ERROR CORRECTED D
         
-        #bigMat = list()
-        #bigMat[[1]] = resMat[[ id[1] ]]
-        #bigMat[[2]] = resMat[[ id[2] ]]
-        #bigMat[[3]] = resMat[[ id[3] ]]
-        #bigMat[[4]] = resMat[[ id[4] ]]
-      
-        #errMat = getErrMat(bigMat)
-        
-        #finalInv = buildInv(errMat)
-        
         result1 = getJackKnife(outData,solveMat[[idComb]],ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
 
         if(idComb==1){
@@ -502,7 +491,6 @@ for(idComb in 1:numComb){
 
         result3 = getJackKnife(outData,solveMat[[idComb]],ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
 
-        #fileOut = paste(out, combNames[ idComb ],".TransRem.ErrorCorr",".txt",sep="")
         if(idComb==1){
             str = sprintf("D\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tnBlocks\tH1\tH2\tH3\tH4")
             str2 = sprintf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%s\t%s\t%s\t%s",result3$thetaN,result3$thetaJack,result3$varJack,result3$Z,result3$pv,result3$nABBA,result3$nBABA,result3$numBlock,nm[1],nm[2],nm[3],nm[4])
@@ -527,23 +515,27 @@ for(idComb in 1:numComb){
         }
         cat("Adding errors to H1, H2 or H3\n")
         pb <- txtProgressBar(min=1,max=Ltot,initial = 0,style = 3,char=":)", width=20)
-
         for(FROM in addFrom){
             for(TO in addTo){
                 if(FROM!=TO){
-                    for(id in 1:3){
+                    for(ii in 1:3){
+                        newMat = list()
+                        newMat[[1]]=resMat[[id[1]]]
+                        newMat[[2]]=resMat[[id[2]]]
+                        newMat[[3]]=resMat[[id[3]]]
+                        newMat[[4]]=resMat[[4]]
                         for(er in 1:LErr){
-                            fileOut1 = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
-                            fileOut1 = paste(dirName,"/",fileOut,sep="")
-                            newMat = bigMat
-                            newMat[[id]][FROM,TO] = newMat[[id]][FROM,TO] + addErr[er]
-                            newMat[[id]][FROM,FROM] = newMat[[id]][FROM,FROM] - addErr[er]
+                            newMat[[ii]]=resMat[[id[ii]]]
+                            fileOut1 = paste("Add",addErr[er],".H",ii,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
+                            fileOut1 = paste(dirName,"/",fileOut1,sep="")
+                            newMat[[ii]][TO,FROM] = newMat[[ii]][TO,FROM] + addErr[er]
+                            newMat[[ii]][FROM,FROM] = newMat[[ii]][FROM,FROM] - addErr[er]
                             newErrMat = getErrMat(newMat)
                             newInv = buildInv(newErrMat)
                             result = getJackKnife(outData,newInv,ABBAname=ABBA,BABAname=BABA,BBAAname=BBAA)
                             
                             str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
-                            str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,nm[1],nm[2],nm[3],nm[4])
+                            str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",ii,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,nm[1],nm[2],nm[3],nm[4])
                             cat(str,str2,file=fileOut1,sep="\n")
                             setTxtProgressBar(pb, idBar,label="ciao"); idBar=idBar+1;
                             gc()
@@ -560,18 +552,23 @@ for(idComb in 1:numComb){
         for(FROM in addFrom){
             for(TO in addTo){
                 if(FROM!=TO){
-                    for(id in 1:3){
+                    for(ii in 1:3){
+                        newMat = list()
+                        newMat[[1]]=resMat[[id[1]]]
+                        newMat[[2]]=resMat[[id[2]]]
+                        newMat[[3]]=resMat[[id[3]]]
+                        newMat[[4]]=resMat[[4]]
                         for(er in 1:LErr){
-                            fileOut2 = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
-                            fileOut2 = paste(dirName,"/",fileOut,sep="")
-                            newMat = bigMat
-                            newMat[[id]][FROM,TO] = newMat[[id]][FROM,TO] + addErr[er]
-                            newMat[[id]][FROM,FROM] = newMat[[id]][FROM,FROM] - addErr[er]
+                            newMat[[ii]]=resMat[[id[ii]]]
+                            fileOut2 = paste("Add",addErr[er],".H",ii,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
+                            fileOut2 = paste(dirName,"/",fileOut2,sep="")
+                            newMat[[ii]][TO,FROM] = newMat[[ii]][TO,FROM] + addErr[er]
+                            newMat[[ii]][FROM,FROM] = newMat[[ii]][FROM,FROM] - addErr[er]
                             newErrMat = getErrMat(newMat)
                             newInv = buildInv(newErrMat)
                             result = getJackKnife(outData,newInv,ABBAname=ABBAtr,BABAname=BABAtr,BBAAname=BBAA)
                             str = sprintf("NumInd\taddErr\tD\tJK-D\tV(JK-D)\tZ\tpvalue\tnABBA\tnBABA\tH1\tH2\tH3\tH4")
-                            str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",id,addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,nm[1],nm[2],nm[3],nm[4])
+                            str2 = sprintf("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%s\t%s\t%s",id[ii],addErr[er],result$thetaN,result$thetaJack,result$varJack,result$Z,result$pv,result$nABBA,result$nBABA,nm[1],nm[2],nm[3],nm[4])
                             cat(str,str2,file=fileOut2,sep="\n")
                             setTxtProgressBar(pb, idBar,label="ciao"); idBar=idBar+1;
                             gc()
@@ -590,15 +587,15 @@ for(idComb in 1:numComb){
         for(FROM in addFrom){
             for(TO in addTo){
                 if(FROM!=TO){
-                for(id in 1:3){
+                for(ii in 1:3){
                     for(er in 1:LErr){                                      
                         #read files
-                        pFile = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
+                        pFile = paste("Add",addErr[er],".H",ii,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
                         pFile = paste(dirName,"/",pFile,sep="")
-                        pFileNT = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
+                        pFileNT = paste("Add",addErr[er],".H",ii,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
                         pFileNT = paste(dirName,"/",pFileNT,sep="")
-                        dat[id,er] = as.numeric(read.table(pFile,as.is=T,header=T)[3])
-                        datNT[id,er] = as.numeric(read.table(pFileNT,as.is=T,header=T)[3])
+                        dat[ii,er] = as.numeric(read.table(pFile,as.is=T,header=T)[3])
+                        datNT[ii,er] = as.numeric(read.table(pFileNT,as.is=T,header=T)[3])
                     }
                 }
                                         #plot
@@ -629,9 +626,9 @@ for(idComb in 1:numComb){
         for(FROM in addFrom){
             for(TO in addTo){
                 if(FROM!=TO){
-                    for(id in 1:3){
+                    for(ii in 1:3){
                         for(er in 1:LErr){
-                            fileOut1 = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
+                            fileOut1 = paste("Add",addErr[er],".H",ii,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr",".txt",sep="")
                             fileOut1 = paste(dirName,"/",fileOut,sep="")
                             file.remove(fileOut1)
                         }
@@ -644,9 +641,9 @@ for(idComb in 1:numComb){
         for(FROM in addFrom){
             for(TO in addTo){
                 if(FROM!=TO){
-                    for(id in 1:3){
+                    for(ii in 1:3){
                         for(er in 1:LErr){
-                            fileOut2 = paste("Add",addErr[er],".H",id,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
+                            fileOut2 = paste("Add",addErr[er],".H",ii,".",letters[FROM],"2",letters[TO],combNames[ idComb ],".ErrCorr.TransRem",".txt",sep="")
                             fileOut2 = paste(dirName,"/",fileOut,sep="")
                             file.remove(fileOut2)
                         }
