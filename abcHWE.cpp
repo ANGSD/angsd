@@ -20,19 +20,21 @@
 
 void abcHWE::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
-  fprintf(argFile,"\t-HWE_pval\t%f\n",HWE_pval);
+  fprintf(argFile,"\t-doHWE\t%d\n",doHWE);
   fprintf(argFile,"\n");
 }
 
 void abcHWE::getOptions(argStruct *arguments){
-  doSnpStat = angsd::getArg("-doSnpStat",doSnpStat,arguments);
-  HWE_pval = angsd::getArg("-HWE_pval",HWE_pval,arguments);
-  if(HWE_pval!=-1&&doSnpStat==0){
-    fprintf(stderr,"\t-> Must supply -doSnpStat fro hwe_pval\n");
-    exit(0);//dragon
-  }
-  if(doSnpStat==0)
-    return;
+  //  doSnpStat = angsd::getArg("-doSnpStat",doSnpStat,arguments);
+  doHWE = angsd::getArg("-doHWE",doHWE,arguments);
+   
+  
+  // if(doHWE!=-1&&doSnpStat==0){
+  //  fprintf(stderr,"\t-> Must supply -doSnpStat fro hwe_pval\n");
+  //  exit(0);//dragon
+  //}
+  // if(doSnpStat==0)
+  // return;
   
   if(arguments->inputtype==INPUT_BEAGLE||arguments->inputtype==INPUT_VCF_GP){
     fprintf(stderr,"Error: you cannot estimate HWE based on posterior probabilities \n");
@@ -46,14 +48,14 @@ void abcHWE::getOptions(argStruct *arguments){
 abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   chisq = NULL;
   outfileZ = NULL;
-  doSnpStat=0;
-  HWE_pval = -1;
+
+  doHWE = 0;
   testMe=0;
   tolStop = 0.00001;
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
 
   if(arguments->argc==2){
-    if(!strcasecmp(arguments->argv[1],"-HWE_pval")){
+    if(!strcasecmp(arguments->argv[1],"-doHWE")){
       printArg(stdout);
       exit(0);
     }else
@@ -62,36 +64,36 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
 
   getOptions(arguments);
 
-  if(doSnpStat==0){
-    shouldRun[index] = 0;
-    return;
-  }
+  //  if(doSnpStat==0){
+  //    shouldRun[index] = 0;
+  //  return;
+  // }
   printArg(arguments->argumentFile);
   //make output files
   const char* postfix;
   postfix=".hwe.gz";
-  if(doSnpStat>0){
+  // if(doSnpStat>0){
     outfileZ = aio::openFileBG(outfiles,postfix);
     //print header
     const char *str = "Chromo\tPosition\tMajor\tMinor\thweFreq\tFreq\tF\tLRT\tp-value\n";
     aio::bgzf_write(outfileZ,str,strlen(str));
-  }
+    //}
 }
 
 
 abcHWE::~abcHWE(){
 
-  if(doSnpStat==0)
-    return;
-  if(doSnpStat>0)
-    if(outfileZ!=NULL)
-      bgzf_close(outfileZ);
+  //  if(doSnpStat==0)
+  //  return;
+  //  if(doSnpStat>0)
+  if(outfileZ!=NULL)
+    bgzf_close(outfileZ);
   delete chisq;
 }
 
 
 void abcHWE::clean(funkyPars *pars){
-  if(doSnpStat==0)
+  if(doHWE==0)
     return;
 
   funkyHWE *hweStruct =(funkyHWE *) pars->extras[index];
@@ -105,7 +107,7 @@ void abcHWE::clean(funkyPars *pars){
 }
 
 void abcHWE::print(funkyPars *pars){
-  if(doSnpStat<=0)
+  if(doHWE<=0)
     return;
 
   funkyHWE *hweStruct = (funkyHWE *) pars->extras[index];//new
@@ -133,7 +135,7 @@ void abcHWE::print(funkyPars *pars){
 
 void abcHWE::run(funkyPars *pars){
  
-  if(doSnpStat==0)
+  if(doHWE==0)
     return;
 
   funkyHWE *hweStruct = new funkyHWE;

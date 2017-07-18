@@ -365,8 +365,12 @@ void abcFilterSNP::getOptions(argStruct *arguments){
   hwe_pval=angsd::getArg("-hwe_pval",hwe_pval,arguments);    
   qscore_pval=angsd::getArg("-qscore_pval",qscore_pval,arguments);
   hetbias_pval=angsd::getArg("-hetbias_pval",hetbias_pval,arguments);    
-  
-
+  int doHWE=0;
+  doHWE=angsd::getArg("-doHWE",doHWE,arguments);    
+  if(doHWE==0){
+    fprintf(stderr,"must use -doHWE 1, to test for HWE\n");
+    exit(0);
+  }  
 }
 
 
@@ -383,7 +387,7 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
   }
 
   getOptions(arguments);
-
+  
   if(doSnpStat==0){
     shouldRun[index] =0;
     return;

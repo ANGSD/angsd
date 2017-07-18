@@ -14,13 +14,14 @@ typedef struct {
 class abcHWE:public abc{
 private:
   Chisqdist *chisq;
-  int doSnpStat;
+  //  int doSnpStat;
   BGZF* outfileZ;
   kstring_t bufstr;
   void estHWE(double *x,double *loglike,int nInd);
   double HWE_like(double *x,double *loglike,int nInd);
   void HWE_EM(double *x,double *loglike,int nInd);
-  double HWE_pval;
+  //  double HWE_pval;
+  int doHWE;
   double LRT_thres;
   int testMe;
   double tolStop;

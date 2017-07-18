@@ -132,10 +132,6 @@ void parseArgStruct(argStruct *arguments){
 	fprintf(stderr,"-doSNP is now called -SNP_pval\n");
 	exit(0);
     }  
-    if(strcasecmp("-doHWE",arguments->argv[i])==0){
-      fprintf(stderr,"-doHWE is now called -HWE_pval\n");
-      exit(0);
-    }
     if(strcasecmp("-soap",arguments->argv[i])==0){
       fprintf(stderr,"-doHWE is deprecated, convert soap file to bam\n");
       exit(0);
