@@ -10,9 +10,11 @@
 
   part of ANGSD: http://www.popgen.dk/angsd 
 
-  this code is horrible and will be merged into snpstat at some point, tsk 7sep 2016
+  
 
- */
+*/
+
+
 #include <htslib/kstring.h>
 #include "abcFreq.h"
 #include "abcHWE.h"
@@ -21,20 +23,18 @@
 void abcHWE::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doHWE\t%d\n",doHWE);
+  fprintf(argFile,"\t-minHWEpval\t%f\n",minHWEpval);
+  fprintf(argFile,"\t-maxHWEpval\t%f\n",maxHWEpval);
   fprintf(argFile,"\n");
 }
 
+
+
 void abcHWE::getOptions(argStruct *arguments){
-  //  doSnpStat = angsd::getArg("-doSnpStat",doSnpStat,arguments);
   doHWE = angsd::getArg("-doHWE",doHWE,arguments);
+  minHWEpval = angsd::getArg("-minHWEpval",minHWEpval,arguments);
+  maxHWEpval = angsd::getArg("-maxHWEpval",maxHWEpval,arguments);
    
-  
-  // if(doHWE!=-1&&doSnpStat==0){
-  //  fprintf(stderr,"\t-> Must supply -doSnpStat fro hwe_pval\n");
-  //  exit(0);//dragon
-  //}
-  // if(doSnpStat==0)
-  // return;
   
   if(arguments->inputtype==INPUT_BEAGLE||arguments->inputtype==INPUT_VCF_GP){
     fprintf(stderr,"Error: you cannot estimate HWE based on posterior probabilities \n");
@@ -50,6 +50,8 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   outfileZ = NULL;
 
   doHWE = 0;
+  maxHWEpval = -1;
+  minHWEpval = -1;
   testMe=0;
   tolStop = 0.00001;
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
@@ -63,29 +65,20 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   }
 
   getOptions(arguments);
-
-  //  if(doSnpStat==0){
-  //    shouldRun[index] = 0;
-  //  return;
-  // }
   printArg(arguments->argumentFile);
-  //make output files
   const char* postfix;
   postfix=".hwe.gz";
-  // if(doSnpStat>0){
-    outfileZ = aio::openFileBG(outfiles,postfix);
-    //print header
-    const char *str = "Chromo\tPosition\tMajor\tMinor\thweFreq\tFreq\tF\tLRT\tp-value\n";
-    aio::bgzf_write(outfileZ,str,strlen(str));
-    //}
+  outfileZ = aio::openFileBG(outfiles,postfix);
+
+  //print header
+  const char *str = "Chromo\tPosition\tMajor\tMinor\thweFreq\tFreq\tF\tLRT\tp-value\n";
+  aio::bgzf_write(outfileZ,str,strlen(str));
+  
 }
 
 
 abcHWE::~abcHWE(){
 
-  //  if(doSnpStat==0)
-  //  return;
-  //  if(doSnpStat>0)
   if(outfileZ!=NULL)
     bgzf_close(outfileZ);
   delete chisq;
@@ -101,6 +94,7 @@ void abcHWE::clean(funkyPars *pars){
   delete[] hweStruct->freqHWE;
   delete[] hweStruct->F;
   delete[] hweStruct->like0;
+  delete[] hweStruct->pval;
   delete[] hweStruct->likeF;
   delete hweStruct;
   
@@ -117,16 +111,8 @@ void abcHWE::print(funkyPars *pars){
       continue;
    
     float lrt= 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
-    //DRAGON lrt is sometimes nan
-    float pval;
-    if(std::isnan(lrt))
-      pval=lrt;
-    else if(lrt<0)
-      pval=1;
-    else			
-      pval=1-chisq->cdf(lrt);
-    //    fprintf(stderr,"lrt:%f\n",lrt);
-    ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],hweStruct->freqHWE[s],hweStruct->freq[s],hweStruct->F[s],lrt,pval);
+  
+    ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],hweStruct->freqHWE[s],hweStruct->freq[s],hweStruct->F[s],lrt,hweStruct->pval[s]);
 
   }
   aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
@@ -145,7 +131,8 @@ void abcHWE::run(funkyPars *pars){
   double *F = new double[pars->numSites];
   double *like0 = new double[pars->numSites];
   double *likeF = new double[pars->numSites];
- 
+  double *pval = new double[pars->numSites];
+   
   double **loglike3;
   loglike3=angsd::get3likesRescale(pars);
 
@@ -176,10 +163,29 @@ void abcHWE::run(funkyPars *pars){
     F[s]=x[1];
     likeF[s] = HWE_like(x,loglike3[s],pars->nInd);
 
+    float lrt= 2*like0[s]-2*likeF[s];
+    //DRAGON lrt is sometimes nan.
+    // AA: have not observed it
+    pval[s]=-1;
+    if(std::isnan(lrt)){
+      pval[s]=lrt;
+      fprintf(stdout,"nan in HWE - skipping\t %f\t%f\t%f\n",lrt,like0[s],likeF[s]);
+      continue;
+    }
+    else if(lrt<0)
+      pval[s]=1;
+    else			
+      pval[s]=1-chisq->cdf(lrt);
 
-    //    fprintf(stderr,"%f\t%f\n",x[0],x[1]);
-    //fprintf(stderr,"%f\t%f\t%f\n",loglike3[s][0],loglike3[s][1],loglike3[s][2]);
+    if(maxHWEpval!=-1 && pval[s] > maxHWEpval)
+      pars->keepSites[s] = 0;
+    
+    if(minHWEpval!=-1 && pval[s] < minHWEpval)
+      pars->keepSites[s] = 0;
+    
 
+    
+    
   }
 
 
@@ -187,6 +193,7 @@ void abcHWE::run(funkyPars *pars){
   hweStruct->freqHWE=freqHWE;
   hweStruct->F=F;
   hweStruct->like0=like0;
+  hweStruct->pval=pval;
   hweStruct->likeF=likeF;
   pars->extras[index] = hweStruct;
 
@@ -293,7 +300,7 @@ double abcHWE::HWE_like(double *x,double *loglike,int nInd){
 
 void abcHWE::estHWE(double *x,double *loglike,int nInd){
 
-  double y[2];// = new double[2];
+  double y[2];
   y[0] = x[0]+2;
   y[1] = x[1]+2;
   int iter=50;

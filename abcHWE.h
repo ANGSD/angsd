@@ -7,6 +7,8 @@ typedef struct {
   double *freqHWE;
   double *like0;
   double *likeF;
+  double *pval;
+  
   double *F;
 }funkyHWE;
 
@@ -22,7 +24,8 @@ private:
   void HWE_EM(double *x,double *loglike,int nInd);
   //  double HWE_pval;
   int doHWE;
-  double LRT_thres;
+  double minHWEpval;
+  double maxHWEpval;
   int testMe;
   double tolStop;
   double differ(double *x,double *y);
