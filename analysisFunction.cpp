@@ -548,7 +548,11 @@ void angsd::logrescale(double *ary,int len){
 
 
 std::vector<char*> angsd::getFilenames(const char * name,int nInd){
- 
+  if(strchr(name,'\r')){
+    fprintf(stderr,"\t\t-> Filelist contains carriage return. Looks like a windows file please remove hidden \'\r\' from filelist\n");
+    exit(0);
+  }
+  
   if(!fexists(name)){
     fprintf(stderr,"[%s]\t-> Problems opening file: %s\n",__FUNCTION__,name);
     exit(0);
