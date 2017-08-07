@@ -13,9 +13,12 @@
 #include <ctype.h>
 #include <cmath>
 #include <htslib/hts.h>
+#include <htslib/khash.h>
+#include <htslib/khash_str2int.h>
 #include "pop1_read.h"
 #include "abcGetFasta.h"
 #include "cigstat.h"
+#include "from_samtools.h"
 
 //three externs below are from
 extern int uniqueOnly;
@@ -25,7 +28,7 @@ extern int minMapQ;
 extern float downSample;
 extern int adjustMapQ;
 extern int baq;
-
+extern void *rghash;
 int getNumBest(bam1_t *b) {
   uint8_t *s= bam_get_aux(b);
   uint8_t *sStop = s+bam_get_l_aux(b);
@@ -82,6 +85,7 @@ int restuff(bam1_t *b){
 
 }
 extern int cigstat;
+
 int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
   int r;
  bam_iter_reread:
@@ -93,7 +97,16 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
   
   if(r!=-1) {
 
-  if((downSample>0 )&& (drand48()>downSample))
+    //extract reads from that has correct RG
+    if(rghash){
+      uint8_t *rg = bam_aux_get(b, "RG");
+      int keep = (rg && khash_str2int_get(rghash, (const char*)(rg+1), NULL)==0);
+      //      fprintf(stderr,"rg:%s keep:%d\n",rg,keep);
+      if (keep==0) goto bam_iter_reread;
+
+    }
+    //    uint8_t *rg = bam_aux_get(b, "RG"); fprintf(stderr,"%s\n",rg);
+    if((downSample>0 )&& (drand48()>downSample))
     goto bam_iter_reread;
   
   extern abcGetFasta *gf;

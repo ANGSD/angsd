@@ -20,7 +20,7 @@
 #include "shared.h"
 #include "abc.h" //<-new way, to add additional analysis to angsd
 #include "analysisFunction.h" //<-included fancy parsing of argument
-
+#include <htslib/khash_str2int.h>
 #define THRESHOLD_FOR_NICEOUTPUT 0//200 //we normally print whenever we change a chr, but don't bother if we have more the 200, looks ugly for contig data
 
 //small hack for the keepsites, this should be included allready in the bam parsing
@@ -124,7 +124,9 @@ void destroy_shared(){
   extern int cigstat;
   if(cigstat)
     cigstat_close();
-    
+  extern void *rghash;
+  if(rghash)
+    khash_str2int_destroy_free(rghash);
 }
 void tnode_destroy(tNode*);
 void cleanUptNodeArray(tNode **row,int nSamples){

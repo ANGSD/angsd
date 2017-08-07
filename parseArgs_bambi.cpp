@@ -6,6 +6,7 @@
 #include "parseArgs_bambi.h"
 #include "shared.h"
 #include "analysisFunction.h"
+#include "from_samtools.h"
 
 // below is default samtools parameters
 int uniqueOnly = 0;
@@ -29,7 +30,8 @@ unsigned int includeflags = 2;
 unsigned int discardflags = 4;
 int redo_baq =0;
 int cigstat =0;
-
+void *rghash=NULL;
+char *rghash_name=NULL;
 int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,const aMap *revMap) {
   aMap::const_iterator it;
    if(strrchr(extra,':')==NULL){//only chromosomename
@@ -157,6 +159,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-downSample\t%f\tDownsample to the fraction of original data\n",downSample);
   fprintf(argFile,"\t-nReads\t\t%d\tNumber of reads to pop from each BAM/CRAMs\n",ret->nReads);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
+  fprintf(argFile,"\t+RG\t%s\tReadgroups to include in analysis(can be filename)\n",rghash_name);
   
   fprintf(argFile,"\n");
   fprintf(argFile,"Examples for region specification:\n");
@@ -187,6 +190,13 @@ void setArgsBam(argStruct *arguments){
   trim = angsd::getArg("-trim",trim,arguments);
   trim5 = angsd::getArg("-trim5",trim5,arguments);
   trim3 = angsd::getArg("-trim3",trim3,arguments);
+  rghash_name= angsd::getArg("+RG",rghash_name,arguments);
+  if(rghash_name&&!angsd::fexists(rghash_name))
+    rghash = add_read_group_single(rghash_name);
+  if(rghash_name&&angsd::fexists(rghash_name))
+    rghash = add_read_groups_file(rghash_name);
+  if(rghash)
+    fprintf(stderr,"\t-> [READGROUP info] Number of readgroups to include: %d\n",khash_str2int_size(rghash));
   adjustMapQ = angsd::getArg("-C",adjustMapQ,arguments);
   baq = angsd::getArg("-baq",baq,arguments);
   redo_baq = angsd::getArg("-redo-baq",redo_baq,arguments);
