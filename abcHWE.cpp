@@ -65,6 +65,9 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   }
 
   getOptions(arguments);
+  if(doHWE==0)
+    return;
+  
   printArg(arguments->argumentFile);
   const char* postfix;
   postfix=".hwe.gz";
