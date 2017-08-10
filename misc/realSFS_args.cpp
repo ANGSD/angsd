@@ -21,6 +21,7 @@ args * getArgs(int argc,char **argv){
   p->seed =0;
   p->fl = NULL;
   p->whichFst = 0;
+  p->fold=0;
   if(argc==0)
     return p;
 
@@ -34,6 +35,8 @@ args * getArgs(int argc,char **argv){
       p->win = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-type"))
       p->type = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-fold"))
+      p->fold = atoi(*(++argv));  
     else  if(!strcasecmp(*argv,"-step"))
       p->step = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-bootstrap"))
@@ -78,12 +81,19 @@ args * getArgs(int argc,char **argv){
   srand48(p->seed);
   for(int i=0;(p->saf.size()>1||p->fl!=NULL)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;
-  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fname:%s fstout:%s oldout:%d seed:%ld bootstrap:%d whichFst:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->outname,p->oldout,p->seed,p->bootstrap,p->whichFst);
+  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fname:%s fstout:%s oldout:%d seed:%ld bootstrap:%d whichFst:%d fold:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->outname,p->oldout,p->seed,p->bootstrap,p->whichFst,p->fold);
 
   if((p->win==-1 &&p->step!=-1) || (p->win!=-1&&p->step==-1)){
     fprintf(stderr,"\t-> Both -win and -step must be supplied for sliding window analysis\n");
     exit(0);
 
+  }
+  if(p->chooseChr){
+    for(int i=0;i<p->saf.size();i++)
+      if(p->saf[i]->mm.find(p->chooseChr)==p->saf[i]->mm.end()){
+	fprintf(stderr,"\t-> Problem finding chromosome: \'%s\' in saffile:%s\n",p->chooseChr,p->saf[i]->fname);
+	exit(0);
+      }
   }
   return p;
 }
