@@ -1,5 +1,5 @@
 #include <pthread.h>
-
+#include <algorithm>
 #include "safreader.h"
 #include "Matrix.hpp"
 #include "realSFS_args.h"
