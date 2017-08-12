@@ -53,12 +53,12 @@ misc:
 
 ifdef HTSSRC
 %.o: %.c
-	$(CC) -c  $(CFLAGS) -I$(HTS_INCDIR) $*.c
-	$(CC) -MM $(CFLAGS)  -I$(HTS_INCDIR) $*.c >$*.d
+	$(CC) -c  $(CFLAGS)  $*.c -I$(HTS_INCDIR)
+	$(CC) -MM $(CFLAGS)  $*.c -I$(HTS_INCDIR)  >$*.d
 
 %.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS)  -I$(HTS_INCDIR) $*.cpp
-	$(CXX) -MM $(CXXFLAGS)  -I$(HTS_INCDIR) $*.cpp >$*.d
+	$(CXX) -c  $(CXXFLAGS) $*.cpp -I$(HTS_INCDIR) 
+	$(CXX) -MM $(CXXFLAGS) $*.cpp -I$(HTS_INCDIR)  >$*.d
 
 angsd: version.h $(OBJ)
 	$(CXX) $(FLAGS)  -o angsd *.o $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
@@ -79,7 +79,7 @@ testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
 
 clean:	testclean
-	rm  -f *.o *.d angsd angsd.static version.h *~
+	rm  -f *.o *.d angsd version.h *~
 	make -C misc/ clean
 
 test:
