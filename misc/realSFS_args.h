@@ -1,3 +1,4 @@
+#pragma once
 #include "../prep_sites.h"
 
 #include "safreader.h"

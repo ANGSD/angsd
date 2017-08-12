@@ -26,61 +26,8 @@ struct emPars{
 pthread_t *thd=NULL;
 size_t *bootstrap = NULL;
 emPars<float> *emp = NULL;
-int **posiG  = NULL;
+
 double ttol = 1e-16; 
-
-size_t parspace(std::vector<persaf *> &saf){
-  size_t ndim = 1;
-  for(int i=0;i<saf.size();i++){
-    ndim *= saf[i]->nChr+1;
-    fprintf(stderr,"\t-> dim(%s):%lu\n",saf[i]->fname,saf[i]->nChr+1);
-  }
-  fprintf(stderr,"\t-> Dimension of parameter space: %lu\n",ndim);
-  return ndim;
-}
-
-
-
-void setGloc(std::vector<persaf *> &saf,size_t nSites){
-#if 1
-  posiG = new int*[saf.size()];
-  for(int i=0;i<saf.size();i++)
-    posiG[i] = new int[nSites];
-#endif
-}
-
-void delGloc(std::vector<persaf *> &saf,size_t nSites){
-  for(int i=0;i<saf.size();i++)
-    delete [] posiG[i];
-  delete [] posiG;
-}
-
-
-size_t helper(persaf * pp,char *chr){
-  if(chr==NULL)
-    return pp->nSites;
-  myMap::iterator it=pp->mm.find(chr);
-  if(it==pp->mm.end()){
-    fprintf(stderr,"\t-> Problem finding chromosome: %s\n",chr);
-    exit(0);
-  }
-  return it->second.nSites;
-}
-
-/*
-  returns the maxnumber of sites across all samples
- */
-size_t calc_nsites(std::vector<persaf *> &pp,args *ar){
-  if(ar->start!=-1 &&ar->stop!=-1)
-    return ar->stop-ar->start;
-  size_t res = helper(pp[0],ar->chooseChr);
-  for(int i=1;i<pp.size();i++)
-    if(helper(pp[i],ar->chooseChr) > res)
-      res = helper(pp[i],ar->chooseChr);
-  return res;
-}
-
-
 
 
 template <typename T>
