@@ -107,7 +107,7 @@ analysisFunction:
 	make -C ../ analysisFunction.o HTSSRC=$(realpath $(HTSSRC))
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp prep_sites analysisFunction realSFS_optim.o realSFS_shared.o
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
 else
 safreader.o: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp 
