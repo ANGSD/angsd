@@ -12,7 +12,7 @@ typedef struct {
   int nThreads;
   std::vector<char *> sfsfname;
   std::vector<persaf *> saf;
-  char *fname;
+  //  char *fname;
   int onlyOnce;
   int emAccl;
   char *outname;

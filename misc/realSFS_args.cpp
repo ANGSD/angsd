@@ -11,7 +11,6 @@ args * getArgs(int argc,char **argv){
   p->tole=1e-6;
   p->nThreads=4;
   p->nSites =0;
-  p->fname = NULL;
   p->onlyOnce = 0;
   p->emAccl =1;
   p->outname = NULL;
@@ -72,7 +71,6 @@ args * getArgs(int argc,char **argv){
     }
     else{
       p->saf.push_back(persaf_init<float>(*argv));
-      p->fname = *argv;
       //   fprintf(stderr,"toKeep:%p\n",p->saf[p->saf.size()-1]->toKeep);
     }
     argv++;
@@ -82,7 +80,7 @@ args * getArgs(int argc,char **argv){
   srand48(p->seed);
   for(int i=0;(p->saf.size()>1||p->fl!=NULL)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;
-  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fname:%s fstout:%s oldout:%d seed:%ld bootstrap:%d whichFst:%d fold:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->fname,p->outname,p->oldout,p->seed,p->bootstrap,p->whichFst,p->fold);
+  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fstout:%s oldout:%d seed:%ld bootstrap:%d whichFst:%d fold:%d\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->outname,p->oldout,p->seed,p->bootstrap,p->whichFst,p->fold);
 
   if((p->win==-1 &&p->step!=-1) || (p->win!=-1&&p->step==-1)){
     fprintf(stderr,"\t-> Both -win and -step must be supplied for sliding window analysis\n");

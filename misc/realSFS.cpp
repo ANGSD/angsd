@@ -29,14 +29,10 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <zlib.h>
-#include <htslib/tbx.h>
-#include "Matrix.hpp"
 #include "safstat.h"
 #include <libgen.h>
 #include <algorithm>
 #include "realSFS_args.h"
-#include "safreader.h"
-#include "keep.hpp"
 #include "header.h"
 #include "safcat.h"
 #include "realSFS_optim.h"
@@ -65,57 +61,6 @@ void handler(int s) {
   SIG_COND=0;
 
 }
-
-/*
-  over elaborate function to read a sfs. Assumption is that input file contains the expected values.
-  output is plugged into ret
- */
-
-void readSFS(const char*fname,size_t hint,double *ret){
-  fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
-  FILE *fp = NULL;
-  if(((fp=fopen(fname,"r")))==NULL){
-    fprintf(stderr,"problems opening file:%s\n",fname);
-    exit(0);
-  }
-  char buf[fsize(fname)+1];
-  if(fsize(fname)!=fread(buf,sizeof(char),fsize(fname),fp)){
-    fprintf(stderr,"Problems reading file: %s\n will exit\n",fname);
-    exit(0);
-  }
-  buf[fsize(fname)]='\0';
-  std::vector<double> res;
-  char *tok=NULL;
-  tok = strtok(buf,"\t\n ");
-  if(!tok){
-    fprintf(stderr,"File:%s looks empty\n",fname);
-    exit(0);
-  }
-  res.push_back(atof(tok));
-
-  while((tok=strtok(NULL,"\t\n "))) {  
-    //fprintf(stderr,"%s\n",tok);
-    res.push_back(atof(tok));
-
-  }
-  //  fprintf(stderr,"size of prior=%lu\n",res.size());
-  if(hint!=res.size()){
-    fprintf(stderr,"problem with size of dimension of prior %lu vs %lu\n",hint,res.size());
-    for(size_t i=0;0&&i<res.size();i++)
-      fprintf(stderr,"%zu=%f\n",i,res[i]);
-    exit(0);
-  }
-  for(size_t i=0;i<res.size();i++){
-      ret[i] = res[i];
-      //      fprintf(stderr,"i=%lu %f\n",i,ret[i]);
-  }
-  normalize(ret,(int)res.size());
-  for(int i=0;0&&i<res.size();i++)
-    ret[i] = log(ret[i]);
-  fclose(fp);
-}
-
-
 
 int print_header(int argc,char **argv){
 
@@ -751,7 +696,7 @@ int main(int argc,char **argv){
     fprintf(stderr,"\t-> NB: You can print data with ./realSFS print afile.saf.idx !!\n");
     fprintf(stderr,"\t-> NB: Higher order SFS's can be estimated by simply supplying multiple .saf.idx files!!\n");
     fprintf(stderr,"\t-> NB: Program uses accelerated EM, to use standard EM supply -m 0 \n");
-    fprintf(stderr,"\t-> Other subfunctions saf2theta, cat, check\n");
+    fprintf(stderr,"\t-> Other subfunctions saf2theta, cat, check, dadi\n");
     return 0;
   }
   ++argv;
