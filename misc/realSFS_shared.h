@@ -7,3 +7,5 @@ size_t helper(persaf * pp,char *chr);
 void delGloc(std::vector<persaf *> &saf,size_t nSites);
 void setGloc(std::vector<persaf *> &saf,size_t nSites);
 size_t parspace(std::vector<persaf *> &saf);
+template <typename T>
+size_t fsizes(std::vector<persaf *> &pp, size_t nSites);

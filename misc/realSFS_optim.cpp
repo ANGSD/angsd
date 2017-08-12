@@ -1,7 +1,5 @@
 #include <pthread.h>
 #include <algorithm>
-#include "safreader.h"
-#include "Matrix.hpp"
 #include "realSFS_args.h"
 #include "realSFS_optim.h"
 extern int howOften;
@@ -533,16 +531,6 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   delete [] oldp;
   delete [] tmp;
   return oldLik;
-}
-
-//just approximate
-template <typename T>
-size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
-  size_t res = 0;
-  for(int i=0;i<pp.size();i++){
-    res += nSites*(pp[i]->nChr+1)*sizeof(T)+nSites*sizeof( T*);
-  }
-  return res;
 }
 
 

@@ -195,3 +195,16 @@ size_t calc_nsites(std::vector<persaf *> &pp,args *ar){
 }
 
 
+
+
+//just approximate
+template <typename T>
+size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
+  size_t res = 0;
+  for(int i=0;i<pp.size();i++){
+    res += nSites*(pp[i]->nChr+1)*sizeof(T)+nSites*sizeof( T*);
+  }
+  return res;
+}
+
+template size_t fsizes<float>(std::vector<persaf *> &pp, size_t nSites);

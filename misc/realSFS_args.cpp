@@ -1,5 +1,6 @@
-#include "realSFS_args.h"
+
 #include <ctime>
+#include "realSFS_args.h"
 
 args * getArgs(int argc,char **argv){
   args *p = new args;

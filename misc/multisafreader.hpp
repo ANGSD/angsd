@@ -1,4 +1,6 @@
 #include "realSFS_shared.h"
+#include "Matrix.hpp"
+
 
 template<typename T>
 void readGL(persaf *fp,size_t nSites,size_t dim,Matrix<T> *ret,int *pp, int scale2norm){

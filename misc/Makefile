@@ -60,13 +60,16 @@ fstreader.o: fstreader.cpp fstreader.h header.h
 safstat.o: safstat.cpp safstat.h 
 	$(CXX) $(FLAGS) -c safstat.cpp -I $(HTS_INCDIR)
 
-realSFS_optim.o: realSFS_optim.cpp realSFS_optim.h 
+realSFS_optim.o: realSFS_optim.cpp realSFS_optim.h  multisafreader.hpp Matrix.hpp realSFS_shared.o
 	$(CXX) $(FLAGS) -c realSFS_optim.cpp -I $(HTS_INCDIR)
+
+realSFS_dadi.o: realSFS_dadi.cpp realSFS_dadi.h  multisafreader.hpp Matrix.hpp
+	$(CXX) $(FLAGS) -c realSFS_dadi.cpp -I $(HTS_INCDIR)
 
 realSFS_shared.o: realSFS_shared.cpp realSFS_shared.h 
 	$(CXX) $(FLAGS) -c realSFS_shared.cpp -I $(HTS_INCDIR)
 
-realSFS_args.o: realSFS_args.cpp realSFS_args.h
+realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o prep_sites
 	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTS_INCDIR)
 
 safcat.o: safcat.cpp safcat.h
@@ -106,8 +109,8 @@ bfgs:
 analysisFunction: 
 	make -C ../ analysisFunction.o HTSSRC=$(realpath $(HTSSRC))
 
-realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp prep_sites analysisFunction realSFS_optim.o realSFS_shared.o
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
+realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp prep_sites analysisFunction realSFS_optim.o realSFS_shared.o realSFS_dadi.o
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_dadi.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread
 else
 safreader.o: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp 
@@ -121,13 +124,16 @@ safstat.o: safstat.cpp safstat.h
 psmcreader.o: psmcreader.cpp psmcreader.h header.h
 	$(CXX) $(FLAGS) -c psmcreader.cpp 
 
-realSFS_args.o: realSFS_args.cpp realSFS_args.h
+realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o prep_sites
 	$(CXX) $(FLAGS) -c realSFS_args.cpp 
 safcat.o: safcat.cpp safcat.h
 	$(CXX) $(FLAGS) -c safcat.cpp
 
-realSFS_optim.o: realSFS_optim.cpp realSFS_optim.h 
+realSFS_optim.o: realSFS_optim.cpp realSFS_optim.h realSFS_args.o multisafreader.hpp Matrix.hpp realSFS_shared.o
 	$(CXX) $(FLAGS) -c realSFS_optim.cpp 
+
+realSFS_dadi.o: realSFS_dadi.cpp realSFS_dadi.h realSFS_args.o multisafreader.hpp Matrix.hpp
+	$(CXX) $(FLAGS) -c realSFS_dadi.cpp 
 
 realSFS_shared.o: realSFS_shared.cpp realSFS_shared.h 
 	$(CXX) $(FLAGS) -c realSFS_shared.cpp 
@@ -153,8 +159,11 @@ bfgs:
 analysisFunction: 
 	make -C ../ analysisFunction.o 
 
-realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp prep_sites analysisFunction realSFS_optim.o realSFS_shared.o
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o -lhts -lz -lpthread
+multisafreader.hpp: Matrix.hpp realSFS_shared.o 
+
+
+realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp prep_sites analysisFunction realSFS_optim.o realSFS_shared.o realSFS_dadi.o
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o realSFS_dadi.o -lhts -lz -lpthread
 
 hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
 	$(CXX) $(FLAGS) -c hmm_psmc.cpp

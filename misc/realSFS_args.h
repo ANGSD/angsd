@@ -1,6 +1,5 @@
 #pragma once
 #include "../prep_sites.h"
-
 #include "safreader.h"
 #include <vector>
 typedef struct {
