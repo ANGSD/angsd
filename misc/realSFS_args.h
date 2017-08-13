@@ -25,6 +25,8 @@ typedef struct {
   filt *fl;
   int whichFst;
   int fold;
+  char *ref;
+  char *anc;
 }args;
 args * getArgs(int argc,char **argv);
 void destroy_args(args *p);
