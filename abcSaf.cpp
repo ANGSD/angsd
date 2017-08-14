@@ -278,6 +278,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   if(fold||isHap)
     newDim = arguments->nInd+1;
   if(doSaf==3){
+    fprintf(stderr,"\t-> -doSaf 3 Does not work in combination with -snpstat and other snpfilters\n");
     outfileGprobs = aio::openFileBG(outfiles,GENO);
   }else if(doSaf!=0&&doThetas==0){
     outfileSAF =  aio::openFileBG(outfiles,SAF);
@@ -1250,7 +1251,7 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
   realRes *r=(realRes *) p->extras[index];
   int id=0;
   for(int s=0; s<p->numSites;s++){
-    if(r->oklist[s]==1){
+    if(r->oklist[s]==1&&p->keepSites[s]){
       nnnSites++;
       aio::bgzf_write(outfileSFS,r->pLikes[id++],sizeof(float)*newDim);
     }
@@ -1258,7 +1259,7 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
 
   for(int i=0;i<p->numSites;i++){
     int mypos = p->posi[i];
-    if(r->oklist[i]==1)
+    if(r->oklist[i]==1&&p->keepSites[i])
       aio::bgzf_write(outfileSFSPOS,&mypos,sizeof(int));
     else if (r->oklist[i]==2)
       fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
@@ -1272,7 +1273,7 @@ void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,std::vector<floa
  int id=0;
  for(int i=0; i<pars->numSites;i++){
    
-   if(r->oklist[i]==1){
+   if(r->oklist[i]==1 &&pars->keepSites[i]!=0){
      double workarray[2*pars->nInd+1];
      for(int iii=0;iii<2*pars->nInd+1;iii++)
        workarray[iii] = r->pLikes[id][iii];
