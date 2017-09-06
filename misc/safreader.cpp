@@ -139,6 +139,10 @@ persaf * persaf_init(char *fname){
   snprintf(tmp2,strlen(fname)+100,"%sgz",tmp);
   fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
   ret->saf = bgzf_open(tmp2,"r");
+  if(!ret->saf){
+    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n will exit",tmp2);
+    exit(0);
+  }
   if(ret->saf)
     my_bgzf_seek(ret->saf,8,SEEK_SET);
   if(ret->saf && ret->version!=safversion(tmp2)){
@@ -149,6 +153,10 @@ persaf * persaf_init(char *fname){
   snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
   fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
   ret->pos = bgzf_open(tmp2,"r");
+  if(!ret->pos){
+    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n will exit",tmp2);
+    exit(0);
+  }
   if(ret->pos)
     my_bgzf_seek(ret->pos,8,SEEK_SET);
   if(ret->pos&& ret->version!=safversion(tmp2)){
