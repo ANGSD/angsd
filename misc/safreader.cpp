@@ -140,7 +140,7 @@ persaf * persaf_init(char *fname){
   fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
   ret->saf = bgzf_open(tmp2,"r");
   if(!ret->saf){
-    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n will exit",tmp2);
+    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n will exit\n",tmp2);
     exit(0);
   }
   if(ret->saf)
@@ -154,7 +154,7 @@ persaf * persaf_init(char *fname){
   fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
   ret->pos = bgzf_open(tmp2,"r");
   if(!ret->pos){
-    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n will exit",tmp2);
+    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n will exit\n",tmp2);
     exit(0);
   }
   if(ret->pos)

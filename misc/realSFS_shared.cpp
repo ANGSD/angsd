@@ -8,7 +8,7 @@ int **posiG  = NULL;
 // this is run once for each chromsome
 
 int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr,filt *fl){
-  //fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
+  fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );fflush(stderr);
 
   if(0&&saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
     //fprintf(stderr,"herer\n");
