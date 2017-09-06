@@ -33,7 +33,7 @@ void printFastaFlank(FILE *fp,char *fasta,int center){
 
 template <typename T>
 void print_dadi(std::vector<double *> &priors,std::vector<Matrix<T> *> &gls,int *posiToPrint,char *curChr){
-  fprintf(stderr,"[%s]\n",__func__);
+  //  fprintf(stderr,"[%s]\n",__func__);
   int nsites = gls[0]->x;
   int npop = priors.size();
   if(ref_l>0&&posiToPrint[gls[0]->x-1]>ref_l-1){
@@ -125,20 +125,11 @@ int main_dadi(int argc, char** argv){
   while(1) {
     static char *curChr=NULL;
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,1);//read nsites from data
-    int b=0;  
-    //fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
-    if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
-      break;
-    {
-      if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
-	//fprintf(stderr,"continue continue\n");
-	continue;
-      }
-    }
-    if(gls[0]->x==0)
-      continue;
+    //    int b=0;  
+
     char *thisChr=arg->chooseChr?arg->chooseChr:curChr;
-    if(lastchr==NULL||strcmp(lastchr,curChr)!=0){
+    //    fprintf(stderr,"lastchr:%p curChr:%p\n",lastchr,thisChr);
+    if(lastchr==NULL||strcmp(lastchr,thisChr)!=0){
       //cleanup first
       free(ref);ref=NULL;ref_l=0;
       free(anc);ref=NULL;anc_l=0;
@@ -147,12 +138,15 @@ int main_dadi(int argc, char** argv){
 	ref = faidx_fetch_seq(fai_ref, thisChr, 0, 0x7fffffff, &ref_l);
       }if(fai_anc)
 	anc = faidx_fetch_seq(fai_anc, thisChr, 0, 0x7fffffff, &anc_l);
+      free(lastchr);lastchr=NULL;
       lastchr=strdup(thisChr);
     }
 
-    fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
     print_dadi(priors,gls,posiToPrint,thisChr);
-    fprintf(stderr,"------------\n");
+    if(ret==-3&&gls[0]->x==0){//no more data in files or in chr, eith way we break;g
+      //fprintf(stderr,"breaking\n");
+      break;
+    }
     for(int i=0;i<gls.size();i++)
       gls[i]->x =0;
     
@@ -161,10 +155,13 @@ int main_dadi(int argc, char** argv){
     if(arg->onlyOnce)
       break;
   }
+  delete [] posiToPrint;
+  free(lastchr);lastchr=NULL;
   delGloc(saf,nSites);
   destroy(gls,nSites);
   destroy_args(arg);
-  
+  for(int i=0;i<priors.size();i++)
+    delete [] priors[i];
   fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
   fprintf(stderr,"\t-> Output is now simply the expected values! \n");
   fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");

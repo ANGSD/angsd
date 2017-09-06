@@ -83,7 +83,7 @@ int print_header(int argc,char **argv){
 }
 template <typename T>
 int printMulti(args *arg){
-  //  fprintf(stderr,"[%s]\n",__FUNCTION__);
+  //fprintf(stderr,"[%s]\n",__FUNCTION__);
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
     assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
@@ -156,13 +156,7 @@ int printMulti(args *arg){
     }
     for(int i=0;i<gls.size();i++)
       gls[i]->x =0;
-#if 0
-    if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
-      fprintf(stderr,"continue continue\n");
-      continue;
-    }
-#endif
-    
+
     if(ret==-2&&arg->chooseChr!=NULL)
       break;
     if(arg->onlyOnce)
