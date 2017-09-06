@@ -33,8 +33,11 @@ void printFastaFlank(FILE *fp,char *fasta,int center){
 
 template <typename T>
 void print_dadi(std::vector<double *> &priors,std::vector<Matrix<T> *> &gls,int *posiToPrint,char *curChr){
-  //  fprintf(stderr,"[%s]\n",__func__);
+  fprintf(stderr,"[%s]:\n",__func__);
   int nsites = gls[0]->x;
+  if(nsites==0)
+    return;
+
   int npop = priors.size();
   if(ref_l>0&&posiToPrint[gls[0]->x-1]>ref_l-1){
     fprintf(stderr,"\t-> Looks like position ofseqdata is larger than reference fasta\n");
@@ -46,7 +49,6 @@ void print_dadi(std::vector<double *> &priors,std::vector<Matrix<T> *> &gls,int 
   }
 
   for(int s=0;s<nsites;s++){//sites
-   
     int isvar=0;
     int counts[npop];
     double prop[npop];
@@ -63,7 +65,6 @@ void print_dadi(std::vector<double *> &priors,std::vector<Matrix<T> *> &gls,int 
       isvar += counts[p];
     }
     if(isvar){
-      //      fprintf(stderr,"exit");
       printFastaFlank(stdout,ref,posiToPrint[s]);
       printFastaFlank(stdout,anc,posiToPrint[s]);
       fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
@@ -85,6 +86,8 @@ int main_dadi(int argc, char** argv){
   }
   args *arg = getArgs(argc,argv);
   std::vector<persaf *> &saf =arg->saf;
+  if(saf.size()==1)
+    saf[0]->kind = 2;
   for(int i=0;i<saf.size();i++)
     assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
   if(saf.size()!=arg->sfsfname.size()){
@@ -141,8 +144,8 @@ int main_dadi(int argc, char** argv){
       free(lastchr);lastchr=NULL;
       lastchr=strdup(thisChr);
     }
-
-    print_dadi(priors,gls,posiToPrint,thisChr);
+    if(gls[0]->x>0)
+      print_dadi(priors,gls,posiToPrint,thisChr);
     if(ret==-3&&gls[0]->x==0){//no more data in files or in chr, eith way we break;g
       //fprintf(stderr,"breaking\n");
       break;
