@@ -10,9 +10,8 @@
 #include <cstdlib>
 #include <cmath>
 #include <cassert>
-#include "ctype.h"
-#include <htslib/ksort.h>
-//#include <htslib/hts.h>
+#include <ctype.h>
+#include "ksort.h"
 #include "mUpPile.h"
 
 
