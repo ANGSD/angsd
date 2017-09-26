@@ -1,4 +1,4 @@
-
+//iupack supplied by kristian ullrich
 
 
 #include <cmath>
@@ -746,8 +746,97 @@ int angsd::getMaxCount(suint *counts,int i, int depth){
   return whichMax;
 }
 
+// combine all bases to get IUPAC code
+// depth is without N
+// i is the individual
+// iupack code supplied by kristian ullrich
+int angsd::getIupacCount(suint *counts,int i, int depth){
+
+  if(depth==-1){
+    depth=0;
+    for( int b = 0; b < 4; b++ )
+      depth+=counts[b+4*i];
+  }
+
+  if(depth<=0)
+    return 14;
+
+  int whichIUPAC = 0;
+  double bIUPACscore = 0;
+  for(int b=1;b<4;b++){
+    if (counts[b+4*i]>0){
+      bIUPACscore = bIUPACscore + pow(b,2);
+    }
+  }
+  //N
+  if(bIUPACscore == 0){
+    whichIUPAC = 14;
+  }
+  //A
+  if(bIUPACscore == 1){
+    whichIUPAC = 0;
+  }
+  //C
+  if(bIUPACscore == 4){
+    whichIUPAC = 1;
+  }
+  //G
+  if(bIUPACscore == 9){
+    whichIUPAC = 2;
+  }
+  //T
+  if(bIUPACscore == 16){
+    whichIUPAC = 3;
+  }
+  //A+G
+  if(bIUPACscore == 10){
+    whichIUPAC = 4;
+  }
+  //C+T
+  if(bIUPACscore == 20){
+    whichIUPAC = 5;
+  }
+  //G+C
+  if(bIUPACscore == 13){
+    whichIUPAC = 6;
+  }
+  //A+T
+  if(bIUPACscore == 17){
+    whichIUPAC = 7;
+  }
+  //G+T
+  if(bIUPACscore == 25){
+    whichIUPAC = 8;
+  }
+  //A+C
+  if(bIUPACscore == 5){
+    whichIUPAC = 9;
+  }
+  //C+G+T
+  if(bIUPACscore == 29){
+    whichIUPAC = 10;
+  }
+  //A+G+T
+  if(bIUPACscore == 26){
+    whichIUPAC = 11;
+  }
+  //A+C+T
+  if(bIUPACscore == 21){
+    whichIUPAC = 12;
+  }
+  //A+C+G
+  if(bIUPACscore == 14){
+    whichIUPAC = 13;
+  }
+  //A+C+G+T
+  if(bIUPACscore == 30){
+    whichIUPAC = 14;
+  }
+  return whichIUPAC;
+}
 
 //count is 4 long, A C G T
+//iupack supplied by kristian ullrich
 int angsd::getRandomCountTotal(suint *counts, int nInd){
 
   size_t totalCounts[4]={0,0,0,0};
@@ -827,7 +916,97 @@ int angsd::getMaxCountTotal(suint *counts,int nInd){
   return whichMax;
 }
 
+// combine all bases to get IUPAC code
+// depth is without N
+// i is the individual
+int angsd::getIupacCountTotal(suint *counts,int nInd){
 
+  size_t totalCounts[4]={0,0,0,0};
+  for(int i=0;i<4*nInd;i++)
+    totalCounts[i%4] +=counts[i];   
+  
+
+  size_t depth=0;
+  for( int b = 0; b < 4; b++ )
+    depth+=totalCounts[b];
+  
+
+  if(depth==0)
+    return 14;
+
+  int whichIUPAC = 0;
+  double bIUPACscore = 0;
+  for(int b=1;b<4;b++){
+    if (totalCounts[b]>0){
+      bIUPACscore = bIUPACscore + pow(b,2);
+    }
+  }
+  //N
+  if(bIUPACscore == 0){
+    whichIUPAC = 14;
+  }
+  //A
+  if(bIUPACscore == 1){
+    whichIUPAC = 0;
+  }
+  //C
+  if(bIUPACscore == 4){
+    whichIUPAC = 1;
+  }
+  //G
+  if(bIUPACscore == 9){
+    whichIUPAC = 2;
+  }
+  //T
+  if(bIUPACscore == 16){
+    whichIUPAC = 3;
+  }
+  //A+G
+  if(bIUPACscore == 10){
+    whichIUPAC = 4;
+  }
+  //C+T
+  if(bIUPACscore == 20){
+    whichIUPAC = 5;
+  }
+  //G+C
+  if(bIUPACscore == 13){
+    whichIUPAC = 6;
+  }
+  //A+T
+  if(bIUPACscore == 17){
+    whichIUPAC = 7;
+  }
+  //G+T
+  if(bIUPACscore == 25){
+    whichIUPAC = 8;
+  }
+  //A+C
+  if(bIUPACscore == 5){
+    whichIUPAC = 9;
+  }
+  //C+G+T
+  if(bIUPACscore == 29){
+    whichIUPAC = 10;
+  }
+  //A+G+T
+  if(bIUPACscore == 26){
+    whichIUPAC = 11;
+  }
+  //A+C+T
+  if(bIUPACscore == 21){
+    whichIUPAC = 12;
+  }
+  //A+C+G
+  if(bIUPACscore == 14){
+    whichIUPAC = 13;
+  }
+  //A+C+G+T
+  if(bIUPACscore == 30){
+    whichIUPAC = 14;
+  }
+  return whichIUPAC;
+}
 
 
 
@@ -1012,7 +1191,7 @@ int refToInt[256] = {
 
 char intToRef[5] = {'A','C','G','T','N'};
 
-
+char intToIupac[15] = {'A','C','G','T','R','Y','S','W','K','M','B','D','H','V','N'};
 
 
 int aio::fexists(const char* str){///@param str Filename given as a string.
