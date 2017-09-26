@@ -21,6 +21,7 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t1: use a random (non N) base (needs -doCounts 1)\n");
   fprintf(argFile,"\t2: use the most common (non N) base (needs -doCounts 1)\n");
   fprintf(argFile,"\t3: use the base with highest ebd (under development) \n");
+  fprintf(argFile,"\t4: output iupac codes (under development) \n");
   fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases perline in output file)\n",NbasesPerLine);
   fprintf(argFile,"\t-explode\t%d\t print chromosome where we have no data (0:no,1:yes)\n",explode);
   fprintf(argFile,"\t-rmTrans\t%d\t remove transitions as different from -ref bases (0:no,1:yes)\n",rmTrans);
