@@ -462,8 +462,14 @@ int main(int argc,char **argv){
   int ss;
   if(NULL==fgets( line, 1000, pfin))
     fprintf(stderr,"Problem reading from file:\n");
-
-  ss=sscanf(line,"msHOT-lite %d %d -t %d -r %d %d\n", &nsam, &howmany,&theta,&rho,&regLen);
+  char *pch = strstr(line,"msHOT-lite");
+  while(1){
+    char *tmppch=strstr(pch+1,"msHOT-lite");
+    if(tmppch=='\0')
+      break;
+    pch=tmppch;
+  }
+  ss=sscanf(pch,"msHOT-lite %d %d -t %d -r %d %d\n", &nsam, &howmany,&theta,&rho,&regLen);
   assert(ss==5);
   fprintf(stderr,"\t-> Number of samples:%d\n",nsam);
   fprintf(stderr,"\t-> Number of replications:%d\n",howmany);

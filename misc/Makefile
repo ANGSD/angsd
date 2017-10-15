@@ -13,7 +13,7 @@ $(info HTSSRC not defined, assuming systemwide installation -lhts)
 endif
 
 
-all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink ngsPSMC ibs scounts
+all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink ngsPSMC ibs scounts msHOT2glf
 
 kmath.o: kmath.c kmath.h
 	$(CC) $(FLAGS) -c kmath.c 
@@ -71,6 +71,9 @@ realSFS_shared.o: realSFS_shared.cpp realSFS_shared.h
 
 realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o prep_sites
 	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTS_INCDIR)
+
+msHOT2glf: msHOT2glf
+	$(CC) $(FLAGS) msHOT2glf.c -I $(HTS_INCDIR)  -std=gnu99 -lz -llzma -lpthread -lm -lbz2 -o msHOT2glf $(HTS_LIBDIR)
 
 safcat.o: safcat.cpp safcat.h
 	$(CXX) $(FLAGS) -c safcat.cpp -I $(HTS_INCDIR)
@@ -149,6 +152,9 @@ thetaStat:	thetaStat.cpp stats.cpp
 
 msToGlf: msToGlf.c
 	$(CC) $(FLAGS) msToGlf.c -O3 -o msToGlf -std=gnu99 -lhts  -lz -lm -lbz2 -llzma -lpthread
+
+msHOTGlf: msHOTglf.c
+	$(CC) $(FLAGS) msHOT2glf.c -O3 -o msHOT2glf -std=gnu99 -lhts  -lz -lm -lbz2 -llzma -lpthread
 
 prep_sites: 
 	make -C ../ prep_sites.o
