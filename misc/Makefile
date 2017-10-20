@@ -72,7 +72,7 @@ realSFS_shared.o: realSFS_shared.cpp realSFS_shared.h
 realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o prep_sites
 	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTS_INCDIR)
 
-msHOT2glf: msHOT2glf
+msHOT2glf: msHOT2glf.c
 	$(CC) $(FLAGS) msHOT2glf.c  -I$(HTS_INCDIR) -O3 -o msHOT2glf -std=gnu99 $(HTS_LIBDIR)  -lz -lm -lbz2 -llzma -lpthread -lcurl
 
 safcat.o: safcat.cpp safcat.h
