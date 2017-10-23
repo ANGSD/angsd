@@ -153,7 +153,7 @@ thetaStat:	thetaStat.cpp stats.cpp
 msToGlf: msToGlf.c
 	$(CC) $(FLAGS) msToGlf.c -O3 -o msToGlf -std=gnu99 -lhts  -lz -lm -lbz2 -llzma -lpthread
 
-msHOTGlf: msHOTglf.c
+msHOT2glf: msHOT2glf.c
 	$(CC) $(FLAGS) msHOT2glf.c -O3 -o msHOT2glf -std=gnu99 -lhts  -lz -lm -lbz2 -llzma -lpthread    
 
 prep_sites: 

@@ -15,7 +15,7 @@
 #include <cstdlib> //for exit()
 #include <cstdio> //for fprintf
 #include <signal.h>//for catching ctrl+c, allow threads to finish
-#include <htslib/hts_os.h>
+//#include <htslib/hts_os.h>
 #include <htslib/hts.h>
 #include "cigstat.h"
 #include "shared.h"
