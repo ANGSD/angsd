@@ -77,6 +77,7 @@ void setInputType(argStruct *args){
   fprintf(stderr,"plp:%d\n",INPUT_PILEUP);
   fprintf(stderr,"vcf_gp:%d\n",INPUT_VCF_GP);
   fprintf(stderr,"vcf_gl:%d\n",INPUT_VCF_GL);
+  fprintf(stderr,"glf10_text:%d\n",INPUT_GLF10_TEXT);
 #endif
 
   args->fai = angsd::getArg("-fai",args->fai,args);
@@ -96,6 +97,15 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
+  tmp = NULL;
+  tmp = angsd::getArg("-glf10_text",tmp,args);
+  if(tmp!=NULL){
+    args->inputtype=INPUT_GLF10_TEXT;
+    args->infile = tmp;
+    args->nams.push_back(strdup(args->infile));
+    return;
+  }
+  
   tmp=NULL;
   tmp = angsd::getArg("-vcf-GP",tmp,args);
   if(tmp!=NULL){
@@ -232,6 +242,7 @@ void multiReader::getOptions(argStruct *arguments){
   fname=angsd::getArg("-vcf-GL",fname,arguments);
   fname=angsd::getArg("-vcf-GP",fname,arguments);
   fname=angsd::getArg("-vcf-pl",fname,arguments);
+  fname=angsd::getArg("-glf10_text",fname,arguments);
   intName=angsd::getArg("-intName",intName,arguments);
   isSim=angsd::getArg("-isSim",intName,arguments);
   nInd=angsd::getArg("-nInd",nInd,arguments);
@@ -278,6 +289,7 @@ multiReader::multiReader(int argc,char**argv){
        (!strcasecmp(args->argv[1],"-pileup")) ||
        (!strcasecmp(args->argv[1],"-vcf-GL")) ||
        (!strcasecmp(args->argv[1],"-vcf-pl")) ||
+       (!strcasecmp(args->argv[1],"-glf10_text")) ||
        (!strcasecmp(args->argv[1],"-vcf-GP"))) {
       printArg(stdout,args);
       exit(0);
@@ -295,6 +307,9 @@ multiReader::multiReader(int argc,char**argv){
     switch(args->inputtype)
       {
       case INPUT_GLF:
+	printAndExit=1;
+	break;
+      case INPUT_GLF10_TEXT:
 	printAndExit=1;
 	break;
       case INPUT_GLF3:
@@ -326,7 +341,7 @@ multiReader::multiReader(int argc,char**argv){
       exit(0);
   }else{
     if(args->nams.size()==0){
-      fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp/-vcf-pl filename\n");
+      fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp/-vcf-pl/-glf10_text filename\n");
       exit(0);
     }
     htsFile *in=sam_open(args->nams[0],"r");
@@ -343,9 +358,9 @@ multiReader::multiReader(int argc,char**argv){
 
 
 
-  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_GLF3||type==INPUT_VCF_GP||type==INPUT_VCF_GL)){
+  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_GLF3||type==INPUT_VCF_GP||type==INPUT_VCF_GL||type==INPUT_GLF10_TEXT)){
     if(nInd==0){
-      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-vcf-GL/-vcf-GP files\n");
+      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-vcf-GL/-vcf-GP/-glf10_text files\n");
       exit(0);
     }
   }else
@@ -356,6 +371,7 @@ multiReader::multiReader(int argc,char**argv){
   args->revMap = revMap;
 
   setArgsBam(args);
+
   if(fname==NULL)
     return;
 
@@ -365,6 +381,7 @@ multiReader::multiReader(int argc,char**argv){
     fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);
     exit(0);
   }
+
   switch(type){
   case INPUT_PILEUP:{
     mpil = new mpileup(args->nInd,gz,args->revMap,minQ);
@@ -379,6 +396,11 @@ multiReader::multiReader(int argc,char**argv){
     myglf = new glfReader(args->nInd,gz,3,isSim);
     break;
   }
+  case INPUT_GLF10_TEXT:{
+    myglf_text = new glfReader_text(args->nInd,gz,args->revMap);
+    break;
+  }
+
   case INPUT_VCF_GP:{
     myvcf = new vcfReader(args->nInd,gz,args->revMap);
     break;
@@ -472,6 +494,11 @@ funkyPars *multiReader::fetch(){
     fp = myglf->fetch(nLines); 
     break;
   }
+  case INPUT_GLF10_TEXT:{
+    fp = myglf_text->fetch(nLines); 
+    break;
+  }
+    
   case INPUT_VCF_GL:{
     fp = myvcf->fetch(nLines); 
     break;
@@ -491,7 +518,7 @@ funkyPars *multiReader::fetch(){
   }
     
   default:{
-    fprintf(stderr,"Unkown inputformat: %d\n",type);
+    fprintf(stderr,"Unknown inputformat: %d\n",type);
 #if 1
   fprintf(stderr,"bam:%d\n",INPUT_BAM);
   fprintf(stderr,"glf:%d\n",INPUT_GLF);

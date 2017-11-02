@@ -116,7 +116,7 @@ void abcGL::getOptions(argStruct *arguments){
     fprintf(stderr,"Can't calculate genotype likelihoods from -glf/-glf3/VCF files\n");
     exit(0);
   }
-  if(arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_VCF_GL)
+  if(arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_VCF_GL||arguments->inputtype==INPUT_GLF10_TEXT)
     return;
   if(doGlf&&GL==0){
     fprintf(stderr,"\t-> You need to choose a genotype likelihood model -GL for dumping genotype likelihoods\n");

@@ -7,11 +7,12 @@
 #include "mpileup.h"
 #include "parseArgs_bambi.h"
 #include "bammer_main.h"
-
+#include "glfReader_text.h"
 class multiReader{
 private:
   int nLines;
   glfReader *myglf;
+  glfReader_text *myglf_text;
   vcfReader *myvcf;
   beagle_reader *bglObj;
   mpileup *mpil;
