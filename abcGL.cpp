@@ -229,7 +229,8 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
       phys_init(arguments->nams);
   }else if(GL==6){
     simple_init();
-  }
+  }else if(GL==7)
+    ancestral_init();
 
   gzoutfile = gzoutfile2 = NULL;
   bufstr.s=NULL; bufstr.l=bufstr.m=0;// <- used for buffered output 
@@ -277,6 +278,8 @@ abcGL::~abcGL(){
     phys_destroy();
   else if(GL==6)
     simple_destroy();
+  else if(GL==7)
+    ancestral_destroy();
   if(doGlf)    bgzf_close(gzoutfile);
     
   if(gzoutfile!=NULL)
