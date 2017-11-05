@@ -78,6 +78,7 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t4: SYK\n");
   fprintf(argFile,"\t5: phys\n");
   fprintf(argFile,"\t6: Super simple sample an allele type GL. (1.0,0.5,0.0)\n");
+  fprintf(argFile,"\t7: outgroup gls\n");
   fprintf(argFile,"\t-trim\t\t%d\t\t(zero means no trimming)\n",trim);
   fprintf(argFile,"\t-tmpdir\t\t%s/\t(used by SOAPsnp)\n",angsd_tmpdir);
   fprintf(argFile,"\t-errors\t\t%s\t\t(used by SYK)\n",errorFname);
@@ -336,6 +337,8 @@ void abcGL::run(funkyPars *pars){
     call_phys(pars->chk,likes,trim);
   else if(GL==6){
     call_simple(pars->counts,pars->keepSites,likes,pars->numSites,pars->nInd);
+  }else if(GL==7){
+    call_ancestral(pars->chk,likes,trim);
   }
   pars->likes = likes;
   

@@ -3,7 +3,7 @@
 #include "gatk_likes.h"
 #include "bam_likes.h"
 #include "simple_likes.h"
-
+#include "ancestral_likes.h"
 class abcGL:public abc{
 private:
   const char * postfix;
