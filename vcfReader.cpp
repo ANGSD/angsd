@@ -144,7 +144,10 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
 	while(((val=angsd::strpop(&tok,',')))[0]!='\0'){
 	  (*gp)[i*3+pp++]=atof(val);
 	}
-	assert(pp==3);
+	if(pp==3){
+	  fprintf(stderr,"\t-> Debug message: Problems at position: %d\n",pos);
+	  exit(0);
+	}
       }if(p==pick[2]){
 	//PL tag
 	
