@@ -107,7 +107,8 @@ void abcGL::getOptions(argStruct *arguments){
   doGlf=angsd::getArg("-doGlf",doGlf,arguments);
   errorFname = angsd::getArg("-errors",errorFname,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
-  
+
+  // should parse a list of quals e.g. 0,20,30. Meaning three bins: 0-19; 20-29; 30+
 
   int doCounts=0;
   int doMajorMinor =0;
@@ -129,9 +130,13 @@ void abcGL::getOptions(argStruct *arguments){
   }
   if(GL==0)
     return;
-
-  if(GL<0||GL>6){
-    fprintf(stderr,"\t-> You've choosen a GL model=%d, only 1,2,3,4,5,6 are implemented\n",GL);
+  if(GL==7){
+    fprintf(stderr,"\t-> GL model=%d (outgroup gls) is BETA\n", GL);
+    // return;
+  }
+  
+  if(( GL<0||GL>7 )) {
+    fprintf(stderr,"\t-> You've choosen a GL model=%d, only 1,2,3,4,5,6,7 are implemented\n",GL);
     exit(0);
   }
   if(GL==4&&(doCounts==0)){
@@ -229,9 +234,15 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
       phys_init(arguments->nams);
   }else if(GL==6){
     simple_init();
-  }else if(GL==7)
-    ancestral_init();
-
+  }else if(GL==7){
+    ancestral_lik.init(arguments->nInd, angsd_tmpdir);
+    if(ancestral_lik.doRecal){
+      fprintf(stderr, "\t-> [%s] Will generate the counts file, please do not run other analyses\n", __FILE__);
+    } else {
+      fprintf(stderr, "\t-> [%s] Will use error matrix already estimated with python script on the counts matrix generated in the previous run\n", __FILE__);
+    } // ancestral_init();
+  }
+  
   gzoutfile = gzoutfile2 = NULL;
   bufstr.s=NULL; bufstr.l=bufstr.m=0;// <- used for buffered output 
 
@@ -278,8 +289,7 @@ abcGL::~abcGL(){
     phys_destroy();
   else if(GL==6)
     simple_destroy();
-  else if(GL==7)
-    ancestral_destroy();
+
   if(doGlf)    bgzf_close(gzoutfile);
     
   if(gzoutfile!=NULL)
@@ -321,9 +331,8 @@ void abcGL::run(funkyPars *pars){
     return;
   //assert(pars->chk!=NULL);
   double **likes = NULL;
-  if(soap.doRecal!=1)
+  if(soap.doRecal!=1 || ancestral_lik.doRecal!=1)
     likes = new double*[pars->chk->nSites];
-  
   if(GL==1)
     call_bam(pars->chk,likes,trim);
   else if(GL==2)
@@ -341,7 +350,10 @@ void abcGL::run(funkyPars *pars){
   else if(GL==6){
     call_simple(pars->counts,pars->keepSites,likes,pars->numSites,pars->nInd);
   }else if(GL==7){
-    call_ancestral(pars->chk,likes,trim);
+    ancestral_lik.run(pars->chk, likes, pars->ref, pars->anc, trim);
+    if(ancestral_lik.doRecal==1){
+      return;
+    }
   }
   pars->likes = likes;
   

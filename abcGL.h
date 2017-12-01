@@ -1,9 +1,9 @@
-
 #include "soap_likes.h"
 #include "gatk_likes.h"
 #include "bam_likes.h"
 #include "simple_likes.h"
 #include "ancestral_likes.h"
+
 class abcGL:public abc{
 private:
   const char * postfix;
@@ -17,6 +17,8 @@ private:
   kstring_t bufstr;
   //soap method is implemented as a class
   soap_likes soap;
+  // ancestral method is implemented as a class
+  anc_likes ancestral_lik;
   //a tempdir used by SOAPsnp for the recalibration matrices
   char *angsd_tmpdir;
 
