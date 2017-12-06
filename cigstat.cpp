@@ -42,7 +42,7 @@ memset(cig_counts[i],0,sizeof(size_t)*max_rlen);
   return 0;
 }
 int cigstat_calc(bam1_t *rd){
-    fprintf(stderr,"\t-> %s.%s():%d\n",__FILE__,__FUNCTION__,__LINE__);
+  //    fprintf(stderr,"\t-> %s.%s():%d\n",__FILE__,__FUNCTION__,__LINE__);
  int nCig = rd->core.n_cigar;
 
     uint32_t *cigs = bam_get_cigar(rd);
