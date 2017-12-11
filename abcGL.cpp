@@ -350,7 +350,7 @@ void abcGL::run(funkyPars *pars){
   else if(GL==6){
     call_simple(pars->counts,pars->keepSites,likes,pars->numSites,pars->nInd);
   }else if(GL==7){
-    ancestral_lik.run(pars->chk, likes, pars->ref, pars->anc, trim);
+    ancestral_lik.run(pars->chk, likes, pars->ref, pars->anc, pars->keepSites, trim);
     if(ancestral_lik.doRecal==1){
       return;
     }

@@ -259,13 +259,13 @@ void anc_likes::init(int nInd_a, const char *wdir){
 }
 
 void anc_likes::gen_counts(const chunkyT *chk, count_mat *count_mat_sample,
-                           const int &whichsample, char *refs, char *ancs,
+                           const int &whichsample, char *refs, char *ancs, int *keepSites,
                            const int &trim) {
 
   int qual, strand, readpos, termini, dist_5p, dist_3p;
   for(int s=0;s<chk->nSites;s++) {
-    // fprintf(stderr,"%c\n",refs[s]);
-    if(refs[s]==4 || ancs[s]==4){
+    
+    if(refs[s]==4 || ancs[s]==4 || keepSites[s]==0){
       continue;
     }
     // we only handle one sample at the time.
@@ -310,7 +310,7 @@ void anc_likes::gen_counts(const chunkyT *chk, count_mat *count_mat_sample,
   }
 }
 
-void anc_likes::run(chunkyT *chk, double **lk, char *refs, char *ancs, int trim){
+void anc_likes::run(chunkyT *chk, double **lk, char *refs, char *ancs, int *keepSites, int trim){
   assert(chk!=NULL);
   if(doRecal==1){
     assert(myMuts!=NULL);
@@ -326,7 +326,7 @@ void anc_likes::run(chunkyT *chk, double **lk, char *refs, char *ancs, int trim)
     }
     for(int i=0;i<chk->nSamples;i++){
       pthread_mutex_lock(myMuts+i);//do persample lock maybe not nescearry due to atomic operations
-      gen_counts(chk, &count_mat_samples[i], i, refs, ancs, trim);
+      gen_counts(chk, &count_mat_samples[i], i, refs, ancs, keepSites, trim);
       pthread_mutex_unlock(myMuts+i);
     }
   } else

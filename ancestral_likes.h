@@ -69,7 +69,7 @@ private:
   void checkfilehandle(std::ifstream &fh, const std::string &filename);
   void checkfilehandle(std::ofstream &fh, const std::string &filename);
   void gen_counts(const chunkyT *chk, count_mat *count_mat_sample,
-                  const int &whichsample, char *refs, char *ancs,
+                  const int &whichsample, char *refs, char *ancs, int *keepSites,
                   const int &trim);
   void geno_ancestral(chunkyT *chk,double **lk,int trim);
 public:
@@ -86,7 +86,7 @@ public:
   // find out what analyses to do
   void init(int nInd, const char *wdir);
   // run calls gen_counts if dorecall==1 else calc_gl(already implemented)
-  void run(chunkyT *chk, double **lk, char *refs, char *ancs, int trim);
+  void run(chunkyT *chk, double **lk, char *refs, char *ancs, int *keepSites,int trim);
   // anc_likes print count_mat if dorecall else do noting
   ~anc_likes();
 };

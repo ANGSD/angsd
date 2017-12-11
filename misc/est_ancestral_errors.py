@@ -117,11 +117,22 @@ def worker_helper(args):
 
 def worker(mat_d_t, mat_d_s, my_id):
     par = np.random.uniform(MINVAL, 0.01, size=16).reshape((4, 4))
+    weird_rows = []
+    for idx, val in enumerate(np.diag(mat_d_s)):
+        # if mat_d_s[idx,idx] < (np.sum(mat_d_s[idx,:])-mat_d_s[idx,idx]):
+        if (mat_d_s[idx,idx]) < (2*(np.sum(mat_d_s[idx,:])-mat_d_s[idx,idx])):
+            mat_d_s[idx, :] = MINVAL
+            mat_d_t[idx, :] = MINVAL
+            weird_rows.append(idx)
+        
     conv = optim.minimize(loglik, par, method='L-BFGS-B',
                           bounds=[(MINVAL, 1-MINVAL) for x in range(16)],
                           args=(mat_d_t, mat_d_s))
 
 
+    # print(my_id)
+    # print(mat_d_t)
+    # print(mat_d_s)
     # print np.round(best_conv.x.reshape(4, 4), 5)
     while not conv.success:
         par = np.random.uniform(MINVAL, 0.1, size=16).reshape((4, 4))
@@ -129,7 +140,11 @@ def worker(mat_d_t, mat_d_s, my_id):
                             bounds=[(MINVAL, 1-MINVAL) for x in range(16)],
                               args=(mat_d_t, mat_d_s))
 
-    optim_par = conv.x.reshape(4, 4)
+    optim_par = conv.x.reshape((4, 4))
+
+    for idx in weird_rows:
+        optim_par[idx, : ] = MINVAL
+
     return (my_id, optim_par)
 
 
