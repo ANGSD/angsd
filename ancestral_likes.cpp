@@ -87,6 +87,7 @@ void anc_likes::load_error_mat(const int & nInd, const int & readpos, const int 
       std::istringstream ss (line);
       ss >> sample >> pos >> prime >> strand >>
         qual >> ancbase >> errorbase >> errorrate;
+      
       errorrates[sample][pos][prime]
             [strand][qual]
             [ancbase][errorbase] = errorrate;
@@ -102,12 +103,40 @@ void anc_likes::load_error_mat(const int & nInd, const int & readpos, const int 
             for (int allele1 = 0; allele1 < NUCLEOTIDES; allele1++) {
               for (int allele2 = allele1; allele2 < NUCLEOTIDES; allele2++) {
                 for (int obsallele = 0; obsallele < NUCLEOTIDES; obsallele++) {
-                  error1 = (errorrates[sample][p][pr][strand][qu]
-                                      [allele1][obsallele] * 0.5);
-                  error2 = (errorrates[sample][p][pr][strand][qu]
-                                      [allele2][obsallele] * 0.5);
+                  error1 = errorrates[sample][p][pr][strand][qu]
+                                      [allele1][obsallele];
+                  error2 = errorrates[sample][p][pr][strand][qu]
+                                      [allele2][obsallele];
+
+                  if(error1 > 1 || error1<0){
+                    fprintf(stderr,
+                            "\nERROR: Sample: %d; readposition: %d; prime: %d; strand: "
+                            "%d; qualitybin: %d; allele: %d; obsallele: %d "
+                            "\n\terror2: %f; Values <0 and >1 are not possible. Check the error estimates",
+                            sample, p, pr, strand, qu, allele1,
+                            obsallele, error1);
+                    exit(0);
+                  }
+                  if(error2 > 1 || error2<0){
+                    fprintf(stderr,
+                            "\nERROR: Sample: %d; readposition: %d; prime: %d; strand: "
+                            "%d; qualitybin: %d; allele: %d; obsallele: %d "
+                            "\n\terror2: %f; Values <0 and >1 are not possible. Check the error estimates",
+                            sample, p, pr, strand, qu, allele2,
+                            obsallele, error2);
+                    exit(0);
+                  }
+                  if(error1<1e-9){
+                    // fprintf(stderr, "these are all the double zeros\n");
+                    error1=1e-9;
+                  }
+                  if(error2<1e-9){
+                    // fprintf(stderr, "these are all the double zeros\n");
+                    error2=1e-9;
+                  }
+                  
                   genotyperates[sample][p][pr][strand][qu][allele1]
-                    [allele2][obsallele] = std::log(error1+error2);
+                    [allele2][obsallele] = std::log( (error1 * 0.5) + (error2 * 0.5) );
                 }
               }
             }
