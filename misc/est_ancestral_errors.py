@@ -2,14 +2,13 @@
 import sys
 import numpy as np
 import scipy.optimize as optim
-from collections import namedtuple
+import logging
 from copy import deepcopy
-import multiprocessing as mp
+# from collections import namedtuple
+# from copy import deepcopy
+# import multiprocessing as mp
 
-NAMED_ROW = namedtuple("ROW", "relpos prime strand qual d t s counts")
-MINVAL = 10e-10
-PSEUDOCOUNT = 1
-
+# NAMED_ROW = namedtuple("ROW", "relpos prime strand qual d t s counts")
 """
 input:9 columns:
 bam_idx, relpos, prime, strand, qual, base_out, base_ref, base_sampe, counts
@@ -22,166 +21,158 @@ A=0; C=1; G=2; T=3
 
 output:
 bam_idx, relpos, prime, strand, qual, base_d, base_s, errorrate
+#paste <(sort -g anc_likes.errors.est ) <( sort -g anc_likes.errors.est2) | awk '{print $0, $8-$NF}' |  sort -gk17,17  |less -S
 """
-class GeneralData(object):
-    def __init__(self):
-        self.groups = set()
-        self.all_data = list()
-        self.donkey_perfect = {}
-        self.donkey_sample = {}
-        self.best_params = {}
-        self._mat_cache = {}
-        self.bin_combinations = []
 
-    def _get_bases(self):
-        for outgroup in range(4):
-            for per_or_sample in range(4):
-                yield outgroup, per_or_sample
+logging.basicConfig(filename=sys.argv[1]+'.log', level=logging.INFO)
+sys.stderr.write("please check {} for error matrices "
+                 "replaced by global estimates\n".format(sys.argv[1]+'.log'))
 
-    def update(self, row):
-        self.groups.add((row.relpos, row.prime, row.strand, row.qual))
-        self.all_data.append(row)
-
-    def load_data_to_dic(self):
-        temp_dic = {}
-        for combi in self.groups:
-            temp_dic[combi] = {}
-            for outgroup, per_or_sample in self._get_bases():
-                temp_dic[combi][(outgroup, per_or_sample)] = PSEUDOCOUNT
-
-        self.donkey_perfect = deepcopy(temp_dic)
-        self.donkey_sample = deepcopy(temp_dic)
-
-        for r in self.all_data:
-            self.donkey_perfect[(r.relpos, r.prime, r.strand, r.qual)][(r.d, r.t)] += r.counts
-            self.donkey_sample[(r.relpos, r.prime, r.strand, r.qual)][(r.d, r.s)] += r.counts
-
-    def yield_general(self):
-        for mygroup in self.groups:
-            mat_d_t, mat_d_s = self._get_matrix(mygroup)
-            if mat_d_t is None:
-                continue
-            yield mygroup, mat_d_t, mat_d_s
-
-    def _get_matrix(self, mygroup):
-        if mygroup in self._mat_cache.iterkeys():
-            return self._mat_cache[mygroup]
-
-        perfectmatrix = list()
-        samplematrix = list()
-        for outgroup, per_or_sample in self._get_bases():
-            perfectmatrix.append(
-                self.donkey_perfect[mygroup][(outgroup, per_or_sample)]
-            )
-            samplematrix.append(
-                self.donkey_sample[mygroup][(outgroup, per_or_sample)]
-            )
-
-        assert len(perfectmatrix) == 16, "FUCKED"
-        assert len(samplematrix) == 16, "FUCKED"
-
-        samplematrix = np.asarray(samplematrix).reshape((4, 4))
-        perfectmatrix = np.asarray(perfectmatrix, dtype=np.float).reshape((4, 4))
-        ## this is with pseudocount is included
-        if np.all(perfectmatrix == 1) or np.all(samplematrix == 1):
-            # sys.stderr.write("Excluding: {} {} {}\n".format(relpos, prime, strand, qual))
-            self._mat_cache[mygroup] = (None, None)
-            return None, None
-        if np.all(perfectmatrix == 0) or np.all(samplematrix == 0):
-            # sys.stderr.write("Excluding: {} {} {}\n".format(relpos, prime, strand, qual))
-            self._mat_cache[mygroup] = (None, None)
-            return None, None
-        if np.sum(perfectmatrix) == 16 or np.sum(samplematrix) == 16:
-            # sys.stderr.write("Excluding: {} {} {}\n".format(relpos, prime, strand, qual))
-            self._mat_cache[mygroup] = (None, None)
-            return None, None
-        # https://stackoverflow.com/a/19602209
-        perfectmatrix /= perfectmatrix.sum(axis=1)[:, np.newaxis]  # rowsum
-        self._mat_cache[mygroup] = (perfectmatrix, samplematrix)
-        return perfectmatrix, samplematrix
+# all indecies without diagonal
+INDECES = [i for i in range(16) if i not in (0, 5, 10, 15)]
+MAT_INDECES = ['_'.join([str(row), str(col)]) for row in range(4) for col in range(4)]
+MINVAL = 10e-10
+PSEUDOCOUNT = 0
 
 
-def loglik(par, pm, sm):
-    emat = par.reshape(4, 4)
-    np.fill_diagonal(emat, 0)
+def loglik2(par, pm, sm):
+    emat = np.zeros(16)
+    emat[INDECES] = par
+    emat = emat.reshape((4, 4))
     np.fill_diagonal(emat, 1-emat.sum(axis=1))
     P = np.matmul(emat, pm)
-    if np.any(P < MINVAL):
-        P[P < MINVAL] = MINVAL
+    P[P < MINVAL] = MINVAL
     return -np.sum(np.log(P) * sm)
 
 
-def worker_helper(args):
-    return worker(*args)
+def ll_wrapper(out_per, out_sam):
+    par2 = np.random.uniform(MINVAL, 0.01, size=12)
+    conv = optim.minimize(loglik2, par2, method='L-BFGS-B',
+                          bounds=[(MINVAL, 1-MINVAL) for x in range(12)],
+                          args=(out_per, out_sam))
 
-
-def worker(mat_d_t, mat_d_s, my_id):
-    par = np.random.uniform(MINVAL, 0.01, size=16).reshape((4, 4))
-    weird_rows = []
-    for idx, val in enumerate(np.diag(mat_d_s)):
-        # if mat_d_s[idx,idx] < (np.sum(mat_d_s[idx,:])-mat_d_s[idx,idx]):
-        if (mat_d_s[idx,idx]) < (2*(np.sum(mat_d_s[idx,:])-mat_d_s[idx,idx])):
-            mat_d_s[idx, :] = MINVAL
-            mat_d_t[idx, :] = MINVAL
-            weird_rows.append(idx)
-        
-    conv = optim.minimize(loglik, par, method='L-BFGS-B',
-                          bounds=[(MINVAL, 1-MINVAL) for x in range(16)],
-                          args=(mat_d_t, mat_d_s))
-
-
-    # print(my_id)
-    # print(mat_d_t)
-    # print(mat_d_s)
-    # print np.round(best_conv.x.reshape(4, 4), 5)
     while not conv.success:
-        par = np.random.uniform(MINVAL, 0.1, size=16).reshape((4, 4))
-        conv = optim.minimize(loglik, par, method='L-BFGS-B',
-                            bounds=[(MINVAL, 1-MINVAL) for x in range(16)],
-                              args=(mat_d_t, mat_d_s))
-
-    optim_par = conv.x.reshape((4, 4))
-
-    for idx in weird_rows:
-        optim_par[idx, : ] = MINVAL
-
-    return (my_id, optim_par)
+        par2 = np.random.uniform(MINVAL, 0.01, size=12)
+        conv = optim.minimize(loglik2, par2, method='L-BFGS-B',
+                              bounds=[(MINVAL, 1-MINVAL) for x in range(12)],
+                              args=(out_per, out_sam))
+    results = np.zeros(16)
+    results[INDECES] = conv.x
+    results = results.reshape((4, 4))
+    np.fill_diagonal(results, 1-results.sum(axis=1))
+    return results
 
 
-bams = {}
-if len(sys.argv) == 3:
-    mypool = mp.Pool(processes=int(sys.argv[2]))
-else:
-    mypool = mp.Pool(processes=1)
+def write_mat_to_file(fh, group, mat):
+    for i in range(4):
+        for j in range(4):
+            fh.write("{} {} {} {}\n".format(
+                " ".join(map(str, group)), i, j, mat[i, j])
+            )
 
+
+global_counts_q = {}
+all_data_per_group = {}
+mykeys = set()
+global_estimate_out_per_dic = {}
+global_estimate_out_sam_dic = {}
+global_estimate_out_per = np.zeros((4, 4), dtype=np.float)
+global_estimate_out_sam = np.zeros((4, 4), dtype=np.float)
 with open(sys.argv[1], 'r') as fh:
-    for line in fh.read().split("\n"):
+    data = fh.read()
+    for line in data.split("\n"):
         if not line:
             continue
-        bam_idx, relpos, prime, strand, qual, d, t, s, counts = [int(x) for x in line.split()]
+        bam_idx, relpos, prime, strand, qual, out, per, sam, counts = [int(x) for x in line.split()]
+        group = (bam_idx, relpos, prime, strand, qual)
+        mykeys.add(group)
+        if group not in all_data_per_group.iterkeys():
+            all_data_per_group[group] = []
 
-        if(counts < 0):
-            sys.stderr.write("Counts are negative. Not Good. Exiting\n")
-            exit(1)
+        all_data_per_group[group].append((out, per, sam, counts))
 
-        if bam_idx not in bams.keys():
-            bams[bam_idx] = GeneralData()
-        bams[bam_idx].update(NAMED_ROW(relpos, prime, strand, qual, d, t, s, counts))
+        if bam_idx not in global_counts_q.iterkeys():
+            global_counts_q[bam_idx] = {}
+        if qual not in global_counts_q[bam_idx].iterkeys():
+            global_counts_q[bam_idx][qual] = {}
 
-todos = []
-for bam_idx, my_data in sorted(bams.iteritems()):
-    my_data.load_data_to_dic()
-    for (relpos, prime, strand, qual), mat_d_t, mat_d_s in my_data.yield_general():
-        todos.append((mat_d_t, mat_d_s,
-                      (bam_idx, relpos, prime, strand, qual)))
+        try:
+            global_counts_q[bam_idx][qual][(out, per, sam)] += counts
+        except KeyError:
+            global_counts_q[bam_idx][qual][(out, per, sam)] = counts
 
-for mygroup, optim_par in mypool.imap_unordered(worker_helper, todos, chunksize=100):
-    bams[mygroup[0]].best_params[mygroup] = optim_par
+        if bam_idx not in global_estimate_out_per_dic.iterkeys():
+            global_estimate_out_per_dic[bam_idx] = np.zeros((4, 4), dtype=np.float)
+            global_estimate_out_sam_dic[bam_idx] = np.zeros((4, 4), dtype=np.float)
+        global_estimate_out_per_dic[bam_idx][out, per] += counts
+        global_estimate_out_sam_dic[bam_idx][out, sam] += counts
+sys.stderr.write("Estimate {} 4x4 matrices\n".format(len(mykeys)))
+global_error_rates_perindi = {}
+global_error_rates_perindi_qual = {}
+for bam_idx in global_estimate_out_per_dic.keys():
+    global_estimate_out_per = global_estimate_out_per_dic[bam_idx]
+    global_estimate_out_per /= global_estimate_out_per.sum(axis=1)[:, np.newaxis]  # rowsum
+
+    global_estimate_out_sam = global_estimate_out_sam_dic[bam_idx]
+
+    global_estimate = ll_wrapper(global_estimate_out_per, global_estimate_out_sam)
+    logging.info("Global estimates; Indi: {}; base observations {}".format(bam_idx, int(np.sum(global_estimate_out_sam))))
+    logging.info(" ".join([coord+":"+str(round(x, 5)) for coord, x in zip(MAT_INDECES, global_estimate.flatten())]))
+    global_error_rates_perindi[bam_idx] = deepcopy(global_estimate)
+
+for bam_idx in global_counts_q.keys():
+    for q, global_counts in global_counts_q[bam_idx].iteritems():
+        out_per = np.zeros((4, 4), dtype=np.float) + PSEUDOCOUNT
+        out_sam = np.zeros((4, 4), dtype=np.float) + PSEUDOCOUNT
+
+        for (out, per, sam), counts in global_counts.iteritems():
+            out_per[out, per] += counts
+            out_sam[out, sam] += counts
+        if np.any(np.diag(out_sam) < 5e3) or np.sum(out_sam) < 5e4:
+            logging.warning("Indi: {}; Binqual {} does not contain sufficient"
+                            " data to get proper estimates."
+                            " Using global estimates "
+                            "instead: {}. Insufficient Count mat:".format(bam_idx,q, q))
+            logging.warning(" ".join([coord+":"+str(int(x))
+                                      for coord, x in zip(MAT_INDECES, out_sam.flatten())]))
+            global_error_rates_perindi_qual[(bam_idx, q)] = global_error_rates_perindi[bam_idx]
+        else:
+            out_per /= out_per.sum(axis=1)[:, np.newaxis]  # rowsum
+            results = ll_wrapper(out_per, out_sam)
+            global_error_rates_perindi_qual[(bam_idx, q)] = results
+            logging.info("Indi: {}; Binqual: {}; base observations: {}".format(bam_idx, q, int(np.sum(out_sam))))
+            logging.info(" ".join([coord+":"+str(round(x, 5)) for coord, x in zip(MAT_INDECES, results.flatten())]))
+
+est_done=0
 
 with open(sys.argv[1]+".est", 'w') as fhout:
-    for bam_idx, my_data in sorted(bams.iteritems()):
-        for (relpos, prime, strand, qual), mat_d_t, mat_d_s in my_data.yield_general():
-            optim_par = my_data.best_params[(bam_idx, relpos, prime, strand, qual)]
-            for base_d in range(4):
-                for base_s in range(4):
-                    fhout.write("{} {} {} {} {} {} {} {}\n".format(bam_idx, relpos, prime, strand, qual, base_d, base_s, optim_par[base_d, base_s]))
+    for group_key, group_data in all_data_per_group.iteritems():
+        if est_done % 50 == 0:
+            sys.stderr.write("{} done out of {}\r".format(est_done, len(mykeys)))
+        out_per = np.zeros((4, 4), dtype=np.float) + PSEUDOCOUNT
+        out_sam = np.zeros((4, 4), dtype=np.float) + PSEUDOCOUNT
+
+        for (out, per, sam, counts) in group_data:
+            out_per[out, per] += counts
+            out_sam[out, sam] += counts
+
+        if np.any(np.diag(out_sam) < 5000):
+            logging.warning("{} does not contain sufficient"
+                            " data to get proper estimates."
+                            " Using estimates of quality bin {}"
+                            " instead. Insufficient Count mat:".format(
+                                " ".join(map(str, group_key)), group_key[-1]))
+            logging.warning(" ".join([coord+":"+str(int(x))
+                                      for coord, x in zip(MAT_INDECES, out_sam.flatten())]))
+
+            # k[-1] == qualbin
+            # k[0] == bam_idx
+            write_mat_to_file(fhout, group_key,
+                              global_error_rates_perindi_qual[(group_key[0],
+                                                               group_key[-1])])
+        else:
+            out_per /= out_per.sum(axis=1)[:, np.newaxis]  # rowsum
+            results = ll_wrapper(out_per, out_sam)
+            write_mat_to_file(fhout, group_key, results)
+        est_done += 1
+sys.stderr.write("Estimated {} 4x4 matrices\n".format(est_done))
