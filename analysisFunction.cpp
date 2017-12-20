@@ -763,9 +763,9 @@ int angsd::getIupacCount(suint *counts,int i, int depth){
 
   int whichIUPAC = 0;
   double bIUPACscore = 0;
-  for(int b=1;b<4;b++){
+  for(int b=0;b<4;b++){
     if (counts[b+4*i]>0){
-      bIUPACscore = bIUPACscore + pow(b,2);
+      bIUPACscore = bIUPACscore + pow(b+1,2);
     }
   }
   //N
