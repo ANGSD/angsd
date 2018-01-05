@@ -64,7 +64,7 @@ void abcWriteVcf::print(funkyPars *pars){
     // GP and GL
     kputc('\t',kstr);
     if(doGeno != 0)
-      ksprintf(kstr,"GT");
+      ksprintf(kstr,"GT:");
     if(doCounts != 0)
       ksprintf(kstr, "DP:AD:");
     ksprintf(kstr,"GP:GL");
