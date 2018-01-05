@@ -62,7 +62,13 @@ void abcWriteVcf::print(funkyPars *pars){
     if(doMaf != 0)
       ksprintf(kstr,";AF=%f", freq->freq_EM[s]);
     // GP and GL
-    ksprintf(kstr,"\tGT:%sGP:GL", (doCounts!=0 ?"DP:AD:":""));
+    kputc('\t',kstr);
+    if(doGeno != 0)
+      ksprintf(kstr,"GT");
+    if(doCounts != 0)
+      ksprintf(kstr, "DP:AD:");
+    ksprintf(kstr,"GP:GL");
+    // Per-indiv data
     for(int i=0; i<pars->nInd;i++){
       kputc('\t',kstr);
       if(doGeno != 0){
