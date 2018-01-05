@@ -2,6 +2,14 @@ class abcWriteVcf:public abc{
 private:
   BGZF *fp;
   kstring_t *kstr;
+  char* refName;
+  char* ancName;
+  int doPost;
+  int doMajorMinor;
+  int gl;
+  int doMaf;
+  int doCounts;
+  int doGeno;
 public:
   int doVcf;
   abcWriteVcf(const char *outfiles,argStruct *arguments,int inputtype);
