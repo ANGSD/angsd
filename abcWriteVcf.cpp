@@ -69,20 +69,28 @@ void abcWriteVcf::print(funkyPars *pars){
       ksprintf(kstr, "DP:AD:");
     ksprintf(kstr,"GP:GL");
     // Per-indiv data
-       for(int i=0; i<pars->nInd;i++){
+    for(int i=0; i<pars->nInd;i++){
       kputc('\t',kstr);
       if(doGeno != 0){
-        int g = geno->dat[s][i];
-        int gg[2] = {'0','1'};
-        if(g == 0)
-          gg[0] = gg[1] = '0';
-        else if(g == 1);
-        else if(g == 2)
-          gg[0] = gg[1] = '1';
-        else
-          gg[0] = gg[1] = '.';
-        ksprintf(kstr, "%c/%c:", gg[0], gg[1]);
+	int g = geno->dat[s][i];
+	int gg[2] = {'0','1'};
+	if(g == 0)
+	  gg[0] = gg[1] = '0';
+	else if(g == 1);
+	else if(g == 2)
+	  gg[0] = gg[1] = '1';
+	else
+	  gg[0] = gg[1] = '.';
+	ksprintf(kstr, "%c/%c:", gg[0], gg[1]);
       }
+      if(doCounts != 0)
+        ksprintf(kstr,"%d:%d,%d:", pars->counts[s][i*4+pars->major[s]]+pars->counts[s][i*4+pars->minor[s]], pars->counts[s][i*4+pars->major[s]], pars->counts[s][i*4+pars->minor[s]]);
+      ksprintf(kstr,"%f,%f,%f:",pars->post[s][i*3+0],pars->post[s][i*3+1],pars->post[s][i*3+2]);
+      ksprintf(kstr,"%f,%f,%f",lh3->lh3[s][i*3+0]/M_LN10,lh3->lh3[s][i*3+1]/M_LN10,lh3->lh3[s][i*3+2]/M_LN10);
+    }
+    ksprintf(kstr,"\n");
+  }
+
   aio::bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
