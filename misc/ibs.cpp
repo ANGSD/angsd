@@ -623,12 +623,12 @@ int main(int argc, char **argv){
 
       if(model==0){
 	for(int w=0;w<10;w++){
-	  fprintf(fibs,"\t%f",myPars->pi[w]);
+	  fprintf(fibs,"\t%f",myPars->pi[w]*myPars->nSites);
 	}
       }
       else if(model==1){
-	double HO=myPars->pi[0]+myPars->pi[4]+myPars->pi[7]+myPars->pi[9];
-	fprintf(fibs,"\t%f\t%f",HO,1-HO);
+	double HO=(myPars->pi[0]+myPars->pi[4]+myPars->pi[7]+myPars->pi[9])*myPars->nSites;
+	fprintf(fibs,"\t%f\t%f",HO,myPars->nSites-HO);
       }
       fprintf(fibs,"\n");
     }
