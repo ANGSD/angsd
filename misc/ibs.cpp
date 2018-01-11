@@ -740,7 +740,7 @@ int main(int argc, char **argv){
        if(model==0){
 	 fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
 	 for(int w=0;w<100;w++){
-	   fprintf(fibspair,"\t%f",myPars2D->pi[w]);
+	   fprintf(fibspair,"\t%f",myPars2D->pi[w]*100);
 	 }
 	 fprintf(fibspair,"\n");
        }
