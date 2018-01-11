@@ -590,9 +590,9 @@ int main(int argc, char **argv){
   if(p2==-1 && all!=1){ // single ind
     //header of ibs files
     if(model==0)
-      fprintf(fibs,"ind\tnSites\tLlike\tpAA\tpAC\tpAG\tpAT\tpCC\tpCG\tpCT\tpGG\tpGT\tpTT\n");
+      fprintf(fibs,"ind\tnSites\tLlike\tnAA\tnAC\tnAG\tnAT\tnCC\tnCG\tnCT\tnGG\tnGT\tnTT\n");
     else if(model==1)
-      fprintf(fibs,"ind\tnSites\tLlike\tpHO\tpHE\n");
+      fprintf(fibs,"ind\tnSites\tLlike\tnHO\tnHE\n");
      
     
     for(int theInd=0;theInd<nInd;theInd++){
@@ -640,11 +640,11 @@ int main(int argc, char **argv){
    fprintf(fibspair,"ind1\tind2\tnSites\tLlike\t");
    //paste(paste0("p",paste(rep(GENO,10),rep(GENO,each=10),sep="_")),collapse="\t")
    if(model==0)
-     fprintf(fibspair,"pAA_AA\tpAC_AA\tpAG_AA\tpAT_AA\tpCC_AA\tpCG_AA\tpCT_AA\tpGG_AA\tpGT_AA\tpTT_AA\tpAA_AC\tpAC_AC\tpAG_AC\tpAT_AC\tpCC_AC\tpCG_AC\tpCT_AC\tpGG_AC\tpGT_AC\tpTT_AC\tpAA_AG\tpAC_AG\tpAG_AG\tpAT_AG\tpCC_AG\tpCG_AG\tpCT_AG\tpGG_AG\tpGT_AG\tpTT_AG\tpAA_AT\tpAC_AT\tpAG_AT\tpAT_AT\tpCC_AT\tpCG_AT\tpCT_AT\tpGG_AT\tpGT_AT\tpTT_AT\tpAA_CC\tpAC_CC\tpAG_CC\tpAT_CC\tpCC_CC\tpCG_CC\tpCT_CC\tpGG_CC\tpGT_CC\tpTT_CC\tpAA_CG\tpAC_CG\tpAG_CG\tpAT_CG\tpCC_CG\tpCG_CG\tpCT_CG\tpGG_CG\tpGT_CG\tpTT_CG\tpAA_CT\tpAC_CT\tpAG_CT\tpAT_CT\tpCC_CT\tpCG_CT\tpCT_CT\tpGG_CT\tpGT_CT\tpTT_CT\tpAA_GG\tpAC_GG\tpAG_GG\tpAT_GG\tpCC_GG\tpCG_GG\tpCT_GG\tpGG_GG\tpGT_GG\tpTT_GG\tpAA_GT\tpAC_GT\tpAG_GT\tpAT_GT\tpCC_GT\tpCG_GT\tpCT_GT\tpGG_GT\tpGT_GT\tpTT_GT\tpAA_TT\tpAC_TT\tpAG_TT\tpAT_TT\tpCC_TT\tpCG_TT\tpCT_TT\tpGG_TT\tpGT_TT\tpTT_TT\n");
+     fprintf(fibspair,"nAA_AA\tnAC_AA\tnAG_AA\tnAT_AA\tnCC_AA\tnCG_AA\tnCT_AA\tnGG_AA\tnGT_AA\tnTT_AA\tnAA_AC\tnAC_AC\tnAG_AC\tnAT_AC\tnCC_AC\tnCG_AC\tnCT_AC\tnGG_AC\tnGT_AC\tnTT_AC\tnAA_AG\tnAC_AG\tnAG_AG\tnAT_AG\tnCC_AG\tnCG_AG\tnCT_AG\tnGG_AG\tnGT_AG\tnTT_AG\tnAA_AT\tnAC_AT\tnAG_AT\tnAT_AT\tnCC_AT\tnCG_AT\tnCT_AT\tnGG_AT\tnGT_AT\tnTT_AT\tnAA_CC\tnAC_CC\tnAG_CC\tnAT_CC\tnCC_CC\tnCG_CC\tnCT_CC\tnGG_CC\tnGT_CC\tnTT_CC\tnAA_CG\tnAC_CG\tnAG_CG\tnAT_CG\tnCC_CG\tnCG_CG\tnCT_CG\tnGG_CG\tnGT_CG\tnTT_CG\tnAA_CT\tnAC_CT\tnAG_CT\tnAT_CT\tnCC_CT\tnCG_CT\tnCT_CT\tnGG_CT\tnGT_CT\tnTT_CT\tnAA_GG\tnAC_GG\tnAG_GG\tnAT_GG\tnCC_GG\tnCG_GG\tnCT_GG\tnGG_GG\tnGT_GG\tnTT_GG\tnAA_GT\tnAC_GT\tnAG_GT\tnAT_GT\tnCC_GT\tnCG_GT\tnCT_GT\tnGG_GT\tnGT_GT\tnTT_GT\tnAA_TT\tnAC_TT\tnAG_TT\tnAT_TT\tnCC_TT\tnCG_TT\tnCT_TT\tnGG_TT\tnGT_TT\tnTT_TT\n");
    else if(model==1) //    HOHO=1, HEHO=2, aHOHO=5, HOHE=11, HEHE 12 
-     fprintf(fibspair,"pAA_AA\tpAB_AA\tpAA_BB\tpAA_AB\tpAB_AB\n");
+     fprintf(fibspair,"nAA_AA\tnAB_AA\tnAA_BB\tnAA_AB\tnAB_AB\n");
    else if(model==2) //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51,  =, =, =, =
-     fprintf(fibspair,"pAA_AA\tpAB_AA\tpAA_BB\tpAA_AB\tpAB_AB\tpAB_CC\tpAB_AC\tpAB_CD\tpAA_BC\n");
+     fprintf(fibspair,"nAA_AA\tnAB_AA\tnAA_BB\tnAA_AB\tnAB_AB\tnAB_CC\tnAB_AC\tnAB_CD\tnAA_BC\n");
 
 
    argu2 * myPars2D= new argu2;
@@ -676,7 +676,7 @@ int main(int argc, char **argv){
    if(model==0){
      fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
      for(int w=0;w<100;w++){
-       fprintf(fibspair,"\t%f",myPars2D->pi[w]*100);
+       fprintf(fibspair,"\t%f",myPars2D->pi[w]*myPars2D->nSites);
      }
      fprintf(fibspair,"\n");
    }
@@ -684,13 +684,13 @@ int main(int argc, char **argv){
      
      //   HOHO=1, HEHO=2, aHOHO=5, HOHE=11, HEHE 12 
      fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
-     fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*24,myPars2D->pi[4]*100*12,myPars2D->pi[10]*100*24,myPars2D->pi[11]*100*36);
+     fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*myPars2D->nSites*4,myPars2D->pi[1]*myPars2D->nSites*24,myPars2D->pi[4]*myPars2D->nSites*12,myPars2D->pi[10]*myPars2D->nSites*24,myPars2D->pi[11]*myPars2D->nSites*36);
      
 
    }
    else if(model==2){ //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51, 
      fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
-     fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*12,myPars2D->pi[40]*100*12,myPars2D->pi[10]*100*12,myPars2D->pi[11]*100*6,myPars2D->pi[71]*100*12,myPars2D->pi[21]*100*24,myPars2D->pi[81]*100*6,myPars2D->pi[50]*100*12);
+     fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*myPars2D->nSites*4,myPars2D->pi[1]*myPars2D->nSites*12,myPars2D->pi[40]*myPars2D->nSites*12,myPars2D->pi[10]*myPars2D->nSites*12,myPars2D->pi[11]*myPars2D->nSites*6,myPars2D->pi[71]*myPars2D->nSites*12,myPars2D->pi[21]*myPars2D->nSites*24,myPars2D->pi[81]*myPars2D->nSites*6,myPars2D->pi[50]*myPars2D->nSites*12);
      
 
    }
@@ -746,12 +746,12 @@ int main(int argc, char **argv){
        }
        else if(model==1){
 	 fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
-	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*24,myPars2D->pi[4]*100*12,myPars2D->pi[10]*100*24,myPars2D->pi[11]*100*36);
+	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*myPars2D->nSites*4,myPars2D->pi[1]*myPars2D->nSites*24,myPars2D->pi[4]*myPars2D->nSites*12,myPars2D->pi[10]*myPars2D->nSites*24,myPars2D->pi[11]*myPars2D->nSites*36);
 	 
        }
        else if(model==2){ //    AAAA=1,, ABAA=2, AABB=41 ,AAAB=11, ABAB=12, ABCC=72, ABAC=22, ABCD=82, AABC=51, 
 	 fprintf(fibspair,"%d\t%d\t%lu\t%f",p1,p2,myPars2D->nSites,myPars2D->lres);
-	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*100*4,myPars2D->pi[1]*100*12,myPars2D->pi[40]*100*12,myPars2D->pi[10]*100*12,myPars2D->pi[11]*100*6,myPars2D->pi[71]*100*12,myPars2D->pi[21]*100*24,myPars2D->pi[81]*100*6,myPars2D->pi[50]*100*12);
+	 fprintf(fibspair,"\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",myPars2D->pi[0]*myPars2D->nSites*4,myPars2D->pi[1]*myPars2D->nSites*12,myPars2D->pi[40]*myPars2D->nSites*12,myPars2D->pi[10]*myPars2D->nSites*12,myPars2D->pi[11]*myPars2D->nSites*6,myPars2D->pi[71]*myPars2D->nSites*12,myPars2D->pi[21]*myPars2D->nSites*24,myPars2D->pi[81]*myPars2D->nSites*6,myPars2D->pi[50]*myPars2D->nSites*12);
        }
  
      }
