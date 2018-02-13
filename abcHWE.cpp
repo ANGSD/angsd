@@ -32,6 +32,9 @@ void abcHWE::printArg(FILE *argFile){
 
 void abcHWE::getOptions(argStruct *arguments){
   doHWE = angsd::getArg("-doHWE",doHWE,arguments);
+  if(doHWE==0)
+    return ;
+
   minHWEpval = angsd::getArg("-minHWEpval",minHWEpval,arguments);
   maxHWEpval = angsd::getArg("-maxHWEpval",maxHWEpval,arguments);
    
