@@ -8,6 +8,7 @@ private:
   char *myFasta;//contains the new fastasequence for the currrent chr
   int hasData;
   int rmTrans;
+  double iupacRatio;
   char *ref;
   int seed;
 public:

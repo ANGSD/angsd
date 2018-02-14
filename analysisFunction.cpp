@@ -1,4 +1,4 @@
-//iupack supplied by kristian ullrich
+
 
 
 #include <cmath>
@@ -749,7 +749,6 @@ int angsd::getMaxCount(suint *counts,int i, int depth){
 // combine all bases to get IUPAC code
 // depth is without N
 // i is the individual
-// iupack code supplied by kristian ullrich
 int angsd::getIupacCount(suint *counts,int i, int depth){
 
   if(depth==-1){
@@ -763,9 +762,9 @@ int angsd::getIupacCount(suint *counts,int i, int depth){
 
   int whichIUPAC = 0;
   double bIUPACscore = 0;
-  for(int b=0;b<4;b++){
+  for(int b=1;b<4;b++){
     if (counts[b+4*i]>0){
-      bIUPACscore = bIUPACscore + pow(b+1,2);
+      bIUPACscore = bIUPACscore + pow(b,2);
     }
   }
   //N
@@ -836,7 +835,6 @@ int angsd::getIupacCount(suint *counts,int i, int depth){
 }
 
 //count is 4 long, A C G T
-//iupack supplied by kristian ullrich
 int angsd::getRandomCountTotal(suint *counts, int nInd){
 
   size_t totalCounts[4]={0,0,0,0};

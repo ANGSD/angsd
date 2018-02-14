@@ -1,8 +1,3 @@
-/*
-  iupac code Kristian Ullrich
- */
-
-
 #include <cmath>
 #include <cstdlib>
 #include <htslib/bgzf.h>
@@ -228,11 +223,11 @@ void abcWriteFasta::run(funkyPars *pars){
     //supplied by kristian ullrich
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
       if(pars->keepSites[s]==0)
-	continue;
+  continue;
       if(pars->nInd==1)
-	myFasta[pars->posi[s]] = intToIupac[ angsd::getIupacCount(pars->counts[s],0) ];
+  myFasta[pars->posi[s]] = intToIupac[ angsd::getIupacCount(pars->counts[s],0) ];
       else
-	myFasta[pars->posi[s]] = intToIupac[ angsd::getIupacCountTotal(pars->counts[s],pars->nInd) ];
+  myFasta[pars->posi[s]] = intToIupac[ angsd::getIupacCountTotal(pars->counts[s],pars->nInd) ];
     }
   }
   //Do transitions removal
