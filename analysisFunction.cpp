@@ -749,7 +749,7 @@ int angsd::getMaxCount(suint *counts,int i, int depth){
 // combine all bases to get IUPAC code
 // depth is without N
 // i is the individual
-int angsd::getIupacCount(suint *counts,int i, int depth){
+int angsd::getIupacCount(suint *counts,int i, double iRatio, int depth){
 
   if(depth==-1){
     depth=0;
@@ -762,9 +762,9 @@ int angsd::getIupacCount(suint *counts,int i, int depth){
 
   int whichIUPAC = 0;
   double bIUPACscore = 0;
-  for(int b=1;b<4;b++){
-    if (counts[b+4*i]>0){
-      bIUPACscore = bIUPACscore + pow(b,2);
+  for(int b=0;b<4;b++){
+    if (double(counts[b+4*i])/double(depth)>iRatio){
+      bIUPACscore = bIUPACscore + pow(b+1,2);
     }
   }
   //N
@@ -917,7 +917,7 @@ int angsd::getMaxCountTotal(suint *counts,int nInd){
 // combine all bases to get IUPAC code
 // depth is without N
 // i is the individual
-int angsd::getIupacCountTotal(suint *counts,int nInd){
+int angsd::getIupacCountTotal(suint *counts,int nInd, double iRatio){
 
   size_t totalCounts[4]={0,0,0,0};
   for(int i=0;i<4*nInd;i++)
@@ -934,9 +934,9 @@ int angsd::getIupacCountTotal(suint *counts,int nInd){
 
   int whichIUPAC = 0;
   double bIUPACscore = 0;
-  for(int b=1;b<4;b++){
-    if (totalCounts[b]>0){
-      bIUPACscore = bIUPACscore + pow(b,2);
+  for(int b=0;b<4;b++){
+    if (double(totalCounts[b])/double(depth)>iRatio){
+      bIUPACscore = bIUPACscore + pow(b+1,2);
     }
   }
   //N
