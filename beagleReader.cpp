@@ -82,11 +82,12 @@ funkyPars *beagle_reader::fetch(int chunksize){
   static int positions =0;//every site is a new position across different chunks
   static int lastRefId =-1;
   static int changed =0;
-  
+ READAGAIN:
   if(changed){
     //parse an entire site:
-
+    //fprintf(stdout,"nSites %d\n",nSites);
     myfunky->refId = lastRefId;
+    //  fprintf(stdout,"BUF= %s\n",buffer);
     myfunky->posi[nSites] = atoi(strtok_r(NULL,delims2,&buffer))-1;
 
     myfunky->major[nSites] = refToChar[strtok_r(NULL,delims,&buffer)[0]];
@@ -114,6 +115,8 @@ funkyPars *beagle_reader::fetch(int chunksize){
       if(lastRefId!=it->second){
 	changed =1;
 	lastRefId = it->second;
+	if(nSites==0) // if chromosome if finish then read next one
+	  goto READAGAIN; 
 	break;
       }
       lastRefId = it->second;
@@ -145,7 +148,8 @@ funkyPars *beagle_reader::fetch(int chunksize){
   myfunky->post=post;
   myfunky->numSites = nSites;
   
-  if(nSites==0){
+  if(nSites==0 & changed==0){
+    fprintf(stdout,"Done reading beagle\n");
     deallocFunkyPars(myfunky);
     return(NULL);
 
