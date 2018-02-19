@@ -21,6 +21,7 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t-explode\t%d\t print chromosome where we have no data (0:no,1:yes)\n",explode);
   fprintf(argFile,"\t-rmTrans\t%d\t remove transitions as different from -ref bases (0:no,1:yes)\n",rmTrans);
   fprintf(argFile,"\t-ref\t%s\t reference fasta, only used with -rmTrans 1\n",ref);
+  fprintf(argFile,"\t-iupacRatio\t%.3f\t (Remove nucleotide below total depth ratio for IUPAC assignment)\n",iupacRatio);
   fprintf(argFile,"\t-seed\t%d\t use non random seed of value 1\n",seed);
   fprintf(argFile,"\n");
 }
@@ -36,6 +37,7 @@ void abcWriteFasta::getOptions(argStruct *arguments){
   NbasesPerLine = angsd::getArg("-basesPerLine",NbasesPerLine,arguments);
   rmTrans=angsd::getArg("-rmTrans",rmTrans,arguments);
   ref=angsd::getArg("-ref",ref,arguments);
+  iupacRatio=angsd::getArg("-iupacRatio",iupacRatio,arguments);
   seed=angsd::getArg("-seed",seed,arguments);
 
 
@@ -81,6 +83,7 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   NbasesPerLine=50;
   hasData =0;
   ref = NULL;
+  iupacRatio = 0.0;
   rmTrans = 0;
   seed=0;
   if(arguments->argc==2){
@@ -225,9 +228,9 @@ void abcWriteFasta::run(funkyPars *pars){
       if(pars->keepSites[s]==0)
   continue;
       if(pars->nInd==1)
-  myFasta[pars->posi[s]] = intToIupac[ angsd::getIupacCount(pars->counts[s],0) ];
+        myFasta[pars->posi[s]] = intToIupac[ angsd::getIupacCount(pars->counts[s],0,iupacRatio) ];
       else
-  myFasta[pars->posi[s]] = intToIupac[ angsd::getIupacCountTotal(pars->counts[s],pars->nInd) ];
+        myFasta[pars->posi[s]] = intToIupac[ angsd::getIupacCountTotal(pars->counts[s],pars->nInd,iupacRatio) ];
     }
   }
   //Do transitions removal
