@@ -465,6 +465,8 @@ void printChunkyT(chunkyT *chk,double **liks,char *refs,FILE *fp){
 }
 
 //only one instance at a time is running this function
+size_t total_number_of_sites_unfiltred =0;
+size_t total_number_of_sites_filtered =0;
 void printFunky(funkyPars *p){
   //  fprintf(stderr,"printFunky killsig=%d nsites=%d refid:%d\n",p->killSig,p->numSites,p->refId);
   if(p->killSig==0) {//don't print the empty killSig chunk
@@ -474,6 +476,10 @@ void printFunky(funkyPars *p){
       else
 	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
     }if(p->numSites!=0){
+      total_number_of_sites_unfiltred += p->numSites;
+      for(int i=0;i<p->numSites;i++)
+	if(p->keepSites[i])
+	  total_number_of_sites_filtered++;
       for(int i=0;i<andersSux;i++)
 	if(shouldRun[i])
 	  allMethods[i]->print(p);
