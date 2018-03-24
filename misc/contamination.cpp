@@ -793,7 +793,8 @@ int main(int argc,char**argv){
   long int seed = 0;
   int n;
   int skipML = 0;
-  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:p:s:j:l:")) >= 0) {
+  int printcounts =0;
+  while ((n = getopt(argc, argv, "h:a:m:b:c:d:e:f:p:s:j:l:k:")) >= 0) {
     switch (n) {
     case 'h': hapfile = strdup(optarg); break;
     case 'a': icounts = strdup(optarg); break;
@@ -804,6 +805,7 @@ int main(int argc,char**argv){
     case 'e': maxDepth = atoi(optarg); break;
     case 'f': skipTrans = atoi(optarg); break;
     case 'j': nJack = atoi(optarg); break;
+    case 'k': printcounts = atoi(optarg); break;
     case 'p': nThreads = atoi(optarg); break;
     case 's': seed = atol(optarg); break;
     case 'l': skipML = atoi(optarg); break;
@@ -812,7 +814,7 @@ int main(int argc,char**argv){
   }
   if(!hapfile||!icounts){
     fprintf(stderr,"\t-> Must supply -h hapmapfile -a angsd.icnts.gz file\n");
-    fprintf(stderr,"\t-> Other options: -m minaf -b startpos -c stoppos -d mindepth -e maxdepth -f skiptrans -p nthreads -s seed -j maxjackknife\n");
+    fprintf(stderr,"\t-> Other options: -m minaf -b startpos -c stoppos -d mindepth -e maxdepth -f skiptrans -p nthreads -s seed -j maxjackknife -k printcounts\n");
     return 0;
   }
   
@@ -830,6 +832,14 @@ int main(int argc,char**argv){
   std::vector<int*> cnt;
   readicnts(icounts,ipos,cnt,minDepth,maxDepth);
   dat d=count(myMap,ipos,cnt);
+  if(printcounts){
+    aMap dm=d.myMap;
+    for(aMap::iterator it=dm.begin();it!=dm.end();it++)
+      fprintf(stdout,"hapmap\t%d\t%d\t%d\t%f\n",it->first,it->second.allele1,it->second.allele2,it->second.freq);
+    for(int i=0;i<d.pos.size();i++)
+      fprintf(stdout,"counts\t%d\t%d\t%d\t%d\t%d\t%d\n",d.pos[i],d.dist[i],d.cn[i][0],d.cn[i][0],d.cn[i][2],d.cn[i][3]);
+    return 0;
+  }
   analysis(d,nThreads,nJack,skipML);
 
   //cleanup
