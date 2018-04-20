@@ -837,7 +837,7 @@ int main(int argc,char**argv){
     for(aMap::iterator it=dm.begin();it!=dm.end();it++)
       fprintf(stdout,"hapmap\t%d\t%d\t%d\t%f\n",it->first,it->second.allele1,it->second.allele2,it->second.freq);
     for(int i=0;i<d.pos.size();i++)
-      fprintf(stdout,"counts\t%d\t%d\t%d\t%d\t%d\t%d\n",d.pos[i],d.dist[i],d.cn[i][0],d.cn[i][0],d.cn[i][2],d.cn[i][3]);
+      fprintf(stdout,"counts\t%d\t%d\t%d\t%d\t%d\t%d\n",d.pos[i],d.dist[i],d.cn[i][0],d.cn[i][1],d.cn[i][2],d.cn[i][3]);
     return 0;
   }
   analysis(d,nThreads,nJack,skipML);
