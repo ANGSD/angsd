@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 
-FLAGS=-O3 ${LDFLAGS}
+FLAGS=-O3
 
 ifdef HTSSRC
 $(info HTSSRC defined)
@@ -73,7 +73,7 @@ realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o prep_sites
 	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTS_INCDIR)
 
 msHOT2glf: msHOT2glf.c
-	$(CC) $(FLAGS) msHOT2glf.c  -I$(HTS_INCDIR) -O3 -o msHOT2glf -std=gnu99 $(HTS_LIBDIR)  -lz -lm -lbz2 -llzma -lpthread -lcurl
+	$(CC) $(FLAGS) msHOT2glf.c  -I$(HTS_INCDIR) -O3 -o msHOT2glf -std=gnu99 $(HTS_LIBDIR)  -lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto
 
 safcat.o: safcat.cpp safcat.h
 	$(CXX) $(FLAGS) -c safcat.cpp -I $(HTS_INCDIR)
@@ -82,13 +82,13 @@ header.o: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp -I $(HTS_INCDIR)
 
 smartCount:	smartCount.c  
-	$(CC) $(FLAGS) smartCount.c -I$(HTS_INCDIR)/htslib -o smartCount -std=gnu99 $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
+	$(CC) $(FLAGS) smartCount.c -I$(HTS_INCDIR)/htslib -o smartCount -std=gnu99 $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
+	$(CXX) $(FLAGS) thetaStat.cpp  -I$(HTS_INCDIR)  -o thetaStat -lpthread $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto
 
 msToGlf: msToGlf.c
-	$(CC) $(FLAGS) msToGlf.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 $(HTS_LIBDIR)  -lz -lm -lbz2 -llzma -lpthread -lcurl
+	$(CC) $(FLAGS) msToGlf.c  -I$(HTS_INCDIR) -O3 -o msToGlf -std=gnu99 $(HTS_LIBDIR)  -lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto
 
 fpsmc.o: fpsmc.cpp fpsmc.h psmcreader.h main_psmc.h
 	$(CXX) $(FLAGS) -c fpsmc.cpp -I $(HTS_INCDIR)
@@ -101,7 +101,7 @@ main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h hmm_psmc.o
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
 ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o hmm_psmc.o bfgs
-	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o hmm_psmc.o fpsmc.o ../bfgs.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
+	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o hmm_psmc.o fpsmc.o ../bfgs.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto
 
 prep_sites: 
 	make -C ../ prep_sites.o HTSSRC=$(realpath $(HTSSRC))
@@ -113,7 +113,7 @@ analysisFunction:
 	make -C ../ analysisFunction.o HTSSRC=$(realpath $(HTSSRC))
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp prep_sites analysisFunction realSFS_optim.o realSFS_shared.o realSFS_dadi.o
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_dadi.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_dadi.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcrypto -lcurl
 else
 safreader.o: safreader.cpp safreader.h header.h
 	$(CXX) $(FLAGS) -c safreader.cpp 
