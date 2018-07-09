@@ -21,8 +21,10 @@ extern int SIG_COND;
 
 
 htsFile *openBAM(const char *fname,int doCheck){
+
   htsFile *fp =NULL;
-  if((fp=sam_open(fname,"r"))==NULL ){
+  extern htsFormat *dingding2;//<-externed from abcGetFasta. This is very bad style. Should Fix, dragon
+  if((fp=sam_open_format(fname,"r",dingding2))==NULL ){
     fprintf(stderr,"[%s] nonexistant file: %s\n",__FUNCTION__,fname);
     exit(0);
   }

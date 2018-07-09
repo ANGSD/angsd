@@ -85,7 +85,7 @@ abcGetFasta::~abcGetFasta(){
   free(ancName);
 }
 
-
+htsFormat *dingding2 =(htsFormat*) calloc(1,sizeof(htsFormat));//<-superstupid hack to be able to parse crams. This should be fixed
 void abcGetFasta::getOptions(argStruct *arguments){
 
   refName = NULL;
@@ -93,6 +93,8 @@ void abcGetFasta::getOptions(argStruct *arguments){
   //from command line
   ancName = angsd::getArg("-anc",ancName,arguments);
   refName = angsd::getArg("-ref",refName,arguments);
+  if(refName==NULL)
+    refName = angsd::getArg("-T",refName,arguments);
   //  fprintf(stderr,"refName=%s\tancName=%s\n",refName,ancName);
 
   if(arguments->argc==2){
@@ -102,7 +104,12 @@ void abcGetFasta::getOptions(argStruct *arguments){
     }else
       return;
   }
-  
+  if(refName){
+    char *ref =(char*) malloc(10 + strlen(refName) + 1);
+    sprintf(ref, "reference=%s", refName);
+    hts_opt_add((hts_opt **)&dingding2->specific,ref);
+    free(ref);
+  }
 }
 
 char *abcGetFasta::loadChr(perFasta *f, char*chrName,int chrId){

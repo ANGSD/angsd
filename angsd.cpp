@@ -282,6 +282,8 @@ int main(int argc, char** argv){
   delete [] bamSortedIds;
   
   delete mr;
-
+  //chack
+  extern htsFormat *dingding2;
+  free(dingding2);
   return 0;
 }
