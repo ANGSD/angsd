@@ -1,5 +1,5 @@
-CC=gcc
-CXX=g++
+CC  ?= gcc
+CXX ?= g++
 
 FLAGS=-O3 ${LDFLAGS}
 

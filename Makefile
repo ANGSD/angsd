@@ -1,3 +1,6 @@
+CC  ?= gcc
+CXX ?= g++
+
 #modied from htslib makefile
 FLAGS=-O3 -D__WITH_POOL__ ${LDFLAGS}
 
