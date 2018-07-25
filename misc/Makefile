@@ -12,6 +12,7 @@ else
 $(info HTSSRC not defined, assuming systemwide installation -lhts)
 endif
 
+.PHONY: all clean
 
 all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink ngsPSMC ibs scounts msHOT2glf
 
@@ -69,7 +70,7 @@ realSFS_dadi.o: realSFS_dadi.cpp realSFS_dadi.h  multisafreader.hpp Matrix.hpp
 realSFS_shared.o: realSFS_shared.cpp realSFS_shared.h 
 	$(CXX) $(FLAGS) -c realSFS_shared.cpp -I $(HTS_INCDIR)
 
-realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o prep_sites
+realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o
 	$(CXX) $(FLAGS) -c realSFS_args.cpp -I $(HTS_INCDIR)
 
 msHOT2glf: msHOT2glf.c
@@ -100,19 +101,10 @@ hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
 main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h hmm_psmc.o
 	$(CXX) $(FLAGS) -c main_psmc.cpp -I$(HTS_INCDIR)
 
-ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o hmm_psmc.o bfgs
+ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o hmm_psmc.o
 	$(CXX) $(FLAGS) ngsPSMC.cpp  -O3 -o ngsPSMC psmcreader.o header.o main_psmc.o hmm_psmc.o fpsmc.o ../bfgs.o  -I$(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
 
-prep_sites: 
-	make -C ../ prep_sites.o HTSSRC=$(realpath $(HTSSRC))
-
-bfgs:
-	make -C ../ bfgs.o HTSSRC=$(realpath $(HTSSRC))
-
-analysisFunction: 
-	make -C ../ analysisFunction.o HTSSRC=$(realpath $(HTSSRC))
-
-realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp prep_sites analysisFunction realSFS_optim.o realSFS_shared.o realSFS_dadi.o
+realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp realSFS_optim.o realSFS_shared.o realSFS_dadi.o
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_dadi.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o -I $(HTS_INCDIR) $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
 else
 safreader.o: safreader.cpp safreader.h header.h
@@ -127,7 +119,7 @@ safstat.o: safstat.cpp safstat.h
 psmcreader.o: psmcreader.cpp psmcreader.h header.h
 	$(CXX) $(FLAGS) -c psmcreader.cpp 
 
-realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o prep_sites
+realSFS_args.o: realSFS_args.cpp realSFS_args.h safreader.o
 	$(CXX) $(FLAGS) -c realSFS_args.cpp 
 safcat.o: safcat.cpp safcat.h
 	$(CXX) $(FLAGS) -c safcat.cpp
@@ -156,19 +148,10 @@ msToGlf: msToGlf.c
 msHOT2glf: msHOT2glf.c
 	$(CC) $(FLAGS) msHOT2glf.c -O3 -o msHOT2glf -std=gnu99 -lhts  -lz -lm -lbz2 -llzma -lpthread    
 
-prep_sites: 
-	make -C ../ prep_sites.o
-
-bfgs:
-	make -C ../ bfgs.o
-
-analysisFunction: 
-	make -C ../ analysisFunction.o 
-
 multisafreader.hpp: Matrix.hpp realSFS_shared.o 
 
 
-realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp prep_sites analysisFunction realSFS_optim.o realSFS_shared.o realSFS_dadi.o
+realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp realSFS_optim.o realSFS_shared.o realSFS_dadi.o
 	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o realSFS_dadi.o -lhts -lz -lpthread
 
 hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
@@ -180,7 +163,7 @@ fpsmc.o: fpsmc.cpp fpsmc.h psmcreader.h main_psmc.h
 main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h fpsmc.o
 	$(CXX) $(FLAGS) -c main_psmc.cpp
 
-ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o bfgs
+ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o
 	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o fpsmc.o main_psmc.o hmm_psmc.o ../bfgs.o -lhts -lz
 
 endif

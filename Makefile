@@ -49,8 +49,8 @@ version.h:
 
 .PHONY: misc clean test
 
-misc:
-	make -C misc/ HTSSRC=$(realpath $(HTSSRC))
+misc: analysisFunction.o bfgs.o prep_sites.o
+	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC))
 
 -include $(OBJ:.o=.d)
 
@@ -81,9 +81,9 @@ endif
 testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
 
-clean:	testclean
+clean: testclean
 	rm  -f *.o *.d angsd version.h *~
-	make -C misc/ clean
+	$(MAKE) -C misc clean
 
 test:
 	echo "Only subset of analyses is being tested"
