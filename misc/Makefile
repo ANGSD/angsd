@@ -1,7 +1,7 @@
 CC  ?= gcc
 CXX ?= g++
 
-FLAGS=-O3 ${LDFLAGS}
+FLAGS = $(CPPFLAGS) -O3 ${LDFLAGS}
 
 ifdef HTSSRC
 $(info HTSSRC defined)
