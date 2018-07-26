@@ -1,9 +1,17 @@
-# Control file for continuous integration testing at http://travis-ci.org/
-# taken from samtools
+sudo: false
+
+os: linux
+dist: trusty
+
 language: c
+
 compiler:
   - clang
   - gcc
+
+env:
+  global:
+    - MAKEFLAGS="-j2"
 
 matrix:
   include:
@@ -16,8 +24,8 @@ matrix:
 addons:
   apt:
     packages:
-    - liblzma-dev
-    - libbz2-dev
+      - liblzma-dev
+      - libbz2-dev
 
 before_script:
   - git clone --depth=5 --branch=develop git://github.com/samtools/samtools.git
