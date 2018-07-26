@@ -14,11 +14,21 @@ endif
 
 FLAGS = $(CPPFLAGS) -O3 $(LDFLAGS)
 
-.PHONY: all clean
+.PHONY: all clean install
 
-PROGRAMS = supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink ngsPSMC ibs scounts msHOT2glf
+prefix      = /usr/local
+exec_prefix = $(prefix)
+bindir      = $(exec_prefix)/bin
 
-all: $(PROGRAMS)
+INSTALL = install
+INSTALL_DIR = $(INSTALL) -dm0755
+INSTALL_PROGRAM = $(INSTALL) -Dm0755
+
+PROGRAMS = thetaStat realSFS
+
+PROGRAMS_MISC = supersim msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink ngsPSMC ibs scounts msHOT2glf
+
+all: $(PROGRAMS) $(PROGRAMS_MISC)
 
 kmath.o: kmath.c kmath.h
 	$(CC) $(FLAGS) -c kmath.c 
@@ -111,3 +121,11 @@ ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o
 
 clean:
 	rm -f *.o $(PROGRAMS) *~
+
+install: $(PROGRAMS)
+	$(INSTALL_DIR) $(DESTDIR)$(bindir)
+	$(INSTALL_PROGRAM) $(PROGRAMS) $(DESTDIR)$(bindir)
+
+install-misc: $(PROGRAMS_MISC)
+	$(INSTALL_DIR) $(DESTDIR)$(bindir)
+	$(INSTALL_PROGRAM) $(PROGRAMS_MISC) $(DESTDIR)$(bindir)

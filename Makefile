@@ -27,10 +27,9 @@ prefix      = /usr/local
 exec_prefix = $(prefix)
 bindir      = $(exec_prefix)/bin
 
-MKDIR_P = mkdir -p
-INSTALL = install -p
-INSTALL_DIR     = $(MKDIR_P) -m 755
-INSTALL_PROGRAM = $(INSTALL)
+INSTALL = install
+INSTALL_DIR = $(INSTALL) -dm0755
+INSTALL_PROGRAM = $(INSTALL) -Dm0755
 
 
 PROGRAMS = angsd
@@ -51,7 +50,7 @@ endif
 version.h:
 	echo '#define ANGSD_VERSION "$(PACKAGE_VERSION)"' > $@
 
-.PHONY: misc clean test
+.PHONY: all clean install install-all install-misc misc test
 
 misc: analysisFunction.o bfgs.o prep_sites.o
 	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC))
@@ -82,5 +81,11 @@ test:
 force:
 
 install: all
-	$(INSTALL_DIR) $(DESTDIR)$(bindir) $(DESTDIR)$(misc_bindir)
+	$(INSTALL_DIR) $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) $(PROGRAMS) $(DESTDIR)$(bindir)
+	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC)) install
+
+install-misc: misc
+	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC)) install-misc
+
+install-all: install install-misc
