@@ -16,8 +16,8 @@ endif
 #modied from htslib makefile
 FLAGS = $(CPPFLAGS) -O3 -D__WITH_POOL__ $(LDFLAGS)
 
-CFLAGS += $(FLAGS)
-CXXFLAGS += $(FLAGS)
+CFLAGS := $(FLAGS) $(CFLAGS)
+CXXFLAGS := $(FLAGS) $(CXXFLAGS)
 
 CSRC = $(wildcard *.c) 
 CXXSRC = $(wildcard *.cpp)

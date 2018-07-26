@@ -9,7 +9,10 @@ matrix:
   include:
     # An unoptimised C99 build, for detecting non-static inline functions
     - compiler: gcc
-      env: CFLAGS="-std=gnu99 -O0"
+      env:
+        - CFLAGS="-std=gnu99 -O0"
+        - CXXFLAGS="-O0"
+
 addons:
   apt:
     packages:
@@ -24,4 +27,7 @@ before_script:
   - git clone --depth=5 git://github.com/ANGSD/smallBam.git
   - export HTSSRC=`pwd`/htslib
   - export BAMDIR=`pwd`/smallBam/
-script: make -e && make -e test
+
+script:
+  - make
+  - make test
