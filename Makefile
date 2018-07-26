@@ -2,7 +2,7 @@ CC  ?= gcc
 CXX ?= g++
 
 #modied from htslib makefile
-FLAGS = $(CPPFLAGS) -O3 -D__WITH_POOL__ ${LDFLAGS}
+FLAGS = $(CPPFLAGS) -O3 -D__WITH_POOL__ $(LDFLAGS)
 
 CFLAGS += $(FLAGS)
 CXXFLAGS += $(FLAGS)
