@@ -14,7 +14,9 @@ endif
 
 .PHONY: all clean
 
-all: supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink ngsPSMC ibs scounts msHOT2glf
+PROGRAMS = supersim thetaStat realSFS msToGlf smartCount printIcounts contamination splitgl NGSadmix contamination2 haploToPlink ngsPSMC ibs scounts msHOT2glf
+
+all: $(PROGRAMS)
 
 kmath.o: kmath.c kmath.h
 	$(CC) $(FLAGS) -c kmath.c 
@@ -169,4 +171,4 @@ ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o
 endif
 
 clean:
-	rm  -f *.o supersim emOptim emOptim2 msToGlf thetaStat smartCount realSFS printIcounts contamination spitgl NGSadmix splitgl scounts *~
+	rm -f *.o $(PROGRAMS) *~
