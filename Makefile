@@ -24,7 +24,7 @@ INSTALL_PROGRAM = $(INSTALL)
 PROGRAMS = angsd
 
 
-all: angsd misc
+all: $(PROGRAMS) misc
 
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
@@ -82,7 +82,7 @@ testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
 
 clean: testclean
-	rm  -f *.o *.d angsd version.h *~
+	rm  -f *.o *.d $(PROGRAMS) version.h *~
 	$(MAKE) -C misc clean
 
 test:
