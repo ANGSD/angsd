@@ -1,6 +1,18 @@
 CC  ?= gcc
 CXX ?= g++
 
+LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
+
+# Adjust $(HTSSRC) to point to your top-level htslib directory
+ifdef HTSSRC
+$(info HTSSRC defined)
+CPPFLAGS += -I$(realpath $(HTSSRC))
+LIBS := $(realpath $(HTSSRC))/libhts.a $(LIBS)
+else
+$(info HTSSRC not defined, assuming systemwide installation)
+LIBS += -lhts
+endif
+
 #modied from htslib makefile
 FLAGS = $(CPPFLAGS) -O3 -D__WITH_POOL__ $(LDFLAGS)
 
@@ -28,14 +40,6 @@ all: $(PROGRAMS) misc
 
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
-# Adjust $(HTSSRC) to point to your top-level htslib directory
-ifdef HTSSRC
-$(info HTSSRC defined)
-HTS_INCDIR=$(realpath $(HTSSRC))
-HTS_LIBDIR=$(realpath $(HTSSRC))/libhts.a
-else
-$(info HTSSRC not defined, assuming systemwide installation -lhts)
-endif
 
 PACKAGE_VERSION  = 0.921
 
@@ -54,29 +58,16 @@ misc: analysisFunction.o bfgs.o prep_sites.o
 
 -include $(OBJ:.o=.d)
 
-ifdef HTSSRC
 %.o: %.c
-	$(CC) -c  $(CFLAGS)  $*.c -I$(HTS_INCDIR)
-	$(CC) -MM $(CFLAGS)  $*.c -I$(HTS_INCDIR)  >$*.d
+	$(CC) -c  $(CFLAGS) $*.c
+	$(CC) -MM $(CFLAGS) $*.c >$*.d
 
 %.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS) $*.cpp -I$(HTS_INCDIR) 
-	$(CXX) -MM $(CXXFLAGS) $*.cpp -I$(HTS_INCDIR)  >$*.d
+	$(CXX) -c  $(CXXFLAGS) $*.cpp
+	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
 angsd: version.h $(OBJ)
-	$(CXX) $(FLAGS)  -o angsd *.o $(HTS_LIBDIR) -lz -lm -lbz2 -llzma -lpthread -lcurl
-else
-%.o: %.c
-	$(CC) -c  $(CFLAGS)  $*.c
-	$(CC) -MM $(CFLAGS)  $*.c >$*.d
-
-%.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS)  $*.cpp
-	$(CXX) -MM $(CXXFLAGS)  $*.cpp >$*.d
-
-angsd: version.h $(OBJ)
-	$(CXX) $(FLAGS)  -o angsd *.o -lz -lpthread -lhts  -lbz2 -llzma
-endif
+	$(CXX) $(FLAGS) -o angsd *.o $(LIBS)
 
 testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
