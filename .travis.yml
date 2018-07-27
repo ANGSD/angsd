@@ -1,20 +1,31 @@
-# Control file for continuous integration testing at http://travis-ci.org/
-# taken from samtools
+sudo: false
+
+os: linux
+dist: trusty
+
 language: c
+
 compiler:
   - clang
   - gcc
+
+env:
+  global:
+    - MAKEFLAGS="-j2"
 
 matrix:
   include:
     # An unoptimised C99 build, for detecting non-static inline functions
     - compiler: gcc
-      env: CFLAGS="-std=gnu99 -O0"
+      env:
+        - CFLAGS="-std=gnu99 -O0"
+        - CXXFLAGS="-O0"
+
 addons:
   apt:
     packages:
-    - liblzma-dev
-    - libbz2-dev
+      - liblzma-dev
+      - libbz2-dev
 
 before_script:
   - git clone --depth=5 --branch=develop git://github.com/samtools/samtools.git
@@ -24,4 +35,7 @@ before_script:
   - git clone --depth=5 git://github.com/ANGSD/smallBam.git
   - export HTSSRC=`pwd`/htslib
   - export BAMDIR=`pwd`/smallBam/
-script: make -e && make -e test
+
+script:
+  - make
+  - make test
