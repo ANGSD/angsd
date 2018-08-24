@@ -683,13 +683,13 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
       continue;
 
     if(skiptrans){
-      if(hs.allele1 == 0 && hs.allele1 == 2)
+      if(hs.allele1 == 0 && hs.allele2 == 2)
 	continue;
-      if(hs.allele1 == 2 && hs.allele1 == 0)
+      if(hs.allele1 == 2 && hs.allele2 == 0)
 	continue;
-      if(hs.allele1 == 1 && hs.allele1 == 3)
+      if(hs.allele1 == 1 && hs.allele2 == 3)
 	continue;
-      if(hs.allele1 == 3 && hs.allele1 == 1)
+      if(hs.allele1 == 3 && hs.allele2 == 1)
 	continue;
 
     }
