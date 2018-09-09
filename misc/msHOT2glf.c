@@ -398,11 +398,13 @@ int main(int argc,char **argv){
   int   segsites;
   int psmcfa = 0;
   int psmc2 = 0;
+  kstring_t tree_kstring;
   while(*argv){
     if(strcasecmp(*argv,"-in")==0) inS = *++argv;
     else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
     else if(strcasecmp(*argv,"-err")==0) errate=atof(*++argv); 
     else if(strcasecmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
+    else if(strcasecmp(*argv,"-win")==0) block=atoi(*++argv); 
     else if(strcasecmp(*argv,"-psmcfa")==0) psmcfa=atoi(*++argv);
     else if(strcasecmp(*argv,"-psmc2")==0) psmc2=atoi(*++argv);
     else if(strcasecmp(*argv,"-seed")==0) seed=atoi(*++argv);
@@ -421,10 +423,10 @@ int main(int argc,char **argv){
     srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
-    fprintf(stderr,"also -err -depth -depthFile -regLen -nind -seed -pileup -psmc -do_seq_glf\n");
+    fprintf(stderr,"also -err -depth -depthFile -regLen -nind -seed -pileup -psmc -do_seq_glf -win\n");
     return 0;
   }
-  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmcfa %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf);
+  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmcfa %d -do_seq_glf: %d -win:%d \n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf,block);
   //print args file
   FILE *argFP=openFile(prefix,".argg");
   fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmc %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf);
@@ -485,13 +487,16 @@ int main(int argc,char **argv){
   BGZF *gz=NULL;
   BGZF *gzSeq = NULL;
   BGZF *gzPsmc = NULL;
-
+  BGZF *tree = NULL;
+  
   if(psmcfa)
     gzPsmc = openFileGz(prefix,".fa.gz","w");
   
   if(do_seq_glf)
     gz = openFileGz(prefix,".glf.gz","w");
-
+  if(1)
+    tree = openFileGz(prefix,".tree.gz","w");
+    
   FILE *pgEst = openFile(prefix,".pgEstH");
 
   fprintf(stderr,"\n");
@@ -502,6 +507,20 @@ int main(int argc,char **argv){
       if( fgets( line, 1000, pfin) == NULL ){
 	fprintf(stderr,"\t-> Problem reading file\n");
 	break;
+      }
+      if(strcmp(line,"//\n")==0){
+  //fprintf(stderr,"skipping line\n");
+	continue;
+      }
+      //fprintf(stderr,"pre[%d]: %s",i,line);
+      int span,en,to;
+      float fl1,fl2;
+      int treentok=sscanf(line,"[%d](%d:%f,%d:%f);\n",&span,&en,&fl1,&to,&fl2);
+      if(treentok==5){
+  //fprintf(stderr,"treentok:%d span:%d en:%d to:%d fl1:%f\n",treentok,span,en,to,fl1);
+	 //      fprintf(stderr,"treentok:%d span:%d en:%d to:%d fl1:%f fl2:%f\n",treentok,span,en,to,fl1,fl2);
+  for(int j=0;j<span;j++)
+    ksprintf(&tree_kstring,"%d\t%d\t%f\n",i,j,fl1);
       }
       ss=sscanf(line,"@begin %d\n",&segsites);
       if(ss==1)
@@ -545,7 +564,10 @@ int main(int argc,char **argv){
     }
 
    }
-   
+  if(tree){
+    assert(tree_kstring.l==bgzf_write(tree,tree_kstring.s,tree_kstring.l));
+    bgzf_close(tree);
+      }
    if(psmcfa)
      bgzf_close(gzPsmc);
    if(gz!=Z_NULL)
