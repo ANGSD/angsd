@@ -398,7 +398,7 @@ int main(int argc,char **argv){
   int   segsites;
   int psmcfa = 0;
   int psmc2 = 0;
-  kstring_t tree_kstring;
+  kstring_t tree_kstring;tree_kstring.s=NULL;tree_kstring.l=tree_kstring.m=0;
   while(*argv){
     if(strcasecmp(*argv,"-in")==0) inS = *++argv;
     else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
