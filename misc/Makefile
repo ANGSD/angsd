@@ -120,7 +120,7 @@ ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o
 	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o fpsmc.o main_psmc.o hmm_psmc.o ../bfgs.o $(LIBS) -lz
 
 clean:
-	rm -f *.o $(PROGRAMS) *~
+	rm -f *.o $(PROGRAMS) $(PROGRAMS_MISC) *~
 
 install: $(PROGRAMS)
 	$(INSTALL_DIR) $(DESTDIR)$(bindir)
