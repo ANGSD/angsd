@@ -418,9 +418,9 @@ int main(int argc,char **argv){
     ++argv; 
   } 
   if(seed==-1)
-    srand48(time(NULL));
-  else
-    srand48(seed);
+    seed = time(NULL); 
+  
+  srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
     fprintf(stderr,"also -err -depth -depthFile -regLen -nind -seed -pileup -psmc -do_seq_glf -win\n");
@@ -561,6 +561,7 @@ int main(int argc,char **argv){
       size_t tt = regLen;
       fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
       fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
+      fflush(outfileSAFIDX);
     }
 
    }
