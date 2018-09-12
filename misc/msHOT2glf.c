@@ -562,6 +562,8 @@ int main(int argc,char **argv){
       fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
       fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
       fflush(outfileSAFIDX);
+      offs[0] = bgzf_tell(outfileSAFPOS);
+      offs[1] = bgzf_tell(outfileSAF);
     }
 
    }
