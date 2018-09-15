@@ -18,6 +18,7 @@ int block = 100;
 #define LENS 100000
 #define NBASE_PER_LINE 60
 
+size_t adepth[1024];
 
 double addProtect2(double a,double b){
   //function does: log(exp(a)+exp(b)) while protecting for underflow
@@ -272,7 +273,10 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffil
   int i, b, numreads;
   numreads = Poisson(meandepth);
   char res[numreads]; // char alleles for all the reads
-
+  if(numreads<1024)
+    adepth[numreads]++;
+  else
+    adepth[1023]++;
 
   double newError = errate;
   if(newError<0.00001)
@@ -379,6 +383,8 @@ void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZ
 }
 
 int main(int argc,char **argv){
+  for(int i=0;i<1024;i++)
+    adepth[i] = 0;
   double errate = 0.01;
   double meanDepth = 4;
   const char *inS = NULL;
@@ -398,12 +404,14 @@ int main(int argc,char **argv){
   int   segsites;
   int psmcfa = 0;
   int psmc2 = 0;
+  int nChr =-1;
   kstring_t tree_kstring;tree_kstring.s=NULL;tree_kstring.l=tree_kstring.m=0;
   while(*argv){
     if(strcasecmp(*argv,"-in")==0) inS = *++argv;
     else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
     else if(strcasecmp(*argv,"-err")==0) errate=atof(*++argv); 
     else if(strcasecmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
+    else if(strcasecmp(*argv,"-nChr")==0) nChr=atoi(*++argv); 
     else if(strcasecmp(*argv,"-win")==0) block=atoi(*++argv); 
     else if(strcasecmp(*argv,"-psmcfa")==0) psmcfa=atoi(*++argv);
     else if(strcasecmp(*argv,"-psmc2")==0) psmc2=atoi(*++argv);
@@ -423,13 +431,13 @@ int main(int argc,char **argv){
   srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
-    fprintf(stderr,"also -err -depth -depthFile -regLen -nind -seed -pileup -psmc -do_seq_glf -win\n");
+    fprintf(stderr,"also -err -depth -depthFile -regLen -nind -seed -pileup -psmc -do_seq_glf -win -psmcfa 1 -psmc2 -nChr \n");
     return 0;
   }
-  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmcfa %d -do_seq_glf: %d -win:%d \n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf,block);
+  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmcfa %d -do_seq_glf: %d -win:%d -nChr\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf,block,nChr);
   //print args file
   FILE *argFP=openFile(prefix,".argg");
-  fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmc %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf);
+  fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmc %d -do_seq_glf: %d -nChr: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf,nChr);
 
   for(int i=0;i<argc;i++)
     fprintf(argFP,"%s ",orig[i]);
@@ -473,7 +481,7 @@ int main(int argc,char **argv){
   }
   ss=sscanf(pch,"msHOT-lite %d %d -t %d -r %d %d\n", &nsam, &howmany,&theta,&rho,&regLen);
   assert(ss==5);
-  fprintf(stderr,"\t-> Number of samples:%d\n",nsam);
+  fprintf(stderr,"\t-> Number of samples:%d (haploids)\n",nsam);
   fprintf(stderr,"\t-> Number of replications:%d\n",howmany);
   fprintf(stderr,"\t-> theta: %d rho: %d regLen:%d\n",theta,rho,regLen);
   if(nsam!=2){
@@ -498,8 +506,11 @@ int main(int argc,char **argv){
     tree = openFileGz(prefix,".tree.gz","w");
     
   FILE *pgEst = openFile(prefix,".pgEstH");
+  FILE *aDepthFP = openFile(prefix,".acounts.txt");
 
   fprintf(stderr,"\n");
+  if(nChr!=-1)
+    howmany=nChr;
   for(int i=0;i<howmany;i++){
       /* read in a sample */
 
@@ -567,6 +578,12 @@ int main(int argc,char **argv){
     }
 
    }
+
+
+  for(int i=0;i<1024-1;i++)
+    fprintf(aDepthFP,"%lu\t",adepth[i]);
+  fprintf(aDepthFP,"%lu\n",adepth[i]);
+  fclose(aDepthFP);
   if(tree){
     assert(tree_kstring.l==bgzf_write(tree,tree_kstring.s,tree_kstring.l));
     bgzf_close(tree);
