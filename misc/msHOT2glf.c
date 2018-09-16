@@ -316,17 +316,21 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffil
     // AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
     //  0, 1, 2, 3, 4, 5, 6, 7, 8, 9
     //  =. -. *. -. =. -. *. =. -. =
-    const char homoz[] = {0,4,7,9};//=
-    const char transverz[] = {1,3,5,8};//-
-    const char transitz[] ={2,6};//* 
     double homo =log(0);
     double het= log(0);
-    for(int i=0;i<4;i++){
-      homo = addProtect2(homo,like[homoz[i]]);
-      het =  addProtect2(het,like[transverz[i]]);
+
+    if(numreads!=0){
+      const char homoz[] = {0,4,7,9};//=
+      const char transverz[] = {1,3,5,8};//-
+      const char transitz[] ={2,6};//* 
+      
+      for(int i=0;i<4;i++){
+	homo = addProtect2(homo,like[homoz[i]]);
+	het =  addProtect2(het,like[transverz[i]]);
+      }
+      for(int i=0;(noTrans==0&&i<2);i++)
+	het = addProtect2(het,like[transitz[i]]);
     }
-    for(int i=0;(noTrans==0&&i<2);i++)
-      het = addProtect2(het,like[transitz[i]]);
     bgzf_write(outfileSAF,&homo,sizeof(double));
     bgzf_write(outfileSAF,&het,sizeof(double));
   }
