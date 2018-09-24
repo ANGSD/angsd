@@ -23,7 +23,7 @@ class abcSaf : public abc{
   char *pest;
   int doPost;
   int doThetas;
-  void calcThetas(funkyPars *p,int index,double *prior,std::vector<float> *vecs,std::vector<int> &myposi);
+  void calcThetas(funkyPars *p,int index,double *prior,std::vector<float> *vecs,std::vector<int> &myposi,int newdim);
 
   double aConst;
   double aConst2;

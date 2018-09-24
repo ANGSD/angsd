@@ -1197,7 +1197,7 @@ void abcSaf::run(funkyPars  *p){
   if(p->numSites==0||(doSaf==0 ))
     return;
   //  fprintf(stderr,"-doSaf:%d -p->nind:%d\n",doSaf,p->nInd);
-  if(doSaf>0&&doSaf!=3){
+  if(doSaf>0&&doSaf!=3) {
     realRes *r = new realRes;
     r->oklist=new char[p->numSites];
     memset(r->oklist,0,p->numSites);
@@ -1205,13 +1205,13 @@ void abcSaf::run(funkyPars  *p){
     
     if(doSaf==1&&isHap==0)
       algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans);
-    else   if(doSaf==1&&isHap==1)
+    else if(doSaf==1&&isHap==1)
       algoJointHap(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans);
     else if(doSaf==2){
       freqStruct *freq = (freqStruct *) p->extras[6];
       filipe::algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans,doSaf,p->major,p->minor,freq->freq,filipeIndF,newDim);
     }else if(doSaf==4){
-    algoJointPost(p->post,p->numSites,p->nInd,p->keepSites,r,fold);
+      algoJointPost(p->post,p->numSites,p->nInd,p->keepSites,r,fold);
     }else if(doSaf==5){
       algoJointMajorMinor(p->likes,p->numSites,p->nInd,p->keepSites,r,fold,p->major,p->minor);
     }
@@ -1268,14 +1268,14 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
 }
 
 
-void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,std::vector<float> *vecs,std::vector<int> &myposi){
+void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,std::vector<float> *vecs,std::vector<int> &myposi,int newDim){
  realRes *r=(realRes *) pars->extras[index];
  int id=0;
- for(int i=0; i<pars->numSites;i++){
+ for(int i=0; i<pars->numSites;i++) {
    
    if(r->oklist[i]==1 &&pars->keepSites[i]!=0){
-     double workarray[2*pars->nInd+1];
-     for(int iii=0;iii<2*pars->nInd+1;iii++)
+     double workarray[newDim];
+     for(int iii=0;iii<newDim;iii++)
        workarray[iii] = r->pLikes[id][iii];
      id++;
      //First find thetaW: nSeg/a1
@@ -1366,7 +1366,7 @@ void abcSaf::print(funkyPars *p){
 	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
     }
     else 
-      calcThetas(p,index,prior,theta_res,theta_pos);
+      calcThetas(p,index,prior,theta_res,theta_pos,newDim);
   }   
 }
 
