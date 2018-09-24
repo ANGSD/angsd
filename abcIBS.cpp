@@ -12,6 +12,7 @@
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "abcIBS.h"
+#include <cassert>
 
 void abcIBS::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
@@ -162,6 +163,8 @@ abcIBS::~abcIBS(){
   if(makeMatrix){
     for(int i=0;i<nInd;i++){
       for(int j=0;j<nInd;j++){
+      
+	  
 	fprintf(outfileMat,"%f\t",ibsMatrixAll[i*nInd + j]*1.0/nonMisAll[i*nInd + j]);
       }
       fprintf(outfileMat,"\n");
@@ -261,8 +264,12 @@ void abcIBS::printHaplo(funkyPars *pars){
   if(makeMatrix){
     for(int i=0;i<pars->nInd;i++){
       for(int j=0;j<pars->nInd;j++){
+	assert( haplo->ibsMatrix[i*pars->nInd+j] >= 0  || haplo->nonMis[i*pars->nInd+j] >= 0 );
+	//	  fprintf(stdout,"negative count %d\t%d\n",haplo->ibsMatrix[i*pars->nInd+j],haplo->nonMis[i*pars->nInd+j]);
+
 	ibsMatrixAll[i*pars->nInd+j] += haplo->ibsMatrix[i*pars->nInd+j];
 	nonMisAll[i*pars->nInd+j] += haplo->nonMis[i*pars->nInd+j];
+	assert(nonMisAll[i*pars->nInd+j] >= 0  || ibsMatrixAll[i*pars->nInd+j]);
       }
     }
   }
