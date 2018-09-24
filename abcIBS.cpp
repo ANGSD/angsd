@@ -269,7 +269,7 @@ void abcIBS::printHaplo(funkyPars *pars){
 
 	ibsMatrixAll[i*pars->nInd+j] += haplo->ibsMatrix[i*pars->nInd+j];
 	nonMisAll[i*pars->nInd+j] += haplo->nonMis[i*pars->nInd+j];
-	assert(nonMisAll[i*pars->nInd+j] >= 0  || ibsMatrixAll[i*pars->nInd+j]);
+	assert(nonMisAll[i*pars->nInd+j] >= 0  || ibsMatrixAll[i*pars->nInd+j] >= 0);
       }
     }
   }
