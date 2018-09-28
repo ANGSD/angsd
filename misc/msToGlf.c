@@ -350,7 +350,7 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF* glffil
 }
 
 //nsam=2*nind
-void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,BGZF* gzSeq,int count,int onlyPoly,BGZF* gzPsmc,int do_seq_glf){
+void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,BGZF* gzSeq,int count,int onlyPoly,BGZF* gzPsmc,int do_seq_glf, int printSNP){
   kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   kstring_t kpsmc;kpsmc.s=NULL;kpsmc.l=kpsmc.m=0;
   int p =0;
@@ -381,7 +381,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double er
     ksprintf(&kpsmc,"@%d\n",count);
 
 
-  if(regLen==0) {
+  if(printSNP) {
     //only generate likes for truely variable sites
     for(int s=0;s<segsites;s++){
       if(pileup)
@@ -694,6 +694,7 @@ int main(int argc,char **argv){
   const char *inS = NULL;
   const char *prefix=NULL;
   int regLen = 0;
+  int printSNP = 0; // Added by FGV on 31/08/2018
   int singleOut = 0;
   FILE *in = NULL;
   argv++;
@@ -713,10 +714,11 @@ int main(int argc,char **argv){
     else if(strcasecmp(*argv,"-out")==0) prefix=*++argv; 
     else if(strcasecmp(*argv,"-err")==0) errate=atof(*++argv); 
     else if(strcasecmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
-    else if(strcasecmp(*argv,"-Nsites")==0) Nsites=atof(*++argv); 
+    else if(strcasecmp(*argv,"-Nsites")==0) Nsites=atoi(*++argv); 
     else if(strcasecmp(*argv,"-depthFile")==0) depthFile=*++argv; 
     else if(strcasecmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
     else if(strcasecmp(*argv,"-regLen")==0) regLen=atoi(*++argv);
+    else if(strcasecmp(*argv,"-printSNP")==0) printSNP=atoi(*++argv);
     else if(strcasecmp(*argv,"-onlyPoly")==0) onlyPoly=atoi(*++argv);
     else if(strcasecmp(*argv,"-pileup")==0) pileup=atoi(*++argv);
     else if(strcasecmp(*argv,"-psmc")==0) psmcOut=atoi(*++argv);
@@ -736,14 +738,17 @@ int main(int argc,char **argv){
     srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
-    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen --nind -seed -pileup -Nsites -psmc -do_seq_glf\n");
+    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen -printSNP -nind -onlyPoly -seed -pileup -Nsites -psmc -simpleRand -do_seq_glf\n");
     return 0;
   }
+  // If no region length provided, then only print SNPs
+  if(regLen==0)
+    printSNP=1;
 
-  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -singleOut=%d -regLen=%d -depthFile=%s -seed %d -nind %d -psmc %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,singleOut,regLen,depthFile,seed,nind,psmcOut,do_seq_glf);
+  fprintf(stderr,"-in %s -out %s -err %f -depth %f -Nsites %d -singleOut %d -regLen %d -printSNP %d -onlyPoly %d -pileup %d -simpleRand %d -depthFile %s -seed %d -nind %d -psmc %d -do_seq_glf %d\n",inS,prefix,errate,meanDepth,Nsites,singleOut,regLen,printSNP,onlyPoly,pileup,simpleRand,depthFile,seed,nind,psmcOut,do_seq_glf);
   //print args file
   FILE *argFP=openFile(prefix,".argg");
-  fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -singleOut=%d -regLen=%d -depthFile=%s -seed %d -nind %d -psmc %d -do_seq_glf: %d\n",inS,prefix,errate,meanDepth,singleOut,regLen,depthFile,seed,nind,psmcOut,do_seq_glf);
+  fprintf(argFP,"-in %s -out %s -err %f -depth %f -Nsites %d -singleOut %d -regLen %d -printSNP %d -onlyPoly %d -pileup %d -simpleRand %d -depthFile %s -seed %d -nind %d -psmc %d -do_seq_glf %d\n",inS,prefix,errate,meanDepth,Nsites,singleOut,regLen,printSNP,onlyPoly,pileup,simpleRand,depthFile,seed,nind,psmcOut,do_seq_glf);
   for(int i=0;i<argc;i++)
     fprintf(argFP,"%s ",orig[i]);
   fclose(argFP);
@@ -893,7 +898,7 @@ int main(int argc,char **argv){
        vPosFP = openFileI(prefix,".vPos",count);
      }
      
-     test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count,onlyPoly,gzPsmc,do_seq_glf) ;
+     test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count,onlyPoly,gzPsmc,do_seq_glf,printSNP) ;
      if(singleOut==0){
        if(gz!=NULL){
 	 bgzf_close(gz);
