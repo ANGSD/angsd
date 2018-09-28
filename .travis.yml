@@ -28,9 +28,9 @@ addons:
       - libbz2-dev
 
 before_script:
-  - git clone --depth=5 --branch=develop git://github.com/samtools/samtools.git
   - git clone --depth=5 --branch=develop git://github.com/samtools/htslib.git
   - cd htslib;git checkout 7caad23a998ee90bda8f61054b9035e92923638d; make;cd ..
+  - git clone --depth=5 --branch=develop git://github.com/samtools/samtools.git
   - cd samtools;make;cd ..
 
   - git clone --depth=5 git://github.com/ANGSD/smallBam.git
