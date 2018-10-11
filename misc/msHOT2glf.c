@@ -331,8 +331,14 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffil
       for(int i=0;(noTrans==0&&i<2);i++)
 	het = addProtect2(het,like[transitz[i]]);
     }
-    bgzf_write(outfileSAF,&homo,sizeof(double));
-    bgzf_write(outfileSAF,&het,sizeof(double));
+    if(sizeof(double)!=bgzf_write(outfileSAF,&homo,sizeof(double))){
+      fprintf(stderr,"\t-> Problem writing hom\n");
+      exit(0);
+    }
+    if(sizeof(double)!=bgzf_write(outfileSAF,&het,sizeof(double))){
+      fprintf(stderr,"\t-> Problem writing het\n");
+      exit(0);
+    }
   }
   
   return numreads;
@@ -354,7 +360,10 @@ void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZ
     if(do_seq_glf||outfileSAF!=NULL)
       print_ind_site(errate,meandepth,genotypes,gz,&kpl,outfileSAF);
     if(outfileSAFPOS)
-      bgzf_write(outfileSAFPOS,&i,sizeof(int));
+      if(sizeof(int)!=bgzf_write(outfileSAFPOS,&i,sizeof(int))){
+	fprintf(stderr,"\t-> Problem writing i\n");
+	exit(0);
+      }
   }
   
 
@@ -438,7 +447,7 @@ int main(int argc,char **argv){
     fprintf(stderr,"also -err -depth -depthFile -regLen -nind -seed -pileup -psmc -do_seq_glf -win -psmcfa 1 -psmc2 -nChr \n");
     return 0;
   }
-  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmcfa %d -do_seq_glf: %d -win:%d -nChr\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf,block,nChr);
+  fprintf(stderr,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmcfa %d -do_seq_glf: %d -win:%d -nChr: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf,block,nChr);
   //print args file
   FILE *argFP=openFile(prefix,".argg");
   fprintf(argFP,"-in=%s -out=%s -err=%f -depth=%f -regLen=%d -seed %d -nind %d -psmc %d -do_seq_glf: %d -nChr: %d\n",inS,prefix,errate,meanDepth,regLen,seed,nind,psmcfa,do_seq_glf,nChr);
@@ -459,8 +468,14 @@ int main(int argc,char **argv){
     outfileSAFPOS =  openFileGz(prefix,SAFPOS,"wb");
     outfileSAFIDX = openFile(prefix,SAFIDX);
     char buf[8]="psmcv1";
-    bgzf_write(outfileSAF,buf,8);
-    bgzf_write(outfileSAFPOS,buf,8);
+    if(8!=bgzf_write(outfileSAF,buf,8)){
+      fprintf(stderr,"\t-> Problem writing buf\n");
+      return 0;
+    }
+    if(8!=bgzf_write(outfileSAFPOS,buf,8)){
+      fprintf(stderr,"\t-> Problem writing buf\n");
+      return 0;
+    }
     fwrite(buf,1,8,outfileSAFIDX);
     offs[0] = bgzf_tell(outfileSAFPOS);
     offs[1] = bgzf_tell(outfileSAF);
