@@ -13,6 +13,8 @@
 #define USE_MALLOC_WRAPPERS
 #include "malloc_wrap.h"
 
+#define __WITH_POOL__
+
 #ifdef __WITH_POOL__
 #include "pooled_alloc.h"
 void *tail=NULL;//<- this will be point to the pool->free

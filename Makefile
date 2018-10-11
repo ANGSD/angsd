@@ -14,7 +14,7 @@ LIBS += -lhts
 endif
 
 #modied from htslib makefile
-FLAGS = $(CPPFLAGS) -O3 -D__WITH_POOL__ $(LDFLAGS)
+FLAGS = $(CPPFLAGS) -O3 $(LDFLAGS)
 
 CFLAGS := $(FLAGS) $(CFLAGS)
 CXXFLAGS := $(FLAGS) $(CXXFLAGS)

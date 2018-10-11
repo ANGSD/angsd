@@ -36,6 +36,8 @@
 #include "cigstat.h"
 extern tpool_alloc_t *tnodes;
 
+#define __WITH_POOL__
+
 pthread_attr_t attr;
 int andersSux =0;
 abc **allMethods = NULL;
