@@ -119,6 +119,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
 
   //let us now modify the the persaf toKeep char vector
   int tsk[saf.size()];
+  int hasdata =0;
   for(int i=0;i<saf.size();i++) {
     tsk[i] =0;
     for(int j=0;j<=saf[i]->toKeep->last;j++)
@@ -127,6 +128,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       else
 	tsk[i]++;
     fprintf(stderr,"\t-> Sites to keep[%s] from pop%d:\t%d\n",chooseChr,i,tsk[i]);
+    hasdata +=tsk[i];
     if(i>0)
       assert(tsk[i]==tsk[i-1]);
 #if 0
@@ -137,6 +139,11 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
 	fprintf(stdout,"saf%d\t%d\n",i,j);
     }
 #endif
+  }
+  if(hasdata==0){
+    fprintf(stderr,"\t-> There is no data for this chr/scaffold lets skip\n");
+    chooseChr=NULL;
+    goto aGotoHereIsTheEasiest;
   }
   keep_destroy(hit);
   return 1;
