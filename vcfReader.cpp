@@ -70,11 +70,11 @@ int vcfReader::parseline(double **lk,double **gp,char &major,char &minor){
   ref[0]=refToInt[ref[0]];
   alt[0]=refToInt[alt[0]];
   if(ref[0]==4|| alt[0]==4){
-    fprintf(stderr,"REF/ALT is 'N' will discard site: %d \n",pos);
+    fprintf(stderr,"\t-> REF/ALT is 'N' or '*' will discard site: %d \n",pos);
     return 0;
   }
   if(ref[0]==4||alt[0]==4){
-    fprintf(stderr,"skipping site:%d (ref and alt must be A,C,G,T not N/n)\n",pos);
+    fprintf(stderr,"\t-> skipping site:%d (ref and alt must be A,C,G,T not N/n)\n",pos);
     return 0;
 
   }

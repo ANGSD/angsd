@@ -79,7 +79,10 @@ void setInputType(argStruct *args){
   fprintf(stderr,"vcf_gl:%d\n",INPUT_VCF_GL);
   fprintf(stderr,"glf10_text:%d\n",INPUT_GLF10_TEXT);
 #endif
-
+  if(args->fai){
+    free(args->fai);
+    args->fai=NULL;
+  }
   args->fai = angsd::getArg("-fai",args->fai,args);
   char *tmp =NULL;
   tmp = angsd::getArg("-glf",tmp,args);
@@ -89,6 +92,7 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
+  free(tmp);
   tmp = NULL;
   tmp = angsd::getArg("-glf3",tmp,args);
   if(tmp!=NULL){
@@ -97,6 +101,7 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
+  free(tmp);
   tmp = NULL;
   tmp = angsd::getArg("-glf10_text",tmp,args);
   if(tmp!=NULL){
@@ -105,7 +110,7 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
-  
+  free(tmp);
   tmp=NULL;
   tmp = angsd::getArg("-vcf-GP",tmp,args);
   if(tmp!=NULL){
@@ -115,6 +120,7 @@ void setInputType(argStruct *args){
    
     return;
   }
+  free(tmp);
   tmp=NULL;
   tmp = angsd::getArg("-vcf-GL",tmp,args);
   if(tmp!=NULL){
@@ -123,6 +129,7 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
+  free(tmp);
   tmp=NULL;
   tmp = angsd::getArg("-vcf-PL",tmp,args);
   if(tmp!=NULL){
@@ -131,6 +138,7 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
+  free(tmp);
   tmp=NULL;
   tmp = angsd::getArg("-pileup",tmp,args);
   if(tmp!=NULL){
@@ -139,6 +147,7 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
+  free(tmp);
   tmp=NULL;
   tmp = angsd::getArg("-beagle",tmp,args);
   if(tmp!=NULL){
@@ -147,6 +156,7 @@ void setInputType(argStruct *args){
     args->nams.push_back(strdup(args->infile));
     return;
   }
+  free(tmp);
   tmp=NULL;
   tmp = angsd::getArg("-i",tmp,args);
   if(tmp!=NULL){
@@ -157,6 +167,7 @@ void setInputType(argStruct *args){
   }
   int nInd = 0;
   nInd = angsd::getArg("-nInd",nInd,args);
+  free(tmp);
   tmp=NULL;
   tmp = angsd::getArg("-bam",tmp,args);
   tmp = angsd::getArg("-b",tmp,args);
@@ -249,8 +260,13 @@ void multiReader::getOptions(argStruct *arguments){
   arguments->nInd = nInd;
 
   //read fai if suppplied (used by other than native bam readers)
-  
-  arguments->fai=angsd::getArg("-fai",arguments->fai,arguments);
+
+  char *tmptmp=NULL;
+  tmptmp=angsd::getArg("-fai",arguments->fai,arguments);
+  if(tmptmp){
+    free(arguments->fai);
+    arguments->fai=tmptmp;
+  }
   
   printArg(arguments->argumentFile,arguments);
 }
@@ -416,8 +432,6 @@ multiReader::multiReader(int argc,char**argv){
   }
     
   default:{
-    //    fprintf(stderr,"\t[%s] assuming what ?\n",__FUNCTION__);
-    //pl = new pileups (faifile,lStart,lStop,filenames,type);
     break;
   }
   }
@@ -472,7 +486,9 @@ multiReader::~multiReader(){
   
   for(unsigned i=0;i<args->nams.size();i++)
     free(args->nams[i]);
-  
+  if(args->fai){
+    free(args->fai);
+  }
   delete []   args->usedArgs;
   free(args->outfiles);
   free(args->infile);

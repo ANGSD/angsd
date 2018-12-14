@@ -47,7 +47,7 @@ char* angsd::getArg(const char* argName,char* type,argStruct *arguments){
 	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
 	exit(0);
       }
-      return(strdup(arguments->argv[argPos+1]));  //VALGRIND says leak. don't care very small DRAGON
+      return strdup(arguments->argv[argPos+1]);
     }
     argPos++;
   }

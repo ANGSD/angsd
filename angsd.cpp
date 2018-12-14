@@ -271,7 +271,7 @@ int main(int argc, char** argv){
   //print out nice messages
   extern size_t total_number_of_sites_unfiltred,total_number_of_sites_filtered;
   fprintf(stderr,"\t-> Arguments and parameters for all analysis are located in .arg file\n");
-  fprintf(stderr,"\t-> Total number of sites analyzed: %lu\n\t-> Number of sites retained after filetering: %lu \n",total_number_of_sites_unfiltred,total_number_of_sites_filtered);
+  fprintf(stderr,"\t-> Total number of sites analyzed: %lu\n\t-> Number of sites retained after filtering: %lu \n",total_number_of_sites_unfiltred,total_number_of_sites_filtered);
   fprintf(stderr, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
   fprintf(stderr, "\t[ALL done] walltime used =  %.2f sec\n", (float)(time(NULL) - t2));  
   fprintf(args->argumentFile, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
@@ -282,7 +282,7 @@ int main(int argc, char** argv){
   delete [] bamSortedIds;
   
   delete mr;
-  //chack
+  //check
   extern htsFormat *dingding2;
   free(dingding2);
   return 0;
