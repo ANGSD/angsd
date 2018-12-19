@@ -64,6 +64,9 @@ namespace angsd {
   void printMatrix(Matrix<double> mat,FILE *file);
   void logrescale(double *ary,int len);
   int svd_inverse(double mat[],int xLen, int yLen);
+  double dnorm(double x,double mean,double sd,int ifLog);
+  double bernoulli(int k, double p, int ifLog);
+  double sd(double* phe, int size );
   std::vector<char*> getFilenames(const char * name,int nInd);
   char *strpop(char **str,char split);
   int getRandomCount(suint *d, int i,  int depth = -1);

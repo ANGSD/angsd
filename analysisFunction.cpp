@@ -47,7 +47,7 @@ char* angsd::getArg(const char* argName,char* type,argStruct *arguments){
 	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
 	exit(0);
       }
-      return strdup(arguments->argv[argPos+1]);
+      return(strdup(arguments->argv[argPos+1]));  //VALGRIND says leak. don't care very small DRAGON
     }
     argPos++;
   }
@@ -1165,6 +1165,72 @@ int angsd::svd_inverse(double mat[],int xLen, int yLen){
 
 
 
+//function for getting density of normal distribution, has safeguards against underflow
+//by emil added 24-11-2018
+double angsd::dnorm(double x,double mean,double sd,int ifLog){
+
+  double fac = 1.0/(sd*sqrt(2.0*M_PI));
+  double val = exp(-(((x-mean)*(x-mean))/(2*sd*sd)));
+
+  double lower_bound=1e-20;//emil - not for users
+
+  if(ifLog){
+    fac = log(fac);
+    val = log(val);
+
+    if(val<lower_bound){
+      return(log(lower_bound));
+    } else{
+      return (fac+val);
+    }    
+  } else{
+    // if val is 0 because exp(-(x-mean)*(x-mean)) is due to underflow, returns low value
+    if(val<lower_bound){      
+      return(lower_bound);
+    } else{
+      return fac*val;
+    }
+  }
+  
+}
+
+//function for getting probability of bernoulli distribution, has safeguards against underflow
+//by emil added 24-11-2018
+double angsd::bernoulli(int k, double p, int ifLog){
+  // if p is 0 or 1, cannot do log
+  // however this because of over/underlow and p i just very close 0 or 1
+  double lower_bound=1e-20;//emil - not for users
+  
+  if(p>1-lower_bound){
+    p = 1-lower_bound;
+  } else if(p<lower_bound){
+    p = lower_bound;
+  }
+  
+  if(ifLog){
+    return( pow(p,k)*pow(1-p,1-k) );
+  } else{
+    return( log(pow(p,k)*pow(1-p,1-k)) );
+  }
+}
+
+
+// function for getting standard derivation of a set of data
+//by emil added 24-11-2018
+double angsd::sd(double* phe, int size ){
+  double ts = 0;
+  for(int i=0;i<size;i++)
+    ts += phe[i];
+  double u = ts/(1.0*size);
+  ts = 0;
+  for(int i=0;i<size;i++)
+    ts += (phe[i]-u)*(phe[i]-u);
+  return ts/(1.0*(size-1.0));
+}
+
+
+
+
 // a,c,g,t,n
 // A,C,G,T,N
 // 0,1,2,3,4
@@ -1411,4 +1477,5 @@ double phi(double x){
 
     return 0.5*(1.0 + sign*y);
 }
+
 
