@@ -4,7 +4,6 @@
   
   anders albrecht@binf.ku.dk made this.
 
-
   logistic regression changed 612new/613
 
   part of angsd
@@ -39,7 +38,6 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t1: Additive/Log-Additive (Default)\n");
   fprintf(argFile,"\t2: Dominant\n");
   fprintf(argFile,"\t3: Recessive\n\n");
-  fprintf(argFile,"  Score Test Options:\n");
   fprintf(argFile,"\t-minHigh\t%d\t(Require atleast minHigh number of high credible genotypes)\n",minHigh);
   fprintf(argFile,"\t-minCount\t%d\t(Require this number of minor alleles, estimated from MAF)\n",minCount);
   fprintf(argFile,"  Hybrid Test Options:\n");
@@ -254,7 +252,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\n");
     //EM asso or dosage model
   } else if(doAsso==4 or doAsso==6){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\n");
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\thigh_WT/HE/HO\n");
   } else if(doAsso==2)
     ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
   else
@@ -352,12 +350,15 @@ void abcAsso::run(funkyPars *pars){
   assoStruct *assoc = allocAssoStruct();
   pars->extras[index] = assoc;
 
+  if(doAsso==2 or doAsso==4 or doAsso==5 or doAsso==6){
+    assoc->highWt=new int[pars->numSites];
+    assoc->highHe=new int[pars->numSites];
+    assoc->highHo=new int[pars->numSites];
+  }
+  
   if(doAsso==1){
     frequencyAsso(pars,assoc);
   } else if(doAsso==2){
-    assoc->highWt=new int[pars->numSites];
-    assoc->highHe=new int[pars->numSites];
-    assoc->highHo=new int[pars->numSites];    
     scoreAsso(pars,assoc);
   } else if(doAsso==4){
     assoc->betas=new double[pars->numSites];
@@ -366,12 +367,10 @@ void abcAsso::run(funkyPars *pars){
     assoc->betas=new double[pars->numSites];
     dosageAsso(pars,assoc);    
   } else if(doAsso==5){
-    assoc->highWt=new int[pars->numSites];
-    assoc->highHe=new int[pars->numSites];
-    assoc->highHo=new int[pars->numSites];
     assoc->betas=new double[pars->numSites];
     hybridAsso(pars,assoc);
   }
+
 
 }
 
@@ -515,7 +514,6 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
 	      keepList[i]=0;
 	  }
 
-
 	if(keepList[i]==1)
 	  keepInd[yi][s]++;
       }  
@@ -553,6 +551,14 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
     maf0=0;
   }
 
+  int highWT=0;
+  int highHE=0;
+  int highHO=0;
+ 
+  double covMatrix[(covmat.y+2)*keepInd];
+  double covMatrixNull[(covmat.y+1)*keepInd];
+  double yfit[keepInd];
+    
   double yNull[keepInd];
   int count = 0;
   double post[keepInd*3];
@@ -568,10 +574,13 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
       post[count*3+0]=postOrg[i*3+0];
       post[count*3+1]=postOrg[i*3+1];
       post[count*3+2]=postOrg[i*3+2];
+
+      covMatrixNull[i] = 1;
       
       designNull->matrix[count][0] = 1;
       for(int c=0;c<covmat.y;c++){
-	designNull->matrix[count][c+1] = covmat.matrix[count][c];
+	designNull->matrix[count][c+1] = covmat.matrix[i][c];
+	covMatrixNull[(c+1)*keepInd+count] = covmat.matrix[i][c];
       }
       count++;    
     }
@@ -589,18 +598,14 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
     fflush(stderr);
     exit(0);
   }
-
+  
   if(isBinary){
-    getFitWLSBin(startNull,yNull,designNull->matrix,NULL,keepInd,designNull->y,-1);
+    getFitBin(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
   } else{      
-    getFitWLS(startNull,yNull,designNull->matrix,NULL,keepInd,designNull->y,-1);
+    getFit(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
   }
   
   double llhNull = logLike(startNull,yNull,designNull,post,isBinary,0);
-  
-  for(int i=0;i<(covmat.y+2);i++){
-    start[i+1]=startNull[i]; // giving null estimates as starting point
-  }
 
   start[0] = drand48()*2-1;
 
@@ -615,23 +620,57 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
     if(keepList[i]){
       y[count]=yOrg[i];      
       // 1: add, 2: dom, 3: rec
-      if(model==3){       
-	design->matrix[count][0] = post[count*3+0];
+      if(model==3){
+	design->matrix[count][0] = post[count*3+2];
+	covMatrix[count] = post[count*3+2];
       } else if(model==2){
-	design->matrix[count][0] = post[count*3+1] + post[count*3+2];
+	design->matrix[count][0] = post[count*3+2] + post[count*3+1];
+	covMatrix[count] = post[count*3+2] + post[count*3+1];
       } else{
 	// getting dosage of the minor allele or second allele of beagle file
-	design->matrix[count][0] = 2*post[count*3+0] + post[count*3+1];
+	design->matrix[count][0] = 2*post[count*3+2] + post[count*3+1];
+	covMatrix[count] = 2*post[count*3+2] + post[count*3+1];
       }
+
+      if(post[count*3+0]>0.90)
+	highWT++;
+      if(post[count*3+1]>0.90)
+	highHE++;
+      if(post[count*3+2]>0.90)
+	highHO++;
+            
+      covMatrix[keepInd+count] = 1;
       design->matrix[count][1] = 1;
       for(int c=0;c<covmat.y;c++){
 	// design matrix has 1 rows per indi with dosage
 	design->matrix[count][2+c] = covmat.matrix[i][c];
+	covMatrix[(c+2)*keepInd+count] = covmat.matrix[i][c];
       }
     }
     count++;
   }
 
+  assoc->highWt[s] = highWT;
+  assoc->highHe[s] = highHE;
+  assoc->highHo[s] = highHO;
+  
+  int nGeno=0;
+  if(highWT >= minHigh)
+    nGeno++;
+  if(highHE >= minHigh)
+    nGeno++;
+  if(highHO >= minHigh)
+    nGeno++;
+
+  if(nGeno<2)
+    return(-999);//set_snan(lrt);
+
+  //basically the same, just renamed for normScoreEnv and binomScoreEnv functions
+  int numInds = keepInd;
+  //freq*numInds*2 is the expected number of minor alleles
+  if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount)
+    return(-999);//set_snan(lrt);      set_snan(lrt);
+  
   if(count!=keepInd){
     fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
     fflush(stderr);
@@ -639,16 +678,16 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
   }  
     
  if(isBinary){
-    getFitWLSBin(start,y,design->matrix,NULL,keepInd,design->y,-1);
-  } else{      
-    getFitWLS(start,y,design->matrix,NULL,keepInd,design->y,-1);
-  }
-  
-  double llh = logLike(start,y,design,post,isBinary,0);
-    
-  // likelihood ratio - chi square distributed according to Wilk's theorem
-  double LRT = -2*(llh-llhNull);
-  return(LRT);  
+   getFitBin(yfit,y,covMatrix,keepInd,design->y,start);
+ } else{
+   getFit(yfit,y,covMatrix,keepInd,design->y,start);  
+ }
+ 
+ double llh = logLike(start,y,design,post,isBinary,0);
+ 
+ // likelihood ratio - chi square distributed according to Wilk's theorem
+ double LRT = -2*(llh-llhNull);
+ return(LRT);  
 }
  
 
@@ -719,7 +758,13 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
       freqStruct *freq = (freqStruct *) pars->extras[6];
 
       stat[yi][s]=dosageAssoc(pars,&design,&designNull,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
-      assoc->betas[s]=start[0]; 
+
+      //if not enough, WT, HE or HO or ind to run test
+      if(assoc->betas[s ]< -900){
+	assoc->betas[s]=NAN;
+      } else{
+	assoc->betas[s]=start[0];
+      }
       
       //cleanup
       delete [] y;
@@ -1091,11 +1136,11 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
 //pat[add/rec][g]
 int pat[3][3] = 
   // add with geno
-  {{2,1,0},
+  {{0,1,2},
     // dom 
-   {1,1,0},
+   {0,1,1},
    // rec 
-   {1,0,0}};
+   {0,0,1}};
 
   
 double abcAsso::logLike(double *start,double* y,angsd::Matrix<double> *design,double *post,int isBinary,int fullModel){
@@ -1217,9 +1262,16 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
     maf0=0;
   }
 
+  int highWT=0;
+  int highHE=0;
+  int highHO=0;
+  
   double yNull[keepInd];
   int count = 0;
   double post[keepInd*3];
+
+  double covMatrixNull[(covmat.y+1)*keepInd];
+  double yfit[keepInd];
   
   designNull->x=keepInd;
   //covars + intercept
@@ -1230,8 +1282,10 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
     if(keepList[i]){
       yNull[count]=yOrg[i];
       designNull->matrix[count][0] = 1;
+      covMatrixNull[count] = 1;
       for(int c=0;c<covmat.y;c++){
-	designNull->matrix[count][c+1] = covmat.matrix[count][c];
+	designNull->matrix[count][c+1] = covmat.matrix[i][c];
+	covMatrixNull[(c+1)*keepInd+count] = covmat.matrix[i][c];
       }
       count++;    
     }
@@ -1253,9 +1307,9 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   }
 
   if(isBinary){
-    getFitWLSBin(startNull,yNull,designNull->matrix,NULL,keepInd,designNull->y,-1);
+    getFitBin(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
   } else{      
-    getFitWLS(startNull,yNull,designNull->matrix,NULL,keepInd,designNull->y,-1);
+    getFit(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
   }
   
   double llhNull = logLike(startNull,yNull,designNull,post,isBinary,0);
@@ -1278,9 +1332,11 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   // WLS (weighted) model with genotypes
   for(int i=0;i<p->nInd;i++){
     if(keepList[i]){
+      
       for(int j=0;j<3;j++){
-	y[count*3+j]=yOrg[i];
+	y[count*3+j]=yOrg[i];	
 	post[count*3+j]=postOrg[i*3+j];
+		
 	// minus 1 (0-indexed), model parameter is 1: add, 2: dom, 3: rec
 	design->matrix[count*3+j][0] = pat[model-1][j];
 	design->matrix[count*3+j][1] = 1;
@@ -1289,8 +1345,39 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
 	  design->matrix[count*3+j][2+c] = covmat.matrix[i][c];
 	}
       }
+
+      if(post[count*3+0]>0.90)
+	highWT++;
+      if(post[count*3+1]>0.90)
+	highHE++;
+      if(post[count*3+2]>0.90)
+	highHO++;
+      
       count++;
     }
+  }
+
+  assoc->highWt[s] = highWT;
+  assoc->highHe[s] = highHE;
+  assoc->highHo[s] = highHO;
+
+  int nGeno=0;
+  if(highWT >= minHigh)
+    nGeno++;
+  if(highHE >= minHigh)
+    nGeno++;
+  if(highHO >= minHigh)
+    nGeno++;
+
+  if(nGeno<2){
+    return(-999);//set_snan(lrt);
+  }
+
+  //basically the same, just renamed for normScoreEnv and binomScoreEnv functions
+  int numInds = keepInd;
+  //freq*numInds*2 is the expected number of minor alleles
+  if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount){
+    return(-999);//set_snan(lrt);      set_snan(lrt);
   }
   
   if(count!=keepInd){
@@ -1405,8 +1492,14 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
       freqStruct *freq = (freqStruct *) pars->extras[6];
   
       stat[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
-      assoc->betas[s]=start[0]; // giving coefs
-      
+
+      //if not enough, WT, HE or HO or ind to run test
+      if( stat[yi][s] < -900){
+	assoc->betas[s]=NAN;
+      } else{
+	assoc->betas[s]=start[0]; // giving coefs
+      }
+	
       //cleanup
       delete [] y;
       delete [] keepList;
@@ -1446,7 +1539,6 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
     statOther[yi] = new double[pars->numSites];
     keepInd[yi]= new int[pars->numSites];
   }
-
   
   angsd::Matrix<double> designNull;
   designNull.x=pars->nInd;
@@ -1528,12 +1620,10 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   assoc->keepInd=keepInd;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// EMIL END
-///////////////////////////////////////////////////////////////////////////////
+int abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv,double *start){
 
-int abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
-
+  //emil added start as an argument passed to the function - which gets estimated coefs
+  
   /*
     linear regression. Fits a linear model. 
     res is the predicted values  (eta) = X%*%coef
@@ -1542,6 +1632,7 @@ int abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
     nInd is the number of individuals
     nEnv is the number of predictors (including the intersept)
   */
+
   
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
@@ -1566,34 +1657,47 @@ int abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
 
   for(int x=0;x<nEnv;x++)//col X
     for(int y=0;y<nEnv;y++)//row Xt
-      for(int i=0;i<nInd;i++)
-	XtX[x*nEnv+y]+=covMatrix[y*nInd+i]*covMatrix[x*nInd+i];
+      for(int i=0;i<nInd;i++){
+	XtX[x*nEnv+y]+=covMatrix[y*nInd+i]*covMatrix[x*nInd+i];	
+      }
 
   //  double workspace[2*nEnv];
   //  angsd::matinv(XtX, nEnv, nEnv, workspace);
   int singular=angsd::svd_inverse(XtX,nEnv,nEnv);
   if(singular)
     return 1 ;
-
-
+  
+  
   //get (inv(t(X)%*%X))%*%(t(X)%*%y) //this is the coef!
- for(int x=0;x<nEnv;x++)//col X
-   for(int y=0;y<nEnv;y++)//row Xt
+  for(int x=0;x<nEnv;x++)//col X
+    for(int y=0;y<nEnv;y++)//row Xt
       invXtX_Xt_y[x]+=XtX[y*nEnv+x]*Xt_y[y];
-
+  
   //get X%*%(inv(t(X)%*%X))%*%(t(X)%*%y)
-   for(int j=0;j<nInd;j++)//row Xt
-     res[j]=0;
- 
-   for(int j=0;j<nInd;j++)//row Xt
-     for(int x=0;x<nEnv;x++)
-       res[j]+=covMatrix[x*nInd+j]*invXtX_Xt_y[x];
- 
+  for(int j=0;j<nInd;j++){//row Xt
+    res[j]=0;
+    //storing coefs
 
-   return 0;
+  }
+
+  for(int x=0;x<nEnv;x++){//row Xt
+      start[x]=invXtX_Xt_y[x];
+  }
+
+  double ts = 0;
+  for(int j=0;j<nInd;j++){//row Xt
+    for(int x=0;x<nEnv;x++){
+      res[j]+=covMatrix[x*nInd+j]*invXtX_Xt_y[x];
+    }
+    ts += (Y[j]-res[j])*(Y[j]-res[j]);
+  }
+      
+  start[nEnv] = sqrt(ts/(1.0*(nInd-nEnv)));
+  
+  return 0;
 }
 
-int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv){
+int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv, double *start){
 
   //emil - tested that tolerance makes logistic regression run much faster
   //double tol = 1e-6;
@@ -1705,8 +1809,11 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
   }
   
   //yTilde <- X%in%coef
-  for(int j=0;j<nInd;j++)//row Xt
+  for(int j=0;j<nInd;j++){//row Xt
     res[j]=0;
+    //storing coefs
+    start[j]= invXtX_Xt_y[j];
+  }
   
   for(int j=0;j<nInd;j++)//row Xt
     for(int x=0;x<nEnv;x++)
@@ -1721,7 +1828,9 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
   return 0;
 }
 
-
+///////////////////////////////////////////////////////////////////////////////
+// EMIL END
+///////////////////////////////////////////////////////////////////////////////
 
 double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc){
   if(doPrint)
@@ -1730,6 +1839,8 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
   double covMatrix[(covmat.y+1)*keepInd];
   double y[keepInd];
   double post[keepInd*3];
+  double start[keepInd];
+  
   int count=0;
   for(int i=0;i<pars->nInd;i++){
     if(keepList[i]){
@@ -1813,11 +1924,11 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
   }
   else{
     if(isBinary){
-      if(getFitBin(yfit,y,covMatrix,keepInd,nEnv))
+      if(getFitBin(yfit,y,covMatrix,keepInd,nEnv,start))
 	return -999;
     }
     else
-      if(getFit(yfit,y,covMatrix,keepInd,nEnv))
+      if(getFit(yfit,y,covMatrix,keepInd,nEnv,start))
 	return -999;
   }
   
@@ -2131,7 +2242,6 @@ void abcAsso::printDoAsso(funkyPars *pars){
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
 
-  //emil
   
   freqStruct *freq = (freqStruct *) pars->extras[6];
   assoStruct *assoc= (assoStruct *) pars->extras[index];
@@ -2145,7 +2255,7 @@ void abcAsso::printDoAsso(funkyPars *pars){
       if(doAsso==5){
 	 ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s]);
        } else if(doAsso==4 or doAsso==6){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s]);
+	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
        } else if(doAsso==2){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
 
