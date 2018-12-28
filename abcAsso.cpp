@@ -760,7 +760,7 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
       stat[yi][s]=dosageAssoc(pars,&design,&designNull,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
 
       //if not enough, WT, HE or HO or ind to run test
-      if(assoc->betas[s ]< -900){
+      if(stat[yi][s]< -900){
 	assoc->betas[s]=NAN;
       } else{
 	assoc->betas[s]=start[0];
@@ -797,47 +797,20 @@ int abcAsso::getFitWLS(double* start, double* y, double** covMatrix, double* wei
      nInd is the number of individuals
      nEnv is the number of predictors (including the intercept)
    */
-  
-   int nIndW=0;
 
-   std::vector<double> nonZeroWeight(nInd3);
-   //char nonZeroWeight[nInd3];
-   //memset(nonZeroWeight,0,nInd3);
-   if(weights==NULL){
-     nIndW=nInd3;
-     nonZeroWeight.assign(nInd3,1);
-     //memset(nonZeroWeight,1,nInd3);
-   } else{
-     for(int i=0;i<nInd3;i++){
-       // checks that weights are greater than 0, and keeps those individuals
-       if(weights[i]>0){
-	 nonZeroWeight[i]=1;
-	 nIndW++;
-       }
-     }
-   }
 
-   std::vector<double> yw(nIndW);
-   std::vector<double> xw(nIndW*nEnv);
+   std::vector<double> yw(nInd3);
+   std::vector<double> xw(nInd3*nEnv);
    
-   //double yw[nIndW]; //<-stripped phenos scaled by stripped weights
-   //double xw[nIndW*nEnv]; //<-stripped designs
+   //double yw[nInd3]; //<-stripped phenos scaled by stripped weights
+   //double xw[nInd3*nEnv]; //<-stripped designs
 
    int cnt=0;
-   for(int i=0;i<nInd3;i++){
-     if(nonZeroWeight[i]){
-       if(weights!=NULL)
-	 yw[cnt] = y[i]*sqrt(weights[i]);
-       else
-	 yw[cnt] = y[i];
-       for(int j=0;j<nEnv;j++){
-	 if(weights!=NULL)
-	   xw[cnt*nEnv+j] = covMatrix[i][j] * sqrt(weights[i]);
-	 else
-	   xw[cnt*nEnv+j] = covMatrix[i][j];	   
-       }
-        cnt++;
-     }
+   for(int i=0;i<nInd3;i++){     
+     yw[i] = y[i]*sqrt(weights[i]);
+     for(int j=0;j<nEnv;j++){       
+       xw[i*nEnv+j] = covMatrix[i][j] * sqrt(weights[i]);       
+     }        
    }
     
    double XtX[nEnv*nEnv];
@@ -847,7 +820,7 @@ int abcAsso::getFitWLS(double* start, double* y, double** covMatrix, double* wei
    // this is doing the matrix product of (X)^T*W*X 
    for(int x=0;x<nEnv;x++)
      for(int y=0;y<nEnv;y++)
-       for(int i=0;i<nIndW;i++)
+       for(int i=0;i<nInd3;i++)
 	 XtX[x*nEnv+y]+=xw[i*nEnv+x]*xw[i*nEnv+y];
 
 #if 0
@@ -886,7 +859,7 @@ int abcAsso::getFitWLS(double* start, double* y, double** covMatrix, double* wei
 
    // doing (X)^T*W*Y
    for(int x=0;x<nEnv;x++)
-     for(int i=0;i<nIndW;i++)
+     for(int i=0;i<nInd3;i++)
        Xt_y[x]+=xw[i*nEnv+x]*yw[i];
 
    // calculating the coefs: inv((X)^T*W*X)*((X)^T*W*Y)
@@ -910,13 +883,8 @@ int abcAsso::getFitWLS(double* start, double* y, double** covMatrix, double* wei
    double ts=0;
    for(int i=0;i<nInd3;i++){
      // getting the residuals
-     double tmp = y[i]-yTilde[i];
-     if(weights!=NULL){       
-       ts += tmp*tmp*weights[i];
-     } else{
-       ts += tmp*tmp;
-     }
-
+     double tmp = y[i]-yTilde[i];    
+     ts += tmp*tmp*weights[i];
    }
         
    if(df==-1){
@@ -927,6 +895,7 @@ int abcAsso::getFitWLS(double* start, double* y, double** covMatrix, double* wei
    return 0;
         
  }
+
 
 
 int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df){
@@ -943,83 +912,57 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
      int df is the number of degrees of freedom
      nInd is the number of individuals
      nEnv is the number of predictors (including the intercept)
+
+     ASSUMES ALL INDIVIDUALS HAVE VALID WEIGHTS
    */
   
-   int nIndW=0;  
-   //char nonZeroWeight[nInd3];
-   std::vector<double> nonZeroWeight(nInd3);
-   //memset(nonZeroWeight,0,nInd3);
-   if(weights==NULL){
-     nIndW=nInd3;
-     nonZeroWeight.assign(nInd3,1);
-     //memset(nonZeroWeight,1,nInd3);
-   } else{
-     for(int i=0;i<nInd3;i++){
-       if(weights[i]>0){
-	 // counts non zero weights!
-	 nonZeroWeight[i]=1;
-	 nIndW++;
-       }
-     }
-   }
-
-   std::vector<double> yw(nIndW);
-   std::vector<double> ww(nIndW);
-   std::vector<double> xw(nIndW*nEnv);
+   std::vector<double> yw(nInd3);
+   std::vector<double> xw(nInd3*nEnv);
    
    //double yw[nIndW]; //<-stripped phenos scaled by stripped weights
    //double ww[nIndW]; //<-stripped weights
    //double xw[nIndW*nEnv]; //<-stripped designs
 
-   int cnt=0;
    for(int i=0;i<nInd3;i++){
-     if(nonZeroWeight[i]){
-       yw[cnt] = y[i];
-       if(weights==NULL){
-	 ww[cnt] = 1;
-       } else{
-	 ww[cnt] = weights[i];
-       }
-       for(int j=0;j<nEnv;j++){
-	 xw[cnt*nEnv+j] = covMatrix[i][j];
-       }
-       cnt++;
-     }
+     yw[i] = y[i];
+     for(int j=0;j<nEnv;j++){
+       xw[i*nEnv+j] = covMatrix[i][j];       
+     }     
    }
 
-   std::vector<double> mustart(nIndW);
-   //double mustart[nIndW];
+   std::vector<double> mustart(nInd3);
+   //double mustart[nInd3];
    // if weights do not exists, have all weights be 1     
-   for(int i=0;i<nIndW;i++){
-     mustart[i] = (ww[i]*yw[i] + 0.5)/(ww[i] + 1);
+   for(int i=0;i<nInd3;i++){
+     mustart[i] = (weights[i]*yw[i] + 0.5)/(weights[i] + 1);
    }
 
-   std::vector<double> eta(nIndW);
-   //double eta[nIndW];
-   for(int i=0;i<nIndW;i++){
+   std::vector<double> eta(nInd3);
+   //double eta[nInd3];
+   for(int i=0;i<nInd3;i++){
      //link
      eta[i] = log(mustart[i]/(1-mustart[i]));
    }
 
-   std::vector<double> mu(nIndW);
-   //double mu[nIndW];
-   for(int i=0;i<nIndW;i++){
+   std::vector<double> mu(nInd3);
+   //double mu[nInd3];
+   for(int i=0;i<nInd3;i++){
      //linkinv
      mu[i] = 1 / (1 + exp(-eta[i]));
    }
 
-   std::vector<double> mu0(nIndW);
-   std::vector<double> muetaval(nIndW);
-   std::vector<double> z(nIndW);
-   std::vector<double> w(nIndW);
+   std::vector<double> mu0(nInd3);
+   std::vector<double> muetaval(nInd3);
+   std::vector<double> z(nInd3);
+   std::vector<double> w(nInd3);
    std::vector<double> Xt_y(nEnv);
    std::vector<double> invXtX_Xt_y(nEnv);
    double XtX[nEnv*nEnv] = {0};
    
-   //   double mu0[nIndW];
-   //double muetaval[nIndW];
-   //double z[nIndW];
-   //double w[nIndW];
+   //   double mu0[nInd3];
+   //double muetaval[nInd3];
+   //double z[nInd3];
+   //double w[nInd3];
    //   double XtX[nEnv*nEnv] = {0};
    //double Xt_y[nEnv] = {0};
    //double invXtX_Xt_y[nEnv] = {0}; 
@@ -1027,15 +970,15 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
    // we run this 20 times...
    for(int t=0;t<20;t++){
      
-     for(int i=0;i<nIndW;i++){
+     for(int i=0;i<nInd3;i++){
        // because mu is same as linkinv(eta)
        muetaval[i] = mu[i]*(1-mu[i]); 
      }
 
-     for(int i=0;i<nIndW;i++){
+     for(int i=0;i<nInd3;i++){
        // can be calculated together as do not depent on eachother
        z[i] = eta[i]+(yw[i]-mu[i])/muetaval[i];       
-       w[i] = sqrt( (ww[i]*(muetaval[i]*muetaval[i])) / (mu[i]*(1-mu[i])) );       
+       w[i] = sqrt( (weights[i]*(muetaval[i]*muetaval[i])) / (mu[i]*(1-mu[i])) );       
      }
       
      // this is doing the matrix product of (X)^T*W*X
@@ -1044,7 +987,7 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
      // thereby the same as taking rows of transposed first matrix (cols of org) and putting it on all columns of second matrix
      for(int x=0;x<nEnv;x++){
        for(int y=0;y<nEnv;y++){
-	 for(int i=0;i<nIndW;i++){
+	 for(int i=0;i<nInd3;i++){
 	   // t(xw) %*% xw
 	   XtX[x*nEnv+y]+=xw[i*nEnv+x]*w[i]*xw[i*nEnv+y]*w[i];
 	 }
@@ -1083,7 +1026,7 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
      // takes first column of first matrix and puts on first and only column of second matrix
      // takes second column of first matrix and puts on first and only column of second matrix
      for(int x=0;x<nEnv;x++){
-       for(int i=0;i<nIndW;i++){	 
+       for(int i=0;i<nInd3;i++){	 
 	 Xt_y[x] += xw[i*nEnv+x]*w[i]*z[i]*w[i];
        }       
      }
@@ -1098,7 +1041,7 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
      }
           
      // eta
-     for(int i=0;i<nIndW;i++){
+     for(int i=0;i<nInd3;i++){
        // clear values of eta
        eta[i]=0;
        for(int x=0;x<nEnv;x++)
@@ -1107,7 +1050,7 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
      double diff = 0;
      
      // mu
-     for(int i=0;i<nIndW;i++){
+     for(int i=0;i<nInd3;i++){
        //linkinv
        mu[i] = 1 / (1 + exp(-eta[i]));
        // we cannot do this for first iteration diff between previous (mu0) and current iteration (mu)
@@ -1123,14 +1066,14 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
      // clear those that have +=
      // much faster than setting values 0 than in for loop
      memset(XtX, 0, sizeof(XtX));
-     Xt_y.assign(0,nEnv);
-     invXtX_Xt_y.assign(0,nEnv);
+     Xt_y.assign(nEnv,0);
+     invXtX_Xt_y.assign(nEnv,0);
      //memset(Xt_y, 0, sizeof(Xt_y));
      //memset(invXtX_Xt_y, 0, sizeof(invXtX_Xt_y));
      
    }
+   
    return 0;
-
 }
 
 //pat[add/rec][g]
@@ -1411,7 +1354,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
     llh0=llh1;   
     memcpy(pars0,start,sizeof(double)*(design->y+1));         
   }
-    
+      
   // likelihood ratio - chi square distributed according to Wilk's theorem
   double LRT = -2*(llh0-llhNull);
   return(LRT);  
@@ -1494,7 +1437,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
       stat[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
 
       //if not enough, WT, HE or HO or ind to run test
-      if( stat[yi][s] < -900){
+      if(stat[yi][s] < -900){
 	assoc->betas[s]=NAN;
       } else{
 	assoc->betas[s]=start[0]; // giving coefs
@@ -1737,7 +1680,6 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
   double invXtX_Xt_y[nEnv];
   double XtX[nEnv*nEnv];
 
-
   for(int x=0;x<nEnv;x++)//col X
     coef[x]=0;
 
@@ -1755,7 +1697,6 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
     for(int i=0;i<nInd;i++){
       eta[i]=0;
     }
-
 
     //eta <- 1/(1+exp(-(X%*%b)))
     for(int i=0;i<nInd;i++){
@@ -1794,27 +1735,19 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
      for(int x=0;x<nEnv;x++)
        coef[x]+=invXtX_Xt_y[x];
 
-     /*
-     fprintf(stdout,"iter=%d\n",iter);
-     for(int x=0;x<nEnv;x++)
-     fprintf(stdout,"%f\t",invXtX_Xt_y[x]);
-     fprintf(stdout,"diff=%f\n",diff);
-     for(int x=0;x<nEnv;x++)
-     fprintf(stdout,"%f\t",coef[x]);
-     fprintf(stdout,"\n");
-     */
-
      if(diff<tol)
        break;
   }
   
   //yTilde <- X%in%coef
   for(int j=0;j<nInd;j++){//row Xt
-    res[j]=0;
-    //storing coefs
-    start[j]= invXtX_Xt_y[j];
+    res[j]=0;   
   }
-  
+
+  for(int x=0;x<nEnv;x++){//row Xt
+    start[x]=coef[x];
+  }
+
   for(int j=0;j<nInd;j++)//row Xt
     for(int x=0;x<nEnv;x++)
       res[j]+=covMatrix[x*nInd+j]*coef[x];
@@ -1827,6 +1760,7 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
 
   return 0;
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // EMIL END
@@ -1849,7 +1783,6 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
 	post[count*3+g]=postOrg[i*3+g];
       count++;
     }
-
   }
 
   if(count!=keepInd){
@@ -1960,9 +1893,6 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
   return stat;
 
 }
-
-
-
 
 double abcAsso::normScoreEnv(double *post,int numInds, double *y, double *ytilde,double *cov,int nEnv,double freq,assoStruct *assoc,int s){
   if(doPrint)
@@ -2258,8 +2188,6 @@ void abcAsso::printDoAsso(funkyPars *pars){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
        } else if(doAsso==2){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
-
-
       } else{
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s]);
 

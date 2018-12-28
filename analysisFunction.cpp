@@ -1208,9 +1208,9 @@ double angsd::bernoulli(int k, double p, int ifLog){
   }
   
   if(ifLog){
-    return( pow(p,k)*pow(1-p,1-k) );
-  } else{
     return( log(pow(p,k)*pow(1-p,1-k)) );
+  } else{
+    return( pow(p,k)*pow(1-p,1-k) );
   }
 }
 
