@@ -267,7 +267,6 @@ abcAsso::~abcAsso(){
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
 
-
   if(doAsso==0)
     return;
   for(int i=0;i<ymat.y;i++)
@@ -299,11 +298,17 @@ void abcAsso::clean(funkyPars *pars){
     delete[] assoc->highHe;
     delete[] assoc->highHo;
     delete[] assoc->betas;
+    for(int yi=0;yi<ymat.y;yi++)
+      delete[] assoc->statOther[yi];
+    delete[] assoc->statOther;
   } else if(doAsso==2){
     delete[] assoc->highWt;
     delete[] assoc->highHe;
-    delete[] assoc->highHo;
-  } else{
+    delete[] assoc->highHo;    
+  } else if(doAsso==4 or doAsso==6){
+    delete[] assoc->highWt;
+    delete[] assoc->highHe;
+    delete[] assoc->highHo;    
     delete[] assoc->betas;
   }
   
@@ -632,13 +637,27 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
 	covMatrix[count] = 2*post[count*3+2] + post[count*3+1];
       }
 
-      if(post[count*3+0]>0.90)
-	highWT++;
-      if(post[count*3+1]>0.90)
-	highHE++;
-      if(post[count*3+2]>0.90)
-	highHO++;
-            
+       //if rec model, WT+HE->WT, HO->HE
+      if(model==3){
+	if((post[count*3+0]+post[count*3+1])>0.90)
+	  highWT++;
+	if(post[count*3+2]>0.90)
+	  highHE++;
+      } else if(model==2){
+	 //if dom model, WT->WT, HE+HO->HE, HO->0
+	if(post[count*3+0]>0.90)
+	  highWT++;
+	if((post[count*3+1]+post[count*3+2])>0.90)
+	  highHE++;
+      } else{
+	if(post[count*3+0]>0.90)
+	  highWT++;
+	if(post[count*3+1]>0.90)
+	  highHE++;
+	if(post[count*3+2]>0.90)
+	  highHO++;
+      }
+           
       covMatrix[keepInd+count] = 1;
       design->matrix[count][1] = 1;
       for(int c=0;c<covmat.y;c++){
@@ -774,6 +793,8 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
     
     delete [] keepListAll;
   } // sites end
+
+  delete [] start;
 
   angsd::deleteMatrix(design);
   angsd::deleteMatrix(designNull);
@@ -1288,18 +1309,32 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
 	  design->matrix[count*3+j][2+c] = covmat.matrix[i][c];
 	}
       }
-
-      if(post[count*3+0]>0.90)
-	highWT++;
-      if(post[count*3+1]>0.90)
-	highHE++;
-      if(post[count*3+2]>0.90)
-	highHO++;
+      
+      //if rec model, WT+HE->WT, HO->HE
+      if(model==3){
+	if((post[count*3+0]+post[count*3+1])>0.90)
+	  highWT++;
+	if(post[count*3+2]>0.90)
+	  highHE++;
+      } else if(model==2){
+	 //if dom model, WT->WT, HE+HO->HE, HO->0
+	if(post[count*3+0]>0.90)
+	  highWT++;
+	if((post[count*3+1]+post[count*3+2])>0.90)
+	  highHE++;
+      } else{
+	if(post[count*3+0]>0.90)
+	  highWT++;
+	if(post[count*3+1]>0.90)
+	  highHE++;
+	if(post[count*3+2]>0.90)
+	  highHO++;
+      }
       
       count++;
     }
   }
-
+  
   assoc->highWt[s] = highWT;
   assoc->highHe[s] = highHE;
   assoc->highHo[s] = highHO;
@@ -1394,7 +1429,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
     designNull.matrix[xi] = new double[covmat.y+1];
     for(int i=0;i<3;i++){
       design.matrix[3*xi+i] = new double[covmat.y+2];    
-      postAll.matrix[3*xi+i] = new double[3];
+      postAll.matrix[3*xi+i] = new double[postAll.y];
     }
   }
       
@@ -1452,6 +1487,12 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
     delete [] keepListAll;
   } // sites end
 
+  delete [] start;
+
+  designNull.x=pars->nInd;
+  design.x=3*pars->nInd;
+  postAll.x=3*pars->nInd;
+  
   angsd::deleteMatrix(postAll);
   angsd::deleteMatrix(design);
   angsd::deleteMatrix(designNull);
@@ -1503,7 +1544,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
     designNull.matrix[xi] = new double[covmat.y+1];
     for(int i=0;i<3;i++){
       design.matrix[3*xi+i] = new double[covmat.y+2];    
-      postAll.matrix[3*xi+i] = new double[3];
+      postAll.matrix[3*xi+i] = new double[postAll.y];
     }
   }
   
@@ -1557,6 +1598,16 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
     
     delete [] keepListAll;
   } // sites end
+
+  delete [] start;
+
+  designNull.x=pars->nInd;
+  design.x=3*pars->nInd;
+  postAll.x=3*pars->nInd;
+  
+  angsd::deleteMatrix(postAll);
+  angsd::deleteMatrix(design);
+  angsd::deleteMatrix(designNull);
 
   assoc->statOther=statOther;
   assoc->stat=stat;
