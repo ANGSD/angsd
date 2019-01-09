@@ -9,6 +9,7 @@
   part of angsd
 
 */
+
 #include <cmath>
 #include <zlib.h>
 #include <htslib/kstring.h>
@@ -17,8 +18,6 @@
 
 #include "abcFreq.h"
 #include "abcAsso.h"
-
-
 
 void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
@@ -40,8 +39,14 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t3: Recessive\n\n");
   fprintf(argFile,"\t-minHigh\t%d\t(Require atleast minHigh number of high credible genotypes)\n",minHigh);
   fprintf(argFile,"\t-minCount\t%d\t(Require this number of minor alleles, estimated from MAF)\n",minCount);
+
+  fprintf(argFile,"\t-assoThres\t%f\tThreshold for logistic regression\n",assoThres);
+  fprintf(argFile,"\t-assoIter\t%d\tNumber of iterations for logistic regression\n",assoIter);
+  fprintf(argFile,"\t-emThres\t%f\tThreshold for convergence of EM algorithm in doAsso 4 and 5\n",emThres);
+  fprintf(argFile,"\t-emIter\t%d\tNumber of max iterations for EM algorithm in doAsso 4 and 5\n\n",emIter);  
+  
   fprintf(argFile,"  Hybrid Test Options:\n");
-  fprintf(argFile,"\t-hybridThres\t\t%f\t(Chisquare (df=1) value threshold for when to perform latent genotype model)\n",hybridThres);
+  fprintf(argFile,"\t-hybridThres\t\t%f\t(p-value value threshold for when to perform latent genotype model)\n",hybridThres);
   fprintf(argFile,"Examples:\n\tPerform Frequency Test\n\t  \'./angsd -yBin pheno.ybin -doAsso 1 -GL 1 -out out -doMajorMinor 1 -minLRT 24 -doMaf 2 -doSNP 1 -bam bam.filelist'\n");
   fprintf(argFile,"\tPerform Score Test\n\t  \'./angsd -yBin pheno.ybin -doAsso 2 -GL 1 -doPost 1 -out out -doMajorMinor 1 -minLRT 24 -doMaf 2 -doSNP 1 -bam bam.filelist'\n");
   fprintf(argFile,"\n");
@@ -74,13 +79,17 @@ void abcAsso::getOptions(argStruct *arguments){
   doPost=angsd::getArg("-doPost",doPost,arguments);
   yfile=angsd::getArg("-yBin",yfile,arguments);
   hybridThres=angsd::getArg("-hybridThres",hybridThres,arguments);
+  assoThres=angsd::getArg("-assoThres",assoThres,arguments);
+  assoIter=angsd::getArg("-assoIter",assoIter,arguments);
+  emThres=angsd::getArg("-emThres",emThres,arguments);
+  emIter=angsd::getArg("-emIter",emIter,arguments);
+  
   if(yfile!=NULL)
     isBinary=1;
   yfile=angsd::getArg("-yQuant",yfile,arguments);
 
   if(doPrint)
     fprintf(stderr,"finished [%s]\t[%s]\n",__FILE__,__FUNCTION__);
-
 
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
@@ -123,10 +132,12 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   dynCov=0;//not for users
   minCov=5;//not for users
   adjust=1;//not for users  
-  doMaf=0;
-  mIter=40;//not for users
-  threshold=1e-04;//not for users
-  hybridThres=3.841;//not for users
+  doMaf=0;  
+  assoIter=100;
+  assoThres=1e-06;
+  emIter=40;
+  emThres=1e-04;  
+  hybridThres=0.05;
   //from command line
   
   if(arguments->argc==2){
@@ -1367,9 +1378,9 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   double pars0[design->y+1];
   memcpy(pars0,start,sizeof(double)*(design->y+1));
   double llh0 = logLike(start,y,design,post,isBinary,fullModel);  
-  for(int i=0;i<mIter;i++){
+  for(int i=0;i<emIter;i++){
     double llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,fullModel);
-    if(fabs(llh1-llh0)<threshold){	 
+    if(fabs(llh1-llh0)<emThres){	 
       //	 fprintf(stderr,"Converged \n");
       break;
     } else if(llh0<llh1){
@@ -1517,6 +1528,9 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   // we can also get coef of genotype
   double **stat = new double*[ymat.y*2];
   double **statOther = new double*[ymat.y*2];
+
+  //chisq distribution with df=1
+  Chisqdist *chisq1 = new Chisqdist(1);
   
   for(int yi=0;yi<ymat.y;yi++){
     stat[yi] = new double[pars->numSites];
@@ -1580,8 +1594,8 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
       freqStruct *freq = (freqStruct *) pars->extras[6];
       stat[yi][s]=doAssociation(pars,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc);
 
-      // similar to P-value of 0.05
-      if(stat[yi][s]>hybridThres){
+      // cutoff has been changed to p-value
+      if(angsd::to_pval(chisq1,stat[yi][s])<hybridThres){
 	// add extra params in stat for storing LRT and beta
 	statOther[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
 	assoc->betas[s]=start[0];
@@ -1600,7 +1614,8 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   } // sites end
 
   delete [] start;
-
+  delete [] chisq1;
+  
   designNull.x=pars->nInd;
   design.x=3*pars->nInd;
   postAll.x=3*pars->nInd;
@@ -1695,7 +1710,7 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
 
   //emil - tested that tolerance makes logistic regression run much faster
   //double tol = 1e-6;
-  double tol = 1e-4;
+  double tol = assoThres;
   
   /*
     logistic regression. Fits a logistic regression model. 
@@ -1736,7 +1751,7 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
 
   //emil - tested that tolerance makes logistic regression run much faster
   //for(int iter=0;iter<100;iter++){
-  for(int iter=0;iter<20;iter++){
+  for(int iter=0;iter<assoIter;iter++){
 
     //set to zero
     for(int x=0;x<nEnv;x++){

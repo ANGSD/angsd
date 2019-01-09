@@ -32,9 +32,12 @@ public:
   int minCount;
   int adjust;  //not for users
   int model;
-  int mIter; //not for users
-  double threshold; //not for users
-  double hybridThres; //not for users
+  int emIter;
+  int assoIter; 
+  double emThres;
+  double assoThres; 
+  double hybridThres; 
+  
   
   void run(funkyPars  *pars);
   void print(funkyPars *pars);  

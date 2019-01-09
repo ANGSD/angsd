@@ -1228,6 +1228,10 @@ double angsd::sd(double* phe, int size ){
   return ts/(1.0*(size-1.0));
 }
 
+double angsd::to_pval(Chisqdist *chisq,double f){
+  return f<0?1:1-chisq->cdf(f);
+}
+
 
 
 
