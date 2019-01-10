@@ -1174,14 +1174,11 @@ double angsd::dnorm(double x,double mean,double sd,int ifLog){
 
   double lower_bound=1e-20;//emil - not for users
 
-  if(ifLog){
-    fac = log(fac);
-    val = log(val);
-
+  if(ifLog){    
     if(val<lower_bound){
       return(log(lower_bound));
     } else{
-      return (fac+val);
+      return (log(fac)+log(val));
     }    
   } else{
     // if val is 0 because exp(-(x-mean)*(x-mean)) is due to underflow, returns low value

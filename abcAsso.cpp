@@ -1,4 +1,7 @@
 /*
+  emil emil.jorsboe@bio.ku.dk - jan9 2019
+  has implemented new methods -doAsso 4, 5 and 6
+
   thorfinn thorfinn@binf.ku.dk dec17 2012 
   has modified so no sites[].chromo etc are used
   
@@ -555,7 +558,7 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// INSERTED BY EMIL 07-11-2018
+// INSERTED BY EMIL 
 ///////////////////////////////////////////////////////////////////////////////
 
 double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, double* start, int fullModel){
@@ -933,7 +936,7 @@ int abcAsso::getFitWLS(double* start, double* y, double** covMatrix, double* wei
 int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df){
 
   //emil
-  double tol = 1e-4;
+  double tol = assoThres;
   
    /*
      Fits logistic model using iterativt weighted least squares (IWLS)
@@ -1000,7 +1003,7 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
    //double invXtX_Xt_y[nEnv] = {0}; 
    
    // we run this 20 times...
-   for(int t=0;t<20;t++){
+   for(int t=0;t<assoIter;t++){
      
      for(int i=0;i<nInd3;i++){
        // because mu is same as linkinv(eta)
@@ -1154,9 +1157,9 @@ double abcAsso::logLike(double *start,double* y,angsd::Matrix<double> *design,do
 //double updateEM(funkyPars *p){
 double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary,int fullModel){
 
-  double ret;
   for(int i=0;i<design->x;i++){
     double m = 0;
+   
     for(int j=0;j<design->y;j++){
       m += design->matrix[i][j]*start[j];
     }
@@ -1168,11 +1171,12 @@ double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::M
       double prob = exp(m)/(exp(m)+1.0);
       // now handling if p is 0 or 1 (makes it very small or large)
       m = angsd::bernoulli(y[i],prob,1);
-    }    
+    }
+     
     double tmp = m + log(post[i]);
     postAll->matrix[(size_t)floor(i/3)][i % 3] = tmp;
   }
-  
+
   // dx is number of indis, dy is 4
   postAll->x = (size_t) design->x/3;
   postAll->y = 3;
@@ -1374,13 +1378,14 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
     fflush(stderr);
     exit(0);
   }  
-    
-  double pars0[design->y+1];
+
+  double pars0[design->y+1]; 
   memcpy(pars0,start,sizeof(double)*(design->y+1));
+  
   double llh0 = logLike(start,y,design,post,isBinary,fullModel);  
   for(int i=0;i<emIter;i++){
-    double llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,fullModel);
-    if(fabs(llh1-llh0)<emThres){	 
+    double llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,fullModel);        
+    if(fabs(llh1-llh0)<emThres and llh1 > 0){	 
       //	 fprintf(stderr,"Converged \n");
       break;
     } else if(llh0<llh1){
@@ -1397,10 +1402,12 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       break;
     }
     
-    llh0=llh1;   
-    memcpy(pars0,start,sizeof(double)*(design->y+1));         
+    llh0=llh1;
+    memcpy(pars0,start,sizeof(double)*(design->y+1));
+        
   }
-      
+
+        
   // likelihood ratio - chi square distributed according to Wilk's theorem
   double LRT = -2*(llh0-llhNull);
   return(LRT);  
@@ -1614,7 +1621,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   } // sites end
 
   delete [] start;
-  delete [] chisq1;
+  delete chisq1;
   
   designNull.x=pars->nInd;
   design.x=3*pars->nInd;
