@@ -991,8 +991,11 @@ int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* 
    std::vector<double> z(nInd3);
    std::vector<double> w(nInd3);
    std::vector<double> Xt_y(nEnv);
-   std::vector<double> invXtX_Xt_y(nEnv);
-   double XtX[nEnv*nEnv] = {0};
+   std::vector<double> invXtX_Xt_y(nEnv);   
+   double XtX[nEnv*nEnv];
+
+   for(int i=0;i<nEnv*nEnv;i++)
+     XtX[i]=0;
    
    //   double mu0[nInd3];
    //double muetaval[nInd3];
