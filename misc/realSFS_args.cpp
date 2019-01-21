@@ -5,6 +5,7 @@
 args * getArgs(int argc,char **argv){
   args *p = new args;
   p->bootstrap = 0;
+  p->resample_chr = 0;
   p->chooseChr=NULL;
   p->start=p->stop=-1;
   p->maxIter=1e2;
@@ -46,6 +47,8 @@ args * getArgs(int argc,char **argv){
       p->step = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-bootstrap"))
       p->bootstrap = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-resample_chr"))
+      p->resample_chr = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-maxIter"))
       p->maxIter = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-oldout"))
@@ -85,14 +88,22 @@ args * getArgs(int argc,char **argv){
   srand48(p->seed);
   for(int i=0;(p->saf.size()>1||p->fl!=NULL)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;
-  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fstout:%s oldout:%d seed:%ld bootstrap:%d whichFst:%d fold:%d ref:%s anc:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->outname,p->oldout,p->seed,p->bootstrap,p->whichFst,p->fold,p->ref,p->anc);
+  fprintf(stderr,"\t-> args: tole:%f nthreads:%d maxiter:%d nsites:%lu start:%s chr:%s start:%d stop:%d fstout:%s oldout:%d seed:%ld bootstrap:%d resample_chr:%d whichFst:%d fold:%d ref:%s anc:%s\n",p->tole,p->nThreads,p->maxIter,p->nSites,p->sfsfname.size()!=0?p->sfsfname[0]:NULL,p->chooseChr,p->start,p->stop,p->outname,p->oldout,p->seed,p->bootstrap,p->resample_chr,p->whichFst,p->fold,p->ref,p->anc);
 
   if((p->win==-1 &&p->step!=-1) || (p->win!=-1&&p->step==-1)){
     fprintf(stderr,"\t-> Both -win and -step must be supplied for sliding window analysis\n");
     exit(0);
 
   }
+  if(!p->bootstrap&&p->resample_chr){//nspope; can't resample without setting bootstrap reps
+    fprintf(stderr,"\t-> Cannot use -resample_chr if number of bootstrap reps is not set with -bootstrap\n");
+    exit(0);
+  }
   if(p->chooseChr){
+    if(p->resample_chr){//nspope; doesn't make sense to resample by chromosome when region specified
+      fprintf(stderr,"\t-> Cannot use -resample_chr if region is specified with -r\n");
+      exit(0);
+    }
     for(int i=0;i<p->saf.size();i++)
       if(p->saf[i]->mm.find(p->chooseChr)==p->saf[i]->mm.end()){
 	fprintf(stderr,"\t-> Problem finding chromosome: \'%s\' in saffile:%s\n",p->chooseChr,p->saf[i]->fname);

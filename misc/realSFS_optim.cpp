@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <algorithm>
+#include <numeric>
 #include "realSFS_args.h"
 #include "realSFS_optim.h"
 extern int howOften;
@@ -23,6 +24,7 @@ struct emPars{
 
 pthread_t *thd=NULL;
 size_t *bootstrap = NULL;
+size_t bootnSites = 0;//nspope; number of sites changes if bootstrapping chromosomes
 emPars<float> *emp = NULL;
 
 double ttol = 1e-16; 
@@ -208,7 +210,7 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
       int inc=0;
       for(size_t x=0;x<gls[0]->y;x++)
 	for(size_t y=0;y<gls[1]->y;y++){
-	  inner[inc] = pre[inc]*gls[0]->mat[s][x]*gls[1]->mat[bootstrap[s]][y];
+	  inner[inc] = pre[inc]*gls[0]->mat[bootstrap[s]][x]*gls[1]->mat[bootstrap[s]][y];
 	  inc++;
 	}
       normalize(inner,dim);
@@ -384,7 +386,10 @@ void destroy(emPars<T> *a,int nThreads ){
 
 template <typename T>
 double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls){
-  emp = setThreadPars<T>(gls,sfs,nThreads,dim,gls[0]->x);
+  if(bootnSites)
+    emp = setThreadPars<T>(gls,sfs,nThreads,dim,bootnSites);
+  else
+    emp = setThreadPars<T>(gls,sfs,nThreads,dim,gls[0]->x);
   fprintf(stderr,"------------\n");
   double oldLik,lik;
   oldLik = like_master<T>(nThreads);
@@ -419,7 +424,10 @@ destroy<T>(emp,nThreads);
 
 template <typename T>
 double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls,int useSq){
-  emp = setThreadPars<T>(gls,p,nThreads,dim,gls[0]->x);
+  if(bootnSites)
+    emp = setThreadPars<T>(gls,p,nThreads,dim,bootnSites);
+  else
+    emp = setThreadPars<T>(gls,p,nThreads,dim,gls[0]->x);
   fprintf(stderr,"------------\n");
   double oldLik,lik;
   oldLik = like_master<T>(nThreads);
@@ -560,14 +568,24 @@ int main_opt(args *arg){
   int ndim=(int) parspace(saf);
   double *sfs=new double[ndim];
 
+  //nspope; saf input is sorted by chromosome, and read in that order
+  //so only need to track starting pos of each chrom in gls[0]
+  //if ever saf input is allowed to be unsorted, -resample_chr will break
+  std::vector<size_t> chrStart(1,0);
+
   //temp used for checking pos are in sync
   setGloc(saf,nSites);
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL,arg->fl,1);//read nsites from data
     int b=0;  
+
     //fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
     if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
       break;
+
+    if(ret==-2&&arg->bootstrap&&arg->resample_chr)//nspope; start pos for new chrom
+      chrStart.push_back(gls[0]->x);
+
       {
       if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
 	//fprintf(stderr,"continue continue\n");
@@ -580,6 +598,13 @@ int main_opt(args *arg){
     
     fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
 
+    //nspope; calculate number of sites for each chr
+    std::vector<size_t> chrSize (chrStart.size()-1);
+    if(arg->bootstrap&&arg->resample_chr&&chrStart.size()>1)
+      std::adjacent_difference(++chrStart.begin(), chrStart.end(), chrSize.begin());
+    chrSize.push_back(gls[0]->x-chrStart.back());
+    std::vector<size_t> bootChr (chrStart.size(), 0);
+  
   neverusegoto:
     if(arg->bootstrap)
       fprintf(stderr,"Will do bootstrap replicate %d/%d\n",b+1,arg->bootstrap);
@@ -605,9 +630,26 @@ int main_opt(args *arg){
 	bootstrap = new size_t[gls[0]->x];
       
       if(bootstrap){
-	for(size_t i=0;i<gls[0]->x;i++)
-	  bootstrap[i] = lrand48() % gls[0]->x;
-	std::sort(bootstrap,bootstrap+gls[0]->x);
+        if(arg->resample_chr){//nspope; resample chromosomes, delete/reallocate bootstrap[], fill in sites
+          size_t newNsites = 0;
+          for(size_t i=0; i<bootChr.size(); i++){
+            bootChr.at(i) = lrand48()%bootChr.size();
+            newNsites += chrSize.at(bootChr.at(i));
+          }
+  	  fprintf(stderr,"\t-> Resampled %lu chromosomes to get %lu total sites\n",bootChr.size(),newNsites);
+          delete [] bootstrap; bootstrap = NULL;//no leaks here
+          bootstrap = new size_t[newNsites];
+          bootnSites = newNsites;//doesn't equal gls[0]->x thus is defined globally and used by setThreadPars 
+          size_t k=0;
+          for(size_t i=0;i<bootChr.size();i++)
+            for(size_t j=0;j<chrSize.at(bootChr.at(i));j++)
+              bootstrap[k++] = chrStart.at(bootChr.at(i))+j;
+          std::sort(bootstrap,bootstrap+newNsites);
+        }else{
+	  for(size_t i=0;i<gls[0]->x;i++)
+	    bootstrap[i] = lrand48() % gls[0]->x;
+	  std::sort(bootstrap,bootstrap+gls[0]->x);
+        }
       }
       double lik;
 

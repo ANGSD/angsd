@@ -680,7 +680,7 @@ int main(int argc,char **argv){
 
     fprintf(stderr, "\n\t-> 4) Estimate the SFS around a gene ??\n");
     fprintf(stderr,"\t-> ./realSFS afile.saf.idx -r chr2:135000000-140000000 \n");
-    fprintf(stderr, "\n\t-> Other options [-P nthreads -tole tolerence_for_breaking_EM -maxIter max_nr_iterations -bootstrap number_of_replications]\n");
+    fprintf(stderr, "\n\t-> Other options [-P nthreads -tole tolerence_for_breaking_EM -maxIter max_nr_iterations -bootstrap number_of_replications -resample_chr 0/1]\n");
 
     fprintf(stderr,"\n\t-> See realSFS print for possible print options\n");
     fprintf(stderr,"\t-> Use realSFS print_header for printing the header\n");
