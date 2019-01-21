@@ -2,3 +2,4 @@
 *.so
 *.a
 *.swp
+*.gitignore
