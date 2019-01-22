@@ -17,16 +17,11 @@
 #include "abcFreq.h"
 #include "abcSaf.h"
 #include "abcFilter.h"
-
+#include "analysisFunction.h"
 
 int abcFreq::emIter = EM_NITER;
 double abcFreq::EM_start = EM_START;
 double *abcFreq::indF = NULL;
-
-double abcFreq::to_pval(Chisqdist *chisq,double f){
-  return f<0?1:1-chisq->cdf(f);
-}
-
 
 //simple phat estimator from the 200danes article, one site function
 double phatFun(suint *counts,int nFiles,double eps,char major,char minor) {
@@ -405,9 +400,9 @@ void abcFreq::print(funkyPars *pars) {
       ksprintf(&bufstr,"%f\t",freq->phat[s]);
     if(doSNP){
       if(doMaf &1)
-	ksprintf(&bufstr,"%e\t",to_pval(chisq1,freq->lrt_EM[s]));
+	ksprintf(&bufstr,"%e\t",angsd::to_pval(chisq1,freq->lrt_EM[s]));
       if(doMaf &2)
-	ksprintf(&bufstr,"%e\t",to_pval(chisq1,freq->lrt_EM_unknown[s]));
+	ksprintf(&bufstr,"%e\t",angsd::to_pval(chisq1,freq->lrt_EM_unknown[s]));
     }
 
     kputw(pars->keepSites[s],&bufstr);kputc('\n',&bufstr);
