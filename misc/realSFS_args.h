@@ -22,6 +22,7 @@ typedef struct {
   int oldout;
   long seed;//<-seed=-1 old version;seed=0 means time; othervise it will be used as seed
   int bootstrap;
+  int resample_chr;//nspope; 1=bootstrap sites by resampling chromosomes, 0=regular bootstrap
   filt *fl;
   int whichFst;
   int fold;
