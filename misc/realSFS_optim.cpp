@@ -183,7 +183,6 @@ void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,size_t sta
    for(int x=0;x<dim;x++)
      post[x] += inner[x];
   }
-  normalize(post,dim);
  
 }
 
@@ -218,7 +217,6 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
 	post[x] += inner[x];
     }
 
-  normalize(post,dim);
  
 }
 
@@ -252,7 +250,6 @@ void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
    for(int x=0;x<dim;x++)
      post[x] += inner[x];
   }
-  normalize(post,dim);
    
 }
 
@@ -290,7 +287,6 @@ void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
   for(int x=0;x<dim;x++)
     post[x] += inner[x];
   
-  normalize(post,dim);
    
 }
 
@@ -326,7 +322,8 @@ void emStep_master(double *post,int nThreads){
       post[j] += emp[i].post[j];
   }
   
-  normalize(post,emp[0].dim);
+  for(int j=0;j<emp[0].dim;j++)
+    post[j] /= double(emp[0].gls[0]->x);//nspope; rescale *after* threads have merged
 
 #if 0
   for(int i=0;i<nThreads;i++){
