@@ -268,6 +268,9 @@ void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
 	      inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i]* gls[3]->mat[s][j];
 	      inc++;
 	    }
+      normalize(inner,dim);//nspope; normalization/addition should happen for each site
+      for(int x=0;x<dim;x++)
+        post[x] += inner[x];
     }
   }
   else{
@@ -280,13 +283,11 @@ void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
 	      inner[inc] = pre[inc]*gls[0]->mat[bootstrap[s]][x] * gls[1]->mat[bootstrap[s]][y] * gls[2]->mat[bootstrap[s]][i]* gls[3]->mat[bootstrap[s]][j];
 	      inc++;
 	    }
-      
+    normalize(inner,dim);//nspope; normalization/addition should happen for each site
+    for(int x=0;x<dim;x++)
+      post[x] += inner[x];
     }
   }
-  normalize(inner,dim);
-  for(int x=0;x<dim;x++)
-    post[x] += inner[x];
-  
    
 }
 
