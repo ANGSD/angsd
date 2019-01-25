@@ -324,7 +324,10 @@ void emStep_master(double *post,int nThreads){
   }
   
   for(int j=0;j<emp[0].dim;j++)
-    post[j] /= double(emp[0].gls[0]->x);//nspope; rescale *after* threads have merged
+    if(bootnSites)
+      post[j] /= double(bootnSites);
+    else
+      post[j] /= double(emp[0].gls[0]->x);//nspope; rescale *after* threads have merged
 
 #if 0
   for(int i=0;i<nThreads;i++){
