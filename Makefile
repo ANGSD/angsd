@@ -37,8 +37,12 @@ PROGRAMS = angsd
 
 all: $(PROGRAMS) misc
 
-BAMDIR=""
+BAMDIR=test/io
 BDIR=$(realpath $(BAMDIR))
+
+ASSODIR=test/assotest
+ADIR=$(realpath $(ASSODIR))
+
 
 PACKAGE_VERSION  = 0.923
 
@@ -77,7 +81,7 @@ clean: testclean
 
 test:
 	echo "Only subset of analyses is being tested"
-	cd test;./testAll.sh ../angsd $(BDIR)
+	cd test;./testAll.sh ../angsd $(BDIR) $(ADIR)
 force:
 
 install: all
