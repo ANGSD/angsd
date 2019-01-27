@@ -1,6 +1,6 @@
-if [[ ! $# -eq 2 ]]
+if [[ ! $# -eq 1 ]]
 then
-    echo "Supply an angsd binary and ASSODIR"
+    echo "Supply the WORKDIR"
     exit 1
 exit
 fi
@@ -8,33 +8,31 @@ fi
 LOG=${0}.log
 rm -f ${LOG}
 
-ANGSD=$1
-ASSODIR=$2
+WDIR=$1
+ASSODIR=assotest
 
-echo $ANGSD $ASSODIR
-
-tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso2new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso4new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso5new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso6new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso2binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso4binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso5binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso6binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 ## check results LRT and beta for each of the 8 analyses give back RVAL which one that fails

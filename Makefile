@@ -19,7 +19,7 @@ FLAGS = $(CPPFLAGS) -O3 $(LDFLAGS)
 CFLAGS := $(FLAGS) $(CFLAGS)
 CXXFLAGS := $(FLAGS) $(CXXFLAGS)
 
-CSRC = $(wildcard *.c) 
+CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 
@@ -37,12 +37,8 @@ PROGRAMS = angsd
 
 all: $(PROGRAMS) misc
 
-BAMDIR=test/io
+BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
-
-ASSODIR=test/assotest
-ADIR=$(realpath $(ASSODIR))
-
 
 PACKAGE_VERSION  = 0.923
 
@@ -81,7 +77,7 @@ clean: testclean
 
 test:
 	echo "Only subset of analyses is being tested"
-	cd test;./testAll.sh ../angsd $(BDIR) $(ADIR)
+	cd test;./testAll.sh ../angsd $(BDIR)
 force:
 
 install: all
