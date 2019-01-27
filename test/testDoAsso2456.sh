@@ -13,28 +13,31 @@ ASSODIR=$2
 
 echo $ANGSD $ASSODIR
 
+tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso2new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-asso2new=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}|tail -n +1 | cut -f7`
+tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso4new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-asso4new=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}|tail -n +1 | cut -f7`
+tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso5new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-asso5new=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}|tail -n +1 | cut -f7`
+tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso6new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-asso6new=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}|tail -n +1 | cut -f7`
+tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso2binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
+tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso4binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-asso2binnew=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}|tail -n +1 | cut -f7`
+tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso5binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-asso4binnew=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}|tail -n +1 | cut -f7`
-
-asso5binnew=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}|tail -n +1 | cut -f7`
-
-asso6binnew=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}|tail -n +1 | cut -f7`
-
+tmp=`$ANGSD -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso6binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 ## check results LRT and beta for each of the 8 analyses give back RVAL which one that fails
-
-echo $asso2new
 
 asso2=1.607704
 RVAL=0
@@ -80,9 +83,9 @@ if [ ! "$asso6" = "$asso6new"  ] ;then
     RVAL=5
 fi
 
-asso2bin=
+asso2bin=1.620294
 
-if [ ! "$asso2bin" = "$asso2newbin"  ] ;then
+if [ ! "$asso2bin" = "$asso2binnew"  ] ;then
     echo "--------------"
     echo "Problem with binary score test"
     echo "--------------"
@@ -91,9 +94,9 @@ if [ ! "$asso2bin" = "$asso2newbin"  ] ;then
     RVAL=6
 fi
 
-asso4bin=
+asso4bin=1.540588
 
-if [ ! "$asso4bin" = "$asso4newbin"  ] ;then
+if [ ! "$asso4bin" = "$asso4binnew"  ] ;then
     echo "--------------"
     echo "Problem with binary latent genotype test"
     echo "--------------"
@@ -102,9 +105,9 @@ if [ ! "$asso4bin" = "$asso4newbin"  ] ;then
     RVAL=7
 fi
 
-asso5bin=
+asso5bin=1.620294
 
-if [ ! "$asso5bin" = "$asso5newbin"  ] ;then
+if [ ! "$asso5bin" = "$asso5binnew"  ] ;then
     echo "--------------"
     echo "Problem with binary hybrid test"
     echo "--------------"
@@ -113,9 +116,9 @@ if [ ! "$asso5bin" = "$asso5newbin"  ] ;then
     RVAL=8
 fi
 
-asso6bin=
+asso6bin=1.540588
 
-if [ ! "$asso6bin" = "$asso6newbin"  ] ;then
+if [ ! "$asso6bin" = "$asso6binnew"  ] ;then
     echo "--------------"
     echo "Problem with binary dosage test"
     echo "--------------"
