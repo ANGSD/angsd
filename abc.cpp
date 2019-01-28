@@ -32,7 +32,7 @@
 #include "abcWriteVcf.h" //<- dump plink files.
 #include "abcPSMC.h"
 #include "abcScounts.h"
-
+#include "abcWriteBcf.h"
 //below we set some variables that are shared between all the analysis classes
 #define MAX_CLASS 29
 
@@ -76,7 +76,8 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcHWE_F(outfiles,arguments,inputtype); // 25
   tskStuff[nit++] = new abcIBS(outfiles,arguments,inputtype); // 
   tskStuff[nit++] = new abcPSMC(outfiles,arguments,inputtype); //
-  tskStuff[nit++] = new abcScounts(outfiles,arguments,inputtype); // 
+  tskStuff[nit++] = new abcScounts(outfiles,arguments,inputtype); //
+  tskStuff[nit++] = new abcWriteBcf(outfiles,arguments,inputtype); // 29
 
 
   nItem = nit;

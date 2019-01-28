@@ -1300,6 +1300,16 @@ BGZF *aio::openFileBG(const char* a,const char* b){
   return fp;
 }
 
+htsFile *aio::openFileHts(const char* a,const char* b){
+
+  char *c = new char[strlen(a)+strlen(b)+1];
+  strcpy(c,a);
+  strncat(c,b,strlen(b));
+  dumpedFiles.push_back(strdup(c));
+  htsFile *fp = hts_open(c,"w");
+  delete [] c;
+  return fp;
+}
 
 FILE *aio::getFILE(const char*fname,const char* mode){
   int writeFile = 0;

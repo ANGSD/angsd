@@ -118,11 +118,11 @@ namespace aio{
   FILE *openFile(const char* a,const char* b);
   FILE *getFILE(const char*fname,const char* mode);
   BGZF *openFileBG(const char* a,const char* b);
+  htsFile *openFileHts(const char * a, const char*b);
   int isNewer(const char *newer,const char *older);
   ssize_t bgzf_write(BGZF *fp, const void *data, size_t length);
   int tgets(gzFile gz,char**buf,int *l);
 }
-
 #endif
 
 
