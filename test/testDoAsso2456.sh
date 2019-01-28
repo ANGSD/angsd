@@ -43,8 +43,6 @@ if [ ! "$asso2" = "$asso2new"  ] ;then
     echo "--------------"
     echo "Problem with score test"
     echo "--------------"
-    cat ${LOG}
-    echo "--------------"
     RVAL=2
 fi
 
@@ -53,8 +51,6 @@ asso4=1.615975
 if [ ! "$asso4" = "$asso4new"  ] ;then
     echo "--------------"
     echo "Problem with latent genotype test"
-    echo "--------------"
-    cat ${LOG}
     echo "--------------"
     RVAL=3
 fi
@@ -65,8 +61,6 @@ if [ ! "$asso5" = "$asso5new"  ] ;then
     echo "--------------"
     echo "Problem with hybrid test"
     echo "--------------"
-    cat ${LOG}
-    echo "--------------"
     RVAL=4
 fi
 
@@ -75,8 +69,6 @@ asso6=1.615975
 if [ ! "$asso6" = "$asso6new"  ] ;then
     echo "--------------"
     echo "Problem with dosage test"
-    echo "--------------"
-    cat ${LOG}
     echo "--------------"
     RVAL=5
 fi
@@ -87,8 +79,6 @@ if [ ! "$asso2bin" = "$asso2binnew"  ] ;then
     echo "--------------"
     echo "Problem with binary score test"
     echo "--------------"
-    cat ${LOG}
-    echo "--------------"
     RVAL=6
 fi
 
@@ -97,8 +87,6 @@ asso4bin=1.540588
 if [ ! "$asso4bin" = "$asso4binnew"  ] ;then
     echo "--------------"
     echo "Problem with binary latent genotype test"
-    echo "--------------"
-    cat ${LOG}
     echo "--------------"
     RVAL=7
 fi
@@ -109,8 +97,6 @@ if [ ! "$asso5bin" = "$asso5binnew"  ] ;then
     echo "--------------"
     echo "Problem with binary hybrid test"
     echo "--------------"
-    cat ${LOG}
-    echo "--------------"
     RVAL=8
 fi
 
@@ -120,10 +106,7 @@ if [ ! "$asso6bin" = "$asso6binnew"  ] ;then
     echo "--------------"
     echo "Problem with binary dosage test"
     echo "--------------"
-    cat ${LOG}
-    echo "--------------"
     RVAL=9
 fi
-
 
 exit $RVAL
