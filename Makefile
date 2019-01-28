@@ -19,7 +19,7 @@ FLAGS = $(CPPFLAGS) -O3 $(LDFLAGS)
 CFLAGS := $(FLAGS) $(CFLAGS)
 CXXFLAGS := $(FLAGS) $(CXXFLAGS)
 
-CSRC = $(wildcard *.c) 
+CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
 

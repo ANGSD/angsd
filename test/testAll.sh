@@ -2,6 +2,7 @@
 
 PRG=""
 BAMDIR=""
+
 if [ $# -eq 0 ] 
 then
     exit 1;
@@ -17,11 +18,11 @@ then
     PRG=$1
     BAMDIR=$2
 fi
+
+
 echo "--------------------"
 echo "Using PRG: '${PRG}' and BAMDIR: '${BAMDIR}'"
 echo "--------------------"
-
-
 
 WDIR=`dirname $PRG`
 
@@ -36,9 +37,6 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 fi
-
-
-
 
 echo "Testing neutrality test statistics"
 ./testTaj.sh $WDIR
@@ -74,6 +72,13 @@ if [ ! $? -eq 0  ]   ;then
 fi
 fi
 
+echo "Testing association"
+./testDoAsso2456.sh $WDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with association exit code: $?"
+    cat ./testDoAsso2456.sh.log
+    RVAL=1
+fi
 
 
 exit ${RVAL}
