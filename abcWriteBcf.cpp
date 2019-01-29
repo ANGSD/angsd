@@ -36,14 +36,14 @@ void abcWriteBcf::printArg(FILE *argFile){
 }
 
 void abcWriteBcf::run(funkyPars *pars){
-  fprintf(stderr,"-dobcf2000:%d\n",doBcf);
+
   if(doBcf==0)
     return ;
    
 }
 
 void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args){
-
+  assert(args);
   bcf_hdr_append(hdr, "##fileDate=20090805");
   bcf_hdr_append(hdr, "##FORMAT=<ID=UF,Number=1,Type=Integer,Description=\"Unused FORMAT\">");
   bcf_hdr_append(hdr, "##INFO=<ID=UI,Number=1,Type=Integer,Description=\"Unused INFO\">");
@@ -71,14 +71,14 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args){
   bcf_hdr_append(hdr, "##FORMAT=<ID=HQ,Number=2,Type=Integer,Description=\"Haplotype Quality\">");
   bcf_hdr_append(hdr, "##FORMAT=<ID=TS,Number=1,Type=String,Description=\"Test String\">");
 
+  fprintf(stderr,"samples from sm:%d\n",args->sm->n);
   for(int i=0;i<args->sm->n;i++){
-    fprintf(stderr,"arguments->sm->sampl[9]:%s\n",args->sm->smpl[i]);
     bcf_hdr_add_sample(hdr, args->sm->smpl[i]);
   }
   bcf_hdr_add_sample(hdr, NULL);      // to update internal structures
   if ( bcf_hdr_write(fp, hdr)!=0 )
     fprintf(stderr,"Failed to write bcf\n");
-
+  
 
 
 }
@@ -93,7 +93,6 @@ void abcWriteBcf::clean(funkyPars *pars){
 }
 
 void abcWriteBcf::print(funkyPars *pars){
-  fprintf(stderr,"-dobcf:%d\n",doBcf);
   if(doBcf==0)
     return;
   if(fp==NULL){
@@ -185,11 +184,11 @@ void abcWriteBcf::getOptions(argStruct *arguments){
   
   
 }
-
+//constructor
 abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputtype){
   fp=NULL;
   doBcf =0;
-  
+  args=arguments;
   outfiles=outfiles_a;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doBcf")){
