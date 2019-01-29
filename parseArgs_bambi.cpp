@@ -192,6 +192,8 @@ void setArgsBam(argStruct *arguments){
   trim = angsd::getArg("-trim",trim,arguments);
   trim5 = angsd::getArg("-trim5",trim5,arguments);
   trim3 = angsd::getArg("-trim3",trim3,arguments);
+  arguments->ref=angsd::getArg("-ref",arguments->ref,arguments);
+  arguments->anc=angsd::getArg("-anc",arguments->anc,arguments);
   rghash_name= angsd::getArg("+RG",rghash_name,arguments);
   if(rghash_name&&!angsd::fexists(rghash_name))
     rghash = add_read_group_single(rghash_name);

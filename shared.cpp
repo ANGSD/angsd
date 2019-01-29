@@ -499,3 +499,6 @@ void printFunky(funkyPars *p){
 
 
 
+const char *angsd_version(){
+  return ANGSD_VERSION;
+}

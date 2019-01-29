@@ -1,7 +1,7 @@
 /*
   This is a class that dumps plink file output
-
  */
+
 #include <assert.h>
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
@@ -36,48 +36,55 @@ void abcWriteBcf::printArg(FILE *argFile){
 }
 
 void abcWriteBcf::run(funkyPars *pars){
-
   if(doBcf==0)
     return ;
-   
+ 
 }
 
-void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args){
+//last is from abc.h
+void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr){
   assert(args);
-  bcf_hdr_append(hdr, "##fileDate=20090805");
-  bcf_hdr_append(hdr, "##FORMAT=<ID=UF,Number=1,Type=Integer,Description=\"Unused FORMAT\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=UI,Number=1,Type=Integer,Description=\"Unused INFO\">");
-  bcf_hdr_append(hdr, "##FILTER=<ID=Flt,Description=\"Unused FILTER\">");
-  bcf_hdr_append(hdr, "##unused=<XX=AA,Description=\"Unused generic\">");
-  bcf_hdr_append(hdr, "##unused=unformatted text 1");
-  bcf_hdr_append(hdr, "##unused=unformatted text 2");
-  bcf_hdr_append(hdr, "##contig=<ID=Unused,length=62435964>");
-  bcf_hdr_append(hdr, "##source=myImputationProgramV3.1");
-  bcf_hdr_append(hdr, "##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta");
-  bcf_hdr_append(hdr, "##contig=<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species=\"Homo sapiens\",taxonomy=x>");
-  bcf_hdr_append(hdr, "##phasing=partial");
-  bcf_hdr_append(hdr, "##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=NEG,Number=.,Type=Integer,Description=\"Test Negative Numbers\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=AA,Number=1,Type=String,Description=\"Ancestral Allele\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=DB,Number=0,Type=Flag,Description=\"dbSNP membership, build 129\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=H2,Number=0,Type=Flag,Description=\"HapMap2 membership\">");
-  bcf_hdr_append(hdr, "##FILTER=<ID=q10,Description=\"Quality below 10\">");
-  bcf_hdr_append(hdr, "##FILTER=<ID=s50,Description=\"Less than 50% of samples have data\">");
-  bcf_hdr_append(hdr, "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
-  bcf_hdr_append(hdr, "##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">");
-  bcf_hdr_append(hdr, "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">");
-  bcf_hdr_append(hdr, "##FORMAT=<ID=HQ,Number=2,Type=Integer,Description=\"Haplotype Quality\">");
-  bcf_hdr_append(hdr, "##FORMAT=<ID=TS,Number=1,Type=String,Description=\"Test String\">");
+  ksprintf(&buf, "##angsdVersion=%s+htslib-%s\n",angsd_version(),hts_version());
+  bcf_hdr_append(hdr, buf.s);
+  
+  buf.l = 0;
+  ksprintf(&buf, "##angsdCommand=");
+  for (int i=1; i<args->argc; i++)
+    ksprintf(&buf, " %s", args->argv[i]);
+  kputc('\n', &buf);
+  bcf_hdr_append(hdr, buf.s);
+  buf.l=0;
 
-  fprintf(stderr,"samples from sm:%d\n",args->sm->n);
-  for(int i=0;i<args->sm->n;i++){
-    bcf_hdr_add_sample(hdr, args->sm->smpl[i]);
+  if (args->ref){
+    buf.l = 0;
+    ksprintf(&buf, "##reference=file://%s\n", args->ref);
+    bcf_hdr_append(hdr,buf.s);
   }
-  bcf_hdr_add_sample(hdr, NULL);      // to update internal structures
-  if ( bcf_hdr_write(fp, hdr)!=0 )
-    fprintf(stderr,"Failed to write bcf\n");
+  if (args->anc){
+    buf.l = 0;
+    ksprintf(&buf, "##ancestral=file://%s\n", args->anc);
+    bcf_hdr_append(hdr,buf.s);
+  }
+
+  // Translate BAM @SQ tags to BCF ##contig tags
+  // todo: use/write new BAM header manipulation routines, fill also UR, M5
+  for (int i=0; i<bhdr->n_targets; i++)
+    {
+      buf.l = 0;
+      ksprintf(&buf, "##contig=<ID=%s,length=%d>", bhdr->target_name[i], bhdr->target_len[i]);
+      bcf_hdr_append(hdr, buf.s);
+    }
+    buf.l = 0;
+    
+    //fprintf(stderr,"samples from sm:%d\n",args->sm->n);
+    for(int i=0;i<args->sm->n;i++){
+      bcf_hdr_add_sample(hdr, args->sm->smpl[i]);
+    }
+    bcf_hdr_add_sample(hdr, NULL);      // to update internal structures
+  
+   if ( bcf_hdr_write(fp, hdr)!=0 )
+     fprintf(stderr,"Failed to write bcf\n");
+   
   
 
 
@@ -99,11 +106,14 @@ void abcWriteBcf::print(funkyPars *pars){
     fp=aio::openFileHts(outfiles,".bcf");
     hdr = bcf_hdr_init("w");
     rec    = bcf_init1();
-    print_bcf_header(fp,hdr,args);
+    print_bcf_header(fp,hdr,args,buf,header);
   }
   lh3struct *lh3 = (lh3struct*) pars->extras[5];
   freqStruct *freq = (freqStruct *) pars->extras[6];
   genoCalls *geno = (genoCalls *) pars->extras[10];
+
+
+  
 #if 0
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
@@ -190,6 +200,7 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   doBcf =0;
   args=arguments;
   outfiles=outfiles_a;
+  buf.s=NULL;buf.l=buf.m=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doBcf")){
       printArg(stdout);

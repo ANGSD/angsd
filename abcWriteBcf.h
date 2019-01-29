@@ -18,6 +18,7 @@ private:
   int doGeno;
   argStruct *args;
   const char *outfiles;
+  kstring_t buf;
 public:
   int doBcf;
   abcWriteBcf(const char *outfiles,argStruct *arguments,int inputtype);

@@ -188,6 +188,7 @@ argStruct *setArgStruct(int argc,char **argv) {
   argStruct *arguments = new argStruct;
   arguments->argumentFile = stderr;
   arguments->outfiles =NULL;
+  arguments->fai=arguments->anc=NULL;
   arguments->hd=NULL;
   arguments->revMap= NULL;
   arguments->argc=argc;

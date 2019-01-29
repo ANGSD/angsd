@@ -43,4 +43,6 @@ typedef struct{
   int show;
   char *fai;
   bam_sample_t *sm;
+  char *ref;
+  char *anc;
 }argStruct;

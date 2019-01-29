@@ -10,7 +10,7 @@ extern int SIG_COND;
 #include <map>
 #include "bambi_interface.h"
 #include "argStruct.h"
-
+#include "version.h"
 #ifndef _types_t
 #define _types_t
 
@@ -62,7 +62,7 @@ void deallocFunkyPars(funkyPars *p);
 void init(argStruct *arguments);//intialize all needed objects
 void destroy_shared();//destroy all initialized objects
 void selector(funkyPars *p);
-
+const char *angsd_version();
 #define LOGMAX 20000   // pre-computed logfactorial 
 
 #endif
