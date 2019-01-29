@@ -55,7 +55,7 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr, buf.s);
   buf.l=0;
 
-  if (args->ref){
+  if(args->ref){
     buf.l = 0;
     ksprintf(&buf, "##reference=file://%s\n", args->ref);
     bcf_hdr_append(hdr,buf.s);
@@ -99,6 +99,8 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Number of high-quality bases\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=DV,Number=1,Type=Integer,Description=\"Number of high-quality non-reference bases\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
+  bcf_hdr_append(hdr,"##INFO=<ID=AF,Number=A,Type=Float,Description=\"Minor Allele Frequency\">\n");
   bcf_hdr_append(hdr,"##INFO=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=DP4,Number=4,Type=Integer,Description=\"Number of high-quality ref-fwd, ref-reverse, alt-fwd and alt-reverse bases\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=SP,Number=1,Type=Integer,Description=\"Phred-scaled strand bias P-value\">");
@@ -116,6 +118,7 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   
   if ( bcf_hdr_write(fp, hdr)!=0 )
     fprintf(stderr,"Failed to write bcf\n");
+  buf.l=0;
 }
 
 
@@ -130,23 +133,26 @@ void abcWriteBcf::clean(funkyPars *pars){
 void abcWriteBcf::print(funkyPars *pars){
   if(doBcf==0)
     return;
+  kstring_t buf;
   if(fp==NULL){
+    fprintf(stderr,"\t-> init\n");
+    buf.s=NULL;buf.l=buf.m=0;
     fp=aio::openFileHts(outfiles,".bcf");
     hdr = bcf_hdr_init("w");
     rec    = bcf_init1();
     print_bcf_header(fp,hdr,args,buf,header);
+    fprintf(stderr,"\t-> done init\n");
   }
   lh3struct *lh3 = (lh3struct*) pars->extras[5];
   freqStruct *freq = (freqStruct *) pars->extras[6];
   genoCalls *geno = (genoCalls *) pars->extras[10];
-
+  
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
       continue;
-  }
-#if 0
+
     rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
-    rec->pos = pars->posi[s]+1;//<- maybe one index?
+    rec->pos = pars->posi[s];//<- maybe one index?
     //    bcf_update_id(hdr, rec, "rs6054257");
     char majmin[4]={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
     bcf_update_alleles_str(hdr, rec, majmin);
@@ -161,144 +167,39 @@ void abcWriteBcf::print(funkyPars *pars){
     bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
     tmpi = -127;
     bcf_update_info_int32(hdr, rec, "NEG", &tmpi, 1);
-    float tmpf = 0.5;
-    bcf_update_info_float(hdr, rec, "AF", &tmpf, 1);
-    bcf_update_info_flag(hdr, rec, "DB", NULL, 1);
-    bcf_update_info_flag(hdr, rec, "H2", NULL, 1);
+    if(freq){
+      float tmpf = freq->freq_EM[s];
+      bcf_update_info_float(hdr, rec, "AF", &tmpf, 1);
+    }
     
-        // .. FORMAT
-    int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int));
-    tmpia[0] = bcf_gt_unphased(0);
-    tmpia[1] = bcf_gt_unphased(0);
-    tmpia[2] = bcf_gt_unphased(1);
-    tmpia[3] = bcf_gt_unphased(0);
-    tmpia[4] = bcf_gt_unphased(1);
-    tmpia[5] = bcf_gt_unphased(1);
-    bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2);
-    tmpia[0] = 48;
-    tmpia[1] = 48;
-    tmpia[2] = 43;
-    bcf_update_format_int32(hdr, rec, "GQ", tmpia, bcf_hdr_nsamples(hdr));
-    tmpia[0] = 1;
-    tmpia[1] = 8;
-    tmpia[2] = 5;
-    bcf_update_format_int32(hdr, rec, "DP", tmpia, bcf_hdr_nsamples(hdr));
-    tmpia[0] = 51;
-    tmpia[1] = 51;
-    tmpia[2] = 51;
-    tmpia[3] = 51;
-    tmpia[4] = bcf_int32_missing;
-    tmpia[5] = bcf_int32_missing;
-    bcf_update_format_int32(hdr, rec, "HQ", tmpia, bcf_hdr_nsamples(hdr)*2);
-    char *tmp_str[] = {"String1","SomeOtherString2","YetAnotherString3"};
-    bcf_update_format_string(hdr, rec, "TS", (const char**)tmp_str, 3);
-    if ( bcf_write1(fp, hdr, rec)!=0 )
-      error("Failed to write to \n");
-  
-#endif
-
-   rec->rid = bcf_hdr_name2id(hdr, "20");
-    // .. POS
-    rec->pos = 14369;
-    // .. ID
-    bcf_update_id(hdr, rec, "rs6054257");
-    // .. REF and ALT
-    bcf_update_alleles_str(hdr, rec, "G,A");
-    // .. QUAL
-    rec->qual = 29;
-    // .. FILTER
-    int32_t tmpi = bcf_hdr_id2int(hdr, BCF_DT_ID, "PASS");
-    bcf_update_filter(hdr, rec, &tmpi, 1);
-    // .. INFO
-    tmpi = 3;
-    bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1);
-    tmpi = 14;
-    bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
-    tmpi = -127;
-    bcf_update_info_int32(hdr, rec, "NEG", &tmpi, 1);
-    float tmpf = 0.5;
-    bcf_update_info_float(hdr, rec, "AF", &tmpf, 1);
-    bcf_update_info_flag(hdr, rec, "DB", NULL, 1);
-    bcf_update_info_flag(hdr, rec, "H2", NULL, 1);
     // .. FORMAT
-    int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int));
-    tmpia[0] = bcf_gt_phased(0);
-    tmpia[1] = bcf_gt_phased(0);
-    tmpia[2] = bcf_gt_phased(1);
-    tmpia[3] = bcf_gt_phased(0);
-    tmpia[4] = bcf_gt_unphased(1);
-    tmpia[5] = bcf_gt_unphased(1);
-    bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2);
-    tmpia[0] = 48;
-    tmpia[1] = 48;
-    tmpia[2] = 43;
-    bcf_update_format_int32(hdr, rec, "GQ", tmpia, bcf_hdr_nsamples(hdr));
-    tmpia[0] = 1;
-    tmpia[1] = 8;
-    tmpia[2] = 5;
-    bcf_update_format_int32(hdr, rec, "DP", tmpia, bcf_hdr_nsamples(hdr));
-    tmpia[0] = 51;
-    tmpia[1] = 51;
-    tmpia[2] = 51;
-    tmpia[3] = 51;
-    tmpia[4] = bcf_int32_missing;
-    tmpia[5] = bcf_int32_missing;
-    bcf_update_format_int32(hdr, rec, "HQ", tmpia, bcf_hdr_nsamples(hdr)*2);
-    char *tmp_str[] = {"String1","SomeOtherString2","YetAnotherString3"};
-    bcf_update_format_string(hdr, rec, "TS", (const char**)tmp_str, 3);
-    if ( bcf_write1(fp, hdr, rec)!=0 )
-      error("Failed to write to %s");
-#if 0
-  for(int s=0;s<pars->numSites;s++){
-    //chr pos id
-       kputc(intToRef[pars->minor[s]],kstr);kputc('\t',kstr);
-    ksprintf(kstr,".\tPASS\tNS=%d", pars->keepSites[s]);
-    // Total per site depth
-    if(doCounts != 0){
-      int depth = 0;
-      for(int i=0; i<4*pars->nInd; i++)
-	depth += pars->counts[s][i];
-      ksprintf(kstr,";DP=%d", depth);
-    }
-    if(refName != NULL)
-      ksprintf(kstr,";RA=%c", intToRef[pars->ref[s]]);
-    if(ancName != NULL)
-      ksprintf(kstr,";AA=%c", intToRef[pars->anc[s]]);
-
-    // MAF
-    if(doMaf != 0)
-      ksprintf(kstr,";AF=%f", freq->freq_EM[s]);
-    // GP and GL
-    kputc('\t',kstr);
-    if(doGeno != 0)
-      ksprintf(kstr,"GT:");
-    if(doCounts != 0)
-      ksprintf(kstr, "DP:AD:");
-    ksprintf(kstr,"GP:GL");
-    // Per-indiv data
-    for(int i=0; i<pars->nInd;i++){
-      kputc('\t',kstr);
-      if(doGeno != 0){
-	int g = geno->dat[s][i];
-	int gg[2] = {'0','1'};
-	if(g == 0)
-	  gg[0] = gg[1] = '0';
-	else if(g == 1);
-	else if(g == 2)
-	  gg[0] = gg[1] = '1';
-	else
-	  gg[0] = gg[1] = '.';
-	ksprintf(kstr, "%c/%c:", gg[0], gg[1]);
+    assert(geno);
+    if(geno){
+      int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
+      for(int i=0; i<pars->nInd;i++){
+	if(geno->dat[s][i]==0){
+	  tmpia[2*i+0] = bcf_gt_unphased(0);
+	  tmpia[2*i+1] = bcf_gt_unphased(0);
+	}else if(geno->dat[s][i]==1){
+	  tmpia[2*i+0] = bcf_gt_unphased(0);
+	  tmpia[2*i+1] = bcf_gt_unphased(1);
+	}  else{
+	  tmpia[2*i+0] = bcf_gt_unphased(1);
+	  tmpia[2*i+1] = bcf_gt_unphased(1);
+	}
+	
       }
-      if(doCounts != 0)
-        ksprintf(kstr,"%d:%d,%d:", pars->counts[s][i*4+pars->major[s]]+pars->counts[s][i*4+pars->minor[s]], pars->counts[s][i*4+pars->major[s]], pars->counts[s][i*4+pars->minor[s]]);
-      ksprintf(kstr,"%f,%f,%f:",pars->post[s][i*3+0],pars->post[s][i*3+1],pars->post[s][i*3+2]);
-      ksprintf(kstr,"%f,%f,%f",lh3->lh3[s][i*3+0]/M_LN10,lh3->lh3[s][i*3+1]/M_LN10,lh3->lh3[s][i*3+2]/M_LN10);
+      bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2); 
     }
-    ksprintf(kstr,"\n");
+
+
+    if ( bcf_write1(fp, hdr, rec)!=0 ){
+      fprintf(stderr,"Failed to write to \n");
+      exit(0);
+    }
+    //    fprintf(stderr,"------\n");
+    bcf_clear1(rec);
   }
-#endif
-  // aio::bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
 void abcWriteBcf::getOptions(argStruct *arguments){
@@ -331,7 +232,7 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   doBcf =0;
   args=arguments;
   outfiles=outfiles_a;
-  buf.s=NULL;buf.l=buf.m=0;
+
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doBcf")){
       printArg(stdout);
