@@ -140,16 +140,118 @@ void abcWriteBcf::print(funkyPars *pars){
   freqStruct *freq = (freqStruct *) pars->extras[6];
   genoCalls *geno = (genoCalls *) pars->extras[10];
 
-
-  
-#if 0
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
       continue;
+  }
+#if 0
+    rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
+    rec->pos = pars->posi[s]+1;//<- maybe one index?
+    //    bcf_update_id(hdr, rec, "rs6054257");
+    char majmin[4]={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
+    bcf_update_alleles_str(hdr, rec, majmin);
+    rec->qual = 29;
+    // .. FILTER
+    int32_t tmpi = bcf_hdr_id2int(hdr, BCF_DT_ID, "PASS");
+    bcf_update_filter(hdr, rec, &tmpi, 1);
+    // .. INFO
+    tmpi = 3;
+    bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1);
+    tmpi = 14;
+    bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
+    tmpi = -127;
+    bcf_update_info_int32(hdr, rec, "NEG", &tmpi, 1);
+    float tmpf = 0.5;
+    bcf_update_info_float(hdr, rec, "AF", &tmpf, 1);
+    bcf_update_info_flag(hdr, rec, "DB", NULL, 1);
+    bcf_update_info_flag(hdr, rec, "H2", NULL, 1);
+    
+        // .. FORMAT
+    int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int));
+    tmpia[0] = bcf_gt_unphased(0);
+    tmpia[1] = bcf_gt_unphased(0);
+    tmpia[2] = bcf_gt_unphased(1);
+    tmpia[3] = bcf_gt_unphased(0);
+    tmpia[4] = bcf_gt_unphased(1);
+    tmpia[5] = bcf_gt_unphased(1);
+    bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2);
+    tmpia[0] = 48;
+    tmpia[1] = 48;
+    tmpia[2] = 43;
+    bcf_update_format_int32(hdr, rec, "GQ", tmpia, bcf_hdr_nsamples(hdr));
+    tmpia[0] = 1;
+    tmpia[1] = 8;
+    tmpia[2] = 5;
+    bcf_update_format_int32(hdr, rec, "DP", tmpia, bcf_hdr_nsamples(hdr));
+    tmpia[0] = 51;
+    tmpia[1] = 51;
+    tmpia[2] = 51;
+    tmpia[3] = 51;
+    tmpia[4] = bcf_int32_missing;
+    tmpia[5] = bcf_int32_missing;
+    bcf_update_format_int32(hdr, rec, "HQ", tmpia, bcf_hdr_nsamples(hdr)*2);
+    char *tmp_str[] = {"String1","SomeOtherString2","YetAnotherString3"};
+    bcf_update_format_string(hdr, rec, "TS", (const char**)tmp_str, 3);
+    if ( bcf_write1(fp, hdr, rec)!=0 )
+      error("Failed to write to \n");
+  
+#endif
+
+   rec->rid = bcf_hdr_name2id(hdr, "20");
+    // .. POS
+    rec->pos = 14369;
+    // .. ID
+    bcf_update_id(hdr, rec, "rs6054257");
+    // .. REF and ALT
+    bcf_update_alleles_str(hdr, rec, "G,A");
+    // .. QUAL
+    rec->qual = 29;
+    // .. FILTER
+    int32_t tmpi = bcf_hdr_id2int(hdr, BCF_DT_ID, "PASS");
+    bcf_update_filter(hdr, rec, &tmpi, 1);
+    // .. INFO
+    tmpi = 3;
+    bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1);
+    tmpi = 14;
+    bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
+    tmpi = -127;
+    bcf_update_info_int32(hdr, rec, "NEG", &tmpi, 1);
+    float tmpf = 0.5;
+    bcf_update_info_float(hdr, rec, "AF", &tmpf, 1);
+    bcf_update_info_flag(hdr, rec, "DB", NULL, 1);
+    bcf_update_info_flag(hdr, rec, "H2", NULL, 1);
+    // .. FORMAT
+    int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int));
+    tmpia[0] = bcf_gt_phased(0);
+    tmpia[1] = bcf_gt_phased(0);
+    tmpia[2] = bcf_gt_phased(1);
+    tmpia[3] = bcf_gt_phased(0);
+    tmpia[4] = bcf_gt_unphased(1);
+    tmpia[5] = bcf_gt_unphased(1);
+    bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2);
+    tmpia[0] = 48;
+    tmpia[1] = 48;
+    tmpia[2] = 43;
+    bcf_update_format_int32(hdr, rec, "GQ", tmpia, bcf_hdr_nsamples(hdr));
+    tmpia[0] = 1;
+    tmpia[1] = 8;
+    tmpia[2] = 5;
+    bcf_update_format_int32(hdr, rec, "DP", tmpia, bcf_hdr_nsamples(hdr));
+    tmpia[0] = 51;
+    tmpia[1] = 51;
+    tmpia[2] = 51;
+    tmpia[3] = 51;
+    tmpia[4] = bcf_int32_missing;
+    tmpia[5] = bcf_int32_missing;
+    bcf_update_format_int32(hdr, rec, "HQ", tmpia, bcf_hdr_nsamples(hdr)*2);
+    char *tmp_str[] = {"String1","SomeOtherString2","YetAnotherString3"};
+    bcf_update_format_string(hdr, rec, "TS", (const char**)tmp_str, 3);
+    if ( bcf_write1(fp, hdr, rec)!=0 )
+      error("Failed to write to %s");
+#if 0
+  for(int s=0;s<pars->numSites;s++){
     //chr pos id
-    ksprintf(kstr,"%s\t%d\t.\t",header->target_name[pars->refId],pars->posi[s]+1);
-    kputc(intToRef[pars->major[s]],kstr);kputc('\t',kstr);
-    kputc(intToRef[pars->minor[s]],kstr);kputc('\t',kstr);
+       kputc(intToRef[pars->minor[s]],kstr);kputc('\t',kstr);
     ksprintf(kstr,".\tPASS\tNS=%d", pars->keepSites[s]);
     // Total per site depth
     if(doCounts != 0){
@@ -162,6 +264,7 @@ void abcWriteBcf::print(funkyPars *pars){
       ksprintf(kstr,";RA=%c", intToRef[pars->ref[s]]);
     if(ancName != NULL)
       ksprintf(kstr,";AA=%c", intToRef[pars->anc[s]]);
+
     // MAF
     if(doMaf != 0)
       ksprintf(kstr,";AF=%f", freq->freq_EM[s]);
