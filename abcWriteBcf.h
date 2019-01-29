@@ -17,8 +17,10 @@ private:
   int doMaf;
   int doCounts;
   int doGeno;
+  argStruct *args;
+  const char *outfiles;
 public:
-  int doVcf;
+  int doBcf;
   abcWriteBcf(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcWriteBcf();
   void getOptions(argStruct *arguments);

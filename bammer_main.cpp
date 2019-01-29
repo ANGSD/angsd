@@ -7,12 +7,13 @@
 #include <stdint.h>
 #include <algorithm>
 #include <htslib/hts.h>
+#include <htslib/khash.h>
 #include "mUpPile.h"
 #include "parseArgs_bambi.h"
 #include "abc.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
-
+#include "sample.h"
 
 
 extern int SIG_COND;
@@ -116,7 +117,7 @@ int checkIfSorted(char *str){
 
 
 
-bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname){
+bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname,bam_sample_t *sm){
   bufReader ret;
   ret.fn = strdup(fname);
   int newlen=strlen(fname);//<-just to avoid valgrind -O3 uninitialized warning
@@ -135,9 +136,11 @@ bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname){
     fprintf(stderr,"\t-> No header information could be found for BAM/CRAM file: \'%s\' will exit\n",fname);
     exit(1);
   }
-  
-  checkIfSorted(ret.hdr->text);
 
+  checkIfSorted(ret.hdr->text);
+  extern int MPLP_IGNORE_RG;
+  bam_smpl_add(sm, fname, MPLP_IGNORE_RG? 0 : ret.hdr->text);
+  //  fprintf(stderr,"sm->smpl[0]:%s\n",sm->smpl[0]);
   if(ret.hdr==NULL) {
     fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
     exit(0);
@@ -157,11 +160,11 @@ bool operator < (const pair& v1, const pair& v2)
   }
 
 int *bamSortedIds = NULL;
-bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,int doCheck,char *fai_fname){
+bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,int doCheck,char *fai_fname,bam_sample_t *sm){
   bufReader *ret = new bufReader[vec.size()];
 
   for(size_t i =0;i<vec.size();i++)
-    ret[i] = initBufReader2(vec[i],doCheck,fai_fname);
+    ret[i] = initBufReader2(vec[i],doCheck,fai_fname,sm);
   //now all readers are inialized, lets validate the header is the same
   for(size_t i=1;i<vec.size();i++)
     if(compHeader(ret[0].hdr,ret[i].hdr)){
@@ -225,8 +228,11 @@ int bammer_main(argStruct *args){
   extern int checkBamHeaders;
   extern int doCheck;
   extern char *fai_fname;
-  bufReader *rd = initializeBufReaders2(args->nams,checkBamHeaders,doCheck,fai_fname);
-
+  args->sm = NULL;
+  args->sm=bam_smpl_init();
+  assert(args->sm);
+  bufReader *rd = initializeBufReaders2(args->nams,checkBamHeaders,doCheck,fai_fname,args->sm);
+  fprintf(stderr, "[%s] %d samples in %lu input files\n", __func__, args->sm->n, args->nams.size());
   extern int maxThreads;
   
   uppile(args->show,maxThreads,rd,args->nReads,args->nams.size(),args->regions,gf);

@@ -218,7 +218,6 @@ int main(int argc, char** argv){
    
 
    init(args);
-   //   fprintf(stderr,"adsfadsf\n");exit(0);
    parseArgStruct(args);
    
    //Below is main loop which will run until nomore data

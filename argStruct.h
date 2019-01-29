@@ -5,6 +5,7 @@
 #include <htslib/hts.h>
 #include <htslib/sam.h>
 #include <cstdio>
+#include "sample.h"
 //little struct for keeping information of regions to extract
 typedef struct{
   int refID;
@@ -41,4 +42,5 @@ typedef struct{
   int nReads;//number of reads to pop from each BAM/CRAM
   int show;
   char *fai;
+  bam_sample_t *sm;
 }argStruct;
