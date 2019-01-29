@@ -105,7 +105,7 @@ void abcWriteBcf::print(funkyPars *pars){
   lh3struct *lh3 = (lh3struct*) pars->extras[5];
   freqStruct *freq = (freqStruct *) pars->extras[6];
   genoCalls *geno = (genoCalls *) pars->extras[10];
-
+#if 0
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
       continue;
@@ -157,7 +157,7 @@ void abcWriteBcf::print(funkyPars *pars){
     }
     ksprintf(kstr,"\n");
   }
-
+#endif
   // aio::bgzf_write(fp,kstr->s,kstr->l);kstr->l=0;
 }
 
@@ -189,7 +189,7 @@ void abcWriteBcf::getOptions(argStruct *arguments){
 abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputtype){
   fp=NULL;
   doBcf =0;
-  kstr=NULL;
+  
   outfiles=outfiles_a;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doBcf")){
@@ -215,6 +215,4 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
 
 abcWriteBcf::~abcWriteBcf(){
   if(fp!=NULL) hts_close(fp);
-  if(kstr && kstr->s)
-    free(kstr->s);
 }

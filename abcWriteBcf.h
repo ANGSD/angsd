@@ -6,7 +6,6 @@
 class abcWriteBcf:public abc{
 private:
   htsFile *fp;
-  kstring_t *kstr;
   bcf_hdr_t *hdr;
   bcf1_t *rec; 
   char* refName;

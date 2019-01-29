@@ -34,7 +34,7 @@
 #include "abcScounts.h"
 #include "abcWriteBcf.h"
 //below we set some variables that are shared between all the analysis classes
-#define MAX_CLASS 29
+#define MAX_CLASS 30
 
 int abc::tot_index =0;
 const bam_hdr_t *abc::header = NULL;
