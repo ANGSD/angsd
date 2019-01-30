@@ -121,7 +121,7 @@ void abcMajorMinor::getOptions(argStruct *arguments){
  doSaf = angsd::getArg("-doSaf",doSaf,arguments);
  pest = angsd::getArg("-pest",pest,arguments);
  skipTriallelic = angsd::getArg("-skipTriallelic",skipTriallelic,arguments);
- doVcf = angsd::getArg("-doVcf",doVcf,arguments);
+ doVcf = angsd::getArg("-dobcf",doVcf,arguments);
  doGlf = angsd::getArg("-doGlf",doGlf,arguments);
 }
 

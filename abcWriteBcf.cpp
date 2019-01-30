@@ -32,7 +32,7 @@ void abcWriteBcf::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doBcf\t%d\n",doBcf);
   fprintf(argFile,"\t1:  (still beta, not really working)\n");
-  fprintf(argFile,"\n\tNB This is a wrapper around -gl -domajorminor and -dopost\n");
+  fprintf(argFile,"\n\tNB This is a wrapper around -gl -domajorminor and -dopost -dogeno\n");
 }
 
 void abcWriteBcf::run(funkyPars *pars){
@@ -85,31 +85,31 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##INFO=<ID=MQB,Number=1,Type=Float,Description=\"Mann-Whitney U test of Mapping Quality Bias (bigger is better)\">");
   bcf_hdr_append(hdr,"##INFO=<ID=BQB,Number=1,Type=Float,Description=\"Mann-Whitney U test of Base Quality Bias (bigger is better)\">");
   bcf_hdr_append(hdr,"##INFO=<ID=MQSB,Number=1,Type=Float,Description=\"Mann-Whitney U test of Mapping Quality vs Strand Bias (bigger is better)\">");
-
+  bcf_hdr_append(hdr,"##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">");
   bcf_hdr_append(hdr,"##INFO=<ID=RPB2,Number=1,Type=Float,Description=\"Mann-Whitney U test of Read Position Bias [CDF] (bigger is better)\">");
   bcf_hdr_append(hdr,"##INFO=<ID=MQB2,Number=1,Type=Float,Description=\"Mann-Whitney U test of Mapping Quality Bias [CDF] (bigger is better)\">");
   bcf_hdr_append(hdr,"##INFO=<ID=BQB2,Number=1,Type=Float,Description=\"Mann-Whitney U test of Base Quality Bias [CDF] (bigger is better)\">");
   bcf_hdr_append(hdr,"##INFO=<ID=MQSB2,Number=1,Type=Float,Description=\"Mann-Whitney U test of Mapping Quality vs Strand Bias [CDF] (bigger is better)\">");
-
   bcf_hdr_append(hdr,"##INFO=<ID=SGB,Number=1,Type=Float,Description=\"Segregation based metric.\">");
   bcf_hdr_append(hdr,"##INFO=<ID=MQ0F,Number=1,Type=Float,Description=\"Fraction of MQ0 reads (smaller is better)\">");
   bcf_hdr_append(hdr,"##INFO=<ID=I16,Number=16,Type=Float,Description=\"Auxiliary tag used for calling, see description of bcf_callret1_t in bam2bcf.h\">");
   bcf_hdr_append(hdr,"##INFO=<ID=QS,Number=R,Type=Float,Description=\"Auxiliary tag used for calling\">");
-  bcf_hdr_append(hdr,"##FORMAT=<ID=PL,Number=G,Type=Integer,Description=\"List of Phred-scaled genotype likelihoods\">");
-  bcf_hdr_append(hdr,"##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Number of high-quality bases\">");
-  bcf_hdr_append(hdr,"##FORMAT=<ID=DV,Number=1,Type=Integer,Description=\"Number of high-quality non-reference bases\">");
-  bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
-  bcf_hdr_append(hdr,"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
-  bcf_hdr_append(hdr,"##INFO=<ID=AF,Number=A,Type=Float,Description=\"Minor Allele Frequency\">\n");
+  bcf_hdr_append(hdr,"##INFO=<ID=AF,Number=A,Type=Float,Description=\"Minor Allele Frequency\">");
   bcf_hdr_append(hdr,"##INFO=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
+  bcf_hdr_append(hdr,"##INFO=<ID=AD,Number=R,Type=Integer,Description=\"Total allelic depths\">");
+  bcf_hdr_append(hdr,"##INFO=<ID=ADF,Number=R,Type=Integer,Description=\"Total allelic depths on the forward strand\">");
+  bcf_hdr_append(hdr,"##INFO=<ID=ADR,Number=R,Type=Integer,Description=\"Total allelic depths on the reverse strand\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=DP4,Number=4,Type=Integer,Description=\"Number of high-quality ref-fwd, ref-reverse, alt-fwd and alt-reverse bases\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=SP,Number=1,Type=Integer,Description=\"Phred-scaled strand bias P-value\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=ADF,Number=R,Type=Integer,Description=\"Allelic depths on the forward strand\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=ADR,Number=R,Type=Integer,Description=\"Allelic depths on the reverse strand\">");
-  bcf_hdr_append(hdr,"##INFO=<ID=AD,Number=R,Type=Integer,Description=\"Total allelic depths\">");
-  bcf_hdr_append(hdr,"##INFO=<ID=ADF,Number=R,Type=Integer,Description=\"Total allelic depths on the forward strand\">");
-  bcf_hdr_append(hdr,"##INFO=<ID=ADR,Number=R,Type=Integer,Description=\"Total allelic depths on the reverse strand\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=PL,Number=G,Type=Integer,Description=\"List of Phred-scaled genotype likelihoods\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Number of high-quality bases\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=DV,Number=1,Type=Integer,Description=\"Number of high-quality non-reference bases\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
   //fprintf(stderr,"samples from sm:%d\n",args->sm->n);
   for(int i=0;i<args->sm->n;i++){
     bcf_hdr_add_sample(hdr, args->sm->smpl[i]);
@@ -135,13 +135,11 @@ void abcWriteBcf::print(funkyPars *pars){
     return;
   kstring_t buf;
   if(fp==NULL){
-    fprintf(stderr,"\t-> init\n");
     buf.s=NULL;buf.l=buf.m=0;
     fp=aio::openFileHts(outfiles,".bcf");
     hdr = bcf_hdr_init("w");
     rec    = bcf_init1();
     print_bcf_header(fp,hdr,args,buf,header);
-    fprintf(stderr,"\t-> done init\n");
   }
   lh3struct *lh3 = (lh3struct*) pars->extras[5];
   freqStruct *freq = (freqStruct *) pars->extras[6];
@@ -161,10 +159,18 @@ void abcWriteBcf::print(funkyPars *pars){
     int32_t tmpi = bcf_hdr_id2int(hdr, BCF_DT_ID, "PASS");
     bcf_update_filter(hdr, rec, &tmpi, 1);
     // .. INFO
-    tmpi = 3;
+    
+    tmpi = pars->keepSites[s];
     bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1);
-    tmpi = 14;
-    bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
+
+    if(pars->counts){
+      int depth = 0;
+      for(int i=0; i<4*pars->nInd; i++)
+	depth += pars->counts[s][i];
+      tmpi = depth;
+      bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
+
+    }
     tmpi = -127;
     bcf_update_info_int32(hdr, rec, "NEG", &tmpi, 1);
     if(freq){
@@ -191,7 +197,23 @@ void abcWriteBcf::print(funkyPars *pars){
       }
       bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2); 
     }
-
+    if(pars->counts){
+      int32_t *tmpfa = (int32_t*)malloc(sizeof(int32_t)*bcf_hdr_nsamples(hdr));
+      suint *ary=pars->counts[s];
+      for(int i=0;i<bcf_hdr_nsamples(hdr);i++)
+	tmpfa[i] = ary[0]+ary[1]+ary[2]+ary[3];
+      bcf_update_format_int32(hdr, rec, "DP", tmpfa,bcf_hdr_nsamples(hdr) );
+    }
+    assert(lh3);
+    if(lh3){
+      float *tmpfa = (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float));
+      //      ksprintf(kstr,"%f,%f,%f",lh3->lh3[s][i*3+0]/M_LN10,lh3->lh3[s][i*3+1]/M_LN10,lh3->lh3[s][i*3+2]/M_LN10);
+      double *ary = lh3->lh3[s];
+      for(int i=0;i<bcf_hdr_nsamples(hdr);i++)
+	for(int j=0;j<3;j++)
+	  tmpfa[i*3+j] = ary[i*3+j]/M_LN10;
+      bcf_update_format_float(hdr, rec, "GL", tmpfa,3*bcf_hdr_nsamples(hdr) );
+    }
 
     if ( bcf_write1(fp, hdr, rec)!=0 ){
       fprintf(stderr,"Failed to write to \n");
