@@ -106,6 +106,8 @@ void printProgInfo(FILE *fp){
   fprintf(fp,"\t-doSNPstat\tCalculate various SNPstat\n");
   fprintf(fp,"\t-cigstat\tPrintout CIGAR stat across readlength\n");
   fprintf(fp,"\tmany others\n\n");
+  fprintf(fp,"Output files:\n\t In general the specific analysis outputs specific files, but we support basic bcf output\n");
+  fprintf(fp,"\t-doBcf\t\tWrapper around -dopost -domajorminor -dofreq -gl -dovcf docounts\n");
   
   fprintf(fp,"For information of specific options type: \n\t./angsd METHODNAME eg \n\t\t./angsd -GL\n\t\t./angsd -doMaf\n\t\t./angsd -doAsso etc\n");
   fprintf(fp,"\t\t./angsd sites for information about indexing -sites files\n");

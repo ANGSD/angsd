@@ -171,8 +171,6 @@ void abcWriteBcf::print(funkyPars *pars){
       bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
 
     }
-    tmpi = -127;
-    bcf_update_info_int32(hdr, rec, "NEG", &tmpi, 1);
     if(freq){
       float tmpf = freq->freq_EM[s];
       bcf_update_info_float(hdr, rec, "AF", &tmpf, 1);
@@ -193,9 +191,9 @@ void abcWriteBcf::print(funkyPars *pars){
 	  tmpia[2*i+0] = bcf_gt_unphased(1);
 	  tmpia[2*i+1] = bcf_gt_unphased(1);
 	}
-	
       }
       bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2); 
+      free(tmpia);
     }
     if(pars->counts){
       int32_t *tmpfa = (int32_t*)malloc(sizeof(int32_t)*bcf_hdr_nsamples(hdr));
@@ -203,16 +201,23 @@ void abcWriteBcf::print(funkyPars *pars){
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++)
 	tmpfa[i] = ary[0]+ary[1]+ary[2]+ary[3];
       bcf_update_format_int32(hdr, rec, "DP", tmpfa,bcf_hdr_nsamples(hdr) );
+      free(tmpfa);
     }
     assert(lh3);
     if(lh3){
-      float *tmpfa = (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float));
-      //      ksprintf(kstr,"%f,%f,%f",lh3->lh3[s][i*3+0]/M_LN10,lh3->lh3[s][i*3+1]/M_LN10,lh3->lh3[s][i*3+2]/M_LN10);
+      float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
+      int32_t *tmpi = (int32_t*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(int32_t));
       double *ary = lh3->lh3[s];
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++)
-	for(int j=0;j<3;j++)
+	for(int j=0;j<3;j++){
 	  tmpfa[i*3+j] = ary[i*3+j]/M_LN10;
+	  tmpi[i*3+j] =(int) -log10(exp(ary[i*3+j]))*10.0;
+	  //	  fprintf(stderr,"pl:%d raw:%f\n",tmpi[i*3+j],ary[i*3+j]);
+	}
       bcf_update_format_float(hdr, rec, "GL", tmpfa,3*bcf_hdr_nsamples(hdr) );
+      bcf_update_format_int32(hdr, rec, "PL", tmpi,3*bcf_hdr_nsamples(hdr) );
+      free(tmpfa);
+      free(tmpi);
     }
 
     if ( bcf_write1(fp, hdr, rec)!=0 ){
