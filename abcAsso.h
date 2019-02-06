@@ -9,6 +9,7 @@ typedef struct{
   int *highWt;
   int *highHo;
   double *betas; //for coefficients added by emil 07-11-2018
+  int *emIter; //number of iterations for EM algorithm in -doAsso 4
 }assoStruct;
 
 
