@@ -1,5 +1,5 @@
 /*
-  emil emil.jorsboe@bio.ku.dk - jan9 2019
+  emil emil.jorsboe@bio.ku.dk jan9 2019
   has implemented new methods -doAsso 4, 5 and 6
 
   thorfinn thorfinn@binf.ku.dk dec17 2012 
@@ -263,10 +263,12 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
 
     // hybrid model score model first, then if significant use EM asso  
   if(doAsso==5){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\n");
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\temIter\n");
     //EM asso or dosage model
-  } else if(doAsso==4 or doAsso==6){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\thigh_WT/HE/HO\n");
+  } else if(doAsso==4){
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\thigh_WT/HE/HO\temIter\n");
+  } else if(doAsso==6){
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\thigh_WT/HE/HO\n");    
   } else if(doAsso==2)
     ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
   else
@@ -325,6 +327,10 @@ void abcAsso::clean(funkyPars *pars){
     delete[] assoc->highHo;    
     delete[] assoc->betas;
   }
+
+  if(doAsso==4 or doAsso==5){
+    delete[] assoc->emIter;
+  }
   
   if(assoc->keepInd!=NULL)
     for( int yi =0;yi<ymat.y;yi++)
@@ -356,6 +362,7 @@ assoStruct *allocAssoStruct(){
   assoc->highWt = NULL;
   assoc->highHe = NULL;
   assoc->highHo = NULL;
+  assoc->emIter = NULL;
   
   return assoc;
 }
@@ -381,12 +388,14 @@ void abcAsso::run(funkyPars *pars){
     scoreAsso(pars,assoc);
   } else if(doAsso==4){
     assoc->betas=new double[pars->numSites];
+    assoc->emIter=new int[pars->numSites];
     emAsso(pars,assoc);    
   } else if(doAsso==6){
     assoc->betas=new double[pars->numSites];
     dosageAsso(pars,assoc);    
   } else if(doAsso==5){
     assoc->betas=new double[pars->numSites];
+    assoc->emIter=new int[pars->numSites];
     hybridAsso(pars,assoc);
   }
 
@@ -709,18 +718,18 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
     fflush(stderr);
     exit(0);
   }  
+  
+  if(isBinary){
+    getFitBin(yfit,y,covMatrix,keepInd,design->y,start);
+  } else{
+    getFit(yfit,y,covMatrix,keepInd,design->y,start);  
+  }
     
- if(isBinary){
-   getFitBin(yfit,y,covMatrix,keepInd,design->y,start);
- } else{
-   getFit(yfit,y,covMatrix,keepInd,design->y,start);  
- }
+  double llh = logLike(start,y,design,post,isBinary,0);
  
- double llh = logLike(start,y,design,post,isBinary,0);
- 
- // likelihood ratio - chi square distributed according to Wilk's theorem
- double LRT = -2*(llh-llhNull);
- return(LRT);  
+  // likelihood ratio - chi square distributed according to Wilk's theorem
+  double LRT = -2*(llh-llhNull);
+  return(LRT);  
 }
  
 
@@ -1254,6 +1263,9 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
 
   double covMatrixNull[(covmat.y+1)*keepInd];
   double yfit[keepInd];
+
+  //for doing dosage regression to prime EM (give good starting coefs)
+  double covMatrixDose[(covmat.y+2)*keepInd];
   
   designNull->x=keepInd;
   //covars + intercept
@@ -1265,9 +1277,21 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       yNull[count]=yOrg[i];
       designNull->matrix[count][0] = 1;
       covMatrixNull[count] = 1;
+
+      if(model==3){
+	covMatrixDose[count] = postOrg[i*3+2];
+      } else if(model==2){
+	covMatrixDose[count] = postOrg[i*3+2] + postOrg[i*3+1];
+      } else{
+	// getting dosage of the minor allele or second allele of beagle file
+	covMatrixDose[count] = 2*postOrg[i*3+2] + postOrg[i*3+1];
+      }      
+      covMatrixDose[keepInd+count] = 1;
+            
       for(int c=0;c<covmat.y;c++){
 	designNull->matrix[count][c+1] = covmat.matrix[i][c];
 	covMatrixNull[(c+1)*keepInd+count] = covmat.matrix[i][c];
+	covMatrixDose[(c+2)*keepInd+count] = covmat.matrix[i][c];
       }
       count++;    
     }
@@ -1295,13 +1319,16 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   }
   
   double llhNull = logLike(startNull,yNull,designNull,post,isBinary,0);
+
+  int dimDose=designNull->y+1;
   
-  for(int i=0;i<(covmat.y+2);i++){
-    start[i+1]=startNull[i]; // giving null estimates as starting point
+  //do dosage regression first to prime EM
+  if(isBinary){
+    getFitBin(yfit,yNull,covMatrixDose,keepInd,dimDose,start);
+  } else{      
+    getFit(yfit,yNull,covMatrixDose,keepInd,dimDose,start);
   }
-
-  start[0] = drand48()*2-1;
-
+  
   double y[3*keepInd];
   count=0;
       
@@ -1384,16 +1411,20 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
 
   double pars0[design->y+1]; 
   memcpy(pars0,start,sizeof(double)*(design->y+1));
+  int nIter=0;
   
   double llh0 = logLike(start,y,design,post,isBinary,fullModel);  
   for(int i=0;i<emIter;i++){
+    nIter++;
     double llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,fullModel);        
     if(fabs(llh1-llh0)<emThres and llh1 > 0){	 
-      //	 fprintf(stderr,"Converged \n");
+      // Converged
+      assoc->emIter[s] = nIter;
       break;
     } else if(llh0<llh1){
-      //	 fprintf(stderr,"Fit caused increase in likelihood, will roll back to previous step\n");		 
+      // Fit caused increase in likelihood, will roll back to previous step
       memcpy(start,pars0,sizeof(double)*(design->y+1));
+      assoc->emIter[s] = nIter;                  
       break;
       // if we problems with the weights then break
     } else if(llh1<-4){
@@ -1402,6 +1433,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       }
       llh0=NAN;
       llhNull=NAN;
+      assoc->emIter[s] = nIter;    
       break;
     }
     
@@ -1610,6 +1642,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
 	statOther[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
 	assoc->betas[s]=start[0];
       } else{
+	assoc->emIter[s]=0;
 	assoc->betas[s]=NAN;
 	statOther[yi][s]=NAN;
       }
@@ -2259,8 +2292,10 @@ void abcAsso::printDoAsso(funkyPars *pars){
      }
  
       if(doAsso==5){
-	 ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s]);
-       } else if(doAsso==4 or doAsso==6){
+	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s],assoc->emIter[s]);
+      } else if(doAsso==4){
+	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%d/%d/%d\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);	 
+       } else if(doAsso==6){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
        } else if(doAsso==2){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
