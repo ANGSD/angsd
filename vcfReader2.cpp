@@ -14,6 +14,7 @@
 #include <limits>
 #include <string>
 #include <pthread.h>
+#include "analysisFunction.h"
 
 #define diskio_threads 24
 int std_queue = 0;
@@ -91,80 +92,76 @@ bool same_val_vcf(T a, T b) {
 // https://en.cppreference.com/w/c/numeric/math/isnan
 bool is_nan_vcf(double x) { return x != x; }
 
-//from angsd
-double emFrequency(double *loglike,int numInds, int iter,double start,char *keep,int keepInd){
+const char *wildcar= "<*>";
 
-  if(keepInd == 0)
-    return 0.0;
-  
-     
-  float W0;
-  float W1;
-  float W2;
-  // fprintf(stderr,"start=%f\n",start);
-  float p=(float)start;
-  float temp_p=(float)start;
-  double accu=0.00001;
-  double accu2=0;
-  float sum;
-
-  
-  int it=0;
-  
-  for(it=0;it<iter;it++){
-    sum=0;
-    for(int i=0;i<numInds;i++){
-      if(keep!=NULL && keep[i]==0)
-        continue;
-      W0=exp(loglike[i*3+0])*pow(1-p,2);
-      W1=exp(loglike[i*3+1])*2*p*(1-p);
-      W2=exp(loglike[i*3+2])*(pow(p,2));
-      sum+=(W1+2*W2)/(2*(W0+W1+W2));
-      if(std::isnan(sum))
-	fprintf(stderr,"PRE[%d]:gls:(%f,%f,%f) W(%f,%f,%f) sum=%f\n",i,loglike[i*3],loglike[i*3+1],loglike[i*3+2],W0,W1,W2,sum);
+//mindfuck2000
+void buildreorder(int swap[10],char **alleles,int len){
+  char bases[] = {'A','C','G','T'};
+  for(int i=0;0&&i<len;i++)
+    fprintf(stderr,"%d):%s\n",i,alleles[i]);
+  int at = 0;//<- yes sir
+  char tmp[4]={'N','N','N','N'};
+  for(int b=0;b<4;b++) {
+    // fprintf(stderr,"b:%d\n",b);
+    int i;
+    for(i=0;i<len;i++){
+      // fprintf(stderr,"cmp: %c %c\n",alleles[i][0],bases[b]);
+      if(alleles[i][0]==bases[b])
+	break;
     }
-    
-    p=sum/keepInd;
-    if((p-temp_p<accu&&temp_p-p<accu)||(p/temp_p<1+accu2&&p/temp_p>1-accu2))
-      break;
-    temp_p=p;
+    //  fprintf(stderr,"i:%d\n",i);
+    if(i==len)
+      tmp[at++]=bases[b];
   }
-  
-  if(std::isnan(p)){
-    fprintf(stderr,"[%s] caught nan will not exit\n",__FUNCTION__);
-    fprintf(stderr,"logLike (3*nInd). nInd=%d\n",numInds);
-    //print_array(stderr,loglike,3*numInds);
-    fprintf(stderr,"keepList (nInd)\n");
-    //print_array(stderr,keep,numInds);
-    fprintf(stderr,"used logLike (3*length(keep))=%d\n",keepInd);
-    
-    for(int ii=0;1&&ii<numInds;ii++){
-      if(keep!=NULL && keep[ii]==1){
-	//	fprintf(stderr,"1\t");
-	for(int gg=0;gg<3;gg++)
-	  fprintf(stderr,"%f\t",loglike[ii*3+gg]);
-	fprintf(stderr,"\n");
+  for(int i=0;0&&i<4;i++)
+    fprintf(stderr,"tmp[%d]:%c\n",i,tmp[i]);
+  for(int i=0;i<10;i++)
+    swap[i]= -1;
+ 
+  int adder =0;
+  for(int en=0;en<len;en++){
+    for(int to=0;to<=en;to++){
+      // fprintf(stderr,"RAW[%d]: en:%s to:%s \n",adder,alleles[en],alleles[to]);
+      if(strcmp(alleles[en],wildcar)!=0&&strcmp(alleles[to],wildcar)!=0){
+	//	fprintf(stderr,"en:%s to:%s\n",alleles[en],alleles[to]);
+	swap[angsd::majorminor[refToInt[alleles[en][0]]][refToInt[alleles[to][0]]]] = adder ;
       }
+      else if(strcmp(alleles[en],wildcar)==0&&strcmp(alleles[to],wildcar)!=0){
+	for(int i=0;tmp[i]!='N';i++){
+	  //	  fprintf(stderr,"Een=<*> en:%s to:%s tre:%c\n",alleles[en],alleles[to],tmp[i]);
+	  swap[angsd::majorminor[refToInt[alleles[to][0]]][refToInt[tmp[i]]]] = adder;
+	}
+      }
+      else if(strcmp(alleles[en],wildcar)!=0&&strcmp(alleles[to],wildcar)==0){
+	for(int i=0;tmp[i]!='N';i++){
+	  //	  fprintf(stderr,"Eto=<*> en:%s to:%s tre:%c\n",alleles[en],alleles[to],tmp[i]);
+	  swap[angsd::majorminor[refToInt[alleles[en][0]]][refToInt[tmp[i]]]] = adder;
+	}
+      }
+      else if(strcmp(alleles[en],wildcar)==0&&strcmp(alleles[to],wildcar)==0){
+	for(int i=0;tmp[i]!='N';i++)
+	  for(int j=i;tmp[j]!='N';j++){
+	    //	    fprintf(stderr,"ASDF en:%s to:%s tre:%c fire:%c\n",alleles[en],alleles[to],tmp[i],tmp[j]);
+	    swap[angsd::majorminor[refToInt[tmp[i]]][refToInt[tmp[j]]]] = adder;
+      	    
+	  }
+      }
+      adder++;
     }
-    sum=0;
-    for(int i=0;i<numInds;i++){
-      if(keep!=NULL && keep[i]==0)
-        continue;
-      W0=exp(loglike[i*3+0])*pow(1-p,2);
-      W1=exp(loglike[i*3+1])*2*p*(1-p);
-      W2=exp(loglike[i*3+2])*(pow(p,2));
-      sum+=(W1+2*W2)/(2*(W0+W1+W2));
-      fprintf(stderr,"[%s.%s():%d] p=%f W %f\t%f\t%f sum=%f loglike: %f\n",__FILE__,__FUNCTION__,__LINE__,p,W0,W1,W2,sum,exp(loglike[i*3+2])*pow(1-p,2));
-      break;
-    }
-    p=-999;
-    assert(p!=999);
-    return p;
   }
-
-  return(p);
+  #if 1
+    fprintf(stderr,"AA swap[%d]:%d\n",0,swap[0]);
+    fprintf(stderr,"AC swap[%d]:%d\n",1,swap[1]);
+    fprintf(stderr,"AG swap[%d]:%d\n",2,swap[2]);
+    fprintf(stderr,"AT swap[%d]:%d\n",3,swap[3]);
+    fprintf(stderr,"CC swap[%d]:%d\n",4,swap[4]);
+    fprintf(stderr,"CG swap[%d]:%d\n",5,swap[5]);
+    fprintf(stderr,"CT swap[%d]:%d\n",6,swap[6]);
+    fprintf(stderr,"GG swap[%d]:%d\n",7,swap[7]);
+    fprintf(stderr,"GT swap[%d]:%d\n",8,swap[8]);
+    fprintf(stderr,"TT swap[%d]:%d\n",9,swap[9]);
+#endif
 }
-
 
 size_t getgls(char*fname,std::vector<double *> &mygl, std::vector<double> &freqs,int minind,double minfreq, std::string &vcf_format_field, std::string &vcf_allele_field,char *seek){
   for(int i=0;i<PHREDMAX;i++){    
@@ -224,18 +221,20 @@ size_t getgls(char*fname,std::vector<double *> &mygl, std::vector<double> &freqs
       continue;
     nsnp++;
     fprintf(stderr,"[%d] rec->n_allele:%d ",rec->pos,rec->n_allele);
-    
+
     for(int i=0;i<rec->n_allele;i++)
       fprintf(stderr,"(%d: %s)",i,rec->d.allele[i]);
     fprintf(stderr,"\n");
-    continue;
-    //if(rec->n_allele>=3||rec->n_allele==1)//last case shouldt happen
-	// continue;
+    int myreorder[10];
+    //funky below took ridiculus long to make
+    buildreorder(myreorder,rec->d.allele,rec->n_allele);
     
-    float ln_gl[3*nsamples];    
+
+    double dupergl[10*nsamples]; 
 
     if(vcf_format_field == "PL") {
       npl = bcf_get_format_int32(hdr, rec, "PL", &pl, &npl_arr);
+      float ln_gl[npl];
       if(npl<0){
         // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
         // no PL tag is available
@@ -243,70 +242,26 @@ size_t getgls(char*fname,std::vector<double *> &mygl, std::vector<double> &freqs
         continue;
       }
       // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
-      
+      fprintf(stderr,"npl:%d\n",npl);
       for (int i=0; i<npl; i++){
-        if ( pl[i]==bcf_int32_missing ){
-          bcf_float_set_missing(ln_gl[i]);
-        } else if ( pl[i]==bcf_int32_vector_end ){
-          bcf_float_set_vector_end(ln_gl[i]);
-        } else{
-          ln_gl[i] = pl2ln_f(pl[i]);
-        }
+	if ( pl[i]==bcf_int32_missing ){
+	  bcf_float_set_missing(ln_gl[i]);
+	} else if ( pl[i]==bcf_int32_vector_end ){
+	  bcf_float_set_vector_end(ln_gl[i]);
+	} else{
+	  ln_gl[i] = pl2ln_f(pl[i]);
+	}
 	//         fprintf(stderr, "%d %f\n", pl[i], ln_gl[i]);
       }
-    } else if(vcf_format_field == "GT"){
-       int ngts = bcf_get_genotypes(hdr, rec, &gt, &ngt_arr);
-       if ( ngts<0 ){
-         fprintf(stderr, "BAD SITE %s:%d. return code:%d while fetching GT tag\n", bcf_seqname(hdr,rec), rec->pos, npl);
-         continue;
-       }
-       for(int ns=0; ns<nsamples;ns++){
-         int32_t *curr_ptr = gt + ns*2;
-         float *ln_gl_ptr = ln_gl + ns*3;
-         if ( bcf_gt_is_missing(curr_ptr[0]) ||
-              bcf_gt_is_missing(curr_ptr[1]) ){ // obs genotype is missing
-           // missing
-           ln_gl_ptr[0] = 0;
-           ln_gl_ptr[1] = 0;
-           ln_gl_ptr[2] = 0;
-           
-         } else if (bcf_gt_allele(curr_ptr[0])!=bcf_gt_allele(curr_ptr[1])){ // this is obs genotype
-           // het
-	   ln_gl_ptr[0] = -INFINITY;
-	   ln_gl_ptr[1] = 0;
-	   ln_gl_ptr[2] = -INFINITY;
-	 } else if(bcf_gt_allele(curr_ptr[0])==1){ // this is obs genotype
-           // hom alt
-	   ln_gl_ptr[0] = -INFINITY;
-	   ln_gl_ptr[1] = -INFINITY;
-	   ln_gl_ptr[2] = 0;
-	 } else{ // this is obs genotype
-           // hom ref
-	   ln_gl_ptr[0] = 0;
-	   ln_gl_ptr[1] = -INFINITY;
-	   ln_gl_ptr[2] = -INFINITY;
-	 }
-       }
+
+      for(int ind=0;ind<nsamples;ind++){
+	for(int o=0;o<10;o++)
+	  dupergl[ind*10+o] = ln_gl[myreorder[o]]; 
+      }
     } else {
       fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, GT or PL\n");
     }
-    
-    int keepInd=0;
-    char keep[nsamples];
-    double *tmp = new double[3*nsamples];    
-    for(int ns=0;ns<nsamples;ns++){
-      float *ary= ln_gl+ns*3;
-      if ((is_nan_vcf(ary[0]) || is_nan_vcf(ary[1]) || is_nan_vcf(ary[2])) ||(same_val_vcf(ary[0], ary[1]) && same_val_vcf(ary[0], ary[2]))){
-        keep[ns]=0;
-      }else{
-	keep[ns]=1;
-	keepInd++;
-      }
-      tmp[ns*3] = ary[0];
-      tmp[ns*3+1] = ary[1];
-      tmp[ns*3+2] = ary[2];
-      // fprintf(stderr, "TMP: %d %d: %f %f %f\n", ns+1, rec->pos+1, tmp[ns*3], tmp[ns*3+1], tmp[ns*3+2]);
-    }
+ 
     //    fprintf(stderr,"keepind:%d\n",keepInd);
 
     
@@ -317,23 +272,11 @@ size_t getgls(char*fname,std::vector<double *> &mygl, std::vector<double> &freqs
     //ok this is a bit messed up. apparantly sometime the allele is <*> sometimes not.
     // just use the first two alleles now and discard the rest of the alleles.
 
-    double freq;
-    if(naf==1){
-      freq = af[0];
-    }else{
-      freq = emFrequency(tmp,nsamples,50,0.05,keep,keepInd);
-    }
     //should matter, program should never run on such low freqs, this is just for validation between formats
-    if(freq>0.999)
-      freq=1;
-    if(freq<0.001)
-      freq=0;
-    //fprintf(stderr,"freq:%f minfreq:%f keepInd:%d minind:%d\n",freq,minfreq,keepInd,minind);
+   
     //filtering
-    if(keepInd>minind&&freq>=minfreq && freq<= (1-minfreq)) {
-
 #ifdef __WITH_MAIN__
-      fprintf(stdout,"%s\t%i\t%s\t%s\tqual:%f n_info:%d n_allele:%d n_fmt:%d n_sample:%d n_samplws_with_data:%d freq:%f",
+      fprintf(stdout,"%s\t%i\t%s\t%s\tqual:%f n_info:%d n_allele:%d n_fmt:%d n_sample:%d\n",
 	      seqnames[rec->rid],
 	      rec->pos+1,
 	      rec->d.allele[0],
@@ -342,25 +285,10 @@ size_t getgls(char*fname,std::vector<double *> &mygl, std::vector<double> &freqs
 	      rec->n_info,
 	      rec->n_allele,
 	      rec->n_fmt,
-	      rec->n_sample,
-	      keepInd,
-	      freq
-	      );
-      for(int i=0;i<3*nsamples;i++)
-	fprintf(stdout," %f",ln_gl[i]);
-      fprintf(stdout,"\n");
+	      rec->n_sample);
+      
 #endif
-      for(int ns=0;ns<3*nsamples;ns++)
-	tmp[ns]=exp(tmp[ns]);
-      mygl.push_back(tmp);
-      freqs.push_back(freq);
-      //populate debug names
-
-    } else {
-      delete [] tmp;
-    }
-    // fprintf(stderr,"rec->pos:%d npl:%d naf:%d rec->n_allele:%d af[0]:%f\n",rec->pos,npl,naf,rec->n_allele,freq);
-    // exit(0);
+      
   }
   fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
 
