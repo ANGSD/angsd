@@ -11,22 +11,11 @@
 #include <vector>
 #include <htslib/vcf.h>
 #include <cmath>
-#include <limits>
 #include <string>
-#include <pthread.h>
 #include "analysisFunction.h"
-
-#define diskio_threads 24
-int std_queue = 0;
-
-
-pthread_mutex_t mymut = PTHREAD_MUTEX_INITIALIZER;
-int mycounter = 0; //my semaphore
 
 typedef struct satan_t{
   char*fname;
-  int minind;
-  double minfreq;
   std::string vcf_format_field;
   std::string vcf_allele_field;
   char *seek;
@@ -36,34 +25,6 @@ typedef struct satan_t{
 }satan;
 
 std::vector<satan> jobs;
-
-//populates a vector with the names of which we have data
-std::vector<char *> hasdata(char *fname){
-  htsFile * inf = NULL;inf=hts_open(fname, "r");assert(inf);
-  bcf_hdr_t *hdr = NULL;hdr=bcf_hdr_read(inf);assert(hdr);
-  bcf1_t *rec = NULL;rec=bcf_init();assert(rec);
-  hts_idx_t *idx=NULL;idx=bcf_index_load(fname);assert(idx);
-  hts_itr_t *iter=NULL;
-  int nseq = 0;  // number of sequences
-  const char **seqnames = NULL;
-  seqnames = bcf_hdr_seqnames(hdr, &nseq); assert(seqnames);//bcf_hdr_id2name(hdr,i)  
-  std::vector<char *> ret;
-  for(int i=0;i<nseq;i++){
-    char buf[strlen(seqnames[i])+100];
-    snprintf(buf,strlen(seqnames[i])+100,"%s:1-1000000000",seqnames[i]);
-    iter=bcf_itr_querys(idx,hdr,buf);
-    if(bcf_itr_next(inf, iter, rec)==0)
-      ret.push_back(strdup(seqnames[i]));
-    hts_itr_destroy(iter);
-  }
-  free(seqnames);
-  bcf_destroy1(rec);
-  bcf_hdr_destroy(hdr);
-  hts_idx_destroy(idx);
-  hts_close(inf);
-  fprintf(stderr,"\t-> Done with preliminary parsing of file: we have data for %lu out of %d reference sequences\n",ret.size(),nseq);
-  return ret;
-}
 
 
 // https://github.com/samtools/htslib/blob/57fe419344cb03e2ea46315443abd242489c32f2/vcf.c#L53
@@ -80,17 +41,7 @@ float pl2ln_f(int32_t & val){
   } else {
     return pl2ln[val];
   }
-    
 }
-
-template <class T>
-bool same_val_vcf(T a, T b) {
-  return std::fabs(a - b) < std::numeric_limits<T>::epsilon();  
-}
-
-
-// https://en.cppreference.com/w/c/numeric/math/isnan
-bool is_nan_vcf(double x) { return x != x; }
 
 const char *wildcar= "<*>";
 
@@ -149,7 +100,7 @@ void buildreorder(int swap[10],char **alleles,int len){
       adder++;
     }
   }
-  #if 1
+#if 0
     fprintf(stderr,"AA swap[%d]:%d\n",0,swap[0]);
     fprintf(stderr,"AC swap[%d]:%d\n",1,swap[1]);
     fprintf(stderr,"AG swap[%d]:%d\n",2,swap[2]);
@@ -163,7 +114,7 @@ void buildreorder(int swap[10],char **alleles,int len){
 #endif
 }
 
-size_t getgls(char*fname,std::vector<double *> &mygl, std::vector<double> &freqs,int minind,double minfreq, std::string &vcf_format_field, std::string &vcf_allele_field,char *seek){
+size_t getgls(char*fname,std::vector<double *> &mygl, std::string &vcf_format_field, std::string &vcf_allele_field,char *seek){
   for(int i=0;i<PHREDMAX;i++){    
     pl2ln[i] = log(pow(10.0,-0.1*i));
   }
@@ -312,36 +263,19 @@ size_t getgls(char*fname,std::vector<double *> &mygl, std::vector<double> &freqs
 
 void *wrap(void *ptr){
   satan *god = (satan*) ptr;
-  god->nind=getgls(god->fname, god->mygl,god->freqs, god->minind, god->minfreq,god->vcf_format_field,god->vcf_allele_field,god->seek);
+  god->nind=getgls(god->fname, god->mygl,god->vcf_format_field,god->vcf_allele_field,god->seek);
   //  pthread_exit(NULL);//this is sometimes called without thread
+  return NULL;
 }
 
-
-void *wrap2(void *){
-  while(1){
-    pthread_mutex_lock(&mymut);
-    int myvar = mycounter;
-    mycounter++;
-    pthread_mutex_unlock(&mymut);
-    if(myvar>=jobs.size())
-      pthread_exit(NULL);
-    satan *god = (satan*) &jobs[myvar];
-    god->nind=getgls(god->fname, god->mygl,god->freqs, god->minind, god->minfreq,god->vcf_format_field,god->vcf_allele_field,god->seek);
-  }
-}
-
-
-double ** readbcfvcf(char*fname,int &nind, std::vector<double> &freqs,int minind,double minfreq, std::string vcf_format_field, std::string vcf_allele_field,char *seek){
+double ** readbcfvcf(char*fname,int &nind, std::string vcf_format_field, std::string vcf_allele_field,char *seek){
   fprintf(stderr,"\t-> readbcfvcf seek:%s nind:%d\n",seek,nind);
   htsFile * inf = NULL;inf=hts_open(fname, "r");assert(inf);  
   bcf_hdr_t *hdr = NULL;hdr=bcf_hdr_read(inf);assert(hdr);
   int isbcf=0;
-  std::vector<char *> hd;
 
   satan god;
   god.fname=fname;
-  god.minind=minind;
-  god.minfreq=minfreq;
   god.vcf_format_field=vcf_format_field;
   god.vcf_allele_field=vcf_allele_field;
   god.seek=seek;
@@ -349,73 +283,21 @@ double ** readbcfvcf(char*fname,int &nind, std::vector<double> &freqs,int minind
 
   if(inf->format.format==bcf){
     isbcf=1;
-    hd = hasdata(fname);
   }if(seek&&isbcf==0){
     fprintf(stderr,"\t-> if choosing region then input file has to be bcf\n");
     exit(0);
   }
-
-  int nseq = 0;  // number of sequences
-  const char **seqnames = NULL;
-  seqnames = bcf_hdr_seqnames(hdr, &nseq); 
-  assert(seqnames);
-  
+ 
   double **gls=NULL;
-  if(seek!=NULL||isbcf==0){//single run
-    wrap(&god);
-    nind=god.nind;
-   
-    gls=new double *[god.mygl.size()];
-    for(int i=0;i<god.mygl.size();i++){
-      gls[i] = god.mygl[i];
-    }
-    freqs=god.freqs;
-  }else{
-      for(int i=0;i<hd.size();i++){
-	jobs.push_back(god);
-	jobs[i].seek=hd[i];
-      }
-    
-    if(diskio_threads==1||isbcf==0){
-      for(int i=0;i<jobs.size();i++){
-	wrap(&jobs[i]);
-      }
-    }else{
-      int at =0;
+  wrap(&god);
+  nind=god.nind;
+  gls=new double *[god.mygl.size()];
+  for(int i=0;i<god.mygl.size();i++)
+    gls[i] = god.mygl[i];
 
-      while(at<hd.size()){
-	//	fprintf(stderr,"at:%d hdsize:%lu\n",at,hd.size());
-	int howmany=std::min(diskio_threads,(int)hd.size()-at);
-	pthread_t mythd[howmany];
-	for(int i=0;i<howmany;i++){
-	  if(std_queue)
-	    assert (pthread_create(&mythd[i],NULL,wrap,&jobs[i+at])==0);
-	  else
-	    assert (pthread_create(&mythd[i],NULL,wrap2,NULL)==0);
-	}
-	for(int i=0;i<howmany;i++)
-	  assert(pthread_join(mythd[i],NULL)==0);
-	at+=howmany;
-      }
-    }
-    int nsites =0;
-    for(int i=0;i<jobs.size();i++)
-      nsites += jobs[i].mygl.size();
-    nind=jobs[0].nind;
-    //    fprintf(stderr,"Done reading everything we have nsites:%d for samples:%d\n",nsites,nind);
-    //merge results
-    gls=new double *[nsites];
-    freqs.reserve(nsites);
-    int at =0;
-    for(int i=0;i<jobs.size();i++){
-      for(int j=0;j<jobs[i].mygl.size();j++)
-	gls[at++] = jobs[i].mygl[j];
-      freqs.insert(freqs.end(),jobs[i].freqs.begin(),jobs[i].freqs.end());
-    }
-    for(int i=0;i<hd.size();i++)
-      free(hd[i]);
-  }
-  free(seqnames);
+  fprintf(stderr,"Done reading everything we have nsites:%lu for samples:%d\n",god.mygl.size(),nind);
+  //merge results
+  
   if(hdr) bcf_hdr_destroy(hdr);
   hts_close(inf);
   return gls;
@@ -423,21 +305,19 @@ double ** readbcfvcf(char*fname,int &nind, std::vector<double> &freqs,int minind
 
 
 #ifdef __WITH_MAIN__
-
 int main(int argc, char **argv) {
   if (argc == 1)
     return 1;
 
   double **gls=NULL;
-  int nind;
-  std::vector<double> freqs;
   std::string pl=std::string("PL");
   std::string fr=std::string("AFngsrelate");
   char *reg = NULL;
   if(argc==3)
     reg=strdup(argv[2]);
   fprintf(stderr,"reg:%s\n",reg);
-  gls = readbcfvcf(argv[1],nind,freqs,2,0.04,pl,fr,reg);
+  int nind;
+  gls = readbcfvcf(argv[1],nind,pl,fr,reg);
   return 0;
 }
 
