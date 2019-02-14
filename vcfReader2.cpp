@@ -205,11 +205,23 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
     if(!bcf_is_snp(rec))
       continue;
     nsnp++;
+#ifdef __WITH_MAIN__
     fprintf(stderr,"[%d] rec->n_allele:%d ",rec->pos,rec->n_allele);
-
     for(int i=0;i<rec->n_allele;i++)
       fprintf(stderr,"(%d: %s)",i,rec->d.allele[i]);
-    fprintf(stderr,"\n");
+    fprintf(stderr," ");
+    fprintf(stdout,"%s\t%i\t%s\t%s\tqual:%f n_info:%d n_allele:%d n_fmt:%d n_sample:%d\n",
+	    seqnames[rec->rid],
+	    rec->pos+1,
+	    rec->d.allele[0],
+	    rec->d.allele[1],
+	    rec->qual,
+	    rec->n_info,
+	    rec->n_allele,
+	    rec->n_fmt,
+	    rec->n_sample);
+#endif
+    
     int myreorder[10];
     //funky below took ridiculus long to make
     buildreorder(myreorder,rec->d.allele,rec->n_allele);
@@ -227,7 +239,11 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
         continue;
       }
       // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
-      fprintf(stderr,"npl:%d\n",npl);
+#ifdef __WITH_MAIN__
+      for(int i=0;i<npl-1;i++)
+	fprintf(stderr,"%d,",pl[i]);
+      	fprintf(stderr,"%d",pl[npl-1]);
+#endif
       for (int i=0; i<npl; i++){
 	if ( pl[i]==bcf_int32_missing ){
 	  bcf_float_set_missing(ln_gl[i]);
@@ -243,6 +259,12 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
 	for(int o=0;o<10;o++)
 	  dupergl[ind*10+o] = ln_gl[myreorder[o]]; 
       }
+      #ifdef __WITH_MAIN__
+      for(int ind=0;ind<10*hs->nsamples;ind++)
+	fprintf(stderr," %f",dupergl[ind]);
+      fprintf(stderr,"\n");
+      #endif
+      
     } else {
       fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, GT or PL\n");
     }
@@ -260,19 +282,7 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
     //should matter, program should never run on such low freqs, this is just for validation between formats
    
     //filtering
-#ifdef __WITH_MAIN__
-      fprintf(stdout,"%s\t%i\t%s\t%s\tqual:%f n_info:%d n_allele:%d n_fmt:%d n_sample:%d\n",
-	      seqnames[rec->rid],
-	      rec->pos+1,
-	      rec->d.allele[0],
-	      rec->d.allele[1],
-	      rec->qual,
-	      rec->n_info,
-	      rec->n_allele,
-	      rec->n_fmt,
-	      rec->n_sample);
-      
-#endif
+
       
   }
   //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
