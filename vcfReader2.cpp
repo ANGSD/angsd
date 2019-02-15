@@ -13,16 +13,8 @@
 #include <cmath>
 #include <string>
 #include "analysisFunction.h"
+#include "vcfReader2.h"
 
-typedef struct satan_t{
-  char*fname;
-  std::string vcf_format_field;
-  std::string vcf_allele_field;
-  char *seek;
-  std::vector<double *> mygl;
-  std::vector<double> freqs;
-  int nind;
-}satan;
 
 typedef struct{
   char *fname;
@@ -296,6 +288,67 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
 }
 
 #ifdef __WITH_MAIN__
+
+
+/*
+  initialize all pointers to zero
+*/
+
+funkyPars *allocFunkyPars(){
+
+  funkyPars *r = new funkyPars;
+  r->numSites =0;
+  r->extras = NULL;
+
+  r->counts = NULL;
+  r->likes = NULL;
+  r->post = NULL;
+
+  r->major = NULL;
+  r->minor = NULL;
+
+  r->ref = NULL;
+  r->anc= NULL;
+  r->keepSites =NULL;
+  r->chk = NULL;
+  r->for_callback = NULL;
+  r->killSig =0;
+  r->posi = NULL;
+  r->refId = -1;
+  return r;
+}
+
+#endif
+
+
+
+funkyPars *vcfReader2::fetch(int chunkSize){
+  //  fprintf(stderr,"fetch:%d curChr:%d\n\n",chunkSize,curChr);
+  static int eof=0;
+  if(eof)
+    return NULL;
+  funkyPars *r = allocFunkyPars();  
+  r->likes=new double*[chunkSize];
+  r->post=new double*[chunkSize];
+  for(int i=0;i<chunkSize;i++){
+    memset(r->likes,0,chunkSize*sizeof(double*));
+    memset(r->post,0,chunkSize*sizeof(double*));
+  }
+  r->posi=new int[chunkSize];
+  r->major = new char[chunkSize];
+  r->minor = new char[chunkSize];
+  
+  memset(r->major,0,chunkSize);
+  memset(r->minor,0,chunkSize);
+  //  fprintf(stderr,"curChr:%d\n",curChr);
+  r->refId = curChr;
+  
+  return r;
+}
+
+
+
+#ifdef __WITH_MAIN__
 int main(int argc, char **argv) {
   if (argc == 1)
     return 1;
@@ -313,6 +366,8 @@ int main(int argc, char **argv) {
 
   int nind;
   funkyPars *fp = myfetch(hs,100);
+  //deallocFunkyPars(fp);
+  htsstuff_destroy(hs);
   return 0;
 }
 
