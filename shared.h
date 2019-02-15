@@ -55,8 +55,8 @@ typedef struct {
   
 }funkyPars;
 
-funkyPars *allocFunkyPars();
-void deallocFunkyPars(funkyPars *p);
+funkyPars *funkyPars_init();
+void funkyPars_destroy(funkyPars *p);
 
 
 void init(argStruct *arguments);//intialize all needed objects

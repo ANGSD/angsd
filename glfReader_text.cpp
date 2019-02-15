@@ -36,7 +36,7 @@ funkyPars *glfReader_text::fetch(int chunksize){
   static const char *delims2 = "_\t \n";
   double **likes = new double*[chunksize];
   
-  funkyPars * myfunky =allocFunkyPars();
+  funkyPars * myfunky =funkyPars_init();
   myfunky->posi = new int[chunksize];
 
   for(int s=0;s<chunksize;s++)
@@ -96,7 +96,7 @@ funkyPars *glfReader_text::fetch(int chunksize){
   myfunky->numSites = nSites;
   
   if(nSites==0){
-    deallocFunkyPars(myfunky);
+    funkyPars_destroy(myfunky);
     return(NULL);
 
   }

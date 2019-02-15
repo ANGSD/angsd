@@ -69,7 +69,7 @@ funkyPars *beagle_reader::fetch(int chunksize){
   static const char *delims2 = "_\t \n";
   double **post = new double*[chunksize];
   
-  funkyPars * myfunky =allocFunkyPars();
+  funkyPars * myfunky =funkyPars_init();
   myfunky->posi = new int[chunksize];
   myfunky->major = new char[chunksize];
   myfunky->minor = new char[chunksize];
@@ -150,7 +150,7 @@ funkyPars *beagle_reader::fetch(int chunksize){
   
   if(nSites==0 & changed==0){
     fprintf(stdout,"Done reading beagle\n");
-    deallocFunkyPars(myfunky);
+    funkyPars_destroy(myfunky);
     return(NULL);
 
   }

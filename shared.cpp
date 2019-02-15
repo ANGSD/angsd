@@ -335,7 +335,7 @@ void waiter(int refId){
 void selector(funkyPars *p){
   // fprintf(stderr,"funkypars\n");
   if(p==NULL){
-    p = allocFunkyPars();
+    p = funkyPars_init();
     p->killSig = 1;
   }else{
     p->extras = new void*[andersSux];//funky
@@ -356,7 +356,7 @@ void selector(funkyPars *p){
   initialize all pointers to zero
 */
 
-funkyPars *allocFunkyPars(){
+funkyPars *funkyPars_init(){
 
   funkyPars *r = new funkyPars;
   r->numSites =0;
@@ -384,7 +384,7 @@ funkyPars *allocFunkyPars(){
 
 
 
-void deallocFunkyPars(funkyPars *p) {
+void funkyPars_destroy(funkyPars *p) {
   //clean up data related to each analysis class;
   if(p->numSites!=0){
     for(int i=0;i<andersSux;i++)
@@ -487,10 +487,10 @@ void printFunky(funkyPars *p){
 	  allMethods[i]->print(p);
     }
    
-    deallocFunkyPars(p);
+    funkyPars_destroy(p);
     
   }else{
-    deallocFunkyPars(p);
+    funkyPars_destroy(p);
     pthread_mutex_unlock(&mUpPile_mutex);
     fprintf(stderr,"\n");//after last positions print add a neu line mutafuka
   }

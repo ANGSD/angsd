@@ -177,7 +177,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
   static int eof=0;
   if(eof)
     return NULL;
-  funkyPars *r = allocFunkyPars();  
+  funkyPars *r = funkyPars_init();  
   //  r->likes=r->post=NULL;
   r->likes=new double*[chunkSize];
   r->post=new double*[chunkSize];

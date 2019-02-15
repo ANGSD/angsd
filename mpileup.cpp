@@ -109,7 +109,7 @@ tNode **parseNd(char *line,int nInd,const char *delims,int minQ,char ref){
 funkyPars *mpileup::fetch(int chunksize){
   static const char *delims = "\t \n";
   
-  funkyPars * myfunky =allocFunkyPars();
+  funkyPars * myfunky =funkyPars_init();
   myfunky->posi = new int[chunksize];
   myfunky->ref = new char[chunksize];
   myfunky->chk = new chunkyT;
@@ -166,7 +166,7 @@ funkyPars *mpileup::fetch(int chunksize){
   //fprintf(stderr,"\nchange2 %d\tnSites %d\tlastRefId\t%d %d %d\n",lastRefId,nSites,lastRefId,myfunky->refId,it->second);
   //  fflush(stderr);
   if(nSites==0 && changed == 0){
-    deallocFunkyPars(myfunky);
+    funkyPars_destroy(myfunky);
     return(NULL);
 
   }

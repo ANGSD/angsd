@@ -16,7 +16,7 @@ glfReader::glfReader(int &nInd_a,gzFile gz_a,int nGL_a,int isSim_a){
 
 
 funkyPars *glfReader::fetch(int chunkSize){
-  funkyPars *r = allocFunkyPars();  
+  funkyPars *r = funkyPars_init();  
   r->likes=new double*[chunkSize];
   r->posi=new int[chunkSize];
   r->anc = new char[chunkSize];

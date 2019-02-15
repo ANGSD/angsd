@@ -46,7 +46,7 @@ void callBack_bambi(fcb *fff){
     //    fprintf(stderr,"SEnding NULL this is a killswitch");
     selector(NULL);//<-send NULL which acts as a killswitch
   }else{
-    funkyPars *fp = allocFunkyPars();
+    funkyPars *fp = funkyPars_init();
     fp->for_callback=fff;
     fp->refId = fp->for_callback->refId;
     selector(fp);

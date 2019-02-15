@@ -327,7 +327,7 @@ funkyPars *vcfReader2::fetch(int chunkSize){
   static int eof=0;
   if(eof)
     return NULL;
-  funkyPars *r = allocFunkyPars();  
+  funkyPars *r = funkyPars_init();  
   r->likes=new double*[chunkSize];
   r->post=new double*[chunkSize];
   for(int i=0;i<chunkSize;i++){
@@ -344,7 +344,7 @@ funkyPars *vcfReader2::fetch(int chunkSize){
   r->refId = curChr;
   
   return r;
-}
+} 
 
 
 
