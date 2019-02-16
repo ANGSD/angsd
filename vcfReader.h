@@ -1,19 +1,26 @@
-#pragma once
-#include "zlib.h"
+#include <htslib/vcf.h>
 #include "argStruct.h"
 #include "analysisFunction.h"
 
+typedef struct{
+  char *fname;
+  char *seek;
+  htsFile *hts_file;
+  bcf_hdr_t *hdr;
+  hts_idx_t *idx;
+  hts_itr_t *iter;
+  int nsamples;
+}htsstuff;
+
+void htsstuff_seek(htsstuff *hs,char *seek);
+htsstuff *htsstuff_init(char *fname,char *seek);
+void htsstuff_destroy(htsstuff *hs);
 class vcfReader{
 private:
-  int nInd;
-  gzFile gz;
-  int len;
-  char *buf,*saveptr,*original;
-  const aMap *revMap;
-  int parseline(double **lk,double **gp,char &major,char &minor);
+  htsstuff *hs;
   int curChr;
 public:
   funkyPars *fetch(int chunkSize);
-  vcfReader(int &nInd_a,gzFile gz_a, const aMap *revMap);
-  ~vcfReader();
+  vcfReader(char *fname,char *seek){ hs=htsstuff_init(fname,seek);}
+  ~vcfReader(){htsstuff_destroy(hs);}
 };

@@ -420,12 +420,11 @@ multiReader::multiReader(int argc,char**argv){
   }
 
   case INPUT_VCF_GP:{
-    myvcf = new vcfReader(args->nInd,gz,args->revMap);
+    myvcf = new vcfReader(NULL,NULL);
     break;
   }
   case INPUT_VCF_GL:{
-    fprintf(stderr,"input_vcf\n");
-    myvcf = new vcfReader(args->nInd,gz,args->revMap);
+    myvcf = new vcfReader(NULL,NULL);
     break;
   }
   case INPUT_BEAGLE:{
