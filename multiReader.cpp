@@ -57,6 +57,11 @@ bam_hdr_t *getHeadFromFai(const char *fname){
   return ret;
 }
 
+bam_hdr_t *bcf_hdr_2_bam_hdr_t (char *fname){
+  bam_hdr_t *bam_hdr = bam_hdr_init();
+
+  return bam_hdr;
+}
 aMap *buildRevTable(const bam_hdr_t *hd){
   aMap *ret = new aMap;
   for(int i=0;i<hd->n_targets;i++){
@@ -333,12 +338,6 @@ multiReader::multiReader(int argc,char**argv){
       case INPUT_GLF3:
 	printAndExit=1;
 	break;
-      case INPUT_VCF_GP:
-	printAndExit=1;
-	break;
-      case INPUT_VCF_GL:
-	printAndExit=1;
-	break;
       case INPUT_BEAGLE:
 	printAndExit=1;
 	break;
@@ -362,21 +361,27 @@ multiReader::multiReader(int argc,char**argv){
       fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp/-vcf-pl/-glf10_text filename\n");
       exit(0);
     }
-    htsFile *in=sam_open(args->nams[0],"r");
-    assert(in);
-    hd= sam_hdr_read(in);
-    hts_close(in);
+    if(INPUT_VCF_GL||INPUT_VCF_GP){
+      
+
+    }else{
+      htsFile *in=sam_open(args->nams[0],"r");
+      assert(in);
+      hd= sam_hdr_read(in);
+      hts_close(in);
+    }
   }
   args->hd = hd;
-  
-  if(args->hd==NULL){
-    fprintf(stderr,"For non-bams you should include -fai arguments\n");
-    exit(0);
-  }  
+  if(!(INPUT_VCF_GL||INPUT_VCF_GP)){
+    if(args->hd==NULL){
+      fprintf(stderr,"For non-bams you should include -fai arguments\n");
+      exit(0);
+    }
+  }
 
 
 
-  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_GLF3||type==INPUT_VCF_GP||type==INPUT_VCF_GL||type==INPUT_GLF10_TEXT)){
+  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_GLF3||type==INPUT_GLF10_TEXT)){
     if(nInd==0){
       fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-vcf-GL/-vcf-GP/-glf10_text files\n");
       exit(0);
@@ -384,6 +389,9 @@ multiReader::multiReader(int argc,char**argv){
   }else
     args->nInd = args->nams.size();
 
+  if(type==INPUT_VCF_GP||type==INPUT_VCF_GL)
+    myvcf = new vcfReader(args->infile,NULL);
+  
   revMap = buildRevTable(args->hd);
 
   args->revMap = revMap;
@@ -419,14 +427,6 @@ multiReader::multiReader(int argc,char**argv){
     break;
   }
 
-  case INPUT_VCF_GP:{
-    myvcf = new vcfReader(NULL,NULL);
-    break;
-  }
-  case INPUT_VCF_GL:{
-    myvcf = new vcfReader(NULL,NULL);
-    break;
-  }
   case INPUT_BEAGLE:{
     bglObj = new beagle_reader(gz,args->revMap,intName,args->nInd);
     break;
@@ -438,10 +438,10 @@ multiReader::multiReader(int argc,char**argv){
   }
   if(args->inputtype==INPUT_VCF_GL||args->inputtype==INPUT_VCF_GL){
     fprintf(stderr,"\t-> VCF still beta. Remember that\n");
-    fprintf(stderr,"\t   1. indels and sites that are non diallelic are discarded\n");
+    fprintf(stderr,"\t   1. indels are are discarded\n");
     fprintf(stderr,"\t   2. will use chrom, pos, ref, alt columns\n");
     fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln\n");
-    fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...)\n");
+    fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...) (NOT USED)\n");
     fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
 
   }
