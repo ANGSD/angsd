@@ -2,6 +2,8 @@
 #include "argStruct.h"
 #include "analysisFunction.h"
 
+#define PHREDMAX 256
+
 typedef struct{
   char *fname;
   char *seek;
@@ -12,15 +14,30 @@ typedef struct{
   int nsamples;
 }htsstuff;
 
+
 void htsstuff_seek(htsstuff *hs,char *seek);
 htsstuff *htsstuff_init(char *fname,char *seek);
 void htsstuff_destroy(htsstuff *hs);
 class vcfReader{
 private:
-  htsstuff *hs;
+float pl2ln[PHREDMAX];
   int curChr;
+  float pl2ln_f(int32_t & val){
+    if(val>=PHREDMAX){
+      return log(pow(10.0,-0.1*val));
+    } else {
+      return pl2ln[val];
+    }
+  }
+
 public:
+  htsstuff *hs;
   funkyPars *fetch(int chunkSize);
-  vcfReader(char *fname,char *seek){ hs=htsstuff_init(fname,seek);}
+  vcfReader(char *fname,char *seek){
+    hs=htsstuff_init(fname,seek);
+    for(int i=0;i<PHREDMAX;i++)
+      pl2ln[i] = log(pow(10.0,-0.1*i));
+    curChr=-1;
+  }
   ~vcfReader(){htsstuff_destroy(hs);}
 };

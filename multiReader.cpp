@@ -57,12 +57,25 @@ bam_hdr_t *getHeadFromFai(const char *fname){
   return ret;
 }
 
-bam_hdr_t *bcf_hdr_2_bam_hdr_t (char *fname){
-  bam_hdr_t *bam_hdr = bam_hdr_init();
-
-  return bam_hdr;
+bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
+  bam_hdr_t *ret = bam_hdr_init();
+  ret->l_text = 0;
+  ret->text =NULL;
+  const char **seqnames = NULL;
+  int nseq;
+  seqnames = bcf_hdr_seqnames(hs->hdr, &nseq); assert(seqnames);
+  
+  ret->n_targets = nseq;
+  ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
+  ret->target_name = (char**) malloc(sizeof(char*)*nseq);
+  for(size_t i=0;i<nseq;i++){
+    ret->target_len[i] = strlen(seqnames[i]);
+    ret->target_name[i] =strdup(seqnames[i]);
+  }
+  return ret;
 }
 aMap *buildRevTable(const bam_hdr_t *hd){
+  assert(hd);
   aMap *ret = new aMap;
   for(int i=0;i<hd->n_targets;i++){
     ret->insert(std::pair<char *,int>(strdup(hd->target_name[i]),i));
@@ -362,7 +375,7 @@ multiReader::multiReader(int argc,char**argv){
       exit(0);
     }
     if(INPUT_VCF_GL||INPUT_VCF_GP){
-      
+
 
     }else{
       htsFile *in=sam_open(args->nams[0],"r");
@@ -389,8 +402,11 @@ multiReader::multiReader(int argc,char**argv){
   }else
     args->nInd = args->nams.size();
 
-  if(type==INPUT_VCF_GP||type==INPUT_VCF_GL)
+  if(type==INPUT_VCF_GP||type==INPUT_VCF_GL){
     myvcf = new vcfReader(args->infile,NULL);
+    args->hd=bcf_hdr_2_bam_hdr_t(myvcf->hs);
+  }
+  //make args->hd
   
   revMap = buildRevTable(args->hd);
 

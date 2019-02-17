@@ -68,17 +68,7 @@ void htsstuff_destroy(htsstuff *hs){
 // uint32_t bcf_float_missing    = 0x7F800001;
 // uint32_t bcf_float_vector_end = 0x7F800002;
 
-const int PHREDMAX=256;
-float pl2ln[PHREDMAX];
-
 // double pl2ln[256];
-float pl2ln_f(int32_t & val){
-  if(val>=PHREDMAX){
-    return log(pow(10.0,-0.1*val));
-  } else {
-    return pl2ln[val];
-  }
-}
 
 const char *wildcar= "<*>";
 
@@ -151,11 +141,25 @@ void buildreorder(int swap[10],char **alleles,int len){
 #endif
 }
 
-funkyPars *myfetch(htsstuff *hs,int chunksize){
-  std::string vcf_format_field = "PL";
-  for(int i=0;i<PHREDMAX;i++){    
-    pl2ln[i] = log(pow(10.0,-0.1*i));
+funkyPars *vcfReader::fetch(int chunkSize){
+  funkyPars *r = funkyPars_init();
+  r->likes=new double*[chunkSize];
+  r->post=new double*[chunkSize];
+  for(int i=0;i<chunkSize;i++){
+    memset(r->likes,0,chunkSize*sizeof(double*));
+    memset(r->post,0,chunkSize*sizeof(double*));
   }
+  
+  r->posi=new int[chunkSize];
+  r->major = new char[chunkSize];
+  r->minor = new char[chunkSize];
+  memset(r->major,0,chunkSize);
+  memset(r->minor,0,chunkSize);
+  //  fprintf(stderr,"curChr:%d\n",curChr);
+  r->refId = curChr;
+  
+  std::string vcf_format_field = "PL";
+  
   bcf1_t *rec = NULL;rec=bcf_init();assert(rec);
 
   //   http://wresch.github.io/2014/11/18/process-vcf-file-with-htslib.html
@@ -175,7 +179,9 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
 #endif
   
   char *chr;
-  while(1){
+  int balcon=0;
+  while(balcon<chunkSize) {
+    //    fprintf(stderr,"%d/%d\n",balcon,chunkSize);
     if(hs->iter==NULL){
       if(bcf_read(hs->hts_file,hs->hdr,rec)!=0)	
 	break;
@@ -187,6 +193,12 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
     if(!bcf_is_snp(rec))
       continue;
     nsnp++;
+    r->posi[balcon] = rec->pos;
+    if(curChr==-1){
+      curChr=rec->rid;
+    }
+    r->refId=rec->rid;
+      
 #ifdef __WITH_MAIN__
     fprintf(stderr,"[%d] rec->n_allele:%d ",rec->pos,rec->n_allele);
     for(int i=0;i<rec->n_allele;i++)
@@ -209,7 +221,7 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
     buildreorder(myreorder,rec->d.allele,rec->n_allele);
     
 
-    double dupergl[10*hs->nsamples]; 
+    double *dupergl = new double[10*hs->nsamples]; 
 
     if(vcf_format_field == "PL") {
       npl = bcf_get_format_int32(hs->hdr, rec, "PL", &pl, &npl_arr);
@@ -246,7 +258,7 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
 	fprintf(stderr," %f",dupergl[ind]);
       fprintf(stderr,"\n");
       #endif
-      
+      r->likes[balcon] = dupergl;
     } else {
       fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, GT or PL\n");
     }
@@ -265,15 +277,15 @@ funkyPars *myfetch(htsstuff *hs,int chunksize){
    
     //filtering
 
-      
+    balcon++;
   }
   //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
 
   free(pl);
 
   bcf_destroy(rec);
-
-  return NULL;
+  r->numSites=balcon;
+  return r;
  
 }
 
@@ -309,32 +321,6 @@ funkyPars *allocFunkyPars(){
 }
 
 #endif
-
-
-
-funkyPars *vcfReader::fetch(int chunkSize){
-  //  fprintf(stderr,"fetch:%d curChr:%d\n\n",chunkSize,curChr);
-  static int eof=0;
-  if(eof)
-    return NULL;
-  funkyPars *r = funkyPars_init();  
-  r->likes=new double*[chunkSize];
-  r->post=new double*[chunkSize];
-  for(int i=0;i<chunkSize;i++){
-    memset(r->likes,0,chunkSize*sizeof(double*));
-    memset(r->post,0,chunkSize*sizeof(double*));
-  }
-  r->posi=new int[chunkSize];
-  r->major = new char[chunkSize];
-  r->minor = new char[chunkSize];
-  
-  memset(r->major,0,chunkSize);
-  memset(r->minor,0,chunkSize);
-  //  fprintf(stderr,"curChr:%d\n",curChr);
-  r->refId = curChr;
-  
-  return r;
-} 
 
 
 

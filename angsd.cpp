@@ -244,8 +244,7 @@ int main(int argc, char** argv){
      selector(tmp);
       
    }
-
-     
+        
 
 
    //now we have no more data lets wait and cleanup
