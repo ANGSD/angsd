@@ -21,6 +21,7 @@ void htsstuff_destroy(htsstuff *hs);
 class vcfReader{
 private:
   bcf1_t *acpy;
+  int32_t *pl;
 float pl2ln[PHREDMAX];
   int curChr;
   float pl2ln_f(int32_t & val){
@@ -41,6 +42,7 @@ public:
     for(int i=0;i<PHREDMAX;i++)
       pl2ln[i] = log(pow(10.0,-0.1*i));
     curChr=-1;
+    pl=NULL;
   }
-  ~vcfReader(){htsstuff_destroy(hs);}
+  ~vcfReader(){htsstuff_destroy(hs);free(pl);}
 };

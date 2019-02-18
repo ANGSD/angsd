@@ -8,7 +8,7 @@
 #include "abcGetFasta.h"
 
 
-int uppile(int show,int nThreads,bufReader *rd,int NLINES,int nFiles,std::vector<regs> regions,abcGetFasta *gf);
+int uppile(int show,int nThreads,bufReader *rd,int NLINES,int nFiles,std::vector<regs> &regions,abcGetFasta *gf);
 tNode *initNodeT(int l);
 
 

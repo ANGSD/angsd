@@ -69,9 +69,11 @@ bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
   ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
   ret->target_name = (char**) malloc(sizeof(char*)*nseq);
   for(size_t i=0;i<nseq;i++){
+    //    fprintf(stderr,"i:%d is:%d\n",i,bcf_hdr_id2length())
     ret->target_len[i] = strlen(seqnames[i]);
     ret->target_name[i] =strdup(seqnames[i]);
   }
+  free(seqnames);
   return ret;
 }
 aMap *buildRevTable(const bam_hdr_t *hd){
@@ -361,38 +363,31 @@ multiReader::multiReader(int argc,char**argv){
     if(printAndExit){
       fprintf(stderr,"\t-> Must supply -fai file\n");
       exit(0);
-
     }
   }
-
   
   if(args->fai){
-    if(!(hd=getHeadFromFai(args->fai)))
+    if(!(args->hd=getHeadFromFai(args->fai)))
       exit(0);
   }else{
     if(args->nams.size()==0){
       fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp/-vcf-pl/-glf10_text filename\n");
       exit(0);
     }
-    if(INPUT_VCF_GL||INPUT_VCF_GP){
-
-
-    }else{
+    if(args->inputtype==INPUT_BAM){
       htsFile *in=sam_open(args->nams[0],"r");
       assert(in);
-      hd= sam_hdr_read(in);
+      args->hd= sam_hdr_read(in);
       hts_close(in);
     }
   }
-  args->hd = hd;
+ 
   if(!(INPUT_VCF_GL||INPUT_VCF_GP)){
     if(args->hd==NULL){
       fprintf(stderr,"For non-bams you should include -fai arguments\n");
       exit(0);
     }
   }
-
-
 
   if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_GLF3||type==INPUT_GLF10_TEXT)){
     if(nInd==0){
@@ -403,17 +398,34 @@ multiReader::multiReader(int argc,char**argv){
     args->nInd = args->nams.size();
 
   if(type==INPUT_VCF_GP||type==INPUT_VCF_GL){
-    myvcf = new vcfReader(args->infile,NULL);
-    args->hd=bcf_hdr_2_bam_hdr_t(myvcf->hs);
+
+    if(args->regions.size()>1){
+      fprintf(stderr,"\t-> Only one region can be specified with using bcf (i doubt more is needed)  will exit\n");
+      exit(0);
+    }else if(args->regions.size()<=1){
+      myvcf = new vcfReader(args->infile,NULL);
+      args->hd=bcf_hdr_2_bam_hdr_t(myvcf->hs);
+    }
+
+    
   }
   //make args->hd
   
   revMap = buildRevTable(args->hd);
-
   args->revMap = revMap;
-
   setArgsBam(args);
+  if(args->regions.size()==1){
+    char tmp[1024];
+    int start=args->regions[0].start;
+    int stop=args->regions[0].stop;
+    int ref=args->regions[0].refID;
+    snprintf(tmp,1024,"%s:%d-%d",args->hd->target_name[ref],start+1,stop);
+    fprintf(stderr,"tmp:%s\n",tmp);
+    exit(0);
+  }
 
+
+  
   if(fname==NULL)
     return;
 

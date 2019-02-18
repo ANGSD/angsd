@@ -28,7 +28,6 @@ private:
   int minQ;
   argStruct *args;
   aMap *revMap;
-  bam_hdr_t *hd;
 public:
   multiReader(int,char**);
   argStruct *getargs(){return args;}

@@ -39,6 +39,7 @@ htsstuff *htsstuff_init(char *fname,char *seek){
 }
 
 void htsstuff_destroy(htsstuff *hs){
+  free(hs->fname);
   free(hs->seek);
   
   if(hs->hdr)
@@ -51,6 +52,7 @@ void htsstuff_destroy(htsstuff *hs){
   if(hs->idx)
     hts_idx_destroy(hs->idx);
 
+  delete hs;
 }
 
 
@@ -136,7 +138,6 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
   // pl data for each call
   int npl_arr = 0;
   int npl     = 0;
-  int32_t *pl = NULL;
 
   std::string vcf_format_field = "PL"; 
   int myreorder[10];
@@ -148,7 +149,6 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
   r->refId=rec->rid;
   r->posi[balcon] = rec->pos;
   r->keepSites[balcon] = hs->nsamples;
-  //  fprintf(stderr,"rec->pos:%d\n",rec->pos);
 
   //parse PL
   if(vcf_format_field == "PL") {
@@ -213,7 +213,6 @@ funkyPars *vcfReader::fetch(int chunkSize){
   int nsnp = 0;  // number of SNP records in file
   int nseq = 0;  // number of sequences
   
-  char *chr;
   int balcon=0;
   
   if(acpy){
@@ -262,6 +261,10 @@ funkyPars *vcfReader::fetch(int chunkSize){
 
   bcf_destroy(rec);
   r->numSites=balcon;
+  if(r->numSites==0){
+    funkyPars_destroy(r);
+    r=NULL;
+  }
   return r;
  
 }
