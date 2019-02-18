@@ -1,15 +1,5 @@
-/*
-  example modified from http://wresch.github.io/2014/11/18/process-vcf-file-with-htslib.html
-
-  compile and run with:
-  g++ vcf.cpp -I../htslib/ ../htslib/libhts.a -lz -D__WITH_MAIN__
-
-./a.out my.bcf
- */
-
 #include <stdio.h>
 #include <vector>
-
 #include <cmath>
 #include <string>
 #include "analysisFunction.h"
@@ -141,10 +131,69 @@ void buildreorder(int swap[10],char **alleles,int len){
 #endif
 }
 
+int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
+  assert(  bcf_is_snp(rec));
+  // pl data for each call
+  int npl_arr = 0;
+  int npl     = 0;
+  int32_t *pl = NULL;
+
+  std::string vcf_format_field = "PL"; 
+  int myreorder[10];
+  //funky below took ridiculus long to make
+  buildreorder(myreorder,rec->d.allele,rec->n_allele);
+  
+  
+  double *dupergl = new double[10*hs->nsamples]; 
+  r->refId=rec->rid;
+  r->posi[balcon] = rec->pos;
+  r->keepSites[balcon] = hs->nsamples;
+  //  fprintf(stderr,"rec->pos:%d\n",rec->pos);
+
+  //parse PL
+  if(vcf_format_field == "PL") {
+    npl = bcf_get_format_int32(hs->hdr, rec, "PL", &pl, &npl_arr);
+    float ln_gl[npl];
+    if(npl<0){
+      // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
+      // no PL tag is available
+      fprintf(stderr, "BAD SITE %s:%d. return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, npl,rec->rid);
+      return 0;
+    }
+    // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
+    for (int i=0; i<npl; i++){
+      if ( pl[i]==bcf_int32_missing ){
+	bcf_float_set_missing(ln_gl[i]);
+      } else if ( pl[i]==bcf_int32_vector_end ){
+	bcf_float_set_vector_end(ln_gl[i]);
+      } else{
+	ln_gl[i] = pl2ln_f(pl[i]);
+      }
+      //         fprintf(stderr, "%d %f\n", pl[i], ln_gl[i]);
+    }
+    
+    for(int ind=0;ind<hs->nsamples;ind++){
+      for(int o=0;o<10;o++)
+	dupergl[ind*10+o] = ln_gl[myreorder[o]]; 
+    }
+    r->likes[balcon] = dupergl;
+  } else {
+    fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, GT or PL\n");
+    return 0;
+   
+  }
+  balcon++;
+  //naf = bcf_get_info_float(hdr, rec, vcf_allele_field.c_str(), &af, &naf_arr);//maybe include this<-
+}
+
+
+
+
 funkyPars *vcfReader::fetch(int chunkSize){
   funkyPars *r = funkyPars_init();
   r->likes=new double*[chunkSize];
   r->post=new double*[chunkSize];
+  r->keepSites = new int[chunkSize];
   for(int i=0;i<chunkSize;i++){
     memset(r->likes,0,chunkSize*sizeof(double*));
     memset(r->post,0,chunkSize*sizeof(double*));
@@ -155,10 +204,6 @@ funkyPars *vcfReader::fetch(int chunkSize){
   r->minor = new char[chunkSize];
   memset(r->major,0,chunkSize);
   memset(r->minor,0,chunkSize);
-  //  fprintf(stderr,"curChr:%d\n",curChr);
-  r->refId = curChr;
-  
-  std::string vcf_format_field = "PL";
   
   bcf1_t *rec = NULL;rec=bcf_init();assert(rec);
 
@@ -167,21 +212,18 @@ funkyPars *vcfReader::fetch(int chunkSize){
   int n    = 0;  // total number of records in file
   int nsnp = 0;  // number of SNP records in file
   int nseq = 0;  // number of sequences
- 
-  // pl data for each call
-  int npl_arr = 0;
-  int npl     = 0;
-  int32_t *pl = NULL;
-
-#ifdef __WITH_MAIN__
-  const char **seqnames = NULL;
-  seqnames = bcf_hdr_seqnames(hs->hdr, &nseq); assert(seqnames);//bcf_hdr_id2name(hdr,i)
-#endif
   
   char *chr;
   int balcon=0;
+  
+  if(acpy){
+    parseline(acpy,hs,r,balcon);
+    bcf_destroy(acpy);
+    acpy=NULL;
+  }
+  
   while(balcon<chunkSize) {
-    //    fprintf(stderr,"%d/%d\n",balcon,chunkSize);
+    //either parse a read with region or nextread
     if(hs->iter==NULL){
       if(bcf_read(hs->hts_file,hs->hdr,rec)!=0)	
 	break;
@@ -190,98 +232,33 @@ funkyPars *vcfReader::fetch(int chunkSize){
 	break;
     }
     n++;
+    //skip nonsnips
     if(!bcf_is_snp(rec))
       continue;
     nsnp++;
-    r->posi[balcon] = rec->pos;
+
+    //initialize
     if(curChr==-1){
       curChr=rec->rid;
     }
-    r->refId=rec->rid;
-      
-#ifdef __WITH_MAIN__
-    fprintf(stderr,"[%d] rec->n_allele:%d ",rec->pos,rec->n_allele);
-    for(int i=0;i<rec->n_allele;i++)
-      fprintf(stderr,"(%d: %s)",i,rec->d.allele[i]);
-    fprintf(stderr," ");
-    fprintf(stdout,"%s\t%i\t%s\t%s\tqual:%f n_info:%d n_allele:%d n_fmt:%d n_sample:%d\n",
-	    seqnames[rec->rid],
-	    rec->pos+1,
-	    rec->d.allele[0],
-	    rec->d.allele[1],
-	    rec->qual,
-	    rec->n_info,
-	    rec->n_allele,
-	    rec->n_fmt,
-	    rec->n_sample);
-#endif
-    
-    int myreorder[10];
-    //funky below took ridiculus long to make
-    buildreorder(myreorder,rec->d.allele,rec->n_allele);
-    
 
-    double *dupergl = new double[10*hs->nsamples]; 
-
-    if(vcf_format_field == "PL") {
-      npl = bcf_get_format_int32(hs->hdr, rec, "PL", &pl, &npl_arr);
-      float ln_gl[npl];
-      if(npl<0){
-        // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
-        // no PL tag is available
-        fprintf(stderr, "BAD SITE %s:%d. return code:%d while fetching PL tag\n", bcf_seqname(hs->hdr,rec), rec->pos, npl);
-        continue;
+    //if we are changing chromosomes
+    if(rec->rid!=curChr){
+      //remove old
+      if(acpy){
+	bcf_destroy(acpy);
+	acpy=NULL;
       }
-      // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
-#ifdef __WITH_MAIN__
-      for(int i=0;i<npl-1;i++)
-	fprintf(stderr,"%d,",pl[i]);
-      	fprintf(stderr,"%d",pl[npl-1]);
-#endif
-      for (int i=0; i<npl; i++){
-	if ( pl[i]==bcf_int32_missing ){
-	  bcf_float_set_missing(ln_gl[i]);
-	} else if ( pl[i]==bcf_int32_vector_end ){
-	  bcf_float_set_vector_end(ln_gl[i]);
-	} else{
-	  ln_gl[i] = pl2ln_f(pl[i]);
-	}
-	//         fprintf(stderr, "%d %f\n", pl[i], ln_gl[i]);
-      }
-
-      for(int ind=0;ind<hs->nsamples;ind++){
-	for(int o=0;o<10;o++)
-	  dupergl[ind*10+o] = ln_gl[myreorder[o]]; 
-      }
-      #ifdef __WITH_MAIN__
-      for(int ind=0;ind<10*hs->nsamples;ind++)
-	fprintf(stderr," %f",dupergl[ind]);
-      fprintf(stderr,"\n");
-      #endif
-      r->likes[balcon] = dupergl;
-    } else {
-      fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, GT or PL\n");
+      //copy new
+      acpy=bcf_dup(rec);
+      curChr=rec->rid;
+      break;
     }
- 
-    //    fprintf(stderr,"keepind:%d\n",keepInd);
 
-    
-    //naf = bcf_get_info_float(hdr, rec, vcf_allele_field.c_str(), &af, &naf_arr);
-    //    fprintf(stderr,"rec->pos:%d npl:%d naf:%d rec->n_allele:%d\n",rec->pos,npl,naf,rec->n_allele);    
-    //if multiple alt alleles then n_allele>3. We only care about diallelic ref/alt alleless
-    //		if(rec->n_allele==4) fprintf(stdout,"\n%s\n",rec->d.allele[2]);
-    //ok this is a bit messed up. apparantly sometime the allele is <*> sometimes not.
-    // just use the first two alleles now and discard the rest of the alleles.
-
-    //should matter, program should never run on such low freqs, this is just for validation between formats
-   
-    //filtering
-
-    balcon++;
+    //regular case
+    parseline(rec,hs,r,balcon);
   }
   //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
-
-  free(pl);
 
   bcf_destroy(rec);
   r->numSites=balcon;
@@ -289,62 +266,4 @@ funkyPars *vcfReader::fetch(int chunkSize){
  
 }
 
-#ifdef __WITH_MAIN__
 
-
-/*
-  initialize all pointers to zero
-*/
-
-funkyPars *allocFunkyPars(){
-
-  funkyPars *r = new funkyPars;
-  r->numSites =0;
-  r->extras = NULL;
-
-  r->counts = NULL;
-  r->likes = NULL;
-  r->post = NULL;
-
-  r->major = NULL;
-  r->minor = NULL;
-
-  r->ref = NULL;
-  r->anc= NULL;
-  r->keepSites =NULL;
-  r->chk = NULL;
-  r->for_callback = NULL;
-  r->killSig =0;
-  r->posi = NULL;
-  r->refId = -1;
-  return r;
-}
-
-#endif
-
-
-
-#ifdef __WITH_MAIN__
-int main(int argc, char **argv) {
-  if (argc == 1)
-    return 1;
-
-  double **gls=NULL;
-  std::string pl=std::string("PL");
-  std::string fr=std::string("AFngsrelate");
-  char *reg = NULL;
-  if(argc==3)
-    reg=strdup(argv[2]);
-  fprintf(stderr,"reg:%s\n",reg);
-
-
-  htsstuff *hs=htsstuff_init(argv[1],reg);
-
-  int nind;
-  funkyPars *fp = myfetch(hs,100);
-  //deallocFunkyPars(fp);
-  htsstuff_destroy(hs);
-  return 0;
-}
-
-#endif

@@ -570,7 +570,7 @@ funkyPars *multiReader::fetch(){
   if(fp&&0)
     fprintf(stderr,"numSites:%d\n",fp->numSites);
   if(fp!=NULL && fp->refId==-1){
-    fprintf(stderr,"\t-> Unkown refid found will close program\n");
+    fprintf(stderr,"\n\t-> Unkown refid found will close program refid:%d\n",fp->refId);
     return NULL;
   }
   return fp;

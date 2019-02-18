@@ -20,6 +20,7 @@ htsstuff *htsstuff_init(char *fname,char *seek);
 void htsstuff_destroy(htsstuff *hs);
 class vcfReader{
 private:
+  bcf1_t *acpy;
 float pl2ln[PHREDMAX];
   int curChr;
   float pl2ln_f(int32_t & val){
@@ -29,12 +30,14 @@ float pl2ln[PHREDMAX];
       return pl2ln[val];
     }
   }
+  int parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon);
 
 public:
   htsstuff *hs;
   funkyPars *fetch(int chunkSize);
   vcfReader(char *fname,char *seek){
     hs=htsstuff_init(fname,seek);
+    acpy=NULL;
     for(int i=0;i<PHREDMAX;i++)
       pl2ln[i] = log(pow(10.0,-0.1*i));
     curChr=-1;
