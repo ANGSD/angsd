@@ -70,7 +70,7 @@ bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
   ret->target_name = (char**) malloc(sizeof(char*)*nseq);
   for(size_t i=0;i<nseq;i++){
     //    fprintf(stderr,"i:%d is:%d\n",i,bcf_hdr_id2length())
-    ret->target_len[i] = strlen(seqnames[i]);
+    ret->target_len[i] =0x7fffffff;// strlen(seqnames[i]);
     ret->target_name[i] =strdup(seqnames[i]);
   }
   free(seqnames);
@@ -318,7 +318,7 @@ multiReader::multiReader(int argc,char**argv){
   printTime(args->argumentFile); 
 
 
-  type = args->inputtype;
+  //type = args->inputtype;
 
   if(args->argc==2) {
     if((!strcasecmp(args->argv[1],"-beagle")) ||
@@ -389,7 +389,7 @@ multiReader::multiReader(int argc,char**argv){
     }
   }
 
-  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_GLF3||type==INPUT_GLF10_TEXT)){
+  if((args->inputtype==INPUT_PILEUP||args->inputtype==INPUT_GLF||args->inputtype==INPUT_GLF3||args->inputtype==INPUT_GLF10_TEXT)){
     if(nInd==0){
       fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-vcf-GL/-vcf-GP/-glf10_text files\n");
       exit(0);
@@ -397,8 +397,7 @@ multiReader::multiReader(int argc,char**argv){
   }else
     args->nInd = args->nams.size();
 
-  if(type==INPUT_VCF_GP||type==INPUT_VCF_GL){
-
+  if(args->inputtype==INPUT_VCF_GP||args->inputtype==INPUT_VCF_GL){
     if(args->regions.size()>1){
       fprintf(stderr,"\t-> Only one region can be specified with using bcf (i doubt more is needed)  will exit\n");
       exit(0);
@@ -406,22 +405,24 @@ multiReader::multiReader(int argc,char**argv){
       myvcf = new vcfReader(args->infile,NULL);
       args->hd=bcf_hdr_2_bam_hdr_t(myvcf->hs);
     }
-
-    
   }
   //make args->hd
   
   revMap = buildRevTable(args->hd);
   args->revMap = revMap;
   setArgsBam(args);
-  if(args->regions.size()==1){
-    char tmp[1024];
-    int start=args->regions[0].start;
-    int stop=args->regions[0].stop;
-    int ref=args->regions[0].refID;
-    snprintf(tmp,1024,"%s:%d-%d",args->hd->target_name[ref],start+1,stop);
-    fprintf(stderr,"tmp:%s\n",tmp);
-    exit(0);
+  if(args->inputtype==INPUT_VCF_GL){
+    if(args->regions.size()==1){
+      char tmp[1024];
+      int start=args->regions[0].start;
+      int stop=args->regions[0].stop;
+      int ref=args->regions[0].refID;
+      snprintf(tmp,1024,"%s:%d-%d",args->hd->target_name[ref],start+1,stop);
+      //    fprintf(stderr,"tmp:%s\n",tmp);
+      //    exit(0);
+      myvcf->seek(tmp);
+    }
+    
   }
 
 
@@ -436,7 +437,7 @@ multiReader::multiReader(int argc,char**argv){
     exit(0);
   }
 
-  switch(type){
+  switch(args->inputtype){
   case INPUT_PILEUP:{
     mpil = new mpileup(args->nInd,gz,args->revMap,minQ);
     break;
@@ -483,7 +484,7 @@ multiReader::~multiReader(){
  
   delete revMap;
 
-    switch(type){
+    switch(args->inputtype){
   case INPUT_PILEUP:{
     delete mpil;
     break;
@@ -530,7 +531,7 @@ multiReader::~multiReader(){
 funkyPars *multiReader::fetch(){
   //  fprintf(stderr,"fetching\n");`
   funkyPars *fp = NULL;
-  switch(type){
+  switch(args->inputtype){
   case INPUT_PILEUP:{
     fp = mpil->fetch(nLines);
     break;
@@ -564,7 +565,7 @@ funkyPars *multiReader::fetch(){
   }
     
   default:{
-    fprintf(stderr,"Unknown inputformat: %d\n",type);
+    fprintf(stderr,"Unknown inputformat: %d\n",args->inputtype);
 #if 1
   fprintf(stderr,"bam:%d\n",INPUT_BAM);
   fprintf(stderr,"glf:%d\n",INPUT_GLF);

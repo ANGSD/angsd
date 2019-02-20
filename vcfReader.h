@@ -36,6 +36,7 @@ float pl2ln[PHREDMAX];
 public:
   htsstuff *hs;
   funkyPars *fetch(int chunkSize);
+  void seek(char *seek){htsstuff_seek(hs,seek);}
   vcfReader(char *fname,char *seek){
     hs=htsstuff_init(fname,seek);
     acpy=NULL;

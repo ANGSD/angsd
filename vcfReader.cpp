@@ -119,7 +119,7 @@ void buildreorder(int swap[10],char **alleles,int len){
       adder++;
     }
   }
-#if 0
+#if 1
     fprintf(stderr,"AA swap[%d]:%d\n",0,swap[0]);
     fprintf(stderr,"AC swap[%d]:%d\n",1,swap[1]);
     fprintf(stderr,"AG swap[%d]:%d\n",2,swap[2]);
@@ -146,10 +146,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
   
   
   double *dupergl = new double[10*hs->nsamples]; 
-  r->refId=rec->rid;
-  r->posi[balcon] = rec->pos;
-  r->keepSites[balcon] = hs->nsamples;
-
+  
   //parse PL
   if(vcf_format_field == "PL") {
     npl = bcf_get_format_int32(hs->hdr, rec, "PL", &pl, &npl_arr);
@@ -182,6 +179,10 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
     return 0;
    
   }
+  r->refId=rec->rid;
+  r->posi[balcon] = rec->pos;
+  r->keepSites[balcon] = hs->nsamples;
+
   balcon++;
   //naf = bcf_get_info_float(hdr, rec, vcf_allele_field.c_str(), &af, &naf_arr);//maybe include this<-
 }
@@ -191,6 +192,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
 
 funkyPars *vcfReader::fetch(int chunkSize){
   funkyPars *r = funkyPars_init();
+  r->nInd = hs->nsamples;
   r->likes=new double*[chunkSize];
   r->post=new double*[chunkSize];
   r->keepSites = new int[chunkSize];
@@ -232,8 +234,10 @@ funkyPars *vcfReader::fetch(int chunkSize){
     }
     n++;
     //skip nonsnips
+    fprintf(stderr,"pre issnp:%d\n",bcf_is_snp(rec));
     if(!bcf_is_snp(rec))
       continue;
+    fprintf(stderr,"post issnp:%d\n",bcf_is_snp(rec));
     nsnp++;
 
     //initialize

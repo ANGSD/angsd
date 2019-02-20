@@ -646,6 +646,16 @@ void abcFreq::postFreq(funkyPars  *pars,freqStruct *freq){
 
 
 void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known ;method=2 em;method=4 bfgs_unknown
+  fprintf(stderr,"chunk:%d numsites:%d nind:%d\n",pars->chunkNumber,pars->numSites,pars->nInd);
+  for(int i=0;1&&i<pars->numSites;i++){
+    if(pars->keepSites[i]){
+      fprintf(stderr,"%s %d",header->target_name[pars->refId],pars->posi[i]);
+      for(int j=0;j<10*pars->nInd;j++)
+	fprintf(stderr," %f",pars->likes[i][j]);
+    }
+  }
+      
+
   
   //here only the likelihoods for the three genotypes are used. 
   double **loglike = NULL;
@@ -678,9 +688,12 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
 
   //loop though all sites and check if we have data.
   for(int s=0;s<pars->numSites;s++) {
+
     if(keepInd[s]==0)//if we dont have any information
       continue;
+    fprintf(stderr,"\t-> keepInd1:%d\n",keepInd[s]);
     keepInd[s]=0;//
+    
     for(int i=0 ; i<pars->nInd ;i++) {//DRAGON CHECK THIS
       keepList[i]=1;
       //also discard if all gls are the same
@@ -692,7 +705,7 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
       }
 
     }
-
+    fprintf(stderr,"\t-> keepInd:%d\n",keepInd[s]);
     if(keepInd[s]==0)//if we dont have any information
       continue;
 
