@@ -146,7 +146,8 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
   
   
   double *dupergl = new double[10*hs->nsamples]; 
-  
+  for(int i=0;i<10*hs->nsamples;i++)
+    dupergl[i] = log(0);
   //parse PL
   if(vcf_format_field == "PL") {
     npl = bcf_get_format_int32(hs->hdr, rec, "PL", &pl, &npl_arr);
@@ -168,10 +169,12 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
       }
       //         fprintf(stderr, "%d %f\n", pl[i], ln_gl[i]);
     }
-    
+    assert((npl % hs->nsamples)==0 );
+    int myofs=npl/hs->nsamples;
     for(int ind=0;ind<hs->nsamples;ind++){
       for(int o=0;o<10;o++)
-	dupergl[ind*10+o] = ln_gl[myreorder[o]]; 
+	if(myreorder[o]!=-1)
+	  dupergl[ind*10+o] = ln_gl[ind*myofs+myreorder[o]]; 
     }
     r->likes[balcon] = dupergl;
   } else {
