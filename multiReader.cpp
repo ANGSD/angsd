@@ -391,7 +391,7 @@ multiReader::multiReader(int argc,char**argv){
 
   if((args->inputtype==INPUT_PILEUP||args->inputtype==INPUT_GLF||args->inputtype==INPUT_GLF3||args->inputtype==INPUT_GLF10_TEXT)){
     if(nInd==0){
-      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-vcf-GL/-vcf-GP/-glf10_text files\n");
+      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-glf10_text files\n");
       exit(0);
     }
   }else
@@ -404,6 +404,7 @@ multiReader::multiReader(int argc,char**argv){
     }else if(args->regions.size()<=1){
       myvcf = new vcfReader(args->infile,NULL);
       args->hd=bcf_hdr_2_bam_hdr_t(myvcf->hs);
+      args->nInd = myvcf->hs->nsamples;
     }
   }
   //make args->hd
@@ -468,8 +469,8 @@ multiReader::multiReader(int argc,char**argv){
   if(args->inputtype==INPUT_VCF_GL||args->inputtype==INPUT_VCF_GL){
     fprintf(stderr,"\t-> VCF still beta. Remember that\n");
     fprintf(stderr,"\t   1. indels are are discarded\n");
-    fprintf(stderr,"\t   2. will use chrom, pos, ref, alt columns\n");
-    fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln\n");
+    fprintf(stderr,"\t   2. will use chrom, pos PL columns\n");
+    fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln (NOT USED)\n");
     fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...) (NOT USED)\n");
     fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
 
@@ -522,6 +523,8 @@ multiReader::~multiReader(){
   delete []   args->usedArgs;
   free(args->outfiles);
   free(args->infile);
+  if(args->anc)
+    free(args->anc);
   bam_hdr_destroy(args->hd);
   if(args->argumentFile!=stderr) fclose(args->argumentFile);
   delete args;

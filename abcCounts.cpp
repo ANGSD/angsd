@@ -99,7 +99,7 @@ void abcCounts::getOptions(argStruct *arguments){
   
 
   if(doCounts && arguments->inputtype!=INPUT_BAM && arguments->inputtype!=INPUT_PILEUP){
-    fprintf(stderr,"Cannot calculate -doCounts 1 from GL/GP data\n");
+    fprintf(stderr,"\t-> Cannot calculate -doCounts 1 from GL/GP data\n");
     exit(0);
   }
   if(dumpCounts&&doCounts==0){

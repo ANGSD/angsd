@@ -678,12 +678,9 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
 
   //loop though all sites and check if we have data.
   for(int s=0;s<pars->numSites;s++) {
-
     if(keepInd[s]==0)//if we dont have any information
       continue;
-
     keepInd[s]=0;//
-    
     for(int i=0 ; i<pars->nInd ;i++) {//DRAGON CHECK THIS
       keepList[i]=1;
       //also discard if all gls are the same

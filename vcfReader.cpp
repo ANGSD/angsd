@@ -16,7 +16,7 @@ void htsstuff_seek(htsstuff *hs,char *seek){
 }
 
 htsstuff *htsstuff_init(char *fname,char *seek){
-  fprintf(stderr,"[%s] seek:%s\n",__FUNCTION__,seek);
+  //  fprintf(stderr,"[%s] seek:%s\n",__FUNCTION__,seek);
   htsstuff *hs = new htsstuff;
   hs->fname=NULL;hs->fname=strdup(fname);
   hs->seek=NULL;
@@ -119,7 +119,7 @@ void buildreorder(int swap[10],char **alleles,int len){
       adder++;
     }
   }
-#if 1
+#if 0
     fprintf(stderr,"AA swap[%d]:%d\n",0,swap[0]);
     fprintf(stderr,"AC swap[%d]:%d\n",1,swap[1]);
     fprintf(stderr,"AG swap[%d]:%d\n",2,swap[2]);
@@ -205,10 +205,6 @@ funkyPars *vcfReader::fetch(int chunkSize){
   }
   
   r->posi=new int[chunkSize];
-  r->major = new char[chunkSize];
-  r->minor = new char[chunkSize];
-  memset(r->major,0,chunkSize);
-  memset(r->minor,0,chunkSize);
   
   bcf1_t *rec = NULL;rec=bcf_init();assert(rec);
 
@@ -237,10 +233,8 @@ funkyPars *vcfReader::fetch(int chunkSize){
     }
     n++;
     //skip nonsnips
-    fprintf(stderr,"pre issnp:%d\n",bcf_is_snp(rec));
     if(!bcf_is_snp(rec))
       continue;
-    fprintf(stderr,"post issnp:%d\n",bcf_is_snp(rec));
     nsnp++;
 
     //initialize

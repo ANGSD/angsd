@@ -105,6 +105,7 @@ void abcSaf::getOptions(argStruct *arguments){
       for(int i=0;i<nd;i++)
 	prior[i] = log(prior[i]/tts);
     }
+
     lbicoTab = new double[2*arguments->nInd+1];
     tsktsktsk = 2*arguments->nInd+1;
     myComb2Tab = new double*[2*arguments->nInd+1];

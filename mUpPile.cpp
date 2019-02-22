@@ -1233,7 +1233,6 @@ void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,hts_idx_t **idx,hts_itr
   }
   char tmp[1024];
   snprintf(tmp,1024,"%s:%d-%d",hd->target_name[ref],start+1,stop);
-  //  fprintf(stderr,"tmp:%s\n",tmp);exit(0);
   if(*itr)
     hts_itr_destroy(*itr);
   *itr = sam_itr_querys(*idx, hdr, tmp);
