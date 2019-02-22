@@ -81,6 +81,7 @@ void print_dadi(std::vector<double *> &priors,std::vector<Matrix<T> *> &gls,int 
 template <typename T>
 int main_dadi(int argc, char** argv){
   if(argc==0){
+    fprintf(stderr,"\t-> Example: realSFS dadi p1.saf.idx p2.saf.idx -sfs p1.saf.idx.ml  -sfs p2.saf.idx.ml -ref hg19NoChr.fa -anc hg19ancNoChr.fa.gz \n");
     fprintf(stderr,"\t-> Possible options: []\n");
     return 0;
   }
