@@ -178,6 +178,10 @@ void abcFreq::getOptions(argStruct *arguments){
     fprintf(stderr,"\t2. unknownminor EM\n");
     fprintf(stderr,"\t3. Posterior maf\n");
   }
+  if(doSNP && abs(doMaf)&8){
+    fprintf(stderr,"\t-> LRT based snp calling is not defined for count based maf estimates\n");
+    exit(0);
+  }
   if(doSNP&&abs(doMaf)==0){
     fprintf(stderr,"You've selected SNP-calling but no maf estimator please select -doMaf INT\n");
     exit(0);
