@@ -328,6 +328,15 @@ int fst_index(int argc,char **argv){
 	fprintf(stderr,"Problem finding chr: %s\n",arg->chooseChr);
 	break;
       }
+    }else{
+      int efsize=0;
+      for(int i=0;i<saf.size();i++){
+	myMap::iterator it2 = saf[i]->mm.find(it->first);
+	if(it2!=saf[i]->mm.end())
+	  efsize++;
+      }
+      if(efsize!=saf.size())
+	continue;
     }
     for(int i=0;i<choose(saf.size(),2);i++){
       ares[i].clear();
