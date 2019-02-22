@@ -236,7 +236,7 @@ void abcWriteBcf::getOptions(argStruct *arguments){
   if(doBcf==0)
     return;
   else{
-    fprintf(stderr,"\n[bcfoutput] \tPlease add the following parameters (-gl 1 -dopost 1 -domajorminor 1 -domaf 1 -dobcf 1 --ignore-RG 0 -dogeno 1 -docounts 1  when dumping bcf)\n\n");
+    fprintf(stderr,"\n[bcfoutput] \tPlease add the following parameters \n\t\t '-gl 1 -dopost 1 -domajorminor 1 -domaf 1 -dobcf 1 --ignore-RG 0 -dogeno 1 -docounts 1'\n\n");
 
   }
   refName = ancName = NULL;
