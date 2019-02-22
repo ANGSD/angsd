@@ -11,7 +11,9 @@ void htsstuff_seek(htsstuff *hs,char *seek){
   if(seek){
     fprintf(stderr,"\t-> Setting iterator to: %s\n",seek);fflush(stderr);
     hs->idx=bcf_index_load(hs->fname);
+    assert(hs->idx);
     hs->iter=bcf_itr_querys(hs->idx,hs->hdr,seek);
+    assert(hs->iter);
   }
 }
 
@@ -133,8 +135,118 @@ void buildreorder(int swap[10],char **alleles,int len){
 #endif
 }
 
+//copied from vcf.c in htslib to understand accessing of these variables
+int vcf_format_tsk(const bcf_hdr_t *h, const bcf1_t *v)
+{
+  kstring_t *s=(kstring_t *)malloc(sizeof(kstring_t));
+  int i;
+  bcf_unpack((bcf1_t*)v, BCF_UN_ALL);
+  kputs(h->id[BCF_DT_CTG][v->rid].key, s); // CHROM
+  kputc('\t', s); kputw(v->pos + 1, s); // POS
+  kputc('\t', s); kputs(v->d.id ? v->d.id : ".", s); // ID
+  kputc('\t', s); // REF
+  if (v->n_allele > 0) kputs(v->d.allele[0], s);
+  else kputc('.', s);
+  kputc('\t', s); // ALT
+  if (v->n_allele > 1) {
+    for (i = 1; i < v->n_allele; ++i) {
+      if (i > 1) kputc(',', s);
+      kputs(v->d.allele[i], s);
+    }
+  } else kputc('.', s);
+  kputc('\t', s); // QUAL
+  if ( bcf_float_is_missing(v->qual) ) kputc('.', s); // QUAL
+  else kputd(v->qual, s);
+  kputc('\t', s); // FILTER
+  if (v->d.n_flt) {
+    for (i = 0; i < v->d.n_flt; ++i) {
+      if (i) kputc(';', s);
+      kputs(h->id[BCF_DT_ID][v->d.flt[i]].key, s);
+    }
+  } else kputc('.', s);
+  kputc('\t', s); // INFO
+  if (v->n_info) {
+    int first = 1;
+    for (i = 0; i < v->n_info; ++i) {
+      bcf_info_t *z = &v->d.info[i];
+      if ( !z->vptr ) continue;
+      if ( !first ) kputc(';', s);
+      first = 0;
+            if (z->key >= h->n[BCF_DT_ID]) {
+	      hts_log_error("Invalid BCF, the INFO index is too large");
+	      errno = EINVAL;
+	      return -1;
+            }
+            kputs(h->id[BCF_DT_ID][z->key].key, s);
+	    fprintf(stderr,"%s: \n",h->id[BCF_DT_ID][z->key].key);
+            if (z->len <= 0) continue;
+            kputc('=', s);
+            if (z->len == 1)
+            {
+	      switch (z->type)
+                {
+		case BCF_BT_INT8:  if ( z->v1.i==bcf_int8_missing ) kputc('.', s); else kputw(z->v1.i, s); break;
+		case BCF_BT_INT16: if ( z->v1.i==bcf_int16_missing ) kputc('.', s); else kputw(z->v1.i, s); break;
+		case BCF_BT_INT32: if ( z->v1.i==bcf_int32_missing ) kputc('.', s); else kputw(z->v1.i, s); break;
+		case BCF_BT_FLOAT: if ( bcf_float_is_missing(z->v1.f) ) kputc('.', s); else kputd(z->v1.f, s); break;
+		case BCF_BT_CHAR:  kputc(z->v1.i, s); break;
+		default: hts_log_error("Unexpected type %d", z->type); exit(1); break;
+                }
+            }
+            else bcf_fmt_array(s, z->len, z->type, z->vptr);
+    }
+    if ( first ) kputc('.', s);
+  } else kputc('.', s);
+  // FORMAT and individual information
+
+    kputc('\n', s);
+    fprintf(stderr,"kstirngts: %s\n",s->s);
+    free(s->s);free(s);
+      
+    return 0;
+}
+
+//returns which info field is the INDEL
+int whichisindel(const bcf_hdr_t *h){
+  int hit =-1;
+  //fprintf(stderr,"ninfo:%d\n",h->n[BCF_DT_ID]);
+  for(int i=0;i<h->n[BCF_DT_ID];i++){
+    //    fprintf(stderr,"i:%d key:%s\n",i,h->id[BCF_DT_ID][i].key);
+    if(h->id[BCF_DT_ID][i].key&&strcmp(h->id[BCF_DT_ID][i].key,"INDEL")==0)
+      return i;
+  }
+  return hit;
+}
+
+//returns 0 if not indel higher values indicates indel
+int isindel(const bcf_hdr_t *h, const bcf1_t *v){
+  bcf_unpack((bcf1_t*)v, BCF_UN_ALL);
+  static int hit = whichisindel(h);//only calculated once
+  assert(hit!=-1);//we assume INDEL exists in INFO field
+  int returnvalue = 0;
+  if (v->n_info) {//loop over all INFO fields
+    for (int i = 0; i < v->n_info; ++i) {
+      bcf_info_t *z = &v->d.info[i];
+      if ( !z->vptr ) continue;
+      if (z->key >= h->n[BCF_DT_ID]) {
+	hts_log_error("Invalid BCF, the INFO index is too large");
+	errno = EINVAL;
+	return -1;
+      }
+      //fprintf(stderr,"z-key:%d  %s\n",z->key,h->id[BCF_DT_ID][z->key].key);
+      if(z->key==hit)//if key hits the INDEL 
+	returnvalue++;
+    }
+  }
+  return returnvalue;
+}
+
+
+
 int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
-  assert(  bcf_is_snp(rec));
+  if(isindel(hs->hdr,rec)!=0)
+    return 0;
+
   // pl data for each call
   int npl_arr = 0;
   int npl     = 0;
@@ -192,7 +304,6 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
 
 
 
-
 funkyPars *vcfReader::fetch(int chunkSize){
   funkyPars *r = funkyPars_init();
   r->nInd = hs->nsamples;
@@ -231,10 +342,15 @@ funkyPars *vcfReader::fetch(int chunkSize){
       if(bcf_itr_next(hs->hts_file, hs->iter, rec)!=0)
 	break;
     }
+
     n++;
     //skip nonsnips
-    if(!bcf_is_snp(rec))
+
+    if(isindel(hs->hdr,rec)){
+      //      fprintf(stderr,"skipping due to non snp\n");
       continue;
+    }
+
     nsnp++;
 
     //initialize

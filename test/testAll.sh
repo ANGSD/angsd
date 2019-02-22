@@ -40,7 +40,7 @@ fi
 
 if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing vcfreading"
-./testVcf.sh $WDIR/angsd $BAMDIR
+./testVcf.sh $WDIR/angsd ${BAMDIR}/small2.bcf
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with -vcf-gl exit code: $?"
     cat ./testVcf.sh.log
