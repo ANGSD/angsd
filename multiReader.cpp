@@ -137,7 +137,8 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_VCF_GP;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-   
+    fprintf(stderr,"\t-> -vcf-gp has been removed from current version, will be included in later versions depending on need\n");
+    exit(0);
     return;
   }
   free(tmp);
@@ -473,7 +474,8 @@ multiReader::multiReader(int argc,char**argv){
     fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln (NOT USED)\n");
     fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...) (NOT USED)\n");
     fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
-    fprintf(stderr,"\t   5. -sites does NOT work with vcf input but -r does\n");
+    fprintf(stderr,"\t   6. -sites does NOT work with vcf input but -r does\n");
+    fprintf(stderr,"\t   7. vcffilereading is still BETA, please report strange behaviour\n");
   }
 }
 
