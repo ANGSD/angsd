@@ -3,6 +3,7 @@
 #include <iostream>
 #include <limits>
 #include <cstdio>
+#include <cassert>
 #include "chisquare.h"
 
 using namespace chisq;
@@ -189,6 +190,7 @@ int main(int argc, char **argv){
   double df;
   std::cout << "Type degrees of freedom"<<std::endl;
   std::cin >> df;
+  assert(df>0);
   int type =0;
   
   std::cout << "Type 1-3.\n\t1: density (R::dchisq)\n\t2: cdf (R::pchisq)\n\t3: invcdf (R::qchisq)"<<std::endl;
