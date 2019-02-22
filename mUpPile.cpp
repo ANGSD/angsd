@@ -1335,7 +1335,7 @@ void destroy_tnode_pool(){
 
 //f Typenames with T are the ones for the callback, in main angsd
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
-int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> regions,abcGetFasta *gf) {
+int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> &regions,abcGetFasta *gf) {
   
   assert(nLines&&nFiles);
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);

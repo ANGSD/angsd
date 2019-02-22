@@ -422,9 +422,11 @@ void funkyPars_destroy(funkyPars *p) {
   
   //below for beagle input
   if(p->major){
-    delete [] p->major;p->major=NULL;
+    delete [] p->major;
+    p->major=NULL;
   }if(p->minor){
-    delete [] p->minor;p->minor=NULL;
+    delete [] p->minor;
+    p->minor=NULL;
   }
   if(p->post){
     for(int i=0;i<p->numSites;i++)

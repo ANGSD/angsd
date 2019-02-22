@@ -57,7 +57,27 @@ bam_hdr_t *getHeadFromFai(const char *fname){
   return ret;
 }
 
+bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
+  bam_hdr_t *ret = bam_hdr_init();
+  ret->l_text = 0;
+  ret->text =NULL;
+  const char **seqnames = NULL;
+  int nseq;
+  seqnames = bcf_hdr_seqnames(hs->hdr, &nseq); assert(seqnames);
+  
+  ret->n_targets = nseq;
+  ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
+  ret->target_name = (char**) malloc(sizeof(char*)*nseq);
+  for(size_t i=0;i<nseq;i++){
+    //    fprintf(stderr,"i:%d is:%d\n",i,bcf_hdr_id2length())
+    ret->target_len[i] =0x7fffffff;// strlen(seqnames[i]);
+    ret->target_name[i] =strdup(seqnames[i]);
+  }
+  free(seqnames);
+  return ret;
+}
 aMap *buildRevTable(const bam_hdr_t *hd){
+  assert(hd);
   aMap *ret = new aMap;
   for(int i=0;i<hd->n_targets;i++){
     ret->insert(std::pair<char *,int>(strdup(hd->target_name[i]),i));
@@ -117,7 +137,8 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_VCF_GP;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-   
+    fprintf(stderr,"\t-> -vcf-gp has been removed from current version, will be included in later versions depending on need\n");
+    exit(0);
     return;
   }
   free(tmp);
@@ -298,7 +319,7 @@ multiReader::multiReader(int argc,char**argv){
   printTime(args->argumentFile); 
 
 
-  type = args->inputtype;
+  //type = args->inputtype;
 
   if(args->argc==2) {
     if((!strcasecmp(args->argv[1],"-beagle")) ||
@@ -333,12 +354,6 @@ multiReader::multiReader(int argc,char**argv){
       case INPUT_GLF3:
 	printAndExit=1;
 	break;
-      case INPUT_VCF_GP:
-	printAndExit=1;
-	break;
-      case INPUT_VCF_GL:
-	printAndExit=1;
-	break;
       case INPUT_BEAGLE:
 	printAndExit=1;
 	break;
@@ -349,47 +364,71 @@ multiReader::multiReader(int argc,char**argv){
     if(printAndExit){
       fprintf(stderr,"\t-> Must supply -fai file\n");
       exit(0);
-
     }
   }
-
   
   if(args->fai){
-    if(!(hd=getHeadFromFai(args->fai)))
+    if(!(args->hd=getHeadFromFai(args->fai)))
       exit(0);
   }else{
     if(args->nams.size()==0){
       fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp/-vcf-pl/-glf10_text filename\n");
       exit(0);
     }
-    htsFile *in=sam_open(args->nams[0],"r");
-    assert(in);
-    hd= sam_hdr_read(in);
-    hts_close(in);
+    if(args->inputtype==INPUT_BAM){
+      htsFile *in=sam_open(args->nams[0],"r");
+      assert(in);
+      args->hd= sam_hdr_read(in);
+      hts_close(in);
+    }
   }
-  args->hd = hd;
-  
-  if(args->hd==NULL){
-    fprintf(stderr,"For non-bams you should include -fai arguments\n");
-    exit(0);
-  }  
+ 
+  if(!(INPUT_VCF_GL||INPUT_VCF_GP)){
+    if(args->hd==NULL){
+      fprintf(stderr,"For non-bams you should include -fai arguments\n");
+      exit(0);
+    }
+  }
 
-
-
-  if((type==INPUT_PILEUP||type==INPUT_GLF||type==INPUT_GLF3||type==INPUT_VCF_GP||type==INPUT_VCF_GL||type==INPUT_GLF10_TEXT)){
+  if((args->inputtype==INPUT_PILEUP||args->inputtype==INPUT_GLF||args->inputtype==INPUT_GLF3||args->inputtype==INPUT_GLF10_TEXT)){
     if(nInd==0){
-      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-vcf-GL/-vcf-GP/-glf10_text files\n");
+      fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-glf10_text files\n");
       exit(0);
     }
   }else
     args->nInd = args->nams.size();
 
+  if(args->inputtype==INPUT_VCF_GP||args->inputtype==INPUT_VCF_GL){
+    if(args->regions.size()>1){
+      fprintf(stderr,"\t-> Only one region can be specified with using bcf (i doubt more is needed)  will exit\n");
+      exit(0);
+    }else if(args->regions.size()<=1){
+      myvcf = new vcfReader(args->infile,NULL);
+      args->hd=bcf_hdr_2_bam_hdr_t(myvcf->hs);
+      args->nInd = myvcf->hs->nsamples;
+    }
+  }
+  //make args->hd
+  
   revMap = buildRevTable(args->hd);
-
   args->revMap = revMap;
-
   setArgsBam(args);
+  if(args->inputtype==INPUT_VCF_GL){
+    if(args->regions.size()==1){
+      char tmp[1024];
+      int start=args->regions[0].start;
+      int stop=args->regions[0].stop;
+      int ref=args->regions[0].refID;
+      snprintf(tmp,1024,"%s:%d-%d",args->hd->target_name[ref],start+1,stop);
+      //    fprintf(stderr,"tmp:%s\n",tmp);
+      //    exit(0);
+      myvcf->seek(tmp);
+    }
+    
+  }
 
+
+  
   if(fname==NULL)
     return;
 
@@ -400,7 +439,7 @@ multiReader::multiReader(int argc,char**argv){
     exit(0);
   }
 
-  switch(type){
+  switch(args->inputtype){
   case INPUT_PILEUP:{
     mpil = new mpileup(args->nInd,gz,args->revMap,minQ);
     break;
@@ -419,15 +458,6 @@ multiReader::multiReader(int argc,char**argv){
     break;
   }
 
-  case INPUT_VCF_GP:{
-    myvcf = new vcfReader(args->nInd,gz,args->revMap);
-    break;
-  }
-  case INPUT_VCF_GL:{
-    fprintf(stderr,"input_vcf\n");
-    myvcf = new vcfReader(args->nInd,gz,args->revMap);
-    break;
-  }
   case INPUT_BEAGLE:{
     bglObj = new beagle_reader(gz,args->revMap,intName,args->nInd);
     break;
@@ -439,12 +469,13 @@ multiReader::multiReader(int argc,char**argv){
   }
   if(args->inputtype==INPUT_VCF_GL||args->inputtype==INPUT_VCF_GL){
     fprintf(stderr,"\t-> VCF still beta. Remember that\n");
-    fprintf(stderr,"\t   1. indels and sites that are non diallelic are discarded\n");
-    fprintf(stderr,"\t   2. will use chrom, pos, ref, alt columns\n");
-    fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln\n");
-    fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...)\n");
+    fprintf(stderr,"\t   1. indels are are discarded\n");
+    fprintf(stderr,"\t   2. will use chrom, pos PL columns\n");
+    fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln (NOT USED)\n");
+    fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...) (NOT USED)\n");
     fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
-
+    fprintf(stderr,"\t   6. -sites does NOT work with vcf input but -r does\n");
+    fprintf(stderr,"\t   7. vcffilereading is still BETA, please report strange behaviour\n");
   }
 }
 
@@ -456,7 +487,7 @@ multiReader::~multiReader(){
  
   delete revMap;
 
-    switch(type){
+    switch(args->inputtype){
   case INPUT_PILEUP:{
     delete mpil;
     break;
@@ -494,6 +525,8 @@ multiReader::~multiReader(){
   delete []   args->usedArgs;
   free(args->outfiles);
   free(args->infile);
+  if(args->anc)
+    free(args->anc);
   bam_hdr_destroy(args->hd);
   if(args->argumentFile!=stderr) fclose(args->argumentFile);
   delete args;
@@ -503,7 +536,7 @@ multiReader::~multiReader(){
 funkyPars *multiReader::fetch(){
   //  fprintf(stderr,"fetching\n");`
   funkyPars *fp = NULL;
-  switch(type){
+  switch(args->inputtype){
   case INPUT_PILEUP:{
     fp = mpil->fetch(nLines);
     break;
@@ -537,7 +570,7 @@ funkyPars *multiReader::fetch(){
   }
     
   default:{
-    fprintf(stderr,"Unknown inputformat: %d\n",type);
+    fprintf(stderr,"Unknown inputformat: %d\n",args->inputtype);
 #if 1
   fprintf(stderr,"bam:%d\n",INPUT_BAM);
   fprintf(stderr,"glf:%d\n",INPUT_GLF);
@@ -555,7 +588,7 @@ funkyPars *multiReader::fetch(){
   if(fp&&0)
     fprintf(stderr,"numSites:%d\n",fp->numSites);
   if(fp!=NULL && fp->refId==-1){
-    fprintf(stderr,"\t-> Unkown refid found will close program\n");
+    fprintf(stderr,"\n\t-> Unkown refid found will close program refid:%d\n",fp->refId);
     return NULL;
   }
   return fp;

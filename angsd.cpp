@@ -245,8 +245,6 @@ int main(int argc, char** argv){
       
    }
 
-     
-
 
    //now we have no more data lets wait and cleanup
 
