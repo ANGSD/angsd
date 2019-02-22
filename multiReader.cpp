@@ -473,7 +473,7 @@ multiReader::multiReader(int argc,char**argv){
     fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln (NOT USED)\n");
     fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...) (NOT USED)\n");
     fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
-
+    fprintf(stderr,"\t   5. -sites does NOT work with vcf input but -r does\n");
   }
 }
 

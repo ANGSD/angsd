@@ -38,6 +38,16 @@ if [ ! $? -eq 0  ]   ;then
 fi
 fi
 
+if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing vcfreading"
+./testVcf.sh $WDIR/angsd $BAMDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -vcf-gl exit code: $?"
+    cat ./testVcf.sh.log
+    RVAL=1
+fi
+fi
+
 echo "Testing neutrality test statistics"
 ./testTaj.sh $WDIR
 if [ ! $? -eq 0 ] ;then
