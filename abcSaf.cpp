@@ -135,13 +135,13 @@ void abcSaf::getOptions(argStruct *arguments){
   if(doSaf==0&&doThetas==0&doPost!=3)
     return;
   if(doThetas!=0&& doSaf==0){
-    fprintf(stderr,"\t Must estimate joint llh (-doSaf) when estimating thetas\n");
+    fprintf(stderr,"\t-> Must estimate joint llh (-doSaf) when estimating thetas\n");
     exit(0);
   }
 
 
   if(pest==NULL&& doThetas){
-    fprintf(stderr,"\t Must supply a sfs used as prior for estimating thetas\n");
+    fprintf(stderr,"\t-> Must supply a sfs used as prior for estimating thetas\n");
     exit(0);
   }
 
