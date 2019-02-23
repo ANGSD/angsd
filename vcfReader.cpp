@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include <errno.h>
 #include "analysisFunction.h"
 #include "vcfReader.h"
 
@@ -11,7 +12,14 @@ void htsstuff_seek(htsstuff *hs,char *seek){
   if(seek){
     fprintf(stderr,"\t-> Setting iterator to: %s\n",seek);fflush(stderr);
     hs->idx=bcf_index_load(hs->fname);
-    assert(hs->idx);
+    if(hs->idx==NULL){
+      fprintf(stderr,"\t-> Problem opening index file of file: \'%s\'\n",hs->fname);
+      exit(0);
+    }
+    if(hs->hts_file->format.format!=bcf){
+      fprintf(stderr,"\t-> File are required to be vcf for using region specification\n");
+      exit(0);
+    }
     hs->iter=bcf_itr_querys(hs->idx,hs->hdr,seek);
     assert(hs->iter);
   }
