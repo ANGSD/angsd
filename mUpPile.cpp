@@ -13,9 +13,7 @@
 #define USE_MALLOC_WRAPPERS
 #include "malloc_wrap.h"
 
-#define __WITH_POOL__
 
-#ifdef __WITH_POOL__
 #include "pooled_alloc.h"
 void *tail=NULL;//<- this will be point to the pool->free
 void *head=NULL;//<- this will be the last node adjoint
@@ -24,7 +22,7 @@ size_t currentnodes=0;
 size_t freenodes =0;
 pthread_mutex_t slist_mutex = PTHREAD_MUTEX_INITIALIZER;
 size_t when_to_flush = 5000;
-#endif
+
 
 pthread_mutex_t mUpPile_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -93,7 +91,7 @@ void tnode_destroy1(tNode *n){
 void tnode_destroy(tNode *n){
   if(n==NULL)
     return;
-#ifdef __WITH_POOL__
+
   if(tail==NULL&&head==NULL)
     head = tail = n;
   else{
@@ -101,11 +99,11 @@ void tnode_destroy(tNode *n){
     head=n;
   }
   freenodes++;
-#else
+  /*
   tnode_destroy1(n);
   free(n);
   n=NULL;
-#endif
+  */
 }
 
 typedef struct{
@@ -218,9 +216,7 @@ void dalloc_nodePool (nodePool& np){
 }
 
 void cleanUpChunkyT(chunkyT *chk){
-#ifdef __WITH_POOL__
   pthread_mutex_lock(&slist_mutex);//just to make sure, its okey to clean up
-#endif
   for(int s=0;s<chk->nSites;s++) {
     for(int i=0;i<chk->nSamples;i++) {
       if(chk->nd[s][i]==NULL)
@@ -239,9 +235,7 @@ void cleanUpChunkyT(chunkyT *chk){
   delete [] chk->refPos;
   delete [] chk->nd;
   delete chk;
-#ifdef __WITH_POOL__
   pthread_mutex_unlock(&slist_mutex);//just to make sure, its okey to clean up
-#endif
 }
 
 
@@ -275,7 +269,7 @@ void tnode_realloc(tNode *d,int newsize){
 
 
 //this is called from a threadsafe context
-#ifdef __WITH_POOL__
+
 void flush_queue(){
   //  fprintf(stderr,"[%s]IN currentnodes:%lu freenodes:%lu when_to_flush:%lu\n",__FUNCTION__,currentnodes,freenodes,when_to_flush);
   pthread_mutex_lock(&slist_mutex);
@@ -293,16 +287,14 @@ void flush_queue(){
   pthread_mutex_unlock(&slist_mutex);
   // fprintf(stderr,"[%s]OUT currentnodes:%lu freenodes:%lu when_to_flush:%lu\n",__FUNCTION__,currentnodes,freenodes,when_to_flush);
 }
-#endif
+
 //int staaa =0;
 tNode *initNodeT(int l){
   if(l<UPPILE_LEN)
     l=UPPILE_LEN;
-#ifdef __WITH_POOL__
   tNode *d=(tNode*)tpool_alloc(tnodes);
-#else
-  tNode *d=(tNode*)calloc(1,sizeof(tNode));
-#endif
+  //  tNode *d=(tNode*)calloc(1,sizeof(tNode));
+
 
   if(d->m==0){
     d->m = l;
@@ -320,12 +312,9 @@ tNode *initNodeT(int l){
   //d->l = d->l2 = d->m2 = 0;
   d->refPos= -999;
   d->insert = NULL;
-#ifdef __WITH_POOL__
   currentnodes++;
   if(currentnodes>when_to_flush &&(currentnodes % 5000)==0)
     flush_queue();
-#endif
-
   return d;
 }
 
@@ -1300,7 +1289,7 @@ void setIterators(bufReader *rd,regs regions,int nFiles,int nThreads){
 void callBack_bambi(fcb *fff);//<-angsd.cpp
 //type=1 -> samtool mpileup textoutput
 //type=0 -> callback to angsd
-#ifdef __WITH_POOL__
+
 void destroy_tnode_pool(){
   if(tnodes==NULL)
     return;
@@ -1331,7 +1320,7 @@ void destroy_tnode_pool(){
   //  delete [] ary;
   tpool_destroy(tnodes);
 }
-#endif
+
 
 //f Typenames with T are the ones for the callback, in main angsd
 //Most likely this can be written more beautifull by using templated types. But to lazy now.

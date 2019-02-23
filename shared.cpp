@@ -36,8 +36,6 @@
 #include "cigstat.h"
 extern tpool_alloc_t *tnodes;
 
-#define __WITH_POOL__
-
 pthread_attr_t attr;
 int andersSux =0;
 abc **allMethods = NULL;
@@ -93,12 +91,7 @@ void init(argStruct *arguments){
   header = arguments->hd;
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
-  
-#ifdef __WITH_POOL__
   tnodes = tpool_create(sizeof(tNode));
-#endif
-  
 }
 
 
@@ -118,11 +111,8 @@ void destroy_shared(){
     delete allMethods[i];
   delete [] abc::shouldRun;
   delete [] allMethods;
-
-#ifdef __WITH_POOL__
   void destroy_tnode_pool();
   destroy_tnode_pool();
-#endif
   extern int cigstat;
   if(cigstat)
     cigstat_close();
@@ -293,10 +283,8 @@ void changeChr(int refId){
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
   ((abcSaf *)allMethods[11])->changeChr(refId);//used when changing chr;
   ((abcPSMC *)allMethods[27])->changeChr(refId);//used when changing chr;
-#ifdef __WITH_POOL__
   void flush_queue();
   flush_queue();
-#endif 
 }
 
 
