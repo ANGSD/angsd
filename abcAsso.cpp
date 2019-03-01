@@ -14,7 +14,6 @@
 */
 
 #include <cmath>
-#include <zlib.h>
 #include <htslib/kstring.h>
 #include "shared.h"
 #include "analysisFunction.h"

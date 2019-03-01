@@ -23,7 +23,6 @@
 
 
 #include <cmath>
-#include <zlib.h>
 #include <assert.h>
 #include <htslib/kstring.h>
 #include "analysisFunction.h"

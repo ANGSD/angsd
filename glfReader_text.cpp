@@ -1,5 +1,3 @@
-
-#include <zlib.h>
 #include <cassert>
 #include "analysisFunction.h"
 #include "glfReader_text.h"

@@ -1,7 +1,6 @@
 #include <cstdio>
 #include <cmath>
 #include <assert.h>
-#include <zlib.h>
 #include <cfloat>
 #include <htslib/kstring.h>
 #include "abcFreq.h"
