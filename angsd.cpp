@@ -175,12 +175,7 @@ void parseArgStruct(argStruct *arguments){
 }
 
 int main(int argc, char** argv){
-  if(strcmp(ZLIB_VERSION,zlib_version)){
-    fprintf(stderr,"\t-> Problem with difference in zlib version used for compiling and linking\n");
-    fprintf(stderr,"\t-> ZLIB_VERSION: %s zlibversion: %s \n",ZLIB_VERSION,zlib_version);
-    //return 0; 
-  }
-  fprintf(stderr,"\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
+   fprintf(stderr,"\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
   //no arguments supplied -> print info
   if(argc==1||(argc==2&&(strcasecmp(argv[1],"--version")==0||strcasecmp(argv[1],"--help")==0))){//if haven't been supplied with arguments, load default,print, and exit
     printProgInfo(stderr);

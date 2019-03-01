@@ -11,7 +11,6 @@
 
 #include <cassert>
 #include <cmath>
-#include <zlib.h>
 #include <htslib/kstring.h>
 #include <htslib/bgzf.h>
 #include "abcFreq.h"

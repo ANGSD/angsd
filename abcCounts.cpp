@@ -4,7 +4,6 @@
   Class that works with counts
 */
 
-#include <zlib.h>
 #include <cassert>
 #include "analysisFunction.h"
 #include "abc.h"
