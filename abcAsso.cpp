@@ -185,6 +185,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   }
 
   // check cov and ymat
+  check_pars(covmat,ymat,isBinary);
 
   //make output files  
   multiOutfile = new BGZF*[ymat.y];
@@ -413,7 +414,7 @@ void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe,
   for(int j=0;j<phe.y;j++){
     for(int i=0;i<phe.x;i++){      
       //if logistic regression check if phenotypes are 0 or 1
-      if(model==1){
+      if(isBinary==1){
 	isBinaryQuan = 0;
 
 	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1){
