@@ -142,7 +142,7 @@ void buildreorder(int swap[10],char **alleles,int len){
     fprintf(stderr,"TT swap[%d]:%d\n",9,swap[9]);
 #endif
 }
-
+#if 0
 //copied from vcf.c in htslib to understand accessing of these variables
 int vcf_format_tsk(const bcf_hdr_t *h, const bcf1_t *v)
 {
@@ -213,7 +213,7 @@ int vcf_format_tsk(const bcf_hdr_t *h, const bcf1_t *v)
       
     return 0;
 }
-
+#endif
 //returns which info field is the INDEL
 int whichisindel(const bcf_hdr_t *h){
   int hit =-1;
@@ -237,7 +237,7 @@ int isindel(const bcf_hdr_t *h, const bcf1_t *v){
       bcf_info_t *z = &v->d.info[i];
       if ( !z->vptr ) continue;
       if (z->key >= h->n[BCF_DT_ID]) {
-	hts_log_error("Invalid BCF, the INFO index is too large");
+	fprintf(stderr,"Invalid BCF, the INFO index is too large");
 	errno = EINVAL;
 	return -1;
       }
