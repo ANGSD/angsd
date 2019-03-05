@@ -404,7 +404,23 @@ int fst_index(int argc,char **argv){
 
 int fst(int argc,char**argv){
   if(argc==0){
-    fprintf(stderr,"\t-> Possible options: index print\n");
+    fprintf(stderr,"realSFS fst [index|print|stats|stats2]\n");
+    fprintf(stderr,"--------------------------------------\n");
+    fprintf(stderr,"\tindex [<pop1>.saf.idx <pop2>.saf.idx ...] -sfs [<pop1-pop2>.sfs] -fstout [<prefix>] -whichFst 0\n");
+    fprintf(stderr,"\t\t-sfs     \tFlattened pairwise 2d site frequency spectra (if more than two populations, use multiple times)\n");
+    fprintf(stderr,"\t\t-fstout  \tOutput prefix\n");
+    fprintf(stderr,"\t\t-whichFst\t0: default, Fst estimator from Reynolds et al (1983) Genetics 3: 767-779\n");
+    fprintf(stderr,"\t\t         \t1: Fst estimator from Bhatia et al (2013) Genome Res 23: 1514-1521\n");
+    fprintf(stderr,"\t\t         \t2: mutual information/Shannon differentiation (not an Fst estimator)\n");
+    fprintf(stderr,"\tprint [<fstout>.fst.idx]\n");
+    fprintf(stderr,"\tstats [<fstout>.fst.idx]\n");
+    fprintf(stderr,"\tstats2 [<fstout>.fst.idx]\n");
+    fprintf(stderr,"\t\t-win     \tWindow size\n");
+    fprintf(stderr,"\t\t-step    \tStep size, e.g. shift in bp from one window to next\n");
+    fprintf(stderr,"\t\t-type    \t0: default, split genome into blocks and use the first window that has data for the entire window\n");
+    fprintf(stderr,"\t\t         \t1: use first position with data as leftmost position of first window\n");
+    fprintf(stderr,"\t\t         \t2: use first coordinate as leftmost position of first window, regardless of whether there is data\n");
+    fprintf(stderr,"Examples and output formats at www.popgen.dk/angsd/index.php/Fst\n");
     return 0;
   }
   if(!strcasecmp(*argv,"index"))  

@@ -72,11 +72,52 @@ void bhatiaFst(int sfs1,int sfs2,double **aMat,double **bMat){
       at++;
     }
 }
+//nspope; mutual information across 2d sfs bins
+//the mutual information is saved in aMat
+//the maximum possible mutual information is saved in bMat
+//thus fst_stat calculates the normalized mutual information (shannon differentiation) which is bounded [0,1]
+//note that mutual information isn't fst, although the "labels" from fst_stat will say fst
+void mutualInf(int sfs1,int sfs2,double **aMat,double **bMat){
+  fprintf(stderr,"\t-> [%s] sfs1:%d sfs2:%d dimspace:%d \n",__FUNCTION__,sfs1,sfs2,(sfs1+1)*(sfs2+1));
+  fprintf(stderr,"\t-> WARNING! calculating mutual information instead of FST, pbs statistics will be meaningless");
+  *aMat = new double[(sfs1+1)*(sfs2+1)];
+  *bMat = new double[(sfs1+1)*(sfs2+1)];
+  double rat = static_cast<double>(sfs1)/static_cast<double>(sfs1+sfs2);
+  double K = -rat * log(rat) - (1.-rat) * log(1.-rat);
+  int at=0;
+  for(int a1=0;a1<=sfs1;a1++)
+    for(int a2=0;a2<=sfs2;a2++){
+      double p1 = static_cast<double>(a1);
+      double p2 = static_cast<double>(a2);
+      double q1 = static_cast<double>(sfs1-a1);
+      double q2 = static_cast<double>(sfs2-a2);
+      double z1 = static_cast<double>(a1+a2);
+      double z2 = static_cast<double>(sfs1+sfs2)-z1;
+      double f11 = z1*rat;
+      double f12 = z2*rat;
+      double f21 = z1*(1.-rat);
+      double f22 = z2*(1.-rat);
+      double lrt = 0.;
+      if (p1*f11 > 0.0) lrt += p1*log(p1/f11);
+      if (p2*f21 > 0.0) lrt += p2*log(p2/f21);
+      if (q1*f12 > 0.0) lrt += q1*log(q1/f12);
+      if (q2*f22 > 0.0) lrt += q2*log(q2/f22);
+      lrt /= (z2 + z1);
+
+      (*aMat)[at] = lrt;
+      (*bMat)[at] = K;
+     
+      //fprintf(stderr,"(%d,%d) al:%f bal:%f\n",a1,a2,(*aMat)[at],(*bMat)[at]);
+      at++;
+    }
+}
 void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat,int whichFst){
   if(whichFst==0)
     reynoldFst(sfs1,sfs2,aMat,bMat);
   else if(whichFst==1)
     bhatiaFst(sfs1,sfs2,aMat,bMat);
+  else if(whichFst==2)//nspope
+    mutualInf(sfs1,sfs2,aMat,bMat);
   else{
     fprintf(stderr,"\t-> Fst option is not implemented\n");
     exit(0);
@@ -171,7 +212,7 @@ int fst_print(int argc,char **argv){
     for(size_t s=first;s<last;s++){
       fprintf(stdout,"%s\t%d",it->first,ppos[s]+1);
       for(int i=0;i<choose((int)pf->names.size(),2);i++)
-	fprintf(stdout,"\t%f\t%f",ares[i][s],bres[i][s]);
+	fprintf(stdout,"\t%.7g\t%.7g",ares[i][s],bres[i][s]);
       fprintf(stdout,"\n");
     }
     for(int i=0;i<choose((int)pf->names.size(),2);i++){
