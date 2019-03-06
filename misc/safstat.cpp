@@ -79,7 +79,7 @@ void bhatiaFst(int sfs1,int sfs2,double **aMat,double **bMat){
 //note that mutual information isn't fst, although the "labels" from fst_stat will say fst
 void mutualInf(int sfs1,int sfs2,double **aMat,double **bMat){
   fprintf(stderr,"\t-> [%s] sfs1:%d sfs2:%d dimspace:%d \n",__FUNCTION__,sfs1,sfs2,(sfs1+1)*(sfs2+1));
-  fprintf(stderr,"\t-> WARNING! calculating mutual information instead of FST, pbs statistics will be meaningless");
+  fprintf(stderr,"\t-> WARNING! calculating mutual information instead of FST, pbs statistics will be meaningless\n");
   *aMat = new double[(sfs1+1)*(sfs2+1)];
   *bMat = new double[(sfs1+1)*(sfs2+1)];
   double rat = static_cast<double>(sfs1)/static_cast<double>(sfs1+sfs2);
