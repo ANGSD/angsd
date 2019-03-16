@@ -173,6 +173,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     covmat.y=0;
     covmat.matrix=NULL;
   }
+  
   if(covfile!=NULL&&(covmat.x!=ymat.x)){
     fprintf(stderr,"The number of covariates (%d) does not match the number of phenotypes (%d)\n",covmat.x,ymat.x);
     exit(0);
@@ -182,6 +183,9 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     fprintf(stderr,"Error: Only doAsso=2 can be performed on quantitative traits\n");
     exit(0);
   }
+
+  // check cov and ymat
+  check_pars(covmat,ymat,isBinary);
 
   //make output files  
   multiOutfile = new BGZF*[ymat.y];
@@ -401,6 +405,66 @@ void abcAsso::run(funkyPars *pars){
 
 }
 
+void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary){
+
+  // check if all values of first column in cov file is 1
+  int interceptChecker = 0;
+  // check if phenotype 0 or 1 - for quantitative
+  int isBinaryQuan = 1;
+  for(int j=0;j<phe.y;j++){
+    for(int i=0;i<phe.x;i++){      
+      //if logistic regression check if phenotypes are 0 or 1
+      if(isBinary==1){
+	isBinaryQuan = 0;
+
+	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1){
+	  fprintf(stderr,"Phenotypes are not binary (0 or 1) for logistic model!\n");
+	  exit(1);
+	}
+
+      } else{
+	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1){
+	  isBinaryQuan = 0;
+	}
+      }
+    }
+
+    if(isBinaryQuan){
+      fprintf(stderr,"\n");
+      fprintf(stderr,"#######################################################################################\n");
+      fprintf(stderr,"#######################################################################################\n");
+      fprintf(stderr,"WARNING: Phenotype nr. %i for linear model appears to be binary, run a logistic model instead!\n",j);
+      fprintf(stderr,"#######################################################################################\n");
+      fprintf(stderr,"#######################################################################################\n");
+      fprintf(stderr,"\n");
+    }
+    isBinaryQuan=1;
+    
+  }
+
+  for(int j=0;j<cov.y;j++){
+    for(int i=0;i<cov.x;i++){
+
+      if(cov.matrix[i][j]==1){
+	interceptChecker++;
+      }
+    }
+
+    // p->len is equal to number of indis in plink file
+    // if these are same length, means user has column of 1s in .cov file
+    if(interceptChecker==cov.x){
+      fprintf(stderr,"Column of 1s for intercept should not be included in covariate,\n");
+      fprintf(stderr,"as this will be added automatically.\n");
+      exit(1);
+    }
+
+    interceptChecker=0;
+  }
+ 
+}
+
+
+			 
 void abcAsso::frequencyAsso(funkyPars  *pars,assoStruct *assoc){
 
   if(doPrint)

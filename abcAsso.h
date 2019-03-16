@@ -54,6 +54,7 @@ public:
   
   angsd::Matrix<double> ymat;
   angsd::Matrix<double> covmat;
+  void check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary);
   void scoreAsso(funkyPars  *pars,assoStruct *assoc);
   double dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, double* start, int fullModel);
   void dosageAsso(funkyPars  *pars,assoStruct *assoc);
@@ -72,4 +73,5 @@ public:
   double normScoreEnv(double *post,int numInds, double *y, double *ytilde,double *cov,int nEnv,double freq,assoStruct *assoc,int s);
   double binomScoreEnv(double *post,int numInds, double *y, double *ytilde,double *cov,int nEnv,double freq,assoStruct *assoc,int s);
   void printDoAsso(funkyPars *pars);
+  
 };
