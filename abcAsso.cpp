@@ -266,12 +266,12 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
 
     // hybrid model score model first, then if significant use EM asso  
   if(doAsso==5){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\temIter\n");
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\tSE\temIter\n");
     //EM asso or dosage model
   } else if(doAsso==4){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\thigh_WT/HE/HO\temIter\n");
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\temIter\n");
   } else if(doAsso==6){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\thigh_WT/HE/HO\n");    
+    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\n");    
   } else if(doAsso==2)
     ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
   else
@@ -317,6 +317,7 @@ void abcAsso::clean(funkyPars *pars){
     delete[] assoc->highHe;
     delete[] assoc->highHo;
     delete[] assoc->betas;
+    delete[] assoc->SEs;
     for(int yi=0;yi<ymat.y;yi++)
       delete[] assoc->statOther[yi];
     delete[] assoc->statOther;
@@ -329,6 +330,7 @@ void abcAsso::clean(funkyPars *pars){
     delete[] assoc->highHe;
     delete[] assoc->highHo;    
     delete[] assoc->betas;
+    delete[] assoc->SEs;
   }
 
   if(doAsso==4 or doAsso==5){
@@ -358,6 +360,7 @@ void abcAsso::print(funkyPars *pars){
 assoStruct *allocAssoStruct(){
   assoStruct *assoc = new assoStruct;
 
+  assoc->SEs=NULL;
   assoc->betas=NULL;
   assoc->stat=NULL;
   assoc->statOther=NULL; 
@@ -391,13 +394,16 @@ void abcAsso::run(funkyPars *pars){
     scoreAsso(pars,assoc);
   } else if(doAsso==4){
     assoc->betas=new double[pars->numSites];
+    assoc->SEs=new double[pars->numSites];
     assoc->emIter=new int[pars->numSites];
     emAsso(pars,assoc);    
   } else if(doAsso==6){
     assoc->betas=new double[pars->numSites];
+    assoc->SEs=new double[pars->numSites];
     dosageAsso(pars,assoc);    
   } else if(doAsso==5){
     assoc->betas=new double[pars->numSites];
+    assoc->SEs=new double[pars->numSites];
     assoc->emIter=new int[pars->numSites];
     hybridAsso(pars,assoc);
   }
@@ -633,6 +639,151 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
 // INSERTED BY EMIL 
 ///////////////////////////////////////////////////////////////////////////////
 
+double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary){
+  
+  if(postAll!=NULL){
+
+    double ret;
+    for(int i=0;i<design->x;i++){
+      double m = 0;
+      for(int j=0;j<design->y;j++){
+	m += design->matrix[i][j]*start[j];
+      }
+
+      // because y is indis long, each entry has to be used 3 times - design has 3*indis rows
+      size_t indexy = (size_t)floor(i/3);
+      
+      if(isBinary==0){
+	// density function of normal distribution
+	m = angsd::dnorm(y[indexy],m,start[design->y],1);
+      } else{      
+	double prob = exp(m)/(exp(m)+1.0);
+	// now handling if p is 0 or 1 (makes it very small or large)
+	m = angsd::bernoulli(y[indexy],prob,1);	
+      }
+      
+      double tmp = m + log(post[i]);
+      postAll->matrix[(size_t)floor(i/3)][i % 3] = tmp;
+    }
+    
+    // x is number of indis, y is 3
+    postAll->x = (size_t) design->x/3;
+    postAll->y = 3;
+
+    // to get rowSums
+    std::vector<double> postTmp(postAll->x);  
+  
+    for(int i=0;i<postAll->x;i++){
+      double tmp = 0;
+      double maxval = postAll->matrix[i][0];
+      for(int j=0;j<postAll->y;j++){
+	// find max - part of trick for doing log(p1+p2+p3)
+	maxval = std::max(maxval,postAll->matrix[i][j]);     
+      }
+      // trick to avoid over/underflow - log(exp(log(val1)-log(max)) + ...) + log(max) = (exp(log(val1))/exp(log(max)))*(max) + ...
+      // same (exp(log(val1))/exp(log(max)))*(max)
+      postTmp[i] = log(exp(postAll->matrix[i][0]-maxval)+exp(postAll->matrix[i][1]-maxval)+exp(postAll->matrix[i][2]-maxval)) + maxval;  
+    }
+  
+    // divide each entry of a row with sum of that row
+    int df = postAll->x - design->y;
+    for(int i=0;i<postAll->x;i++){
+      double tmp = 0;
+      for(int j=0;j<postAll->y;j++){          
+	postAll->matrix[i][j] -= postTmp[i];
+      }    
+    }
+    
+    //need to flatten the weights, which is p(s|y,G,phi,Q,f)
+    // so first four values is for first indi, and so on...
+    double weights[postAll->x*postAll->y];
+    int a = 0;
+    for(int i=0;i<postAll->x;i++)
+      for(int j=0;j<postAll->y;j++){
+	weights[a++] = exp(postAll->matrix[i][j]);
+	//check if issue with weights
+	if(exp(postAll->matrix[i][j])!=exp(postAll->matrix[i][j]) or std::isinf(exp(postAll->matrix[i][j]))){
+	  fprintf(stderr,"Issue with weights being nan or inf\n");
+	  return(-9);
+	}
+      }
+    
+    std::vector<double> yTilde(design->x);         
+    
+    for(int i=0;i<design->x;i++)
+      for(int x=0;x<design->y;x++){
+	yTilde[i] += design->matrix[i][x]*start[x];
+      }
+    
+    int count=0;
+
+    // this has colSums for each col for each indi (3 rows)
+    std::vector<double> summedDesign((design->x/3)*design->y);   
+    std::vector<double> tmp(design->x);
+        
+    for(int i=0;i<design->x;i++){
+      // because y is indis long, each entry has to be used 3 times - design has 3*indis rows
+      size_t indexy = (size_t)floor(i/3);      
+      // getting the residuals      
+      tmp[i] = ((y[indexy]-yTilde[i]) / (start[design->y]*start[design->y]))*weights[i];        
+      for(int x=0;x<design->y;x++){                  
+	if(i % 3 == 2){
+	  // for each col take 3 rows for indis and take sum
+	  summedDesign[count*design->y+x]=design->matrix[i-2][x]*tmp[i-2]+design->matrix[i-1][x]*tmp[i-1]+design->matrix[i][x]*tmp[i];	 
+	}	
+      }
+      if(i % 3 == 2){
+	count++;
+      }      
+    }
+    
+    double invSummedDesign[design->y*design->y];
+    for(int i=0;i<design->y*design->y;i++)
+      invSummedDesign[i]=0;
+    
+    // this is doing the matrix product of (X)^T*W*X 
+    for(int x=0;x<design->y;x++)
+      for(int y=0;y<design->y;y++)
+	for(int i=0;i<(int)floor(design->x/3);i++){
+	  invSummedDesign[x*design->y+y]+=summedDesign[i*design->y+x]*summedDesign[i*design->y+y];
+	}
+
+    // doing inv((X)^T*W*X)
+    int singular=angsd::svd_inverse(invSummedDesign, design->y, design->y);
+    
+    return(sqrt(invSummedDesign[0]));
+    
+  } else{
+    
+    std::vector<double> yTilde(design->x);   
+    
+    for(int i=0;i<design->x;i++)
+      for(int x=0;x<design->y;x++)
+	yTilde[i] += design->matrix[i][x]*start[x];
+    
+    
+    double meanGeno = 0;
+    for(int i=0;i<design->x;i++){
+      meanGeno+=design->matrix[i][0];
+    }
+    meanGeno=meanGeno/design->x;
+    
+    double ts=0;
+    double denom=0;
+    for(int i=0;i<design->x;i++){
+      // getting the residuals         
+      ts += (y[i]-yTilde[i])*(y[i]-yTilde[i]);
+      //x_i - x_avg
+      denom += (design->matrix[i][0]-meanGeno)*(design->matrix[i][0]-meanGeno);     
+    }
+
+    return(sqrt((ts/(1.0*(design->x)-design->y))/denom));
+           
+  }  
+  
+}
+
+
 double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, double* start, int fullModel){
 
   int maf0=1;
@@ -754,7 +905,7 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
     }
     count++;
   }
-
+  
   assoc->highWt[s] = highWT;
   assoc->highHe[s] = highHE;
   assoc->highHo[s] = highHO;
@@ -863,12 +1014,14 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
       freqStruct *freq = (freqStruct *) pars->extras[6];
 
       stat[yi][s]=dosageAssoc(pars,&design,&designNull,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
-
+      
       //if not enough, WT, HE or HO or ind to run test
       if(stat[yi][s]< -900){
 	assoc->betas[s]=NAN;
+	assoc->SEs[s]=NAN;
       } else{
 	assoc->betas[s]=start[0];
+	assoc->SEs[s]=standardError(start,&design,NULL,y,pars->post[s],isBinary);
       }
       
       //cleanup
@@ -1007,7 +1160,7 @@ int abcAsso::getFitWLS(double* start, double* y, double** covMatrix, double* wei
 
 int abcAsso::getFitWLSBin(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df){
 
-  //emil
+  //emil - made this settable
   double tol = assoThres;
   
    /*
@@ -1233,8 +1386,7 @@ double abcAsso::logLike(double *start,double* y,angsd::Matrix<double> *design,do
 double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary,int fullModel){
 
   for(int i=0;i<design->x;i++){
-    double m = 0;
-   
+    double m = 0;   
     for(int j=0;j<design->y;j++){
       m += design->matrix[i][j]*start[j];
     }
@@ -1247,12 +1399,12 @@ double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::M
       // now handling if p is 0 or 1 (makes it very small or large)
       m = angsd::bernoulli(y[i],prob,1);
     }
-     
+    
     double tmp = m + log(post[i]);
     postAll->matrix[(size_t)floor(i/3)][i % 3] = tmp;
   }
-
-  // dx is number of indis, dy is 4
+  
+  // x is number of indis, y is 3
   postAll->x = (size_t) design->x/3;
   postAll->y = 3;
 
@@ -1264,14 +1416,14 @@ double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::M
     double tmp = 0;
     double maxval = postAll->matrix[i][0];
     for(int j=0;j<postAll->y;j++){
-      // find max - part of trick for doing log(p1+p2+p3+p4)
+      // find max - part of trick for doing log(p1+p2+p3)
       maxval = std::max(maxval,postAll->matrix[i][j]);     
     }
     // trick to avoid over/underflow - log(exp(log(val1)-log(max)) + ...) + log(max) = (exp(log(val1))/exp(log(max)))*(max) + ...
     // same (exp(log(val1))/exp(log(max)))*(max)
     postTmp[i] = log(exp(postAll->matrix[i][0]-maxval)+exp(postAll->matrix[i][1]-maxval)+exp(postAll->matrix[i][2]-maxval)) + maxval;  
   }
-
+   
   // divide each entry of a row with sum of that row
   int df = postAll->x - design->y;
   for(int i=0;i<postAll->x;i++){
@@ -1304,8 +1456,6 @@ double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::M
    
   return logLike(start,y,design,post,isBinary,fullModel);
 }
-
-
   
 double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,angsd::Matrix<double> *postAll,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, double* start, int fullModel){
 
@@ -1586,12 +1736,15 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
       freqStruct *freq = (freqStruct *) pars->extras[6];
   
       stat[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
-
+      
+      
       //if not enough, WT, HE or HO or ind to run test
       if(stat[yi][s] < -900){
 	assoc->betas[s]=NAN;
+	assoc->SEs[s]=NAN;
       } else{
 	assoc->betas[s]=start[0]; // giving coefs
+	assoc->SEs[s]=standardError(start,&design,&postAll,y,pars->post[s],isBinary);
       }
 	
       //cleanup
@@ -1703,10 +1856,12 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
       if(angsd::to_pval(chisq1,stat[yi][s])<hybridThres){
 	// add extra params in stat for storing LRT and beta
 	statOther[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,start,1);
+	assoc->SEs[s]=standardError(start,&design,&postAll,y,pars->post[s],isBinary);
 	assoc->betas[s]=start[0];
       } else{
 	assoc->emIter[s]=0;
 	assoc->betas[s]=NAN;
+	assoc->SEs[s]=NAN;
 	statOther[yi][s]=NAN;
       }
       
@@ -2355,11 +2510,11 @@ void abcAsso::printDoAsso(funkyPars *pars){
      }
  
       if(doAsso==5){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s],assoc->emIter[s]);
+	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%f\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s],assoc->SEs[s],assoc->emIter[s]);
       } else if(doAsso==4){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%d/%d/%d\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);	 
+	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);	 
        } else if(doAsso==6){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
        } else if(doAsso==2){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
       } else{

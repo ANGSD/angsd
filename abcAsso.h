@@ -10,6 +10,8 @@ typedef struct{
   int *highHo;
   double *betas; //for coefficients added by emil 07-11-2018
   int *emIter; //number of iterations for EM algorithm in -doAsso 4
+  double *SEs; //for standard error estimates added by emil 20-03-2019
+  
 }assoStruct;
 
 
@@ -56,6 +58,7 @@ public:
   angsd::Matrix<double> covmat;
   void check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary);
   void scoreAsso(funkyPars  *pars,assoStruct *assoc);
+  double standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary);
   double dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, double* start, int fullModel);
   void dosageAsso(funkyPars  *pars,assoStruct *assoc);
   int getFitWLS(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);
