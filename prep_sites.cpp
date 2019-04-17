@@ -129,7 +129,7 @@ void filt_print(FILE *fp,filt*f,char *chr){
   for(std::map<char*,asdf_dats,ltstr>::const_iterator it=f->offs.begin();it!=f->offs.end();++it){
     fprintf(stderr,"chr:\t\'%s\'\t",it->first);
     fprintf(stderr,"last:\t\'%lu\'\t",it->second.len);
-    fprintf(stderr,"\toffs:%"PRId64"\n",it->second.offs);
+    fprintf(stderr,"\toffs:%" PRId64 "\n",it->second.offs);
   }
   fprintf(stderr,"------------\n");
   for(std::map<char*,asdf_dats,ltstr>::const_iterator it=f->offs.begin();it!=f->offs.end();++it){

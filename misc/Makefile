@@ -1,7 +1,7 @@
 CC  ?= gcc
 CXX ?= g++
 
-LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl -lcrypto
+LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
 
 ifdef HTSSRC
 $(info HTSSRC defined)
