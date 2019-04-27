@@ -1212,6 +1212,7 @@ double angsd::bernoulli(int k, double p, int ifLog){
 }
 
 
+
 // function for getting standard derivation of a set of data
 //by emil added 24-11-2018
 double angsd::sd(double* phe, int size ){
@@ -1227,6 +1228,17 @@ double angsd::sd(double* phe, int size ){
 
 double angsd::to_pval(Chisqdist *chisq,double f){
   return f<0?1:1-chisq->cdf(f);
+}
+
+// function for getting density of lambda function
+//by emil added 12-04-2019
+// from: http://www.masaers.com/2013/10/08/Implementing-Poisson-pmf.html
+double angsd::poisson(double k,  double lambda, int ifLog) {
+  if(ifLog){
+    return (k * log(lambda) - lgamma(k + 1.0) - lambda);
+  } else{
+    return exp(k * log(lambda) - lgamma(k + 1.0) - lambda);
+  }
 }
 
 

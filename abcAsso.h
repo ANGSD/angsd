@@ -31,6 +31,8 @@ public:
   int GL;
   int sitePerm;  //not for users
   int isBinary;
+  int isCount;
+  int isQuant;
   int minHigh;
   int minCount;
   int adjust;  //not for users
@@ -52,29 +54,35 @@ public:
   ~abcAsso();
   //other stuff
   char *covfile;
-  char *yfile;
+  char *yfile1;
+  char *yfile2;
+  char *yfile3;
   
   angsd::Matrix<double> ymat;
   angsd::Matrix<double> covmat;
   void check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary);
   void scoreAsso(funkyPars  *pars,assoStruct *assoc);
-  double standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary);
-  double dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, double* start, int fullModel);
+  double standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount);
+  double standardError2(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount);
+  double dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel);
   void dosageAsso(funkyPars  *pars,assoStruct *assoc);
   int getFitWLS(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);
   int getFitWLSBin(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);
-  double logLike(double *start,double* y,angsd::Matrix<double> *design,double *post,int isBinary, int fullModel);
-  double logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary, int fullModel);
+  int getFitWLSPois(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);
+  double logLike(double *start,double* y,angsd::Matrix<double> *design,double *post,int isBinary, int isCount, int fullModel);
+  double logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary, int isCount, int fullModel);
   double sd(double* phe, int size );
-  double doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,angsd::Matrix<double> *postAll,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, double* start, int fullModel);  
+  double doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,angsd::Matrix<double> *postAll,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel);  
   void emAsso(funkyPars  *pars,assoStruct *assoc);
   void hybridAsso(funkyPars  *pars,assoStruct *assoc);
   void frequencyAsso(funkyPars  *pars,assoStruct *assoc);
   double doAssociation(funkyPars *pars,double *post,double *y,int keepInd,int *keepList,double freq,int s,assoStruct *assoc);
   int getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv, double *start);
   int getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv, double *start);
+  int getFitPois(double *res,double *Y,double *covMatrix,int nInd,int nEnv, double *start);
   double normScoreEnv(double *post,int numInds, double *y, double *ytilde,double *cov,int nEnv,double freq,assoStruct *assoc,int s);
   double binomScoreEnv(double *post,int numInds, double *y, double *ytilde,double *cov,int nEnv,double freq,assoStruct *assoc,int s);
+  double poisScoreEnv(double *post,int numInds, double *y, double *ytilde,double *cov,int nEnv,double freq,assoStruct *assoc,int s);
   void printDoAsso(funkyPars *pars);
   
 };

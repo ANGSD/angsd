@@ -67,6 +67,7 @@ namespace angsd {
   double dnorm(double x,double mean,double sd,int ifLog);
   double bernoulli(int k, double p, int ifLog);
   double sd(double* phe, int size );
+  double poisson(double k,  double lambda, int ifLog);
   double to_pval(Chisqdist *chisq,double f);
   std::vector<char*> getFilenames(const char * name,int nInd);
   char *strpop(char **str,char split);
