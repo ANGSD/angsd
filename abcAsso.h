@@ -41,7 +41,8 @@ public:
   int assoIter; 
   double emThres;
   double assoThres; 
-  double hybridThres; 
+  double hybridThres;
+  int doPriming; 
   
   
   void run(funkyPars  *pars);
@@ -63,7 +64,6 @@ public:
   void check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary);
   void scoreAsso(funkyPars  *pars,assoStruct *assoc);
   double standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount);
-  double standardError2(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount);
   double dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel);
   void dosageAsso(funkyPars  *pars,assoStruct *assoc);
   int getFitWLS(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);
@@ -71,9 +71,12 @@ public:
   int getFitWLSPois(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);
   double logLike(double *start,double* y,angsd::Matrix<double> *design,double *post,int isBinary, int isCount, int fullModel);
   double logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary, int isCount, int fullModel);
+  double logupdateEMwald(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary, int isCount, int fullModel, int iter);
   double sd(double* phe, int size );
   double doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,angsd::Matrix<double> *postAll,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel);  
   void emAsso(funkyPars  *pars,assoStruct *assoc);
+  double doEMassoWald(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel);
+  void emAssoWald(funkyPars  *pars,assoStruct *assoc);
   void hybridAsso(funkyPars  *pars,assoStruct *assoc);
   void frequencyAsso(funkyPars  *pars,assoStruct *assoc);
   double doAssociation(funkyPars *pars,double *post,double *y,int keepInd,int *keepList,double freq,int s,assoStruct *assoc);
