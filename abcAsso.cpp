@@ -1664,91 +1664,7 @@ double abcAsso::logLike(double *start,double* y,angsd::Matrix<double> *design,do
 
 
 //double updateEM(funkyPars *p){
-double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary,int isCount,int fullModel){
-
-  for(int i=0;i<design->x;i++){
-    double m = 0;   
-    for(int j=0;j<design->y;j++){
-      m += design->matrix[i][j]*start[j];
-    }
-
-    if(isBinary){
-      double prob = exp(m)/(exp(m)+1.0);
-      // now handling if p is 0 or 1 (makes it very small or large)
-      m = angsd::bernoulli(y[i],prob,1);
-
-   } else if(isCount){
-      double lambda = exp(m);
-      // now handling if p is 0 or 1 (makes it very small or large)
-      m = angsd::poisson(y[i],lambda,1);            
-
-    } else{      
-      // density function of normal distribution
-      m = angsd::dnorm(y[i],m,start[design->y],1);
-
-    }
-    
-    double tmp = m + log(post[i]);
-    postAll->matrix[(size_t)floor(i/3)][i % 3] = tmp;
-  }
-  
-  // x is number of indis, y is 3
-  postAll->x = (size_t) design->x/3;
-  postAll->y = 3;
-
-  // to get rowSums
-  std::vector<double> postTmp(postAll->x);  
-  //  double postTmp[postAll->x];
-  
-  for(int i=0;i<postAll->x;i++){
-    double tmp = 0;
-    double maxval = postAll->matrix[i][0];
-    for(int j=0;j<postAll->y;j++){
-      // find max - part of trick for doing log(p1+p2+p3)
-      maxval = std::max(maxval,postAll->matrix[i][j]);     
-    }
-    // trick to avoid over/underflow - log(exp(log(val1)-log(max)) + ...) + log(max) = (exp(log(val1))/exp(log(max)))*(max) + ...
-    // same (exp(log(val1))/exp(log(max)))*(max)
-    postTmp[i] = log(exp(postAll->matrix[i][0]-maxval)+exp(postAll->matrix[i][1]-maxval)+exp(postAll->matrix[i][2]-maxval)) + maxval;  
-  }
-   
-  // divide each entry of a row with sum of that row
-  int df = postAll->x - design->y;
-  for(int i=0;i<postAll->x;i++){
-    double tmp = 0;
-    for(int j=0;j<postAll->y;j++){          
-      postAll->matrix[i][j] -= postTmp[i];
-    }    
-  }
-  
-  //need to flatten the weights, which is p(s|y,G,phi,Q,f)
-  // so first four values is for first indi, and so on...
-  double weigths[postAll->x*postAll->y];
-  int a = 0;
-  for(int i=0;i<postAll->x;i++)
-    for(int j=0;j<postAll->y;j++){
-      weigths[a++] = exp(postAll->matrix[i][j]);
-      //check if issue with weights
-      if(exp(postAll->matrix[i][j])!=exp(postAll->matrix[i][j]) or std::isinf(exp(postAll->matrix[i][j]))){
-	  fprintf(stderr,"Issue with weights being nan or inf\n");
-	  return(-9);
-      }
-    }   
-  
-  if(isBinary){    
-    getFitWLSBin(start,y,design->matrix,weigths,keepInd*3,design->y,df);    
-  } else if(isCount){
-    getFitWLSPois(start,y,design->matrix,weigths,keepInd*3,design->y,df);
-  } else{
-    //double resi[nInd];
-    getFitWLS(start,y,design->matrix,weigths,keepInd*3,design->y,df);
-  }
-     
-  return logLike(start,y,design,post,isBinary,isCount,fullModel);
-}
-
-//double updateEM(funkyPars *p){
-double abcAsso::logupdateEMwald(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary,int isCount,int fullModel, int iter){
+double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary,int isCount,int fullModel, int iter){
   
   double meanPheno = 0;
   if(iter){
@@ -2040,7 +1956,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   double llh0 = logLike(start,y,design,post,isBinary,isCount,fullModel);  
   for(int i=0;i<emIter;i++){
     nIter++;
-    double llh1 = logupdateEMwald(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,i);
+    double llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,i);
             
     if(fabs(llh1-llh0)<emThres and llh1 > 0){	 
       // Converged
@@ -2346,7 +2262,7 @@ double abcAsso::doEMassoWald(funkyPars *p,angsd::Matrix<double> *design,angsd::M
   
   for(int i=0;i<emIter;i++){
     nIter++;
-    double llh1 = logupdateEMwald(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,i);
+    double llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,i);
     
     if(fabs(llh1-llh0)<emThres and llh1 > 0){	 
       // Converged

@@ -70,8 +70,7 @@ public:
   int getFitWLSBin(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);
   int getFitWLSPois(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);
   double logLike(double *start,double* y,angsd::Matrix<double> *design,double *post,int isBinary, int isCount, int fullModel);
-  double logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary, int isCount, int fullModel);
-  double logupdateEMwald(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary, int isCount, int fullModel, int iter);
+  double logupdateEM(double* start,angsd::Matrix<double> *design,angsd::Matrix<double> *postAll,double* y,int keepInd,double* post,int isBinary, int isCount, int fullModel, int iter);
   double sd(double* phe, int size );
   double doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,angsd::Matrix<double> *postAll,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel);  
   void emAsso(funkyPars  *pars,assoStruct *assoc);
