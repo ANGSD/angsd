@@ -539,7 +539,7 @@ int main(int argc,char **argv){
 	break;
       }
       if(strcmp(line,"//\n")==0){
-  //fprintf(stderr,"skipping line\n");
+	//fprintf(stderr,"skipping line\n");
 	continue;
       }
       //fprintf(stderr,"pre[%d]: %s",i,line);
@@ -547,14 +547,18 @@ int main(int argc,char **argv){
       float fl1,fl2;
       int treentok=sscanf(line,"[%d](%d:%f,%d:%f);\n",&span,&en,&fl1,&to,&fl2);
       if(treentok==5){
-  //fprintf(stderr,"treentok:%d span:%d en:%d to:%d fl1:%f\n",treentok,span,en,to,fl1);
-	 //      fprintf(stderr,"treentok:%d span:%d en:%d to:%d fl1:%f fl2:%f\n",treentok,span,en,to,fl1,fl2);
-  for(int j=0;j<span;j++)
-    ksprintf(&tree_kstring,"%d\t%d\t%f\n",i,j,fl1);
+	//fprintf(stderr,"treentok:%d span:%d en:%d to:%d fl1:%f\n",treentok,span,en,to,fl1);
+	//      fprintf(stderr,"treentok:%d span:%d en:%d to:%d fl1:%f fl2:%f\n",treentok,span,en,to,fl1,fl2);
+	for(int j=0;j<span;j++)
+	  ksprintf(&tree_kstring,"%d\t%d\t%f\n",i,j,fl1);
       }
       ss=sscanf(line,"@begin %d\n",&segsites);
       if(ss==1)
 	break;
+    }
+    if(tree!=NULL & tree_kstring.l>4096){
+      assert(tree_kstring.l==bgzf_write(tree,tree_kstring.s,tree_kstring.l));
+      tree_kstring.l=0;
     }
     fprintf(stderr,"\t-> Parsing replicate:%d which should have nseg: %d ",i,segsites);
     memset(positInt,0,sizeof(int)*regLen);
@@ -606,7 +610,7 @@ int main(int argc,char **argv){
   if(tree){
     assert(tree_kstring.l==bgzf_write(tree,tree_kstring.s,tree_kstring.l));
     bgzf_close(tree);
-      }
+  }
    if(psmcfa)
      bgzf_close(gzPsmc);
    if(gz!=Z_NULL)
