@@ -63,7 +63,7 @@ public:
   angsd::Matrix<double> covmat;
   void check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary);
   void scoreAsso(funkyPars  *pars,assoStruct *assoc);
-  double standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount);
+  double standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount, int *keepList, int nInd);
   double dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel);
   void dosageAsso(funkyPars  *pars,assoStruct *assoc);
   int getFitWLS(double* start, double* y, double** covMatrix, double* weights, int nInd3, int nEnv, int df);

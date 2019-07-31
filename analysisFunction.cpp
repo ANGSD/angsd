@@ -1024,7 +1024,7 @@ int ludcmp(double **a, int *indx, double &d,int n)
 	big=temp;
     }
     if(big==0){
-      fprintf(stderr,"singular matrix in ludcmp");
+      //fprintf(stderr,"singular matrix in ludcmp");
       return(1);
 	//    assert(big!=0) ;
 

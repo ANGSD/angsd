@@ -452,7 +452,7 @@ void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe,
       if(isBinary){
 	isBinaryQuan = 0;
 
-	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1){
+	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1 and phe.matrix[i][j]!=-999){
 	  fprintf(stderr,"Phenotypes are not binary (0 or 1) for logistic model!\n");
 	  exit(1);
 	}
@@ -676,7 +676,19 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
 // INSERTED BY EMIL 
 ///////////////////////////////////////////////////////////////////////////////
 
-double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount){
+double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount,int *keepList, int nInd){
+
+  //problem is that not all y values might be included since some might have missing information
+  std::vector<double> ynew(design->x);         
+  
+  //only need individuals with valid phenotypic information
+  int count=0;
+  for(int i=0;i<nInd;i++){
+    if(keepList[i]){      
+      ynew[count]=y[i];
+      count++;
+    }
+  }
   
   if(postAll!=NULL){
 
@@ -691,18 +703,18 @@ double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angs
       size_t indexy = (size_t)floor(i/3);
       
       if(isBinary){
+		
 	double prob = exp(m)/(exp(m)+1.0);
 	// now handling if p is 0 or 1 (makes it very small or large)
-	m = angsd::bernoulli(y[indexy],prob,1);	
+	m = angsd::bernoulli(ynew[indexy],prob,1);	
 
       } else if(isCount){
 	double lambda = exp(m);
-	// now handling if p is 0 or 1 (makes it very small or large)
-	m = angsd::poisson(y[indexy],lambda,1);
+	m = angsd::poisson(ynew[indexy],lambda,1);
 	
       } else{
 	// density function of normal distribution
-	m = angsd::dnorm(y[indexy],m,start[design->y],1);
+	m = angsd::dnorm(ynew[indexy],m,start[design->y],1);
       }
       
       double tmp = m + log(post[i]);
@@ -782,9 +794,9 @@ double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angs
       // getting the residuals
         
       if(isBinary || isCount){
-	tmp[i] = (y[indexy]-yTilde[i]) * weights[i];
+	tmp[i] = (ynew[indexy]-yTilde[i]) * weights[i];
       } else{
-	tmp[i] = ((y[indexy]-yTilde[i]) / (start[design->y]*start[design->y]))*weights[i];
+	tmp[i] = ((ynew[indexy]-yTilde[i]) / (start[design->y]*start[design->y]))*weights[i];
       }    
       
       for(int x=0;x<design->y;x++){                  
@@ -816,7 +828,7 @@ double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angs
     
   } else{
     
-     std::vector<double> yTilde(design->x);         
+    std::vector<double> yTilde(design->x);         
     
     for(int i=0;i<design->x;i++)
       for(int x=0;x<design->y;x++){
@@ -837,13 +849,17 @@ double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angs
 
     std::vector<double> summedDesign(design->x*design->y); 
     std::vector<double> tmp(design->x);
-        
+
+    //design has 3*indis rows
     for(int i=0;i<design->x;i++){
-        
+
+      //ynew is indis long, so this is to be able to use that each value 3 times
+      size_t indexy = (size_t)floor(i/3);
+      
       if(isBinary || isCount){
-	tmp[i] = (y[i]-yTilde[i]);
+	tmp[i] = (ynew[indexy]-yTilde[i]);
       } else{
-	tmp[i] = ((y[i]-yTilde[i]) / (start[design->y]*start[design->y]));
+	tmp[i] = ((ynew[indexy]-yTilde[i]) / (start[design->y]*start[design->y]));
       }
 
       for(int x=0;x<design->y;x++){                  	
@@ -903,7 +919,7 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
       post[count*3+1]=postOrg[i*3+1];
       post[count*3+2]=postOrg[i*3+2];
 
-      covMatrixNull[i] = 1;
+      covMatrixNull[count] = 1;
       
       designNull->matrix[count][0] = 1;
       for(int c=0;c<covmat.y;c++){
@@ -920,7 +936,7 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
   for(int i=0;i<(covmat.y+2);i++){
     startNull[i] = drand48()*2-1;
   }
-  
+
   if(count!=keepInd){
     fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
     fflush(stderr);
@@ -934,9 +950,9 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
   } else{      
     getFit(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
   }
-  
-  double llhNull = logLike(startNull,yNull,designNull,post,isBinary,isCount,0);
 
+  double llhNull = logLike(startNull,yNull,designNull,post,isBinary,isCount,0);
+    
   start[0] = drand48()*2-1;
 
   double y[keepInd];
@@ -990,8 +1006,10 @@ if((post[count*3+0]+post[count*3+1])>0.90)
 	design->matrix[count][2+c] = covmat.matrix[i][c];
 	covMatrix[(c+2)*keepInd+count] = covmat.matrix[i][c];
       }
+      count++;
     }
-    count++;
+
+    
   }
   
   assoc->highWt[s] = highWT;
@@ -1005,7 +1023,7 @@ if((post[count*3+0]+post[count*3+1])>0.90)
     nGeno++;
   if(highHO >= minHigh)
     nGeno++;
-
+  
   if(nGeno<2)
     return(-999);//set_snan(lrt);
 
@@ -1019,8 +1037,8 @@ if((post[count*3+0]+post[count*3+1])>0.90)
     fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
     fflush(stderr);
     exit(0);
-  }  
-  
+  }
+   
   if(isBinary){
     getFitBin(yfit,y,covMatrix,keepInd,design->y,start);
   } else if(isCount){
@@ -1028,11 +1046,12 @@ if((post[count*3+0]+post[count*3+1])>0.90)
   } else{
     getFit(yfit,y,covMatrix,keepInd,design->y,start);  
   }
-    
-  double llh = logLike(start,y,design,post,isBinary,isCount,0);
  
+  double llh = logLike(start,y,design,post,isBinary,isCount,0);
+
   // likelihood ratio - chi square distributed according to Wilk's theorem
   double LRT = -2*(llh-llhNull);
+
   return(LRT);  
 }
  
@@ -1051,6 +1070,11 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
   int **keepInd  = new int*[ymat.y];
   // we can also get coef of genotype
   double **stat = new double*[ymat.y*2];
+ 
+  for(int yi=0;yi<ymat.y;yi++){
+    stat[yi] = new double[pars->numSites];
+    keepInd[yi]= new int[pars->numSites];
+  }
   
   angsd::Matrix<double> designNull;
   designNull.x=pars->nInd;
@@ -1067,11 +1091,7 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
     designNull.matrix[xi] = new double[covmat.y+1];
     design.matrix[xi] = new double[covmat.y+2];            
   }
- 
-  for(int yi=0;yi<ymat.y;yi++){
-    stat[yi] = new double[pars->numSites];
-    keepInd[yi]= new int[pars->numSites];
-  }
+
   
   for(int s=0;s<pars->numSites;s++){//loop overs sites
     if(pars->keepSites[s]==0)
@@ -1111,7 +1131,7 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
 	assoc->SEs[s]=NAN;
       } else{
 	assoc->betas[s]=start[0];
-	assoc->SEs[s]=standardError(start,&design,NULL,y,pars->post[s],isBinary,isCount);
+	assoc->SEs[s]=standardError(start,&design,NULL,y,pars->post[s],isBinary,isCount, keepList, pars->nInd);
       }
       
       //cleanup
@@ -1982,6 +2002,8 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
     memcpy(pars0,start,sizeof(double)*(design->y+1));
         
   }
+
+  
         
   // likelihood ratio - chi square distributed according to Wilk's theorem
   double LRT = -2*(llh0-llhNull);
@@ -2002,6 +2024,12 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
   // we can also get coef of genotype
   double **stat = new double*[ymat.y*2];
 
+  for(int yi=0;yi<ymat.y;yi++){
+    stat[yi] = new double[pars->numSites];
+    keepInd[yi]= new int[pars->numSites];
+  }
+  
+  
   angsd::Matrix<double> designNull;
   designNull.x=pars->nInd;
   //covars + intercept
@@ -2026,10 +2054,6 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
     }
   }
       
-  for(int yi=0;yi<ymat.y;yi++){
-    stat[yi] = new double[pars->numSites];
-    keepInd[yi]= new int[pars->numSites];
-  }
   
   for(int s=0;s<pars->numSites;s++){//loop overs sites
     if(pars->keepSites[s]==0)
@@ -2055,7 +2079,8 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
 
 	if(keepList[i]==1)
 	  keepInd[yi][s]++;
-      }  
+      }
+      
       double *y = new double[pars->nInd];
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
@@ -2063,15 +2088,14 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
       freqStruct *freq = (freqStruct *) pars->extras[6];
   
       stat[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);
-      
-      
+            
       //if not enough, WT, HE or HO or ind to run test
       if(stat[yi][s] < -900){
 	assoc->betas[s]=NAN;
 	assoc->SEs[s]=NAN;
       } else{
 	assoc->betas[s]=start[0]; // giving coefs
-	assoc->SEs[s]=standardError(start,&design,&postAll,y,pars->post[s],isBinary,isCount);
+	assoc->SEs[s]=standardError(start,&design,&postAll,y,pars->post[s],isBinary,isCount,keepList,pars->nInd);
       }
 	
       //cleanup
@@ -2372,7 +2396,7 @@ void abcAsso::emAssoWald(funkyPars  *pars,assoStruct *assoc){
 	assoc->SEs[s]=NAN;
       } else{
 	assoc->betas[s]=start[0]; // giving coefs
-	assoc->SEs[s]=standardError(start,&design,&postAll,y,pars->post[s],isBinary,isCount);
+	assoc->SEs[s]=standardError(start,&design,&postAll,y,pars->post[s],isBinary,isCount,keepList,pars->nInd);
       }
 
       stat[yi][s]=(start[0]*start[0])/((assoc->SEs[s])*(assoc->SEs[s]));
@@ -2472,7 +2496,8 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
 	  }
 	if(keepList[i]==1)
 	  keepInd[yi][s]++;
-      }  
+      }
+      
       double *y = new double[pars->nInd];
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
@@ -2484,7 +2509,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
       if(angsd::to_pval(chisq1,stat[yi][s])<hybridThres){
 	// add extra params in stat for storing LRT and beta
 	statOther[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);
-	assoc->SEs[s]=standardError(start,&design,&postAll,y,pars->post[s],isBinary,isCount);
+	assoc->SEs[s]=standardError(start,&design,&postAll,y,pars->post[s],isBinary,isCount,keepList,pars->nInd);
 	assoc->betas[s]=start[0];
       } else{
 	assoc->emIter[s]=0;
@@ -2541,7 +2566,6 @@ int abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv,do
     Xt_y[i]=0;
   for(int i=0;i<nEnv;i++)
     invXtX_Xt_y[i]=0;
-
  
   //get t(X)%*%y
   for(int x=0;x<nEnv;x++)//col X
@@ -2564,8 +2588,7 @@ int abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv,do
   int singular=angsd::svd_inverse(XtX,nEnv,nEnv);
   if(singular)
     return 1 ;
-  
-  
+
   //get (inv(t(X)%*%X))%*%(t(X)%*%y) //this is the coef!
   for(int x=0;x<nEnv;x++)//col X
     for(int y=0;y<nEnv;y++)//row Xt
@@ -2589,7 +2612,7 @@ int abcAsso::getFit(double *res,double *Y,double *covMatrix,int nInd,int nEnv,do
     }
     ts += (Y[j]-res[j])*(Y[j]-res[j]);
   }
-      
+       
   start[nEnv] = sqrt(ts/(1.0*(nInd-nEnv)));
   
   return 0;
