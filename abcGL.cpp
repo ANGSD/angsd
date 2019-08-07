@@ -89,6 +89,7 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t2: beagle likelihood file\t%s\n",beaglepostfix);
   fprintf(argFile,"\t3: binary 3 times likelihood\t%s\n",postfix);
   fprintf(argFile,"\t4: text version (10 log likes)\t%s\n",postfix);
+  fprintf(argFile,"\t5: binary saf files (usefull for realSFS)\t%s\n",postfix);
   fprintf(argFile,"\n");
 
 }
@@ -175,10 +176,14 @@ void abcGL::getOptions(argStruct *arguments){
 }
 
 abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
+  nnnSites =0;
+  outfileSAF = NULL;
+  outfileSAFPOS = NULL;
+  outfileSAFIDX = NULL;
   errors = NULL;
   postfix = ".glf.gz";
   beaglepostfix = ".beagle.gz";
-  
+  tmpChr = NULL;
   trim =0;
   GL=0;
   doGlf=0;
@@ -244,7 +249,25 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   
   gzoutfile = gzoutfile2 = NULL;
   bufstr.s=NULL; bufstr.l=bufstr.m=0;// <- used for buffered output 
+  const char *SAF = ".saf.gz";
+  const char *SAFPOS =".saf.pos.gz";
+  const char *SAFIDX =".saf.idx";
 
+  if(doGlf==5){
+    outfileSAF =  aio::openFileBG(outfiles,SAF);
+    outfileSAFPOS =  aio::openFileBG(outfiles,SAFPOS);
+    outfileSAFIDX = aio::openFile(outfiles,SAFIDX);
+    char buf[8]="safv3";
+    aio::bgzf_write(outfileSAF,buf,8);
+    aio::bgzf_write(outfileSAFPOS,buf,8);
+    fwrite(buf,1,8,outfileSAFIDX);
+    offs[0] = bgzf_tell(outfileSAFPOS);
+    offs[1] = bgzf_tell(outfileSAF);
+    size_t tt = 9;
+    fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
+  }
+  
+  
   if(doGlf){
  
     if(doGlf!=2){
@@ -273,7 +296,26 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
 
 
 abcGL::~abcGL(){
-
+  if(GL>0&&doGlf==5){
+      assert(outfileSAF!=NULL);
+    assert(outfileSAFIDX!=NULL);
+    assert(outfileSAFPOS!=NULL);
+    //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
+    if(nnnSites!=0&&tmpChr!=NULL){
+      size_t clen = strlen(tmpChr);
+      fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);
+      fwrite(tmpChr,1,clen,outfileSAFIDX);
+      size_t tt = nnnSites;
+      fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
+      fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
+    }//else
+    // fprintf(stderr,"enpty chr\n");
+    //reset
+    offs[0] = bgzf_tell(outfileSAFPOS);
+    offs[1] = bgzf_tell(outfileSAF);
+    nnnSites=0;
+  }
+  
   free(angsd_tmpdir);
   
   if(GL==0&&doGlf==0)
@@ -303,6 +345,11 @@ abcGL::~abcGL(){
     delete [] errors;
   }
   delete [] logfactorial;
+  if(doGlf==5){
+    if(outfileSAF) bgzf_close(outfileSAF);;
+    if(outfileSAFPOS) bgzf_close(outfileSAFPOS);
+    if(outfileSAFIDX) fclose(outfileSAFIDX);
+  }
 }
 
 void abcGL::clean(funkyPars *pars){
@@ -525,8 +572,49 @@ void abcGL::printLike(funkyPars *pars) {
       kputc('\n',&bufstr);
     }
     aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
+  }else if(doGlf==5){
+    for(int s=0;s<pars->numSites;s++){
+      if(pars->keepSites[s]==0)
+	continue;
+      nnnSites++;
+      float tmp[10*pars->nInd];
+      for(int i=0;i<10;i++)
+	tmp[i] = pars->likes[s][i];
+      aio::bgzf_write(outfileSAF,tmp,sizeof(float)*10*pars->nInd);
+      int mypos = pars->posi[s];
+      aio::bgzf_write(outfileSAFPOS,&mypos,sizeof(int));
+    }
+
+
   }
 
 
 }
 
+void abcGL::changeChr(int refId) {
+  fprintf(stderr,"Charnge chr:%d\n",refId);
+  if(GL>0&&doGlf==5){
+    assert(outfileSAF!=NULL);
+    assert(outfileSAFIDX!=NULL);
+    assert(outfileSAFPOS!=NULL);
+    //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
+    if(nnnSites!=0&&tmpChr!=NULL){
+      size_t clen = strlen(tmpChr);
+      fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);
+      fwrite(tmpChr,1,clen,outfileSAFIDX);
+      size_t tt = nnnSites;
+      fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
+      fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
+    }//else
+    // fprintf(stderr,"enpty chr\n");
+    //reset
+    offs[0] = bgzf_tell(outfileSAFPOS);
+    offs[1] = bgzf_tell(outfileSAF);
+    nnnSites=0;
+    
+    free(tmpChr);
+    tmpChr = strdup(header->target_name[refId]);
+
+
+  }
+}

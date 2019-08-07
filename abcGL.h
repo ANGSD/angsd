@@ -6,6 +6,10 @@
 
 class abcGL:public abc{
 private:
+  BGZF *outfileSAF;
+  FILE *outfileSAFIDX;
+  BGZF *outfileSAFPOS;
+
   const char * postfix;
   const char * beaglepostfix;
 
@@ -25,12 +29,14 @@ private:
   //below used for filtering qscore,mapQ and trimming
   int trim;
 
-  
+  int64_t offs[2];
   BGZF *gzoutfile;
   BGZF *gzoutfile2;
   int GL;
   int doGlf;
   int minInd;
+  char *tmpChr;
+  int nnnSites;
   void getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,double ****errorProbs,int *keepSites,double **loglikes);
   void printLike(funkyPars *pars);
 
@@ -40,7 +46,7 @@ public:
   void clean(funkyPars *pars);  
   void getOptions(argStruct *arguments);
   void printArg(FILE *argFile);
-
+  void changeChr(int refId);
   abcGL(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcGL();
 
