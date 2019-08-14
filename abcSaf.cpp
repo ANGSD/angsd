@@ -616,7 +616,8 @@ void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,real
       hj[index]=0;
     //initalize
     memcpy(hj,liks,3*sizeof(double));
-    
+    hj[1] = 2*hj[1]; //fix reported by @nspope in issue #244
+
     for(int i=1 ; i<nInd ;i++) {
       double Paa=liks[i*3];
       double PAa=2*liks[i*3+1];
