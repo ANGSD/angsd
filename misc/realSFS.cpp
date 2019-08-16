@@ -43,6 +43,52 @@ int howOften =5e6;//how often should we print out (just to make sure something i
 
 int really_kill =3;
 int VERBOSE = 1;
+/*
+  when doing folded spectra we reuse the unfolded datastructure containing sample allele frequencies (SAF).
+  and we loop over the entire unfolded matrix. But (here comes the trick).
+  categories of the spectra with an allelecount >0.5 should be 'merged' with the corresponding category. that is
+  2dsfs[al1,al2] =  2dsfs[al1,al2]+2dsfs[dimpop1-al1,dimpop2-al2]
+  so we populate a remap/lookup vector that maps the categories of the unfolded 2dsfs with the parameter(sfs) for the unfolded. Such that some of the entries in the unfoldedsfs gets reused.
+
+example 6alleles in pop1, 5 alleles inpop2: 5+6 total
+so entry 4,4 =freq 8/11 >0.5 gets should be added to (6-4,5-4)=(2,1)
+  
+> m
+  0  1  2  3  4  5
+0 1  8 15 22 29 36
+1 2  9 16 23 30 37
+2 3 10 17 24 31 38
+3 4 11 18 25 32 39
+4 5 12 19 26 33 40
+5 6 13 20 27 34 41
+6 7 14 21 28 35 42
+
+> fold2d(m)
+   0  1  2  3  4  5
+0 43 43 43 43 43 43
+1 43 43 43 43 43 NA
+2 43 43 43 43 NA NA
+3 43 43 43 NA NA NA
+4 43 43 NA NA NA NA
+5 43 NA NA NA NA NA
+6 NA NA NA NA NA NA
+
+the remap vector will therefore substitute position 33 with 10
+   0  1  2  3  4  5
+0  1  8 15 22 29 36
+1  2  9 16 23 30  6
+2  3 10 17 24 12  5
+3  4 11 18 18 11  4
+4  5 12 24 17 10  3
+5  6 30 23 16  9  2
+6 36 29 22 15  8  1
+
+abit mindfuck, the above matrices are represented as flattened versions.
+also some subtle things with row vs col in the implementation(since c is rowwise, R colwise)
+
+*/
+
+int *foldremapper = NULL;
 
 extern std::vector <char *> dumpedFiles;
 
