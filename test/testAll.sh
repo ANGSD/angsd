@@ -64,6 +64,16 @@ if [ ! $? -eq 0 ] ;then
     RVAL=1
 fi
 
+echo "Testing fst_folded using msms"
+./testFst_folded.sh $WDIR
+if [ ! $? -eq 0 ] ;then
+    echo "Problem with Fst_folded test statistics exit code: $?"
+    cat ./testFst_folded.sh.log
+    RVAL=1
+fi
+
+
+
 echo "Testing SFS"
 ./testSFS.sh $WDIR
 if [ ! $? -eq 0  ]   ;then
