@@ -5,14 +5,11 @@ f0d1daf18be08669ae6fae887ae6c3b0  fst/output/fai.fai
 438284748894ffa2f373c54c04ac1f4c  fst/output/pop1.glf.gz
 ecd3d53de81723fe1946173f661eff50  fst/output/pop1.pop2.fst.gz
 b1c1122f1fe00d15c065a1e96ed7fa11  fst/output/pop1.pop2.fst.idx
-32f7e82c9006aee6001382b497fadbd1  fst/output/pop1.pop2.fst.idx.res
 ef15db8f0967e3b0fc035f3cb7fe25d5  fst/output/pop1.pop2.pop3.fst.gz
 0812543195649d134f13ce15b7b71006  fst/output/pop1.pop2.pop3.fst.idx
-1f9847ea99a611ccd38c5b6ea748122c  fst/output/pop1.pop2.pop3.fst.idx.res
 17cda8e8fb4b093ee2ceb80bdbff9bac  fst/output/pop1.pop2.saf.idx.ml
 4c8b872a1a12a665a098f06257b6b99d  fst/output/pop1.pop3.fst.gz
 1c421c1d1ff3d51d9ba8a425efd8e9c0  fst/output/pop1.pop3.fst.idx
-c2d9a7172dedd8b4ef4e70d07ed0f293  fst/output/pop1.pop3.fst.idx.res
 6bde7976aaa6c82df3f5530670ac9e87  fst/output/pop1.pop3.saf.idx.ml
 eee7f83e7aa478a6b2af981baaddfbe9  fst/output/pop1.saf.gz
 8f5d5e35458354dea8846adaf50de005  fst/output/pop1.saf.idx
@@ -21,7 +18,6 @@ eee7f83e7aa478a6b2af981baaddfbe9  fst/output/pop1.saf.gz
 f8222e65e04211030da2b5e4959120cc  fst/output/pop2.glf.gz
 550753ed00d949a546e699443c96149f  fst/output/pop2.pop3.fst.gz
 e3486c1b565dc77895e18e377a385bb7  fst/output/pop2.pop3.fst.idx
-74019281349322dcf56f9adcfc608894  fst/output/pop2.pop3.fst.idx.res
 765d0f788e7d7a442206af52e3e1df79  fst/output/pop2.pop3.saf.idx.ml
 5c340b1dc1221cdb88ed19ce5d452792  fst/output/pop2.saf.gz
 aa22b430fb026a5eea9badca32b700d7  fst/output/pop2.saf.idx
@@ -32,3 +28,7 @@ aa22b430fb026a5eea9badca32b700d7  fst/output/pop2.saf.idx
 5a60619980bf936ab5600e6e5ff226cf  fst/output/pop3.saf.idx
 6e262b167d95bca7e801f0884d9c9f73  fst/output/pop3.saf.idx.ml
 3b9b9ce3659281062638b8cf7a79dfd9  fst/output/pop3.saf.pos.gz
+a09fea4bdb3bab8e11784ac6b8a77de5  fst/output/pop1.pop2.fst.idx.res
+d84a2c70e4a172b7fcf091351773b019  fst/output/pop1.pop2.pop3.fst.idx.res
+d8addd0aebc81985b477c6d20c3084d2  fst/output/pop1.pop3.fst.idx.res
+f9fb9c300cd7f58db70f29b7d4ae7143  fst/output/pop2.pop3.fst.idx.res
