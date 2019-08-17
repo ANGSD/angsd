@@ -7,6 +7,8 @@ extern int howOften;
 #include "multisafreader.hpp"
 void readSFS(const char*fname,size_t hint,double *ret);
 
+extern int * foldremapper;
+
 template<typename T>
 struct emPars{
   int threadId;
@@ -51,6 +53,8 @@ double lik1(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
     }
   return r;
 }
+
+//this function also works with folded now tsk aug17 2019. its very late evening
 template <typename T>
 double lik2(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   double r =0;
@@ -59,8 +63,9 @@ double lik2(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
       double tmp =0;
       int inc =0;
       for(size_t i=0;i<gls[0]->y;i++)
-	for(size_t j=0;j<gls[1]->y;j++)
-	  tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j];
+	for(size_t j=0;j<gls[1]->y;j++){
+	  tmp += sfs[foldremapper[inc++]]* gls[0]->mat[s][i] *gls[1]->mat[s][j];
+	}
       r += log(tmp);
     }
   }
@@ -70,7 +75,7 @@ double lik2(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
       int inc =0;
       for(size_t i=0;i<gls[0]->y;i++)
 	for(size_t j=0;j<gls[1]->y;j++)
-	  tmp += sfs[inc++]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j];
+	  tmp += sfs[foldremapper[inc++]]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j];
       r += log(tmp);
     }
   return r;
@@ -195,9 +200,12 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
   if(bootstrap==NULL)
     for(size_t s=start;SIG_COND&&s<stop;s++){
       int inc=0;
+      for(int i=0;i<dim;i++)
+	inner[i] =0;
       for(size_t x=0;x<gls[0]->y;x++)
 	for(size_t y=0;y<gls[1]->y;y++){
-	  inner[inc] = pre[inc]*gls[0]->mat[s][x]*gls[1]->mat[s][y];
+	  inner[foldremapper[inc]] += pre[foldremapper[inc]]*gls[0]->mat[s][x]*gls[1]->mat[s][y];
+	  assert(!std::isnan(inner[foldremapper[inc]]));
 	  inc++;
 	}
       normalize(inner,dim);
@@ -207,9 +215,11 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
   else
     for(size_t s=start;SIG_COND&&s<stop;s++){
       int inc=0;
+      for(int i=0;i<dim;i++)
+	inner[i] =0;
       for(size_t x=0;x<gls[0]->y;x++)
 	for(size_t y=0;y<gls[1]->y;y++){
-	  inner[inc] = pre[inc]*gls[0]->mat[bootstrap[s]][x]*gls[1]->mat[bootstrap[s]][y];
+	  inner[foldremapper[inc]] += pre[foldremapper[inc]]*gls[0]->mat[bootstrap[s]][x]*gls[1]->mat[bootstrap[s]][y];
 	  inc++;
 	}
       normalize(inner,dim);
@@ -541,11 +551,17 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   delete [] tmp;
   return oldLik;
 }
-
-
+int *foldremapper = NULL;
+int *makefoldremapper(args *arg,int pop1,int pop2);
 template <typename T>
 int main_opt(args *arg){
-
+  if(arg->fold&&arg->saf.size()!=2){
+    fprintf(stderr,"\t-> Folding is currently only implemented for 2populations. For one population please do -fold 1 in main angsd\n")
+      ;
+    exit(0);
+  }
+  if(arg->saf.size()==2)
+    foldremapper = makefoldremapper(arg,0,1);
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
     assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
@@ -625,7 +641,28 @@ int main_opt(args *arg){
 	}
 	
       }
-      normalize(sfs,ndim);
+    if(foldremapper) { //implies 2 pops
+#if 0
+      fprintf(stdout,"SFSIN");
+      for(int i=0;i<ndim;i++)
+	fprintf(stdout,"%f\t",sfs[i]);
+      fprintf(stdout,"\n");
+#endif
+      
+      //this block is debug block for validating that the input sfs gets folded correctly
+      double newtmp[ndim];
+      for(int i=0;i<ndim;i++)
+	newtmp[i] = 0;
+      for(int i=0;i<ndim;i++){
+	newtmp[foldremapper[i]] += sfs[i];
+	//	fprintf(stderr,"%d %f\n",i,newtmp[i]);
+      }
+      for(int i=0;i<ndim;i++){
+	//	fprintf(stdout,"%f ",newtmp[i]);
+	sfs[i] = newtmp[i];
+      }
+    }
+    normalize(sfs,ndim);
       
       if(bootstrap==NULL &&arg->bootstrap)
 	bootstrap = new size_t[gls[0]->x];

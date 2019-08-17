@@ -88,7 +88,49 @@ also some subtle things with row vs col in the implementation(since c is rowwise
 
 */
 
-int *foldremapper = NULL;
+//
+
+
+int *makefoldremapper(args *arg,int pop1,int pop2){
+  fprintf(stderr,"\t-> generating offset remapper lookup for flux cascade curves\n");
+  int dimpop1 = arg->saf[pop1]->nChr+1;
+  int dimpop2 = arg->saf[pop2]->nChr+1;
+  int ndim = dimpop1*dimpop2;
+  //  fprintf(stderr,"ndim:%d (%lu,%lu)\n",ndim,dimpop1,dimpop2);
+  
+  int map[dimpop1][dimpop2];
+  double tot=dimpop1+dimpop2-2;
+  //fprintf(stderr,"tot:%.0f\n",tot);
+  int inc=0;
+  
+  for(size_t x=0;x<dimpop1;x++)
+    for(size_t y=0;y<dimpop2;y++)
+      map[x][y] = inc++;
+  int *mapper = new int [ndim];
+  inc=0;
+  
+  for(size_t x=0;x<dimpop1;x++){
+    for(size_t y=0;y<dimpop2;y++){
+      double af= (x+y)/tot;
+      //      fprintf(stderr,"x:%lu y:%lu af:%f ",x,y,af);
+      if((arg->fold==1)&&(af>0.5)){
+	mapper[inc] = map[dimpop1-x-1][dimpop2-y-1];
+	//fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
+      }else{
+	mapper[inc] = inc;
+	//fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
+      }
+      inc++;
+    }
+  }
+#if 0
+  for(int i=0;i<ndim;i++)
+    fprintf(stdout,"%d %d\n",i,mapper[i]);
+  exit(0);
+#endif
+  return mapper;
+}
+
 
 extern std::vector <char *> dumpedFiles;
 
