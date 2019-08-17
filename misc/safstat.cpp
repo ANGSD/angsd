@@ -84,16 +84,17 @@ void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat,int whichFst){
 
 }
 
-void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres){
+void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres,int *remap){
   assert(prior!=NULL);
   double tre[3]={0,0,0};//a/b,sum(a),sum(0)
   for(int s=0;s<gl1->x;s++){
     int inc =0 ;
     double tmp[(gl1->y+1)*(gl2->y+1)];
-    
+    for(int jj=0;jj<(gl1->y+1)*(gl2->y+1);jj++)
+      tmp[jj] = 0;
     for(int i=0;i<gl1->y;i++)
       for(int j=0;j<gl2->y;j++){
-	tmp[inc] = prior[inc]* gl1->mat[s][i] *gl2->mat[s][j];
+	tmp[remap[inc]] += prior[remap[inc]]* gl1->mat[s][i] *gl2->mat[s][j];
 	inc++;
       }
     //    exit(0);
@@ -426,13 +427,13 @@ int fst_stat(int argc,char **argv){
     fstUW[i] = unweight[i]/(1.0*((double)nObs[i]));
     fstW[i] = wa[i]/wb[i];
     fprintf(stderr,"\t-> FST.Unweight[nObs:%lu]:%f Fst.Weight:%f\n",nObs[i],fstUW[i],fstW[i]);
-    fprintf(stdout,"%f %f\n",fstUW[i],fstW[i]);
+    fprintf(stdout,"%f\t%f\n",fstUW[i],fstW[i]);
   }
   if(chs==3){
     //if chr==3 then we have 3pops and we will also calculate pbs statistics
     calcpbs(fstW);//<- NOTE: the pbs values will replace the fstW values
     for(int i=0;i<3;i++)
-      fprintf(stderr,"\t-> pbs.pop%d\t%f\n",i+1,fstW[i]);
+      fprintf(stdout,"pbs.pop%d\t%f\n",i+1,fstW[i]);
   }
   delete [] ares;
   delete [] bres;

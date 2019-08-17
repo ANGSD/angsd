@@ -354,27 +354,53 @@ int fst_index(int argc,char **argv){
     fprintf(stderr,"\t-> You therefore need to supply %d 2dsfs priors instead of:%lu\n",choose(saf.size(),2),arg->sfsfname.size());
     exit(0);
   }
+  fprintf(stderr,"\t-> IMPORTANT: please make sure that your saf files hasnt been folded with -fold 1 in -doSaf in angsd\n");
+  
+  double **a1,**b1;
+  int **remaps;
+  a1=new double*[choose(saf.size(),2)];
+  b1=new double*[choose(saf.size(),2)];
+  remaps=new int*[choose(saf.size(),2)];
+  int inc=0;
+  for(int i=0;i<saf.size();i++)
+    for(int j=i+1;j<saf.size();j++){
+      calcCoef((int)saf[i]->nChr,(int)saf[j]->nChr,&a1[inc],&b1[inc],arg->whichFst);
+      remaps[inc] = makefoldremapper(arg,i,j);
+      //      fprintf(stderr,"a1[%d]:%p b1[%d]:%p\n",inc,&a1[inc][0],inc,&b1[inc][0]);
+      inc++;
+    }
+
+
+  inc =0;
   std::vector<double *> sfs;
-  int inc =0;
   for(int i=0;i<saf.size();i++)
     for(int j=i+1;j<saf.size();j++){
       size_t pairdim = (saf[i]->nChr+1)*(saf[j]->nChr+1);
       double *ddd=new double[pairdim];
       readSFS(arg->sfsfname[inc],pairdim,ddd);
+      if(arg->fold==1){
+#if 0
+	fprintf(stdout,"SFSIN");
+	  for(int i=0;i<ndim;i++)
+	    fprintf(stdout,"%f\t",ddd[i]);
+	  fprintf(stdout,"\n");
+#endif
+	  //this block is debug block for validating that the input sfs gets folded correctly
+	  double newtmp[pairdim];
+	  for(int i=0;i<pairdim;i++)
+	    newtmp[i] = 0;
+	  for(int i=0;i<pairdim;i++){
+	    newtmp[remaps[inc][i]] += ddd[i];
+	    //	fprintf(stderr,"%d %f\n",i,newtmp[i]);
+	  }
+	  for(int i=0;i<pairdim;i++){
+	    //	fprintf(stdout,"%f ",newtmp[i]);
+	    ddd[i] = newtmp[i];
+	  }
+      }
+      
       normalize(ddd,pairdim);
       sfs.push_back(ddd);
-      inc++;
-    }
-
-  
-  double **a1,**b1;
-  a1=new double*[choose(saf.size(),2)];
-  b1=new double*[choose(saf.size(),2)];
-  inc=0;
-  for(int i=0;i<saf.size();i++)
-    for(int j=i+1;j<saf.size();j++){
-      calcCoef((int)saf[i]->nChr,(int)saf[j]->nChr,&a1[inc],&b1[inc],arg->whichFst);
-      //      fprintf(stderr,"a1[%d]:%p b1[%d]:%p\n",inc,&a1[inc][0],inc,&b1[inc][0]);
       inc++;
     }
 
@@ -444,7 +470,7 @@ int fst_index(int argc,char **argv){
       for(int i=0;i<saf.size();i++)
 	for(int j=i+1;j<saf.size();j++){
 	  //	  fprintf(stderr,"i:%d j:%d inc:%d gls[i]:%p gls[j]:%p sfs:%p a1:%p b1:%p\n",i,j,inc,gls[i],gls[j],sfs[i],&a1[inc][0],&a1[inc][0]);
-	  block_coef(gls[i],gls[j],sfs[inc],a1[inc],b1[inc],ares[inc],bres[inc]);
+	  block_coef(gls[i],gls[j],sfs[inc],a1[inc],b1[inc],ares[inc],bres[inc],remaps[inc]);
 	  inc++;
 	}
       for(int i=0;i<gls[0]->x;i++)

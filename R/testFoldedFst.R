@@ -232,4 +232,7 @@ if(FALSE){
     hist(sfs.2d.fold.est2$par*ncol(gl12.fold)-scan('../test/fst_folded/output/pop1.pop2.saf.idx.ml.fold'))
     ##also works now. lets stop here its 2.13am
     plot(sfs.2d.fold.est2$par*ncol(gl12.fold)-scan('../test/fst_folded/output/pop1.pop2.saf.idx.ml.fold'))
+
+    ##lets check the fst values for the unfolded
+    
 }

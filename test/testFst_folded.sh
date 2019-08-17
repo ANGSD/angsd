@@ -66,15 +66,15 @@ ${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx ${ODIR}/pop3.saf.idx -seed -1 -fold 1 
 ${WDIR}/misc/realSFS ${ODIR}/pop2.saf.idx ${ODIR}/pop3.saf.idx -seed -1 -fold 1 >${ODIR}/pop2.pop3.saf.idx.ml.fold 2>>${LOG}
 ##need to fix below still
 echo "Calculating fst index for 3 pairwise, and multi fst" >>${LOG} 2>&1
-${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx -fstout ${ODIR}/pop1.pop2 -sfs ${ODIR}/pop1.pop2.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop3.saf.idx -fstout ${ODIR}/pop1.pop3 -sfs ${ODIR}/pop1.pop3.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS fst index ${ODIR}/pop2.saf.idx ${ODIR}/pop3.saf.idx -fstout ${ODIR}/pop2.pop3 -sfs ${ODIR}/pop2.pop3.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx ${ODIR}/pop3.saf.idx -fstout ${ODIR}/pop1.pop2.pop3 -sfs ${ODIR}/pop1.pop2.saf.idx.ml -sfs ${ODIR}/pop1.pop3.saf.idx.ml -sfs ${ODIR}/pop2.pop3.saf.idx.ml 2>>${LOG}
+${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx -fstout ${ODIR}/pop1.pop2.fold -sfs ${ODIR}/pop1.pop2.saf.idx.ml.fold -fold 1 2>>${LOG}
+${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop3.saf.idx -fstout ${ODIR}/pop1.pop3.fold -sfs ${ODIR}/pop1.pop3.saf.idx.ml.fold -fold 1 2>>${LOG}
+${WDIR}/misc/realSFS fst index ${ODIR}/pop2.saf.idx ${ODIR}/pop3.saf.idx -fstout ${ODIR}/pop2.pop3.fold -sfs ${ODIR}/pop2.pop3.saf.idx.ml.fold -fold 1 2>>${LOG}
+${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx ${ODIR}/pop3.saf.idx -fstout ${ODIR}/pop1.pop2.pop3.fold -sfs ${ODIR}/pop1.pop2.saf.idx.ml.fold -sfs ${ODIR}/pop1.pop3.saf.idx.ml.fold -sfs ${ODIR}/pop2.pop3.saf.idx.ml.fold -fold 1 2>>${LOG}
 echo "Calculating fst stats for 3 pairwise, and multi fst" >>${LOG} 2>&1
-${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.fst.idx >${ODIR}/pop1.pop2.fst.idx.res 2>>${LOG}
-${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop3.fst.idx >${ODIR}/pop1.pop3.fst.idx.res 2>>${LOG}
-${WDIR}/misc/realSFS fst stats ${ODIR}/pop2.pop3.fst.idx >${ODIR}/pop2.pop3.fst.idx.res 2>>${LOG}
-${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.pop3.fst.idx >${ODIR}/pop1.pop2.pop3.fst.idx.res 2>>${LOG}
+${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.fold.fst.idx >${ODIR}/pop1.pop2.fst.idx.res.fold 2>>${LOG}
+${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop3.fold.fst.idx >${ODIR}/pop1.pop3.fst.idx.res.fold 2>>${LOG}
+${WDIR}/misc/realSFS fst stats ${ODIR}/pop2.pop3.fold.fst.idx >${ODIR}/pop2.pop3.fst.idx.res.fold 2>>${LOG}
+${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.pop3.fold.fst.idx >${ODIR}/pop1.pop2.pop3.fst.idx.res.fold 2>>${LOG}
 
 
 
