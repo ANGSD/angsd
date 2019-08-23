@@ -590,7 +590,6 @@ void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<i
 
 
 int saf2theta(int argc,char**argv){
-  int fold =0;
   const char *THETAS =".thetas.gz";
   const char *THETASIDX =".thetas.idx";
   BGZF *theta_dat;
@@ -692,7 +691,7 @@ int saf2theta(int argc,char**argv){
       //exit(0);
       //First find thetaW: nSeg/a1
       double pv,seq;
-      if(fold)
+      if(arg->fold)
 	pv = 1-exp(workarray[0]);
       else
 	pv = 1-exp(workarray[0])-exp(workarray[nChr]);
@@ -706,7 +705,7 @@ int saf2theta(int argc,char**argv){
       //     ksprintf(&kb,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
       theta_pos.push_back(posiToPrint[s]);
       // fprintf(stderr,"posiToPrint[s]:%d\n",posiToPrint[s]);
-      if(fold==0) {
+      if(arg->fold==0) {
 	double pairwise=0;    //Find theta_pi the pairwise
 	double thL=0;    //Find thetaL sfs[i]*i;
 	double thH=0;//thetaH sfs[i]*i^2
