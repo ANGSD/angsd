@@ -554,6 +554,7 @@ void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
      */    
 
     if(fold) {
+      fprintf(stderr,"Folding will be moved from abcSaf.cpp\n");
       //newDim is set in constructor
       for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
 	sumMinors[i] = log(sumMinors[i] + sumMinors[2*numInds-i]);
@@ -692,7 +693,7 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
       //     fprintf(stderr,"%d:%d\t%d\t%d\n",major_offset,Aa_offset,AA_offset,aa_offset);
       //part two
       double hj[numInds+1];
-      for(int index=0;index<(2*numInds+1);index++)
+      for(int index=0;index<(numInds+1);index++)
 	if(underFlowProtect==0)
 	  hj[index]=0;
 	else
@@ -711,7 +712,7 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
 	  // fprintf(stdout,"mymax[%d]=%f\t",i,mymax);
 	  
 	  if(mymax<MINLIKE){
-	    //	    fprintf(stderr,"\n%f %f %f\n",GAA, GAa,Gaa);
+	    //      fprintf(stderr,"\n%f %f %f\n",GAA, GAa,Gaa);
 	    Gaa = 0;
 	    GAA = 0;
 	    totmax = totmax + mymax;
@@ -738,20 +739,18 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
 	}
 	//	fprintf(stdout,"it=%d PAA=%f\tPAa=%f\tPaa=%f\n",it,PAA,PAa,Paa);
 	if(i==0){
-	  hj[0] =Paa;
-	  hj[1] =PAA;
+	  hj[0] =PAA;
+	  hj[1] =Paa;
 	}else{
 	  //fprintf(stderr,"asdf\n");
 	  for(int j=i+1; j>0;j--) {
 	    double tmp;
 	    if(underFlowProtect==1)
-	      tmp =angsd::addProtect2(PAA+hj[j-1],Paa+hj[j]);
+	      tmp =angsd::addProtect2(Paa+hj[j-1],PAA+hj[j]);
 	    else
-	      tmp = PAA*hj[j-1]+Paa*hj[j];
-	    
+	      tmp = Paa*hj[j-1]+PAA*hj[j];
 	    if(std::isnan(tmp)){
 	      fprintf(stderr,"is nan:%d\n",j );
-	      
 	      hj[j] = 0;
 	      break;
 	    }else
@@ -760,18 +759,18 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
 	  if(underFlowProtect==1)
 	    hj[0] = Paa+hj[0];
 	  else
-	    hj[0] = Paa*hj[0];
+	    hj[0] = PAA*hj[0];
 
 	}
 	//ifunderflowprotect then hj is in logspace
-	
+
       }
       
       for(int i=0;i<numInds+1;i++)
 	if(underFlowProtect==0)
-	  sumMinors[i] +=  exp(log(hj[i])-lbicoTab[i]+totmax);
+	  sumMinors[i] +=  exp(log(hj[i])+totmax);
 	else
-	  sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-lbicoTab[i]+totmax));
+	  sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]+totmax));
     }
     //sumMinors is in normal space, not log
     /*
@@ -796,6 +795,11 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
 	myCounter++;
       }
     }
+    //exit(0);
+  }
+  if(fold){
+    fprintf(stderr,"folding is not implemented for -doSaf 1 with haploids. Please write developer if you would like this implemented\n");
+    exit(0);
   }
   
 }
@@ -850,24 +854,14 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
       double PAA,PAa,Paa;
 
       for(int i=0 ; i<numInds ;i++) {
-	//	printf("pre scale AA=%f\tAa=%f\taa=%f\n",liks[it][i*3+AA_offset],liks[it][i*3+Aa_offset],liks[it][i*3+aa_offset]);
+	//      printf("pre scale AA=%f\tAa=%f\taa=%f\n",liks[it][i*3+AA_offset],liks[it][i*3+Aa_offset],liks[it][i*3+aa_offset]);
 	double GAA,GAa,Gaa;
-#ifdef RESCALE
-	if(0){//The rescaling is now done in 'getMajorMinor()'
-	double max = liks[it][i*10+0];
-	for(int index=1;index<10;index++)
-	  if(liks[it][i*10+index]>max)
-	    max = liks[it][i*10+index];
-	for(int index=0;index<10;index++)
-	  liks[it][i*10+index] = liks[it][i*10+index]-max;
-	}
-#endif
-	//printf("post scale AA=%f\tAa=%f\taa=%f\n",liks[it][i*3+AA_offset],liks[it][i*3+Aa_offset],liks[it][i*3+aa_offset]);
 	GAA = liks[it][i*10+AA_offset];
 
 	GAa = log(2.0)+liks[it][i*10+Aa_offset];
 	Gaa = liks[it][i*10+aa_offset];
 	//printf("[GAA] GAA=%f\tGAa=%f\tGaa=%f\n",GAA,GAa,Gaa);
+	
 	//do underlfow protection (we are in logspace here) (rasmus style)
 	if(1){
 	  double mymax;
