@@ -350,11 +350,11 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF* glffil
 }
 
 //nsam=2*nind
-void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,BGZF* gzSeq,int count,int onlyPoly,BGZF* gzPsmc,int do_seq_glf, int printSNP){
+void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double errate,double meandepth, int regLen,FILE *vSitesFP,double *depths,int dLen,BGZF* gzSeq,int count,int onlyPoly,BGZF* gzPsmc,int do_seq_glf, int printSNP,int simHap){
   kstring_t kpl;kpl.s=NULL;kpl.l=kpl.m=0;
   kstring_t kpsmc;kpsmc.s=NULL;kpsmc.l=kpsmc.m=0;
   int p =0;
-  char ** res=malloc(nsam/2*sizeof(char*));
+  char ** res=malloc(nsam/(2-simHap)*sizeof(char*));
   if(positInt[0]==0)//why
     positInt[0]=1;
   for(int i=1;i<segsites;i++){
@@ -370,10 +370,10 @@ void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double er
   fwrite(&segsites,sizeof(int),1,vSitesFP);
   fwrite(positInt,sizeof(int),segsites,vSitesFP);
   //make genotypes
-  for(int h=0;h<nsam;h+=2){
+  for(int h=0;h<nsam;h+=(2-simHap)){
     res[p] = malloc(segsites);
     for(int s =0;s<segsites;s++){
-      res[p][s] =gv(list[h][s]) +gv(list[h+1][s]); 
+      res[p][s] =gv(list[h][s]) +gv(list[h+1-simHap][s]); 
     }
     p++;
   }
@@ -387,7 +387,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double er
       if(pileup)
 	ksprintf(&kpl,"%d\t%d\tN\t",count,s);
 
-      for(int i=0;i<nsam/2;i++){
+      for(int i=0;i<nsam/(2-simHap);i++){
 	int genotypes[2] = {0,0};
 	if(res[i][s]>=1)
 	  genotypes[1] = 1;
@@ -417,7 +417,7 @@ void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double er
 	  else
 	    print_ind_site(errate,depths[i],genotypes,gz,&kpl);
 	}
-	if(pileup && i<nsam/2-1)
+	if(pileup && i<nsam/(2-simHap)-1)
 	  kputc('\t',&kpl);
       }
 
@@ -706,6 +706,7 @@ int main(int argc,char **argv){
   int seed = -1;
   int Nsites=0;
   int do_seq_glf = 1;
+  int simHap =0;
   pileup=0;
 
 
@@ -716,7 +717,8 @@ int main(int argc,char **argv){
     else if(strcasecmp(*argv,"-depth")==0) meanDepth=atof(*++argv); 
     else if(strcasecmp(*argv,"-Nsites")==0) Nsites=atoi(*++argv); 
     else if(strcasecmp(*argv,"-depthFile")==0) depthFile=*++argv; 
-    else if(strcasecmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv); 
+    else if(strcasecmp(*argv,"-singleOut")==0) singleOut=atoi(*++argv);
+    else if(strcasecmp(*argv,"-simHap")==0) simHap=atoi(*++argv); 
     else if(strcasecmp(*argv,"-regLen")==0) regLen=atoi(*++argv);
     else if(strcasecmp(*argv,"-printSNP")==0) printSNP=atoi(*++argv);
     else if(strcasecmp(*argv,"-onlyPoly")==0) onlyPoly=atoi(*++argv);
@@ -738,17 +740,17 @@ int main(int argc,char **argv){
     srand48(seed);
   if(inS==NULL||prefix==NULL){
     fprintf(stderr,"Probs with args, supply -in -out\n");
-    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen -printSNP -nind -onlyPoly -seed -pileup -Nsites -psmc -simpleRand -do_seq_glf\n");
+    fprintf(stderr,"also -err -depth -depthFile -singleOut -regLen -printSNP -nind -onlyPoly -seed -pileup -Nsites -psmc -simpleRand -do_seq_glf -simHap\n");
     return 0;
   }
   // If no region length provided, then only print SNPs
   if(regLen==0)
     printSNP=1;
 
-  fprintf(stderr,"-in %s -out %s -err %f -depth %f -Nsites %d -singleOut %d -regLen %d -printSNP %d -onlyPoly %d -pileup %d -simpleRand %d -depthFile %s -seed %d -nind %d -psmc %d -do_seq_glf %d\n",inS,prefix,errate,meanDepth,Nsites,singleOut,regLen,printSNP,onlyPoly,pileup,simpleRand,depthFile,seed,nind,psmcOut,do_seq_glf);
+  fprintf(stderr,"-in %s -out %s -err %f -depth %f -Nsites %d -singleOut %d -regLen %d -printSNP %d -onlyPoly %d -pileup %d -simpleRand %d -depthFile %s -seed %d -nind %d -psmc %d -do_seq_glf %d -simHap %d\n",inS,prefix,errate,meanDepth,Nsites,singleOut,regLen,printSNP,onlyPoly,pileup,simpleRand,depthFile,seed,nind,psmcOut,do_seq_glf,simHap);
   //print args file
   FILE *argFP=openFile(prefix,".argg");
-  fprintf(argFP,"-in %s -out %s -err %f -depth %f -Nsites %d -singleOut %d -regLen %d -printSNP %d -onlyPoly %d -pileup %d -simpleRand %d -depthFile %s -seed %d -nind %d -psmc %d -do_seq_glf %d\n",inS,prefix,errate,meanDepth,Nsites,singleOut,regLen,printSNP,onlyPoly,pileup,simpleRand,depthFile,seed,nind,psmcOut,do_seq_glf);
+  fprintf(argFP,"-in %s -out %s -err %f -depth %f -Nsites %d -singleOut %d -regLen %d -printSNP %d -onlyPoly %d -pileup %d -simpleRand %d -depthFile %s -seed %d -nind %d -psmc %d -do_seq_glf %d -simHap %d\n",inS,prefix,errate,meanDepth,Nsites,singleOut,regLen,printSNP,onlyPoly,pileup,simpleRand,depthFile,seed,nind,psmcOut,do_seq_glf,simHap);
   for(int i=0;i<argc;i++)
     fprintf(argFP,"%s ",orig[i]);
   fclose(argFP);
@@ -806,9 +808,11 @@ int main(int argc,char **argv){
   
 
   double ttt=0;
-  if(nsam % 2 ){
-    fprintf(stderr,"\nGL calculation is based on diploid samples, you need to supply an even number of haplotypes\n");
-    return 0;
+  if(simHap==1){
+    if(nsam % 2 ){
+      fprintf(stderr,"\nGL calculation is based on diploid samples, you need to supply an even number of haplotypes\n");
+      return 0;
+    }
   }
   for(int i=1;i<=nsam-1;i++){
     ttt += 1.0*1/i;
@@ -898,7 +902,7 @@ int main(int argc,char **argv){
        vPosFP = openFileI(prefix,".vPos",count);
      }
      
-     test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count,onlyPoly,gzPsmc,do_seq_glf,printSNP) ;
+     test(nsam, segsites, list,positInt,gz,errate,meanDepth,regLen,vPosFP,depths,nind,gzSeq,count,onlyPoly,gzPsmc,do_seq_glf,printSNP,simHap) ;
      if(singleOut==0){
        if(gz!=NULL){
 	 bgzf_close(gz);
