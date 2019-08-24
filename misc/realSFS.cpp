@@ -90,44 +90,90 @@ also some subtle things with row vs col in the implementation(since c is rowwise
 
 //
 
+int *makefoldadjust(int *ary,int len){
+  //  fprintf(stderr,"makefoldadjust:%d\n",len);
+  int *ret = new int[len];
+  for(int i=0;i<len;i++)
+    ret[i] = 1;
+  int shouldexit =1;
+  for(int i=0;i<len;i++)
+    if(ary[i]!=i)
+      shouldexit =0;
+  if(shouldexit){
+    fprintf(stderr,"will breakk\n");
+    return ret;
+  }
+  for(int i=0;i<len;i++){
+    int nobs=0;
+    for(int j=0;j<len;j++){
+      //      fprintf(stderr,"i:%d j:%d\n",i,j);
+      if(ary[i]==ary[j])
+	nobs++;
+    }
+    if(nobs==1)
+      ret[i] = 2;
+    else if(nobs>2){
+      fprintf(stderr,"nobs>2:%f should only be 1 or 2\n");
+      exit(0);
+    }
+  }
+  for(int i=0;1&&i<len;i++)
+    fprintf(stderr,"%d %d\n",i, ret[i]);
+  return ret;
+}
+
 
 int *makefoldremapper(args *arg,int pop1,int pop2){
   fprintf(stderr,"\t-> generating offset remapper lookup for flux cascade curves\n");
-  int dimpop1 = arg->saf[pop1]->nChr+1;
-  int dimpop2 = arg->saf[pop2]->nChr+1;
-  int ndim = dimpop1*dimpop2;
-  //  fprintf(stderr,"ndim:%d (%lu,%lu)\n",ndim,dimpop1,dimpop2);
-  
-  int map[dimpop1][dimpop2];
-  double tot=dimpop1+dimpop2-2;
-  //fprintf(stderr,"tot:%.0f\n",tot);
-  int inc=0;
-  
-  for(size_t x=0;x<dimpop1;x++)
-    for(size_t y=0;y<dimpop2;y++)
-      map[x][y] = inc++;
-  int *mapper = new int [ndim];
-  inc=0;
-  
-  for(size_t x=0;x<dimpop1;x++){
-    for(size_t y=0;y<dimpop2;y++){
-      double af= (x+y)/tot;
-      //      fprintf(stderr,"x:%lu y:%lu af:%f ",x,y,af);
-      if((arg->fold==1)&&(af>0.5)){
-	mapper[inc] = map[dimpop1-x-1][dimpop2-y-1];
-	//fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
-      }else{
-	mapper[inc] = inc;
-	//fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
-      }
-      inc++;
+  int *mapper=NULL;
+  if(pop1==pop2 &&arg->saf.size()==1){
+    int ndim = arg->saf[pop1]->nChr+1;
+    mapper = new int [ndim];
+    for(int i=0;i<ndim;i++)
+      mapper[i] = i;
+    if(arg->fold==1){
+      for(int i=0;i<ndim/2;i++)
+	mapper[ndim-i-1] =i;
     }
-  }
+    for(int i=0;0&&i<ndim;i++)
+      fprintf(stderr,"%d:%d\n",i,mapper[i]);
+  }else{
+    int dimpop1 = arg->saf[pop1]->nChr+1;
+    int dimpop2 = arg->saf[pop2]->nChr+1;
+    int ndim = dimpop1*dimpop2;
+    //fprintf(stderr,"ndim:%d (%lu,%lu)\n",ndim,dimpop1,dimpop2);
+    
+    int map[dimpop1][dimpop2];
+    double tot=dimpop1+dimpop2-2;
+    //fprintf(stderr,"tot:%.0f\n",tot);
+    int inc=0;
+    
+    for(size_t x=0;x<dimpop1;x++)
+      for(size_t y=0;y<dimpop2;y++)
+	map[x][y] = inc++;
+    mapper = new int [ndim];
+    inc=0;
+    
+    for(size_t x=0;x<dimpop1;x++){
+      for(size_t y=0;y<dimpop2;y++){
+	double af= (x+y)/tot;
+	//      fprintf(stderr,"x:%lu y:%lu af:%f ",x,y,af);
+	if((arg->fold==1)&&(af>0.5)){
+	  mapper[inc] = map[dimpop1-x-1][dimpop2-y-1];
+	  //fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
+	}else{
+	  mapper[inc] = inc;
+	  //fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
+	}
+	inc++;
+      }
+    }
 #if 0
-  for(int i=0;i<ndim;i++)
-    fprintf(stdout,"%d %d\n",i,mapper[i]);
-  exit(0);
+    for(int i=0;i<ndim;i++)
+      fprintf(stdout,"%d %d\n",i,mapper[i]);
+    // exit(0);
 #endif
+  }
   return mapper;
 }
 
@@ -357,15 +403,17 @@ int fst_index(int argc,char **argv){
   fprintf(stderr,"\t-> IMPORTANT: please make sure that your saf files hasnt been folded with -fold 1 in -doSaf in angsd\n");
   
   double **a1,**b1;
-  int **remaps;
+  int **remaps,**remaps_scaling;
   a1=new double*[choose(saf.size(),2)];
   b1=new double*[choose(saf.size(),2)];
   remaps=new int*[choose(saf.size(),2)];
+  remaps_scaling=new int*[choose(saf.size(),2)];
   int inc=0;
   for(int i=0;i<saf.size();i++)
     for(int j=i+1;j<saf.size();j++){
       calcCoef((int)saf[i]->nChr,(int)saf[j]->nChr,&a1[inc],&b1[inc],arg->whichFst);
       remaps[inc] = makefoldremapper(arg,i,j);
+      remaps_scaling[inc] = makefoldadjust(remaps[inc],(arg->saf[i]->nChr+1)*(arg->saf[j]->nChr+1));
       //      fprintf(stderr,"a1[%d]:%p b1[%d]:%p\n",inc,&a1[inc][0],inc,&b1[inc][0]);
       inc++;
     }
@@ -470,7 +518,7 @@ int fst_index(int argc,char **argv){
       for(int i=0;i<saf.size();i++)
 	for(int j=i+1;j<saf.size();j++){
 	  //	  fprintf(stderr,"i:%d j:%d inc:%d gls[i]:%p gls[j]:%p sfs:%p a1:%p b1:%p\n",i,j,inc,gls[i],gls[j],sfs[i],&a1[inc][0],&a1[inc][0]);
-	  block_coef(gls[i],gls[j],sfs[inc],a1[inc],b1[inc],ares[inc],bres[inc],remaps[inc]);
+	  block_coef(gls[i],gls[j],sfs[inc],a1[inc],b1[inc],ares[inc],bres[inc],remaps[inc],remaps_scaling[inc]);
 	  inc++;
 	}
       for(int i=0;i<gls[0]->x;i++)

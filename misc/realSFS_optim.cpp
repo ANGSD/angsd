@@ -7,7 +7,8 @@ extern int howOften;
 #include "multisafreader.hpp"
 void readSFS(const char*fname,size_t hint,double *ret);
 
-extern int * foldremapper;
+int * foldremapper=NULL;
+int * foldfactors=NULL;
 
 template<typename T>
 struct emPars{
@@ -35,20 +36,21 @@ double ttol = 1e-16;
 template <typename T>
 double lik1(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
   assert(from >=0 && to >=0);
-  //  fprintf(stderr,"[%s] from:%d to:%d\n",__FUNCTION__,from,to);
+  //fprintf(stderr,"[%s] from:%d to:%d\n",__FUNCTION__,from,to);
   double r =0;
   if(!bootstrap)
     for(size_t s=from;s<to;s++){
       double tmp =0;
-      for(size_t i=0;i<gls[0]->y;i++)
-	tmp += sfs[i]* gls[0]->mat[s][i]; 
+      for(size_t i=0;i<gls[0]->y;i++){
+	tmp += sfs[foldremapper[i]]* gls[0]->mat[s][i]*foldfactors[i];
+      }
       r += log(tmp);
     }
   else
     for(size_t s=from;s<to;s++){
       double tmp =0;
       for(size_t i=0;i<gls[0]->y;i++)
-	tmp += sfs[i]* gls[0]->mat[bootstrap[s]][i]; 
+	tmp += sfs[foldremapper[i]]* gls[0]->mat[bootstrap[s]][i]*foldfactors[i]; 
       r += log(tmp);
     }
   return r;
@@ -64,9 +66,11 @@ double lik2(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
       int inc =0;
       for(size_t i=0;i<gls[0]->y;i++)
 	for(size_t j=0;j<gls[1]->y;j++){
-	  tmp += sfs[foldremapper[inc++]]* gls[0]->mat[s][i] *gls[1]->mat[s][j];
+	  tmp += sfs[foldremapper[inc]]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*foldfactors[inc];
+	  inc++;
 	}
       r += log(tmp);
+      //      fprintf(stderr,"r:%f\n",r);exit(0);
     }
   }
   else
@@ -74,8 +78,10 @@ double lik2(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
       double tmp =0;
       int inc =0;
       for(size_t i=0;i<gls[0]->y;i++)
-	for(size_t j=0;j<gls[1]->y;j++)
-	  tmp += sfs[foldremapper[inc++]]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j];
+	for(size_t j=0;j<gls[1]->y;j++){
+	  tmp += sfs[foldremapper[inc]]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j]*foldfactors[inc];
+	  inc++;
+	}
       r += log(tmp);
     }
   return r;
@@ -178,12 +184,17 @@ void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,size_t sta
     post[x] =0.0;
     
   for(size_t s=start;SIG_COND&&s<stop;s++){
-    if(bootstrap==NULL)
+    if(bootstrap==NULL){
+      for(int i=0;i<dim;i++)
+	inner[i] =0;
       for(int x=0;x<dim;x++)
-	inner[x] = pre[x]*gls[0]->mat[s][x];
-    else
+	inner[foldremapper[x]] += pre[foldremapper[x]]*gls[0]->mat[s][x]*foldfactors[x];
+    }else{
+      for(int i=0;i<dim;i++)
+	inner[i] =0;
       for(int x=0;x<dim;x++)
-	inner[x] = pre[x]*gls[0]->mat[bootstrap[s]][x];
+	inner[foldremapper[x]] += pre[foldremapper[x]]*gls[0]->mat[bootstrap[s]][x]*foldfactors[x];
+    }
    normalize(inner,dim);
    for(int x=0;x<dim;x++)
      post[x] += inner[x];
@@ -204,7 +215,7 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
 	inner[i] =0;
       for(size_t x=0;x<gls[0]->y;x++)
 	for(size_t y=0;y<gls[1]->y;y++){
-	  inner[foldremapper[inc]] += pre[foldremapper[inc]]*gls[0]->mat[s][x]*gls[1]->mat[s][y];
+	  inner[foldremapper[inc]] += pre[foldremapper[inc]]*gls[0]->mat[s][x]*gls[1]->mat[s][y]*foldfactors[inc];
 	  assert(!std::isnan(inner[foldremapper[inc]]));
 	  inc++;
 	}
@@ -219,7 +230,7 @@ void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start
 	inner[i] =0;
       for(size_t x=0;x<gls[0]->y;x++)
 	for(size_t y=0;y<gls[1]->y;y++){
-	  inner[foldremapper[inc]] += pre[foldremapper[inc]]*gls[0]->mat[bootstrap[s]][x]*gls[1]->mat[bootstrap[s]][y];
+	  inner[foldremapper[inc]] += pre[foldremapper[inc]]*gls[0]->mat[bootstrap[s]][x]*gls[1]->mat[bootstrap[s]][y]*foldfactors[inc];
 	  inc++;
 	}
       normalize(inner,dim);
@@ -551,17 +562,24 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   delete [] tmp;
   return oldLik;
 }
-int *foldremapper = NULL;
 int *makefoldremapper(args *arg,int pop1,int pop2);
+int *makefoldadjust(int *ary,int pop1);
 template <typename T>
 int main_opt(args *arg){
-  if(arg->fold&&arg->saf.size()!=2){
-    fprintf(stderr,"\t-> Folding is currently only implemented for 2populations. For one population please do -fold 1 in main angsd\n")
-      ;
+  if(arg->fold&&arg->saf.size()>2){
+    fprintf(stderr,"\t-> Folding is currently only implemented for one and two populations.\n");
     exit(0);
   }
-  if(arg->saf.size()==2)
+  if(arg->saf.size()==1){
+    foldremapper = makefoldremapper(arg,0,0);
+    foldfactors = makefoldadjust(foldremapper,arg->saf[0]->nChr+1);
+  }  else if(arg->saf.size()==2){
     foldremapper = makefoldremapper(arg,0,1);
+    //    fprintf(stderr,"foldremapper: %d %d\n",0,foldremapper[0]);exit(0);
+    foldfactors = makefoldadjust(foldremapper,(arg->saf[0]->nChr+1)*(arg->saf[1]->nChr+1));
+  }
+  
+   
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
     assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
@@ -641,7 +659,7 @@ int main_opt(args *arg){
 	}
 	
       }
-    if(foldremapper) { //implies 2 pops
+    if(foldremapper) { //implies 1 or 2 pops
 #if 0
       fprintf(stdout,"SFSIN");
       for(int i=0;i<ndim;i++)

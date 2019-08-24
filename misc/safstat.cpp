@@ -84,7 +84,7 @@ void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat,int whichFst){
 
 }
 
-void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres,int *remap){
+void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres,int *remap,int *rescal){
   assert(prior!=NULL);
   double tre[3]={0,0,0};//a/b,sum(a),sum(0)
   for(int s=0;s<gl1->x;s++){
@@ -94,7 +94,7 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
       tmp[jj] = 0;
     for(int i=0;i<gl1->y;i++)
       for(int j=0;j<gl2->y;j++){
-	tmp[remap[inc]] += prior[remap[inc]]* gl1->mat[s][i] *gl2->mat[s][j];
+	tmp[remap[inc]] += prior[remap[inc]]* gl1->mat[s][i] *gl2->mat[s][j]*rescal[inc];
 	inc++;
       }
     //    exit(0);
