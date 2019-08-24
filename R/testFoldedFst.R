@@ -141,7 +141,7 @@ if(FALSE){
     barplot(rbind(table(p1.d),a.p1.sfs),be=T)
     barplot(rbind(table(p2.d),a.p2.sfs),be=T)
     barplot(rbind(table(p3.d),a.p3.sfs),be=T)
-    ##all good sofar with the 1dsfs
+    ##All good sofar with the 1dsfs
 
     a.p1.p2.sfs <- matrix(scan("../test/fst_folded/output/pop1.pop2.saf.idx.ml"),byrow=T,nrow(p1.p2.sfs),ncol(p1.p2.sfs))
     a.p1.p3.sfs <- matrix(scan("../test/fst_folded/output/pop1.pop3.saf.idx.ml"),byrow=T,nrow(p1.p3.sfs),ncol(p1.p3.sfs))
@@ -155,7 +155,7 @@ if(FALSE){
     plot(p1.p3.sfs,a.p1.p3.sfs)
     plot(p2.p3.sfs,a.p2.p3.sfs)
 
-    ##all good sofar with the 2dsfs. , we are only simulatre 64k sites with 837 categories of the spectra
+    ##All good sofar with the 2dsfs. , we are only simulatre 64k sites with 837 categories of the spectra
 
     ##now lets redo with folding
     a.p1.p2.sfs.fold <- matrix(scan("../test/fst_folded/output/pop1.pop2.saf.idx.ml.fold"),byrow=T,nrow(p1.p2.sfs),ncol(p1.p2.sfs))
@@ -169,8 +169,13 @@ if(FALSE){
     plot(na2zero(fold2d(p1.p2.sfs)),a.p1.p2.sfs.fold)
     plot(na2zero(fold2d(p1.p3.sfs)),a.p1.p3.sfs.fold)
     plot(na2zero(fold2d(p2.p3.sfs)),a.p2.p3.sfs.fold)
+    par(mfrow=c(3,1))
+    boxplot(na2zero(fold2d(p1.p2.sfs))-a.p1.p2.sfs.fold)
+    boxplot(na2zero(fold2d(p1.p3.sfs))-a.p1.p3.sfs.fold)
+    boxplot(na2zero(fold2d(p2.p3.sfs))-a.p2.p3.sfs.fold)
 
-    ##this looks fine, but lets implement a glf reader in R and implement the folded optimization so we are sure things really work
+    
+    ##This looks fine, but lets implement a glf reader in R and implement the folded optimization so we are sure things really work
     
     ##code below implements the stuff that happens in realSFS.cpp
     readdata<-function(fname,x,nsites){
