@@ -46,7 +46,7 @@ if [ ! "$asso2" = "$asso2new"  ] ;then
     RVAL=2
 fi
 
-asso4=1.615975
+asso4=1.606574
 
 if [ ! "$asso4" = "$asso4new"  ] ;then
     echo "--------------"

@@ -1008,7 +1008,6 @@ if((post[count*3+0]+post[count*3+1])>0.90)
       }
       count++;
     }
-
     
   }
   
@@ -1802,27 +1801,44 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   int highWT=0;
   int highHE=0;
   int highHO=0;
-  
-  double yNull[keepInd];
+
+  double yDose[keepInd];
+  double yNull[3*keepInd];
   int count = 0;
   double post[keepInd*3];
 
-  double covMatrixNull[(covmat.y+1)*keepInd];
-  double yfit[keepInd];
-
+  double covMatrixNull[(covmat.y+1)*3*keepInd];
+  double yfitDose[keepInd];
+  double yfitNull[3*keepInd];
+  
   //for doing dosage regression to prime EM (give good starting coefs)
   double covMatrixDose[(covmat.y+2)*keepInd];
   
-  designNull->x=keepInd;
+  designNull->x=3*keepInd;
   //covars + intercept
   designNull->y=covmat.y+1;
-     
-  // WLS (weighted) model with genotypes
+   
   for(int i=0;i<p->nInd;i++){
     if(keepList[i]){
-      yNull[count]=yOrg[i];
-      designNull->matrix[count][0] = 1;
-      covMatrixNull[count] = 1;
+      
+      for(int j=0;j<3;j++){
+
+	yNull[count*3+j]=yOrg[i];
+      	post[count*3+j]=postOrg[i*3+j];
+	designNull->matrix[count*3+j][0] = 1;
+
+	covMatrixNull[count*3+j] = 1;
+	
+	for(int c=0;c<covmat.y;c++){
+	  // design matrix has 3 rows per indi - possible genotypes 
+	  designNull->matrix[count*3+j][1+c] = covmat.matrix[i][c];
+	  // because has each value 3 times - meaning first 3*keepInd values are column 1
+	  covMatrixNull[(c+1)*3*keepInd+count*3+j] = covmat.matrix[i][c];
+	}
+	
+      }
+
+      yDose[count]=yOrg[i];
 
       if(model==3){
 	covMatrixDose[count] = postOrg[i*3+2];
@@ -1835,8 +1851,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       covMatrixDose[keepInd+count] = 1;
             
       for(int c=0;c<covmat.y;c++){
-	designNull->matrix[count][c+1] = covmat.matrix[i][c];
-	covMatrixNull[(c+1)*keepInd+count] = covmat.matrix[i][c];
+
 	covMatrixDose[(c+2)*keepInd+count] = covmat.matrix[i][c];
       }
       count++;    
@@ -1859,25 +1874,27 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   }
 
   if(isBinary){
-    getFitBin(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
+    getFitBin(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
   } else if(isCount){
-    getFitPois(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
+    getFitPois(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
   } else{      
-    getFit(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
+    getFit(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
   }
   
-  double llhNull = logLike(startNull,yNull,designNull,post,isBinary,isCount,0);
+  // has to calculate likelihood under null model like under alternative model
+  // (meaning like for alternative in EM approach not like in dosage approach)
+  double llhNull = logLike(startNull,yNull,designNull,post,isBinary,isCount,1);
 
   if(doPriming){
     
     int dimDose=designNull->y+1;    
     //do dosage regression first to prime EM
     if(isBinary){
-      getFitBin(yfit,yNull,covMatrixDose,keepInd,dimDose,start);
+      getFitBin(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
     } else if(isCount){
-      getFitPois(yfit,yNull,covMatrixDose,keepInd,dimDose,start);
+      getFitPois(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
     } else{      
-      getFit(yfit,yNull,covMatrixDose,keepInd,dimDose,start);
+      getFit(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
     }
     
   } else{
@@ -1972,15 +1989,18 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   double pars0[design->y+1]; 
   memcpy(pars0,start,sizeof(double)*(design->y+1));
   int nIter=0;
-  
-  double llh0 = logLike(start,y,design,post,isBinary,isCount,fullModel);  
+
+  double llh0 = logLike(start,y,design,post,isBinary,isCount,fullModel);
+  double llh1 = llh0;
+
   for(int i=0;i<emIter;i++){
     nIter++;
-    double llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,i);
+    llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,i);
             
     if(fabs(llh1-llh0)<emThres and llh1 > 0){	 
       // Converged
       assoc->emIter[s] = nIter;
+      
       break;
     } else if(llh0<llh1 & (not doPriming | not (i==0))){
       // Fit caused increase in likelihood, will roll back to previous step
@@ -2003,10 +2023,10 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
         
   }
 
+  llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,999);
   
-        
   // likelihood ratio - chi square distributed according to Wilk's theorem
-  double LRT = -2*(llh0-llhNull);
+  double LRT = -2*(llh1-llhNull);
   return(LRT);  
 }
 
@@ -2028,13 +2048,12 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
     stat[yi] = new double[pars->numSites];
     keepInd[yi]= new int[pars->numSites];
   }
-  
-  
+    
   angsd::Matrix<double> designNull;
   designNull.x=pars->nInd;
   //covars + intercept
   designNull.y=covmat.y+1;
-  designNull.matrix=new double*[pars->nInd];
+  designNull.matrix=new double*[3*pars->nInd];
     
   angsd::Matrix<double> design; 
   design.x=3*pars->nInd;
@@ -2047,14 +2066,13 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
   postAll.matrix=new double*[3*pars->nInd];
   
   for(int xi=0;xi<pars->nInd;xi++){    
-    designNull.matrix[xi] = new double[covmat.y+1];
     for(int i=0;i<3;i++){
+      designNull.matrix[3*xi+i] = new double[covmat.y+1];
       design.matrix[3*xi+i] = new double[covmat.y+2];    
       postAll.matrix[3*xi+i] = new double[postAll.y];
     }
   }
-      
-  
+        
   for(int s=0;s<pars->numSites;s++){//loop overs sites
     if(pars->keepSites[s]==0)
       continue;
@@ -2141,7 +2159,7 @@ double abcAsso::doEMassoWald(funkyPars *p,angsd::Matrix<double> *design,angsd::M
   double post[keepInd*3];
   
   double yfit[keepInd];
-  double yNull[keepInd];
+  double yDose[keepInd];
 
   //for doing dosage regression to prime EM (give good starting coefs)
   double covMatrixDose[(covmat.y+2)*keepInd];
@@ -2149,7 +2167,7 @@ double abcAsso::doEMassoWald(funkyPars *p,angsd::Matrix<double> *design,angsd::M
   // WLS (weighted) model with genotypes
   for(int i=0;i<p->nInd;i++){
     if(keepList[i]){
-      yNull[count]=yOrg[i];
+      yDose[count]=yOrg[i];
       if(model==3){
 	covMatrixDose[count] = postOrg[i*3+2];
       } else if(model==2){
@@ -2182,11 +2200,11 @@ double abcAsso::doEMassoWald(funkyPars *p,angsd::Matrix<double> *design,angsd::M
     
     //do dosage regression first to prime EM
     if(isBinary){
-      getFitBin(yfit,yNull,covMatrixDose,keepInd,dimDose,start);
+      getFitBin(yfit,yDose,covMatrixDose,keepInd,dimDose,start);
     } else if(isCount){
-      getFitPois(yfit,yNull,covMatrixDose,keepInd,dimDose,start);
+      getFitPois(yfit,yDose,covMatrixDose,keepInd,dimDose,start);
     } else{      
-      getFit(yfit,yNull,covMatrixDose,keepInd,dimDose,start);
+      getFit(yfit,yDose,covMatrixDose,keepInd,dimDose,start);
     }
 
   }  else{
@@ -2388,8 +2406,7 @@ void abcAsso::emAssoWald(funkyPars  *pars,assoStruct *assoc){
  
       freqStruct *freq = (freqStruct *) pars->extras[6];
   
-      tmp=doEMassoWald(pars,&design,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);
-            
+      tmp=doEMassoWald(pars,&design,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);            
       //if not enough, WT, HE or HO or ind to run test
       if(tmp < -900){
 	assoc->betas[s]=NAN;
