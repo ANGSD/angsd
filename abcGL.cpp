@@ -592,7 +592,7 @@ void abcGL::printLike(funkyPars *pars) {
 }
 
 void abcGL::changeChr(int refId) {
-  fprintf(stderr,"Charnge chr:%d\n",refId);
+  //  fprintf(stderr,"Charnge chr:%d\n",refId);
   if(GL>0&&doGlf==5){
     assert(outfileSAF!=NULL);
     assert(outfileSAFIDX!=NULL);
