@@ -1257,7 +1257,7 @@ int abcAsso::getFitWLS(double* start, double* y, double** covMatrix, double* wei
    }
         
    if(df==-1){
-     start[nEnv] = sqrt(ts/(1.0*(nInd3-nEnv)));
+     start[nEnv] = sqrt(ts/(1.0*(nInd3/3-nEnv)));
    } else{
      start[nEnv] = sqrt(ts/(1.0*df));
    }
