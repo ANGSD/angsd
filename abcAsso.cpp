@@ -29,7 +29,7 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t4: Latent genotype model\n");
   fprintf(argFile,"\t5: Score Test with latent genotype model - hybrid test\n");
   fprintf(argFile,"\t6: Dosage regression\n");
-  fprintf(argFile,"\t7: Latent genotype model (wald test)\n");
+  fprintf(argFile,"\t7: Latent genotype model (wald test) - NOT PROPERLY TESTED YET!\n");
   fprintf(argFile,"  Frequency Test Options:\n");
   fprintf(argFile,"\t-yBin\t\t%s\t(File containing disease status)\t\n\n",yfile1);
   fprintf(argFile,"  Score, Latent, Hybrid and Dosage Test Options:\n");
@@ -102,6 +102,9 @@ void abcAsso::getOptions(argStruct *arguments){
   if(yfile3!=NULL)
     isQuant=1;    
 
+  if(doAsso==7){
+    fprintf(stderr,"Warning: Wald test is not properly tested and might give inflated test statistics!\n");
+  }
   
   if(doPrint)
     fprintf(stderr,"finished [%s]\t[%s]\n",__FILE__,__FUNCTION__);
