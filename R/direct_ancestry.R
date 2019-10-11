@@ -98,7 +98,7 @@ cat("tole = ", tole,"\n")
 
     nAaAa <- sfs[5]
     nAaAA <- sfs[4]+sfs[6]
-    nAAaa <- sfs[4]+sfs[7]
+    nAAaa <- sfs[3]+sfs[7]
     nAAAa <- sfs[2]+sfs[8]
     nAAAA <- sfs[1]+sfs[9]
 #    nAaAa <- counts[1]
