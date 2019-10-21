@@ -1820,7 +1820,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   designNull->x=3*keepInd;
   //covars + intercept
   designNull->y=covmat.y+1;
-   
+  
   for(int i=0;i<p->nInd;i++){
     if(keepList[i]){
       
@@ -1908,7 +1908,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       start[i+1] = startNull[i];      
     }
   }
-  
+
   double y[3*keepInd];
   count=0;
   
@@ -1959,7 +1959,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       count++;
     }
   }
-   
+
   assoc->highWt[s] = highWT;
   assoc->highHe[s] = highHE;
   assoc->highHo[s] = highHO;
@@ -2472,7 +2472,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   designNull.x=pars->nInd;
   //covars + intercept
   designNull.y=covmat.y+1;
-  designNull.matrix=new double*[pars->nInd];
+  designNull.matrix=new double*[3*pars->nInd];
     
   angsd::Matrix<double> design; 
   design.x=3*pars->nInd;
@@ -2483,15 +2483,15 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   postAll.x=3*pars->nInd;
   postAll.y=3;
   postAll.matrix=new double*[3*pars->nInd];
-  
-  for(int xi=0;xi<pars->nInd;xi++){    
-    designNull.matrix[xi] = new double[covmat.y+1];
+
+  for(int xi=0;xi<pars->nInd;xi++){
     for(int i=0;i<3;i++){
-      design.matrix[3*xi+i] = new double[covmat.y+2];    
+      designNull.matrix[3*xi+i] = new double[covmat.y+1];
+      design.matrix[3*xi+i] = new double[covmat.y+2];
       postAll.matrix[3*xi+i] = new double[postAll.y];
     }
   }
-  
+    
   for(int s=0;s<pars->numSites;s++){//loop overs sites
     if(pars->keepSites[s]==0)
       continue;
