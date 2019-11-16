@@ -275,7 +275,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
     if(npl<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
-      fprintf(stderr, "BAD SITE %s:%d. return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, npl,rec->rid);
+      fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, npl,rec->rid);
       return 0;
     }
     // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
@@ -308,6 +308,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
 
   balcon++;
   //naf = bcf_get_info_float(hdr, rec, vcf_allele_field.c_str(), &af, &naf_arr);//maybe include this<-
+  return 1;//<- what should this function return?
 }
 
 

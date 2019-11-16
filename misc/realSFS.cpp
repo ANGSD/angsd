@@ -113,7 +113,7 @@ int *makefoldadjust(int *ary,int len){
     if(nobs==1)
       ret[i] = 2;
     else if(nobs>2){
-      fprintf(stderr,"nobs>2:%f should only be 1 or 2\n");
+      fprintf(stderr,"nobs>2: should only be 1 or 2\n");
       exit(0);
     }
   }

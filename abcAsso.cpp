@@ -2005,7 +2005,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       assoc->emIter[s] = nIter;
       
       break;
-    } else if(llh0<llh1 & (not doPriming | not (i==0))){
+    } else if((llh0<llh1) & (not doPriming | not (i==0))){
       // Fit caused increase in likelihood, will roll back to previous step
       memcpy(start,pars0,sizeof(double)*(design->y+1));
       assoc->emIter[s] = nIter;                  
@@ -2313,7 +2313,7 @@ double abcAsso::doEMassoWald(funkyPars *p,angsd::Matrix<double> *design,angsd::M
       // Converged
       assoc->emIter[s] = nIter;
       break;
-    } else if(llh0<llh1 & (not doPriming | not (i==0))){
+    } else if((llh0<llh1) & (not doPriming | not (i==0))){
       // Fit caused increase in likelihood, will roll back to previous step
       memcpy(start,pars0,sizeof(double)*(design->y+1));
       assoc->emIter[s] = nIter;                  
