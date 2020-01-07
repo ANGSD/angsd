@@ -50,13 +50,14 @@ bam_hdr_t *getHeadFromFai(const char *fname){
     ret->target_len[i] = lengths[i];
     ret->target_name[i] =strdup(chrs[i]);
   }
-
+ 
   for(uint i=0;i<chrs.size();i++)
     free(chrs[i]);
   fclose(fp);
   return ret;
 }
 
+/*
 bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
   bam_hdr_t *ret = bam_hdr_init();
   ret->l_text = 0;
@@ -64,6 +65,15 @@ bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
   const char **seqnames = NULL;
   int nseq;
   seqnames = bcf_hdr_seqnames(hs->hdr, &nseq); assert(seqnames);
+  for (int i=0; i<hs->hdr->nhrec; i++){
+    bcf_hrec_t *hrec=hs->hdr->hrec[i];
+    if(strcmp(hrec->key,"contig")==0){
+      fprintf(stderr,"%d) hrec->value:%s key:%s\n",i,hrec->value,hrec->key);
+      for(int j=0;j<hrec->nkeys;j++)
+	fprintf(stderr,"i:%d j:%d keys:%s vals:%s\n",i,j,hrec->keys[j],hrec->vals[j]);
+    }
+  }
+  exit(0);
   
   ret->n_targets = nseq;
   ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
@@ -74,6 +84,46 @@ bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
     ret->target_name[i] =strdup(seqnames[i]);
   }
   free(seqnames);
+  return ret;
+}
+*/
+bam_hdr_t *bcf_hdr_2_bam_hdr_t2 (htsstuff *hs){
+  bam_hdr_t *ret = bam_hdr_init();
+  ret->l_text = 0;
+  ret->text =NULL;
+
+  int nseq=0;
+
+  for (int i=0; i<hs->hdr->nhrec; i++){
+    bcf_hrec_t *hrec=hs->hdr->hrec[i];
+    if(strcmp(hrec->key,"contig")==0)
+      nseq++;
+  }
+  
+  ret->n_targets = nseq;
+  ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
+  ret->target_name = (char**) malloc(sizeof(char*)*nseq);
+  int at=0;
+  for (int i=0; i<hs->hdr->nhrec; i++){
+    bcf_hrec_t *hrec=hs->hdr->hrec[i];
+    if(strcmp(hrec->key,"contig")==0){
+      //      fprintf(stderr,"%d) hrec->value:%s key:%s\n",i,hrec->value,hrec->key);
+      int newlen =-1;
+      char *chrnam=NULL;
+      for(int j=0;j<hrec->nkeys;j++){
+	if(strcmp("ID",hrec->keys[j])==0)
+	  chrnam = strdup(hrec->vals[j]);
+	if(strcmp("length",hrec->keys[j])==0)
+	  newlen = atoi(hrec->vals[j]);
+	//fprintf(stderr,"i:%d j:%d keys:%s vals:%s\n",i,j,hrec->keys[j],hrec->vals[j]);
+      }
+      //fprintf(stderr,"at: %d ID:%s len:%d\n",at,chrnam,newlen);
+      ret->target_len[at] = newlen;
+      ret->target_name[at] = chrnam;
+      at++;
+    }
+  }
+
   return ret;
 }
 aMap *buildRevTable(const bam_hdr_t *hd){
@@ -404,7 +454,7 @@ multiReader::multiReader(int argc,char**argv){
       exit(0);
     }else if(args->regions.size()<=1){
       myvcf = new vcfReader(args->infile,NULL);
-      args->hd=bcf_hdr_2_bam_hdr_t(myvcf->hs);
+      args->hd=bcf_hdr_2_bam_hdr_t2(myvcf->hs);
       args->nInd = myvcf->hs->nsamples;
     }
   }
