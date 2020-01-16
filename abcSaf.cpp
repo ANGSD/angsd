@@ -768,9 +768,9 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
       
       for(int i=0;i<numInds+1;i++)
 	if(underFlowProtect==0)
-	  sumMinors[i] +=  exp(log(hj[i])+totmax);
+	  sumMinors[i] +=  exp(log(hj[i])-lbicoTab[i]+totmax);
 	else
-	  sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]+totmax));
+	  sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-lbicoTab[i]+totmax));
     }
     //sumMinors is in normal space, not log
     /*

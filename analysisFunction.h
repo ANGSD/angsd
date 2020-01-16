@@ -1,3 +1,4 @@
+#include <zlib.h>
 #ifndef _angsd_
 #define _angsd_
 
