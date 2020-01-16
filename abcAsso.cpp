@@ -1803,7 +1803,7 @@ double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::M
   }
 
   delete [] weigths;
-     
+  
   return logLike(start,y,design,post,isBinary,isCount,fullModel);
   
 }
@@ -3005,8 +3005,6 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
     }
 
   }
-
-  //
  
   double *yfit = new double[keepInd];
   if(nEnv==1){
@@ -3016,8 +3014,7 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
     mean=mean/keepInd;
     for(int i=0;i<keepInd;i++)
       yfit[i]=mean;
-  }
-  else{
+  } else{
     //intialise these values as not being done in getFit function
     for(int i=0;i<keepInd;i++)
        yfit[i]=0;
