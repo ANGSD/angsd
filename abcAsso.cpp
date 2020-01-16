@@ -754,7 +754,7 @@ double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angs
     
     //need to flatten the weights, which is p(s|y,G,phi,Q,f)
     // so first four values is for first indi, and so on...
-    double weights[postAll->x*postAll->y];
+    double* weights = new double[postAll->x*postAll->y];
     int a = 0;
     for(int i=0;i<postAll->x;i++)
       for(int j=0;j<postAll->y;j++){
@@ -762,6 +762,7 @@ double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angs
 	//check if issue with weights
 	if(exp(postAll->matrix[i][j])!=exp(postAll->matrix[i][j]) or std::isinf(exp(postAll->matrix[i][j]))){
 	  fprintf(stderr,"Issue with weights being nan or inf\n");
+	  delete [] weights;
 	  return(-9);
 	}
       }
@@ -826,6 +827,8 @@ double abcAsso::standardError(double* start, angsd::Matrix<double> *design, angs
 
     // doing inv((X)^T*W*X)
     int singular=angsd::svd_inverse(invSummedDesign, design->y, design->y);
+
+    delete [] weights;
     
     return(sqrt(invSummedDesign[0]));
     
@@ -901,73 +904,27 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
   int highWT=0;
   int highHE=0;
   int highHO=0;
- 
-  double covMatrix[(covmat.y+2)*keepInd];
-  double covMatrixNull[(covmat.y+1)*keepInd];
-  double yfit[keepInd];
-    
-  double yNull[keepInd];
-  int count = 0;
+
   double post[keepInd*3];
   
-  designNull->x=keepInd;
-  //covars + intercept
-  designNull->y=covmat.y+1;
-     
-  // WLS (weighted) model with genotypes
-  for(int i=0;i<p->nInd;i++){
-    if(keepList[i]){
-      yNull[count]=yOrg[i];
-      post[count*3+0]=postOrg[i*3+0];
-      post[count*3+1]=postOrg[i*3+1];
-      post[count*3+2]=postOrg[i*3+2];
-
-      covMatrixNull[count] = 1;
-      
-      designNull->matrix[count][0] = 1;
-      for(int c=0;c<covmat.y;c++){
-	designNull->matrix[count][c+1] = covmat.matrix[i][c];
-	covMatrixNull[(c+1)*keepInd+count] = covmat.matrix[i][c];
-      }
-      count++;    
-    }
-  }
-
-  // need intercept 
-  double startNull[covmat.y+2];
-
-  for(int i=0;i<(covmat.y+2);i++){
-    startNull[i] = drand48()*2-1;
-  }
-
-  if(count!=keepInd){
-    fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
-    fflush(stderr);
-    exit(0);
-  }
-  
-  if(isBinary){
-    getFitBin(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
-  } else if(isCount){
-    getFitPois(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
-  } else{      
-    getFit(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
-  }
-
-  double llhNull = logLike(startNull,yNull,designNull,post,isBinary,isCount,0);
-    
-  start[0] = drand48()*2-1;
+  //////////////////////////// check if site can be run first - checking data for full model
 
   double y[keepInd];
-  count=0;
+  int count=0;
       
   design->x=keepInd;
   design->y=covmat.y+2;
+
+  double covMatrix[(covmat.y+2)*keepInd];
   
   // WLS (weighted) model with genotypes
   for(int i=0;i<p->nInd;i++){
     if(keepList[i]){
-      y[count]=yOrg[i];      
+      y[count]=yOrg[i];            
+      post[count*3+0]=postOrg[i*3+0];
+      post[count*3+1]=postOrg[i*3+1];
+      post[count*3+2]=postOrg[i*3+2];
+      
       // 1: add, 2: dom, 3: rec
       if(model==3){
 	design->matrix[count][0] = post[count*3+2];
@@ -1040,6 +997,63 @@ if((post[count*3+0]+post[count*3+1])>0.90)
     fflush(stderr);
     exit(0);
   }
+
+  ///////////////////////////////////////////////////////
+  
+  double covMatrixNull[(covmat.y+1)*keepInd];
+  double yfit[keepInd];
+    
+  double yNull[keepInd];
+  count = 0;
+    
+  designNull->x=keepInd;
+  //covars + intercept
+  designNull->y=covmat.y+1;
+     
+  // WLS (weighted) model with genotypes
+  for(int i=0;i<p->nInd;i++){
+    if(keepList[i]){
+      yNull[count]=yOrg[i];
+      yfit[count]=0;
+      post[count*3+0]=postOrg[i*3+0];
+      post[count*3+1]=postOrg[i*3+1];
+      post[count*3+2]=postOrg[i*3+2];
+
+      covMatrixNull[count] = 1;
+      
+      designNull->matrix[count][0] = 1;
+      for(int c=0;c<covmat.y;c++){
+	designNull->matrix[count][c+1] = covmat.matrix[i][c];
+	covMatrixNull[(c+1)*keepInd+count] = covmat.matrix[i][c];
+      }
+      count++;    
+    }
+  }
+
+  // need intercept 
+  double startNull[covmat.y+2];
+
+  for(int i=0;i<(covmat.y+2);i++){
+    startNull[i] = drand48()*2-1;
+  }
+
+  if(count!=keepInd){
+    fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
+    fflush(stderr);
+    exit(0);
+  }
+  
+  if(isBinary){
+    getFitBin(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
+  } else if(isCount){
+    getFitPois(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
+  } else{      
+    getFit(yfit,yNull,covMatrixNull,keepInd,designNull->y,startNull);
+  }
+
+  double llhNull = logLike(startNull,yNull,designNull,post,isBinary,isCount,0);
+    
+  start[0] = drand48()*2-1;
    
   if(isBinary){
     getFitBin(yfit,y,covMatrix,keepInd,design->y,start);
@@ -1710,7 +1724,8 @@ double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::M
 	prob = exp(m)/(exp(m)+1.0);	
       }
       // now handling if p is 0 or 1 (makes it very small or large)
-      m = angsd::bernoulli(y[i],prob,1);            
+      m = angsd::bernoulli(y[i],prob,1);
+
    } else if(isCount){
       double lambda;
       if(iter==0 and not doPriming){
@@ -1732,6 +1747,7 @@ double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::M
     
     double tmp = m + log(post[i]);
     postAll->matrix[(size_t)floor(i/3)][i % 3] = tmp;
+
   }
   
   // x is number of indis, y is 3
@@ -1765,31 +1781,32 @@ double abcAsso::logupdateEM(double* start,angsd::Matrix<double> *design,angsd::M
   
   //need to flatten the weights, which is p(s|y,G,phi,Q,f)
   // so first four values is for first indi, and so on...
-  double weigths[postAll->x*postAll->y];
+  double* weigths = new double[postAll->x*postAll->y];
   int a = 0;
   for(int i=0;i<postAll->x;i++)
     for(int j=0;j<postAll->y;j++){
       weigths[a++] = exp(postAll->matrix[i][j]);
-      //check if issue with weights
+      //check if issue with weights      
       if(exp(postAll->matrix[i][j])!=exp(postAll->matrix[i][j]) or std::isinf(exp(postAll->matrix[i][j]))){
-	  fprintf(stderr,"Issue with weights being nan or inf\n");
-	  return(-9);
+        fprintf(stderr,"Issue with weights being nan or inf\n");	
+	delete [] weigths;
+	return(-9);
       }
-    }   
+    }
   
   if(isBinary){    
     getFitWLSBin(start,y,design->matrix,weigths,keepInd*3,design->y,df);    
   } else if(isCount){
     getFitWLSPois(start,y,design->matrix,weigths,keepInd*3,design->y,df);
   } else{
-    //double resi[nInd];
     getFitWLS(start,y,design->matrix,weigths,keepInd*3,design->y,df);
   }
+
+  delete [] weigths;
      
   return logLike(start,y,design,post,isBinary,isCount,fullModel);
+  
 }
-
-
 
 
 double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,angsd::Matrix<double> *postAll,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel){
@@ -1805,118 +1822,18 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   int highHE=0;
   int highHO=0;
 
-  double yDose[keepInd];
-  double yNull[3*keepInd];
-  int count = 0;
-  double post[keepInd*3];
-
-  double covMatrixNull[(covmat.y+1)*3*keepInd];
-  double yfitDose[keepInd];
-  double yfitNull[3*keepInd];
+  double* post = new double[keepInd*3];    
+  double* y = new double[3*keepInd];
   
-  //for doing dosage regression to prime EM (give good starting coefs)
-  double covMatrixDose[(covmat.y+2)*keepInd];
-  
-  designNull->x=3*keepInd;
-  //covars + intercept
-  designNull->y=covmat.y+1;
-  
-  for(int i=0;i<p->nInd;i++){
-    if(keepList[i]){
-      
-      for(int j=0;j<3;j++){
-
-	yNull[count*3+j]=yOrg[i];
-      	post[count*3+j]=postOrg[i*3+j];
-	designNull->matrix[count*3+j][0] = 1;
-
-	covMatrixNull[count*3+j] = 1;
-	
-	for(int c=0;c<covmat.y;c++){
-	  // design matrix has 3 rows per indi - possible genotypes 
-	  designNull->matrix[count*3+j][1+c] = covmat.matrix[i][c];
-	  // because has each value 3 times - meaning first 3*keepInd values are column 1
-	  covMatrixNull[(c+1)*3*keepInd+count*3+j] = covmat.matrix[i][c];
-	}
-	
-      }
-
-      yDose[count]=yOrg[i];
-
-      if(model==3){
-	covMatrixDose[count] = postOrg[i*3+2];
-      } else if(model==2){
-	covMatrixDose[count] = postOrg[i*3+2] + postOrg[i*3+1];
-      } else{
-	// getting dosage of the minor allele or second allele of beagle file
-	covMatrixDose[count] = 2*postOrg[i*3+2] + postOrg[i*3+1];
-      }      
-      covMatrixDose[keepInd+count] = 1;
-            
-      for(int c=0;c<covmat.y;c++){
-
-	covMatrixDose[(c+2)*keepInd+count] = covmat.matrix[i][c];
-      }
-      count++;    
-    }
-  }
-
-  // both need intercept and sd(y)
-  double startNull[covmat.y+2];
-
-  for(int i=0;i<(covmat.y+1);i++){
-    startNull[i] = drand48()*2-1;
-  }
-
-  startNull[covmat.y+1]=angsd::sd(yNull,keepInd); 
-  
-  if(count!=keepInd){
-    fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
-    fflush(stderr);
-    exit(0);
-  }
-
-  if(isBinary){
-    getFitBin(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
-  } else if(isCount){
-    getFitPois(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
-  } else{      
-    getFit(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
-  }
-  
-  // has to calculate likelihood under null model like under alternative model
-  // (meaning like for alternative in EM approach not like in dosage approach)
-  double llhNull = logLike(startNull,yNull,designNull,post,isBinary,isCount,1);
-
-  if(doPriming){
-    
-    int dimDose=designNull->y+1;    
-    //do dosage regression first to prime EM
-    if(isBinary){
-      getFitBin(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
-    } else if(isCount){
-      getFitPois(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
-    } else{      
-      getFit(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
-    }
-    
-  } else{
-    //first element of start is coef of genotype    
-    start[0] = drand48()*2-1;
-    
-    for(int i=0;i<(covmat.y+2);i++){
-      start[i+1] = startNull[i];      
-    }
-  }
-
-  double y[3*keepInd];
-  count=0;
+  int count=0;
   
   design->x=3*keepInd;
   design->y=covmat.y+2;
   
   postAll->x=3*keepInd;
   postAll->y=3;
+
+  ////////////////// check if site can be run first - checking data for full model - therefore reading in data from full model
   
   // WLS (weighted) model with genotypes
   for(int i=0;i<p->nInd;i++){
@@ -1925,7 +1842,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       for(int j=0;j<3;j++){
 	y[count*3+j]=yOrg[i];	
 	post[count*3+j]=postOrg[i*3+j];
-		
+	
 	// minus 1 (0-indexed), model parameter is 1: add, 2: dom, 3: rec
 	design->matrix[count*3+j][0] = pat[model-1][j];
 	design->matrix[count*3+j][1] = 1;
@@ -1973,6 +1890,10 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
     nGeno++;
 
   if(nGeno<2){
+    //set the number of EM iterations to 0
+    assoc->emIter[s] = 0;
+    delete [] y;
+    delete [] post;
     return(-999);//set_snan(lrt);
   }
 
@@ -1980,6 +1901,10 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   int numInds = keepInd;
   //freq*numInds*2 is the expected number of minor alleles
   if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount){
+    //set the number of EM iterations to 0
+    assoc->emIter[s] = 0;
+    delete [] y;
+    delete [] post;
     return(-999);//set_snan(lrt);      set_snan(lrt);
   }
   
@@ -1988,6 +1913,113 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
     fflush(stderr);
     exit(0);
   }  
+    
+  //////////////////////////////////////////////////////////////////////////////////////
+  
+  double* yDose = new double[keepInd];
+  double* yNull = new double[3*keepInd];
+  count = 0;
+
+  double* covMatrixNull = new double[(covmat.y+1)*3*keepInd];
+  double* yfitDose = new double[keepInd];
+  double* yfitNull = new double[3*keepInd];
+  
+  //for doing dosage regression to prime EM (give good starting coefs)
+  double* covMatrixDose = new double[(covmat.y+2)*keepInd];
+  
+  designNull->x=3*keepInd;
+  //covars + intercept
+  designNull->y=covmat.y+1;
+  
+  for(int i=0;i<p->nInd;i++){
+    if(keepList[i]){
+      
+      for(int j=0;j<3;j++){
+
+	yfitNull[count*3+j]=0;
+	yNull[count*3+j]=yOrg[i];
+
+	designNull->matrix[count*3+j][0] = 1;
+	covMatrixNull[count*3+j] = 1;
+	
+	for(int c=0;c<covmat.y;c++){
+	  // design matrix has 3 rows per indi - possible genotypes 
+	  designNull->matrix[count*3+j][1+c] = covmat.matrix[i][c];
+	  // because has each value 3 times - meaning first 3*keepInd values are column 1
+	  covMatrixNull[(c+1)*3*keepInd+count*3+j] = covmat.matrix[i][c];
+	}
+	
+      }
+      
+      yDose[count]=yOrg[i];
+      yfitDose[count]=0;
+
+      if(model==3){
+	covMatrixDose[count] = postOrg[i*3+2];
+      } else if(model==2){
+	covMatrixDose[count] = postOrg[i*3+2] + postOrg[i*3+1];
+      } else{
+	// getting dosage of the minor allele or second allele of beagle file
+	covMatrixDose[count] = 2*postOrg[i*3+2] + postOrg[i*3+1];
+      }      
+      covMatrixDose[keepInd+count] = 1;
+            
+      for(int c=0;c<covmat.y;c++){
+
+	covMatrixDose[(c+2)*keepInd+count] = covmat.matrix[i][c];
+      }
+      count++;    
+    }
+  }
+
+  // both need intercept and sd(y)
+  double startNull[covmat.y+2];
+ 
+  for(int i=0;i<(covmat.y+1);i++){
+    startNull[i] = drand48()*2-1;
+  }
+
+  // using yDose - as this has length of number of indis - yNull has 3 times indis length
+  startNull[covmat.y+1]=angsd::sd(yDose,keepInd);
+  
+  if(count!=keepInd){
+    fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
+    fflush(stderr);
+    exit(0);
+  }
+  
+  if(isBinary){
+    getFitBin(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
+  } else if(isCount){
+    getFitPois(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
+  } else{      
+    getFit(yfitNull,yNull,covMatrixNull,3*keepInd,designNull->y,startNull);
+  }
+  
+  // has to calculate likelihood under null model like under alternative model
+  // (meaning like for alternative in EM approach not like in dosage approach)
+  double llhNull = logLike(startNull,yNull,designNull,post,isBinary,isCount,1);
+
+  if(doPriming){
+    //has one more column in design matrix, as genotype is also included here
+    int dimDose=designNull->y+1;    
+    //do dosage regression first to prime EM
+    if(isBinary){
+      getFitBin(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
+    } else if(isCount){
+      getFitPois(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
+    } else{      
+      getFit(yfitDose,yDose,covMatrixDose,keepInd,dimDose,start);
+    }
+    
+  } else{
+    //first element of start is coef of genotype    
+    start[0] = drand48()*2-1;
+    
+    for(int i=0;i<(covmat.y+2);i++){
+      start[i+1] = startNull[i];      
+    }
+  }
   
   double pars0[design->y+1]; 
   memcpy(pars0,start,sizeof(double)*(design->y+1));
@@ -2008,7 +2040,8 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
     } else if(llh0<llh1 & (not doPriming | not (i==0))){
       // Fit caused increase in likelihood, will roll back to previous step
       memcpy(start,pars0,sizeof(double)*(design->y+1));
-      assoc->emIter[s] = nIter;                  
+      assoc->emIter[s] = nIter;
+      
       break;
       // if we problems with the weights then break
     } else if(llh1<-4){
@@ -2017,20 +2050,37 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       }
       llh0=NAN;
       llhNull=NAN;
-      assoc->emIter[s] = nIter;    
+      assoc->emIter[s] = nIter;
+      
       break;
     }
+
+    // problem that emIter did not get set sometimes
+    assoc->emIter[s] = nIter;
     
     llh0=llh1;
     memcpy(pars0,start,sizeof(double)*(design->y+1));
         
   }
 
-  llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,999);
-  
+  //emil - can remove this as this is similar to running the EM algo after converged...
+  //this is the reason why this versiona and version 0.931 (21st Oct commit) of ANGSD's -doAsso4 gives other result
+  //llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,999);
+
+  delete [] yDose;    
+  delete [] yNull;
+  delete [] covMatrixNull;
+  delete [] yfitDose;
+  delete [] yfitNull;
+  delete [] covMatrixDose;
+
+  delete [] y;
+  delete [] post;
+    
   // likelihood ratio - chi square distributed according to Wilk's theorem
   double LRT = -2*(llh1-llhNull);
-  return(LRT);  
+  return(LRT);
+  
 }
 
 void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
@@ -2678,13 +2728,16 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
   double invXtX_Xt_y[nEnv];
   double XtX[nEnv*nEnv];
 
-  for(int x=0;x<nEnv;x++)//col X
+  //emil - coefs have to start at 0, not start otherwise we get problem with infinite weights
+  for(int x=0;x<nEnv;x++){//col X
     coef[x]=0;
+  }
 
   //emil - tested that tolerance makes logistic regression run much faster
   //for(int iter=0;iter<100;iter++){
+  
   for(int iter=0;iter<assoIter;iter++){
-
+    
     //set to zero
     for(int x=0;x<nEnv;x++){
       Xt_y[x]=0;
@@ -2692,6 +2745,7 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
       for(int y=0;y<nEnv;y++)
 	XtX[x*nEnv + y]=0;
     }
+    
     for(int i=0;i<nInd;i++){
       eta[i]=0;
     }
@@ -2702,11 +2756,12 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
       	eta[i]+=coef[x]*covMatrix[x*nInd+i];
       eta[i] = 1.0/(1+exp(-eta[i])); 
     }
-     
+
     //get t(X) %*% ( y - eta )
     for(int x=0;x<nEnv;x++)//col X
       for(int i=0;i<nInd;i++)
 	Xt_y[x]+=covMatrix[x*nInd+i]*(Y[i]-eta[i]);
+
 
     //get solve(t(X*eta*(1-eta)) %*% X )
     for(int x=0;x<nEnv;x++)//col X
@@ -2714,6 +2769,7 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
 	for(int i=0;i<nInd;i++)
 	  XtX[x*nEnv+y]+=covMatrix[y*nInd+i] * eta[i] * covMatrix[x*nInd+i];
 
+    
     // double workspace[2*nEnv];
     //angsd::matinv(XtX, nEnv, nEnv, workspace);
     int singular=angsd::svd_inverse(XtX,nEnv,nEnv);
@@ -2737,11 +2793,6 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
        break;
   }
   
-  //yTilde <- X%in%coef
-  for(int j=0;j<nInd;j++){//row Xt
-    res[j]=0;   
-  }
-
   for(int x=0;x<nEnv;x++){//row Xt
     start[x]=coef[x];
   }
@@ -2749,13 +2800,10 @@ int abcAsso::getFitBin(double *res,double *Y,double *covMatrix,int nInd,int nEnv
   for(int j=0;j<nInd;j++)//row Xt
     for(int x=0;x<nEnv;x++)
       res[j]+=covMatrix[x*nInd+j]*coef[x];
+  
   for(int j=0;j<nInd;j++)
     res[j]= angsd::sigm(res[j]);
-
-  //   for(int x=0;x<nEnv;x++)
-  //   fprintf(stdout,"%f\t",coef[x]);
-  //fprintf(stdout,"\n");
-
+  
   return 0;
 }
 
@@ -2859,26 +2907,20 @@ int abcAsso::getFitPois(double *res,double *Y,double *covMatrix,int nInd,int nEn
        break;
   }
   
-  //yTilde <- X%in%coef
-  for(int j=0;j<nInd;j++){//row Xt
-    res[j]=0;   
-  }
-
   for(int x=0;x<nEnv;x++){//row Xt
     start[x]=coef[x];
   }
 
+  //yTilde <- X%in%coef
   for(int j=0;j<nInd;j++)//row Xt
     for(int x=0;x<nEnv;x++)
       res[j]+=covMatrix[x*nInd+j]*coef[x];
+  
   for(int j=0;j<nInd;j++)
     res[j]=exp(res[j]);
-
-  //   for(int x=0;x<nEnv;x++)
-  //   fprintf(stdout,"%f\t",coef[x]);
-  //fprintf(stdout,"\n");
-
+  
   return 0;
+  
 }
 
 
@@ -2976,6 +3018,9 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
       yfit[i]=mean;
   }
   else{
+    //intialise these values as not being done in getFit function
+    for(int i=0;i<keepInd;i++)
+       yfit[i]=0;
     if(isBinary){
       if(getFitBin(yfit,y,covMatrix,keepInd,nEnv,start))
 	return -999;
@@ -3144,6 +3189,8 @@ double abcAsso::normScoreEnv(double *post,int numInds, double *y, double *ytilde
   */
 
   if((0||lrt>1000||I<-0.01||lrt<0)&&lrt!=-999&&lrt!=-99){//!std::isnan(lrt)){
+    /* this is really annoying and genereates a lot of unwanted ouput - Emil has therefore commented it 15th Jan 2020
+    
     for(int i=0 ; i<numInds ;i++) {
       fprintf(stderr,"y: %f\t  yfit: %f \t post %f %f %f\tEx %f %f\tU %f cov: ",y[i],ytilde[i],post[i*3+0],post[i*3+1],post[i*3+2],Ex[i],Ex2[i],U);
       for(int j=0;j<nEnv;j++)
@@ -3161,12 +3208,14 @@ double abcAsso::normScoreEnv(double *post,int numInds, double *y, double *ytilde
       fprintf(stderr,"Vab: %f\t",Vab[j]);
     fprintf(stderr,"\n");
 
+
     fflush(stderr);
     fflush(stdout);
+    
+    */
+
     fprintf(stderr,"The test is unreliable. You should increase -minHigh\n");
 
-
-      //    exit(0);
   }
   
   delete []  Ex;
@@ -3271,13 +3320,15 @@ double abcAsso::binomScoreEnv(double *post,int numInds, double *y, double *ytild
     //dispersion matrix has zero corners
 
     if((lrt>1000||I<-0.01||lrt<0)&&lrt!=-999&&lrt!=-99){//!std::isnan(lrt)){
+      /* this is really annoying and genereates a lot of unwanted ouput - Emil has therefore commented it 15th Jan 2020
       for(int i=0 ; i<numInds ;i++) {
 	fprintf(stderr,"y: %f\t  post %f %f %f\tEx %f %f\tU %f\n",y[i],post[i*3+0],post[i*3+1],post[i*3+2],Ex[i],Ex2[i],U);
       }
-      //      exit(0);
+
+      */
+      
       fprintf(stderr,"The test is unreliable. You should increase -minHigh\n");
-      
-      
+            
     }
 
     delete []  Ex;
@@ -3389,13 +3440,15 @@ double abcAsso::poisScoreEnv(double *post,int numInds, double *y, double *ytilde
   //dispersion matrix has zero corners
   
   if((lrt>1000||I<-0.01||lrt<0)&&lrt!=-999&&lrt!=-99){//!std::isnan(lrt)){
+    /* this is really annoying and genereates a lot of unwanted ouput - Emil has therefore commented it 15th Jan 2020
     for(int i=0 ; i<numInds ;i++) {
       fprintf(stderr,"y: %f\t  post %f %f %f\tEx %f %f\tU %f\n",y[i],post[i*3+0],post[i*3+1],post[i*3+2],Ex[i],Ex2[i],U);
     }
-    //      exit(0);
+
+    */
+
     fprintf(stderr,"The test is unreliable. You should increase -minHigh\n");
-    
-    
+        
   }
   
   delete []  Ex;
@@ -3421,7 +3474,7 @@ void abcAsso::printDoAsso(funkyPars *pars){
  
       if(doAsso==5){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%f\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s],assoc->SEs[s],assoc->emIter[s]);
-      } else if(doAsso==4 or doAsso==7){
+      } else if(doAsso==4 or doAsso==7){	
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);	 
        } else if(doAsso==6){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
@@ -3429,7 +3482,6 @@ void abcAsso::printDoAsso(funkyPars *pars){
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
       } else{
 	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s]);
-
       }
     }
     aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);bufstr.l=0;
