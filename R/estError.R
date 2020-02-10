@@ -152,30 +152,31 @@ logLike<-function(x,Xch,Pch){
 res<-NULL
 for(j in 1:nInd){
   m<-getMat(r[j,])
-
+  print(m)
 
   ##remove if missing
   m<-m[-5,-5,-5]
-
+  
   Pch<-matrix(0,4,4)
   for(i in 1:4)
     Pch<-Pch+m[,,i]
-
+  print(Pch)
   Pch<-Pch/rowSums(Pch)
-  #Pch<-Pch/sum(Pch)
-
+  cat("Matrix of allele change probabilities.\nA diagonal close to 1 denotes a low probability of errors.\n\n")
+  print(Pch)
   
   Xch<-matrix(0,4,4)
   for(i in 1:4)
-    Xch<-Xch+m[,i,]
-
+      Xch<-Xch+m[,i,]
+  cat("\n\nObserved allele changes:\n\n")
+  print(Xch)
   maxErr=0.02;
 
   conv<-list(par=1,objective=Inf)
       
   for(i in 1:nIter){
       Tempconv <- nlminb(runif(12)/100,logLike,upper=rep(maxErr,12),lower=rep(1e-10,12),Xch=Xch,Pch=Pch)
-      if( Tempconv$par > maxErr*0.99 )
+      if( any(Tempconv$par > maxErr*0.99) )
           maxErr<-min(1,maxErr*10);
       if(Tempconv$objective<conv$objective){
           conv<-Tempconv
@@ -297,3 +298,5 @@ if(file.info(chrFile)$size!=0 & !is.na(file.info(chrFile)$size)){
     dev.off()
     write.table(res,file=paste(out,"OverChr.txt",sep=""),qu=F,row=T,col=T)
 }
+
+#warnings()
