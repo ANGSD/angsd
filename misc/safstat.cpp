@@ -286,6 +286,8 @@ int fst_stat2(int argc,char **argv){
       fprintf(stdout,"\n");
 #endif
       for(int i=0;i<choose((int)pf->names.size(),2);i++){
+	if(std::isnan(ares[i][s])||std::isnan(ares[i][s]))
+	  continue;
 	unweight[i] += ares[i][s]/bres[i][s];
 	wa[i] += ares[i][s];
 	wb[i] += bres[i][s];
@@ -403,6 +405,9 @@ int fst_stat(int argc,char **argv){
       fprintf(stdout,"\n");
 #endif
       for(int i=0;i<choose((int)pf->names.size(),2);i++){
+	if(std::isnan(ares[i][s])||std::isnan(ares[i][s]))
+	  continue;
+	
 	if(bres[i][s]!=0){
 	  unweight[i] += ares[i][s]/bres[i][s];
 	  nObs[i]++;

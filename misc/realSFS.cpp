@@ -117,14 +117,14 @@ int *makefoldadjust(int *ary,int len){
       exit(0);
     }
   }
-  for(int i=0;1&&i<len;i++)
+  for(int i=0;0&&i<len;i++)
     fprintf(stderr,"%d %d\n",i, ret[i]);
   return ret;
 }
 
 
 int *makefoldremapper(args *arg,int pop1,int pop2){
-  fprintf(stderr,"\t-> generating offset remapper lookup for flux cascade curves\n");
+  fprintf(stderr,"\t-> generating offset remapper lookup\n");
   int *mapper=NULL;
   if(pop1==pop2 &&arg->saf.size()==1){
     int ndim = arg->saf[pop1]->nChr+1;
@@ -373,7 +373,8 @@ void print(int argc,char **argv){
 
 int fst_index(int argc,char **argv){
   if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx [chrname, write more info]\n");
+    fprintf(stderr,"Must supply afile.saf.idx [chrname, write more info]\nExample:\n");
+    fprintf(stderr,"\t./realSFS pop1.saf.idx pop2.saf.idx -sfs pop1.pop2.sfs -outname fst.pop1.pop1\n");
     return 0; 
   }
   args *arg = getArgs(argc,argv);
@@ -550,7 +551,7 @@ int fst_index(int argc,char **argv){
   }
   delGloc(saf,nSites);
   destroy(gls,nSites);
-  destroy_args(arg);
+
   for(int i=0;i<sfs.size();i++)
     delete [] sfs[i];
 #if 0
@@ -561,12 +562,16 @@ int fst_index(int argc,char **argv){
   bgzf_close(fstbg);
   fclose(fstfp);
   fprintf(stderr,"\t-> fst index finished with no errors!\n");
+  fprintf(stderr,"\t\t Example runs:\n");
+  fprintf(stderr,"\t realSFS fst stats  %s.fst.idx \n",arg->outname);
+  fprintf(stderr,"\t realSFS fst stats2 %s.fst.idx \n",arg->outname);
+  destroy_args(arg);
   return 0;
 }
 
 int fst(int argc,char**argv){
   if(argc==0){
-    fprintf(stderr,"\t-> Possible options: index print\n");
+    fprintf(stderr,"\t-> Possible options: index print stats stats2\n");
     return 0;
   }
   if(!strcasecmp(*argv,"index"))  
