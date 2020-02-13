@@ -213,13 +213,25 @@ perChr getPerChr(BGZF *fp){
   
   //make thetas into normal space
   for(size_t i=0;i<ret.nSites;i++){
+    if(1){
+      if(std::isnan(ret.tW[i]))
+	ret.tW[i] = log(0);
+      if(std::isnan(ret.tP[i]))
+	ret.tP[i] = log(0);
+      if(std::isnan(ret.tF[i]))
+	ret.tF[i] = log(0);
+      if(std::isnan(ret.tH[i]))
+	ret.tH[i] = log(0);
+      if(std::isnan(ret.tL[i]))
+	ret.tL[i] = log(0);
+    }
     ret.tW[i] = exp(ret.tW[i]);
     ret.tP[i] = exp(ret.tP[i]);
     ret.tF[i] = exp(ret.tF[i]);
     ret.tH[i] = exp(ret.tH[i]);
     ret.tL[i] = exp(ret.tL[i]);
   }
-
+  
 
   return ret;
 }
