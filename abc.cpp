@@ -27,6 +27,7 @@
 #include "abcWritePlink.h" //<- dump plink files.
 #include "abcSmartCounts.h"
 #include "abcTemplate.h"
+#include "abcRAD.h"
 #include "abcAncestry.h"
 #include "abcIBS.h"
 #include "abcWriteVcf.h" //<- dump plink files.
@@ -34,7 +35,7 @@
 #include "abcScounts.h"
 #include "abcWriteBcf.h"
 //below we set some variables that are shared between all the analysis classes
-#define MAX_CLASS 30
+#define MAX_CLASS 35
 
 int abc::tot_index =0;
 const bam_hdr_t *abc::header = NULL;
@@ -78,7 +79,7 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcPSMC(outfiles,arguments,inputtype); //
   tskStuff[nit++] = new abcScounts(outfiles,arguments,inputtype); //
   tskStuff[nit++] = new abcWriteBcf(outfiles,arguments,inputtype); // 29
-
+  tskStuff[nit++] = new abcRAD(outfiles,arguments,inputtype); // 30
 
   nItem = nit;
   return tskStuff;
