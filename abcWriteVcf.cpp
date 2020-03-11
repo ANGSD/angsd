@@ -19,6 +19,11 @@ void abcWriteVcf::printArg(FILE *argFile){
 }
 
 void abcWriteVcf::run(funkyPars *pars){
+  if(doVcf>0){
+    fprintf(stderr,"\t-doVcf is deprecated. Please use -doBcf 1\n");
+    fprintf(stderr,"\tExample: \"./angsd -b file.list -dobcf 1 -doMajorMinor 1 -doPost 1 -gl 1 -domaf 1 -docounts 1 -dogeno 1\"\n");
+    exit(0);
+  }
   if(doVcf==0)
     return ;
    
