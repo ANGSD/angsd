@@ -57,7 +57,7 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   doHWE = 0;
   maxHWEpval = -1;
   minHWEpval = -1;
-  minHetFreq = -1;//nspope;hetFilter
+  maxHetFreq = -1;//nspope;hetFilter
   testMe=0;
   tolStop = 0.00001;
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
@@ -206,7 +206,7 @@ void abcHWE::run(funkyPars *pars){
 
     //nspope;hetFilter 
     //filter by maximum heterozygote frequency
-    hetfreq[s] = -2.*(1.-x[1])*x[0]*(1.-x[0]);
+    hetfreq[s] = 2.*(1.-x[1])*x[0]*(1.-x[0]);
     if(maxHetFreq!=-1 && hetfreq[s] > maxHetFreq)
       pars->keepSites[s] = 0;
     
