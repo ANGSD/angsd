@@ -10,6 +10,8 @@ typedef struct {
   double *pval;
   
   double *F;
+
+  double *hetfreq;//nspope;hetFilter
 }funkyHWE;
 
 
@@ -26,6 +28,7 @@ private:
   int doHWE;
   double minHWEpval;
   double maxHWEpval;
+  double maxHetFreq;//nspope;hetFilter
   int testMe;
   double tolStop;
   double differ(double *x,double *y);
