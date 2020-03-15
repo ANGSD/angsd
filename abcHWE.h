@@ -29,6 +29,7 @@ private:
   double minHWEpval;
   double maxHWEpval;
   double maxHetFreq;//nspope;hetFilter
+  double minHetFreq;//nspope;hetFilter
   int testMe;
   double tolStop;
   double differ(double *x,double *y);
