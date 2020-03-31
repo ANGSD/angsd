@@ -331,8 +331,10 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
       kputs("pu-EM\t",&bufstr);
   }
   kputs("nInd\n",&bufstr);
-  aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
-  bufstr.l=0;
+  if(outfileZ!=NULL){
+    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
+    bufstr.l=0;
+  }
   if(beagleProb){
     kputs("marker\tallele1\tallele2",&bufstr);
     for(int i=0;i<arguments->nInd;i++){
@@ -410,10 +412,10 @@ void abcFreq::print(funkyPars *pars) {
 
     kputw(pars->keepSites[s],&bufstr);kputc('\n',&bufstr);
   }
-
-  aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);  
-  bufstr.l=0;
-
+  if(outfileZ!=NULL){
+    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);  
+    bufstr.l=0;
+  }
   if(beagleProb){
     //beagle format
     for(int s=0;s<pars->numSites;s++) {
