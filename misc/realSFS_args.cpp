@@ -78,7 +78,7 @@ args * getArgs(int argc,char **argv){
       p->fl = filt_read(*(++argv));
     }
     else{
-      p->saf.push_back(persaf_init<float>(*argv));
+      p->saf.push_back(persaf_init<float>(*argv,1));
       //   fprintf(stderr,"toKeep:%p\n",p->saf[p->saf.size()-1]->toKeep);
     }
     argv++;
