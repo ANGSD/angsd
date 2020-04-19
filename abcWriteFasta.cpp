@@ -66,10 +66,10 @@ void writeChr(kstring_t *bufstr,size_t len,char *nam,char*d,int nbpl){
   ksprintf(bufstr,">%s",nam);
   for(size_t i=0;i<len;i++){
     if(i % nbpl == 0)
-      kputc('\n',bufstr);
-    kputc(d!=NULL?d[i]:'N',bufstr);
+      aio::kputc('\n',bufstr);
+    aio::kputc(d!=NULL?d[i]:'N',bufstr);
   }
-  kputc('\n',bufstr);
+  aio::kputc('\n',bufstr);
 
 }
 

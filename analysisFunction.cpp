@@ -1501,4 +1501,13 @@ double phi(double x){
     return 0.5*(1.0 + sign*y);
 }
 
-
+//kputw-kputc-kputs breaks in newer versions of htslib
+int aio::kputw(int c,kstring_t *s){
+  return ksprintf(s,"%d",c);
+}
+int aio::kputc(char c,kstring_t *s){
+  return ksprintf(s,"%c",c);
+}
+int aio::kputs(char *c,kstring_t *s){
+  return ksprintf(s,"%s",c);
+}

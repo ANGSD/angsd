@@ -309,41 +309,41 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
     doMaf=abs(doMaf);
   //print header
   
-  kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
+  aio::kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
   if(refName!=NULL||arguments->inputtype==INPUT_PILEUP)
-    kputs("ref\t",&bufstr);
+    aio::kputs("ref\t",&bufstr);
   if(ancName)
-    kputs("anc\t",&bufstr);
+    aio::kputs("anc\t",&bufstr);
   
   if(doMaf &1)
-    kputs("knownEM\t",&bufstr);
+    aio::kputs("knownEM\t",&bufstr);
   if(doMaf &2)
-    kputs("unknownEM\t",&bufstr);    
+    aio::kputs("unknownEM\t",&bufstr);    
   if(doMaf &4)
-    kputs("PPmaf\t",&bufstr);
+    aio::kputs("PPmaf\t",&bufstr);
   if(doMaf &8)
-    kputs("phat\t",&bufstr);
+    aio::kputs("phat\t",&bufstr);
   
   if(doSNP){
     if(doMaf &1)
-      kputs("pK-EM\t",&bufstr);
+      aio::kputs("pK-EM\t",&bufstr);
     if(doMaf &2)
-      kputs("pu-EM\t",&bufstr);
+      aio::kputs("pu-EM\t",&bufstr);
   }
-  kputs("nInd\n",&bufstr);
+  aio::kputs("nInd\n",&bufstr);
   aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
   bufstr.l=0;
   if(beagleProb){
-    kputs("marker\tallele1\tallele2",&bufstr);
+    aio::kputs("marker\tallele1\tallele2",&bufstr);
     for(int i=0;i<arguments->nInd;i++){
-      kputs("\tInd",&bufstr);
-      kputw(i,&bufstr);
-      kputs("\tInd",&bufstr);
-      kputw(i,&bufstr);
-      kputs("\tInd",&bufstr);
-      kputw(i,&bufstr);
+      aio::kputs("\tInd",&bufstr);
+      aio::kputw(i,&bufstr);
+      aio::kputs("\tInd",&bufstr);
+      aio::kputw(i,&bufstr);
+      aio::kputs("\tInd",&bufstr);
+      aio::kputw(i,&bufstr);
     }
-    kputc('\n',&bufstr);
+    aio::kputc('\n',&bufstr);
     aio::bgzf_write(outfileZ2,bufstr.s,bufstr.l);
     bufstr.l=0;
   }
@@ -379,17 +379,17 @@ void abcFreq::print(funkyPars *pars) {
     if(pars->keepSites[s]==0)
       continue;
     //plugin chr,pos,major,minor
-    kputs(header->target_name[pars->refId],&bufstr);kputc('\t',&bufstr);
-    kputw(pars->posi[s]+1,&bufstr);kputc('\t',&bufstr);
-    kputc(intToRef[pars->major[s]],&bufstr);kputc('\t',&bufstr);
-    kputc(intToRef[pars->minor[s]],&bufstr);kputc('\t',&bufstr);
+    aio::kputs(header->target_name[pars->refId],&bufstr);aio::kputc('\t',&bufstr);
+    aio::kputw(pars->posi[s]+1,&bufstr);aio::kputc('\t',&bufstr);
+    aio::kputc(intToRef[pars->major[s]],&bufstr);aio::kputc('\t',&bufstr);
+    aio::kputc(intToRef[pars->minor[s]],&bufstr);aio::kputc('\t',&bufstr);
 
 
     //plugin ref, anc if exists
     if(pars->ref!=NULL)
-      {kputc(intToRef[pars->ref[s]],&bufstr);kputc('\t',&bufstr);}
+      {aio::kputc(intToRef[pars->ref[s]],&bufstr);aio::kputc('\t',&bufstr);}
     if(pars->anc!=NULL)
-      {kputc(intToRef[pars->anc[s]],&bufstr);kputc('\t',&bufstr);}
+      {aio::kputc(intToRef[pars->anc[s]],&bufstr);aio::kputc('\t',&bufstr);}
 
     
     
@@ -408,7 +408,7 @@ void abcFreq::print(funkyPars *pars) {
 	ksprintf(&bufstr,"%e\t",angsd::to_pval(chisq1,freq->lrt_EM_unknown[s]));
     }
 
-    kputw(pars->keepSites[s],&bufstr);kputc('\n',&bufstr);
+    aio::kputw(pars->keepSites[s],&bufstr);aio::kputc('\n',&bufstr);
   }
 
   aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);  
@@ -421,13 +421,13 @@ void abcFreq::print(funkyPars *pars) {
       if(pars->keepSites[s]==0)
 	continue;
       // fprintf(stderr,"keepsites=%d\n",pars->keepSites[s]);
-      kputs(header->target_name[pars->refId],&bufstr);
-      kputc('_',&bufstr);
-      kputw(pars->posi[s]+1,&bufstr);
-      kputc('\t',&bufstr);
-      kputw(pars->major[s],&bufstr);
-      kputc('\t',&bufstr);
-      kputw(pars->minor[s],&bufstr);
+      aio::kputs(header->target_name[pars->refId],&bufstr);
+      aio::kputc('_',&bufstr);
+      aio::kputw(pars->posi[s]+1,&bufstr);
+      aio::kputc('\t',&bufstr);
+      aio::kputw(pars->major[s],&bufstr);
+      aio::kputc('\t',&bufstr);
+      aio::kputw(pars->minor[s],&bufstr);
 
       int major = pars->major[s];
       int minor = pars->minor[s];
@@ -437,7 +437,7 @@ void abcFreq::print(funkyPars *pars) {
 	ksprintf(&bufstr, "\t%f",pars->post[s][i]);
       }
       
-      kputc('\n',&bufstr);
+      aio::kputc('\n',&bufstr);
     
     }
     //valgrind on osx complains here check if prob on unix
