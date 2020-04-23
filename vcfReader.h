@@ -1,4 +1,7 @@
 #include <htslib/vcf.h>
+#include<cstdio>
+#include <cstring>
+
 #include "argStruct.h"
 #include "analysisFunction.h"
 
@@ -31,13 +34,28 @@ float pl2ln[PHREDMAX];
       return pl2ln[val];
     }
   }
-  int parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon);
-
+  //type=0 -> PL
+  //type=1 -> GL
+  int parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type);
+  int pl_or_gl;
+  int ln_gl_m;
+  float *ln_gl;
+  float *farr;
+  int32_t *iarr;
+  int mfarr;
+  int miarr;
 public:
   htsstuff *hs;
   funkyPars *fetch(int chunkSize);
   void seek(char *seek){htsstuff_seek(hs,seek);}
-  vcfReader(char *fname,char *seek){
+  vcfReader(char *fname,char *seek,int pl_or_gl_a){
+    farr=NULL;
+    iarr=NULL;
+    mfarr=0;
+    miarr=0;
+    ln_gl_m = 1024;
+    ln_gl =(float *) malloc(sizeof(float)*ln_gl_m);
+    pl_or_gl = pl_or_gl_a;
     hs=htsstuff_init(fname,seek);
     acpy=NULL;
     for(int i=0;i<PHREDMAX;i++)
@@ -45,5 +63,5 @@ public:
     curChr=-1;
     pl=NULL;
   }
-  ~vcfReader(){htsstuff_destroy(hs);free(pl);}
+  ~vcfReader(){htsstuff_destroy(hs);free(pl);free(ln_gl);free(iarr);free(farr);}
 };

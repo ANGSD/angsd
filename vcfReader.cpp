@@ -223,6 +223,8 @@ int whichisindel(const bcf_hdr_t *h){
     if(h->id[BCF_DT_ID][i].key&&strcmp(h->id[BCF_DT_ID][i].key,"INDEL")==0)
       return i;
   }
+  if(hit==-1)
+    fprintf(stderr,"\t-> No indel tag in vcf/bcf file, will therefore not be able to filter out indels\n");
   return hit;
 }
 
@@ -230,7 +232,9 @@ int whichisindel(const bcf_hdr_t *h){
 int isindel(const bcf_hdr_t *h, const bcf1_t *v){
   bcf_unpack((bcf1_t*)v, BCF_UN_ALL);
   static int hit = whichisindel(h);//only calculated once
-  assert(hit!=-1);//we assume INDEL exists in INFO field
+  //  assert(hit!=-1);//we assume INDEL exists in INFO field
+  if(hit==-1)
+    return 0;
   int returnvalue = 0;
   if (v->n_info) {//loop over all INFO fields
     for (int i = 0; i < v->n_info; ++i) {
@@ -250,70 +254,117 @@ int isindel(const bcf_hdr_t *h, const bcf1_t *v){
 }
 
 
-
-int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon){
+//type=0 -> PL
+//type=1 -> GL
+int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type){
+  int n;
   if(isindel(hs->hdr,rec)!=0)
     return 0;
 
   // pl data for each call
-  int npl_arr = 0;
-  int npl     = 0;
 
-  std::string vcf_format_field = "PL"; 
   int myreorder[10];
   //funky below took ridiculus long to make
   buildreorder(myreorder,rec->d.allele,rec->n_allele);
   
   
-  double *dupergl = new double[10*hs->nsamples]; 
+  double *dupergl = new double[10*hs->nsamples];
   for(int i=0;i<10*hs->nsamples;i++)
     dupergl[i] = log(0);
   //parse PL
-  if(vcf_format_field == "PL") {
-    npl = bcf_get_format_int32(hs->hdr, rec, "PL", &pl, &npl_arr);
-    float ln_gl[npl];
-    if(npl<0){
+  if(type==0) {
+    n = bcf_get_format_int32(hs->hdr, rec, "PL", &iarr, &miarr);
+    if(n>=ln_gl_m){
+      ln_gl_m *=2;
+      ln_gl = (float *) realloc(ln_gl,sizeof(float)*ln_gl_m);
+    }
+    if(n<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
-      fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, npl,rec->rid);
+      fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
       return 0;
-    }
-    // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
-    for (int i=0; i<npl; i++){
-      if ( pl[i]==bcf_int32_missing ){
-	bcf_float_set_missing(ln_gl[i]);
-      } else if ( pl[i]==bcf_int32_vector_end ){
-	bcf_float_set_vector_end(ln_gl[i]);
-      } else{
-	ln_gl[i] = pl2ln_f(pl[i]);
+    }else{
+      // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
+      for (int i=0; i<n; i++){
+	if ( iarr[i]==bcf_int32_missing ){
+	  bcf_float_set_missing(ln_gl[i]);
+	} else if ( iarr[i]==bcf_int32_vector_end ){
+	  bcf_float_set_vector_end(ln_gl[i]);
+	} else{
+	  ln_gl[i] = pl2ln_f(iarr[i]);
+	}
+	//         fprintf(stderr, "%d %f\n", pl[i], ln_gl[i]);
       }
-      //         fprintf(stderr, "%d %f\n", pl[i], ln_gl[i]);
     }
-    assert((npl % hs->nsamples)==0 );
-    int myofs=npl/hs->nsamples;
-    for(int ind=0;ind<hs->nsamples;ind++){
-      for(int o=0;o<10;o++)
-	if(myreorder[o]!=-1)
-	  dupergl[ind*10+o] = ln_gl[ind*myofs+myreorder[o]]; 
-    }
-    r->likes[balcon] = dupergl;
-  } else {
-    fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, GT or PL\n");
-    return 0;
    
+  }else if(type==1) {
+    n = bcf_get_format_float(hs->hdr, rec, "GL", &farr, &mfarr);
+    if(n>=ln_gl_m){
+      ln_gl_m *=2;
+      ln_gl = (float *) realloc(ln_gl,sizeof(float)*ln_gl_m);
+    }
+    
+    if(n<0){
+      // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
+      // no PL tag is available
+      fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching GL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
+      return 0;
+    }{
+      // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
+      for (int i=0; i<n; i++){
+	if (bcf_float_is_missing(farr[i]) ){
+	  bcf_float_set_missing(ln_gl[i]);
+	} else if ( farr[i]==bcf_float_vector_end ){
+	  bcf_float_set_vector_end(ln_gl[i]);
+	} else{
+	  ln_gl[i] = farr[i]/M_LOG10E;
+	  if(ln_gl[i]==0.0)
+	    ln_gl[i] = -0.0;
+	}
+	//	fprintf(stderr, "%f %f\n", farr[i], ln_gl[i]);
+      }
+    }
+  } else {
+    fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, PL or GL\n");
+    return 0;
+  }
+  
+  if(n>=0){
+    assert((n % hs->nsamples)==0 );
+    int myofs=n/hs->nsamples;
+    for(int ind=0;ind<hs->nsamples;ind++){
+      int rollback =0;
+      for(int o=0;o<10;o++){
+	if(myreorder[o]!=-1)
+	  dupergl[ind*10+o] = ln_gl[ind*myofs+myreorder[o]];
+	if(std::isnan(dupergl[ind*10+o])){
+	  rollback = 1;
+	  break;
+	}
+      }
+      for(int o=0;rollback&&o<10;o++)
+	if(myreorder[o]!=-1)
+	  dupergl[ind*10+o] = -0.0;
+      
+    }
+  }
+  r->likes[balcon] = dupergl;
+  for(int i=0;0&i<hs->nsamples;i++){
+    for(int j=0;j<10;j++)
+      fprintf(stderr,"%f\t",r->likes[balcon][i*10+j]);
+    fprintf(stderr,"\n");
   }
   r->refId=rec->rid;
   r->posi[balcon] = rec->pos;
   r->keepSites[balcon] = hs->nsamples;
-
   balcon++;
-  //naf = bcf_get_info_float(hdr, rec, vcf_allele_field.c_str(), &af, &naf_arr);//maybe include this<-
   return 1;//<- what should this function return?
 }
 
 
 
 funkyPars *vcfReader::fetch(int chunkSize){
+  //  fprintf(stderr,"pl_or_gl:%d\n",pl_or_gl);
   funkyPars *r = funkyPars_init();
   r->nInd = hs->nsamples;
   r->likes=new double*[chunkSize];
@@ -337,7 +388,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
   int balcon=0;
   
   if(acpy){
-    parseline(acpy,hs,r,balcon);
+    parseline(acpy,hs,r,balcon,pl_or_gl);
     bcf_destroy(acpy);
     acpy=NULL;
   }
@@ -381,7 +432,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
     }
 
     //regular case
-    parseline(rec,hs,r,balcon);
+    parseline(rec,hs,r,balcon,pl_or_gl);
   }
   //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
 

@@ -293,13 +293,13 @@ argStruct *setArgStruct(int argc,char **argv) {
   return arguments;
 }
 
-
 void multiReader::printArg(FILE *argFile,argStruct *args){
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
   fprintf(argFile,"\t-nLines\t%d\t(Number of lines to read)\n",nLines);
   fprintf(argFile,"\t-beagle\t%s\t(Beagle Filename (can be .gz))\n",fname);
-  fprintf(argFile,"\t-vcf-GL\t%s\t(vcf Filename (can be .gz))\n",fname);
-  fprintf(argFile,"\t-vcf-GP\t%s\t(vcf Filename (can be .gz))\n",fname);
+  fprintf(argFile,"\t-vcf-GL\t%s\t(vcf Filename (can be bcf compressed or uncompressed))\n",fname);
+  fprintf(argFile,"\t-vcf-PL\t%s\t(vcf Filename (can be bcf compressed or uncompressed))\n",fname);
+  fprintf(argFile,"\t-vcf-GP\t%s\t(vcf Filename (can be bcf compressed or uncompressed))(*not used)\n",fname);
   fprintf(argFile,"\t-glf\t%s\t(glf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-pileup\t%s\t(pileup Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-intName %d\t(Assume First column is chr_position)\n",intName);
@@ -449,11 +449,21 @@ multiReader::multiReader(int argc,char**argv){
     args->nInd = args->nams.size();
 
   if(args->inputtype==INPUT_VCF_GP||args->inputtype==INPUT_VCF_GL){
+    char *tmptmp=NULL;
+    tmptmp=angsd::getArg("-vcf-pl",tmptmp,args);
+    if(tmptmp!=NULL)
+      pl_or_gl =0;
+    free(tmptmp);tmptmp=NULL;
+    tmptmp=angsd::getArg("-vcf-gl",tmptmp,args);
+
+    if(tmptmp!=NULL)
+      pl_or_gl =1;
+    free(tmptmp);tmptmp=NULL;
     if(args->regions.size()>1){
       fprintf(stderr,"\t-> Only one region can be specified with using bcf (i doubt more is needed)  will exit\n");
       exit(0);
     }else if(args->regions.size()<=1){
-      myvcf = new vcfReader(args->infile,NULL);
+      myvcf = new vcfReader(args->infile,NULL,pl_or_gl);
       args->hd=bcf_hdr_2_bam_hdr_t2(myvcf->hs);
       args->nInd = myvcf->hs->nsamples;
     }
