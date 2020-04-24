@@ -158,10 +158,6 @@ void abcCovar::run(funkyPars *pars){
 	keepList[i*pars->nInd+s]=0;
       else if(norm<-20)
 	keepList[i*pars->nInd+s]=0;
-      else if(pars->counts[s][i]+pars->counts[s][i+1]+pars->counts[s][i+2]+pars->counts[s][i+3] >8)
-	keepList[i*pars->nInd+s]=0;
-      else if(pars->counts[s][i]+pars->counts[s][i+1]+pars->counts[s][i+2]+pars->counts[s][i+3]<4)
-	keepList[i*pars->nInd+s]=0;
       else if(pars->likes[s][i*10+angsd::majorminor[pars->major[s]][pars->major[s]]]+
 	 pars->likes[s][i*10+angsd::majorminor[pars->major[s]][pars->minor[s]]]+
 	 pars->likes[s][i*10+angsd::majorminor[pars->minor[s]][pars->minor[s]]]
