@@ -100,6 +100,16 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing haplocall"
+./testHaploCall.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with haplocall exit code: $?"
+    cat ./testHaploCall.sh.log
+    RVAL=1
+fi
+fi
+
 
 exit ${RVAL}
 

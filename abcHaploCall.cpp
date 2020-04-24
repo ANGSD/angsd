@@ -143,11 +143,10 @@ void abcHaploCall::printHaplo(funkyPars *pars){
 
     ksprintf(&bufstr,"%s\t%d\t%c\t",header->target_name[pars->refId],pars->posi[s]+1,intToRef[haplo->major[s]]);
  
-    for(int i=0;i<pars->nInd;i++){
+    for(int i=0;i<pars->nInd-1;i++){
       ksprintf(&bufstr,"%c\t",intToRef[haplo->dat[s][i]]);
     }
-
-    ksprintf(&bufstr,"\n");
+    ksprintf(&bufstr,"%c\n",intToRef[haplo->dat[s][pars->nInd-1]]);
   }
 
   if(bufstr.l>0)
