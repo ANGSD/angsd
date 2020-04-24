@@ -282,6 +282,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
       fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
+      delete [] dupergl;
       return 0;
     }else{
       // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
@@ -362,9 +363,8 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 }
 
 
-
+int fc=0;
 funkyPars *vcfReader::fetch(int chunkSize){
-  //  fprintf(stderr,"pl_or_gl:%d\n",pl_or_gl);
   funkyPars *r = funkyPars_init();
   r->nInd = hs->nsamples;
   r->likes=new double*[chunkSize];
@@ -380,62 +380,54 @@ funkyPars *vcfReader::fetch(int chunkSize){
   bcf1_t *rec = NULL;rec=bcf_init();assert(rec);
 
   //   http://wresch.github.io/2014/11/18/process-vcf-file-with-htslib.html
-  // counters
   int n    = 0;  // total number of records in file
   int nsnp = 0;  // number of SNP records in file
-  int nseq = 0;  // number of sequences
   
   int balcon=0;
-  
+  int bcf_retval =0;
+ never: //haha
+
   if(acpy){
+    curChr=acpy->rid;
     parseline(acpy,hs,r,balcon,pl_or_gl);
     bcf_destroy(acpy);
     acpy=NULL;
   }
-  
   while(balcon<chunkSize) {
     //either parse a read with region or nextread
     if(hs->iter==NULL){
-      if(bcf_read(hs->hts_file,hs->hdr,rec)!=0)	
+      if(((bcf_retval=bcf_read(hs->hts_file,hs->hdr,rec)))!=0)	
 	break;
     }else{
-      if(bcf_itr_next(hs->hts_file, hs->iter, rec)!=0)
+      if(((bcf_retval=bcf_itr_next(hs->hts_file, hs->iter, rec)))!=0)
 	break;
     }
-
     n++;
     //skip nonsnips
-
     if(isindel(hs->hdr,rec)){
-      //      fprintf(stderr,"skipping due to non snp\n");
+      fprintf(stderr,"skipping due to non snp\n");
       continue;
     }
 
     nsnp++;
 
     //initialize
-    if(curChr==-1){
+    if(curChr==-1)
       curChr=rec->rid;
-    }
 
     //if we are changing chromosomes
     if(rec->rid!=curChr){
-      //remove old
-      if(acpy){
-	bcf_destroy(acpy);
-	acpy=NULL;
-      }
-      //copy new
       acpy=bcf_dup(rec);
-      curChr=rec->rid;
       break;
     }
 
     //regular case
     parseline(rec,hs,r,balcon,pl_or_gl);
   }
-  //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
+  if(balcon==0&&bcf_retval==0)
+    goto never;
 
+  //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
   bcf_destroy(rec);
   r->numSites=balcon;
   if(r->numSites==0){
