@@ -44,11 +44,13 @@ float pl2ln[PHREDMAX];
   int32_t *iarr;
   int mfarr;
   int miarr;
+  std::vector<regs> *regions;//this is a pointer. I should really be more consistent, but i dont want to copy construct
 public:
   htsstuff *hs;
   funkyPars *fetch(int chunkSize);
   void seek(char *seek){htsstuff_seek(hs,seek);}
-  vcfReader(char *fname,char *seek,int pl_or_gl_a){
+  vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *regions_a){
+    regions = regions_a;
     farr=NULL;
     iarr=NULL;
     mfarr=0;

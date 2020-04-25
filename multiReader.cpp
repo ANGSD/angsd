@@ -463,7 +463,7 @@ multiReader::multiReader(int argc,char**argv){
       fprintf(stderr,"\t-> Only one region can be specified with using bcf (i doubt more is needed)  will exit\n");
       exit(0);
     }else if(args->regions.size()<=1){
-      myvcf = new vcfReader(args->infile,NULL,pl_or_gl);
+      myvcf = new vcfReader(args->infile,NULL,pl_or_gl,&args->regions);
       args->hd=bcf_hdr_2_bam_hdr_t2(myvcf->hs);
       args->nInd = myvcf->hs->nsamples;
     }
