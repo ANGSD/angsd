@@ -1,4 +1,6 @@
 #!/bin/bash
+#run locally like
+#make test BAMDIR=smallBam/
 
 PRG=""
 BAMDIR=""

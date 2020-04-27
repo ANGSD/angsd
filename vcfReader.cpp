@@ -7,11 +7,53 @@
 #include "vcfReader.h"
 
 
+bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
+  bam_hdr_t *ret = bam_hdr_init();
+  ret->l_text = 0;
+  ret->text =NULL;
+
+  int nseq=0;
+
+  for (int i=0; i<hs->hdr->nhrec; i++){
+    bcf_hrec_t *hrec=hs->hdr->hrec[i];
+    if(strcmp(hrec->key,"contig")==0)
+      nseq++;
+  }
+  
+  ret->n_targets = nseq;
+  ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
+  ret->target_name = (char**) malloc(sizeof(char*)*nseq);
+  int at=0;
+  for (int i=0; i<hs->hdr->nhrec; i++){
+    bcf_hrec_t *hrec=hs->hdr->hrec[i];
+    if(strcmp(hrec->key,"contig")==0){
+      //      fprintf(stderr,"%d) hrec->value:%s key:%s\n",i,hrec->value,hrec->key);
+      int newlen =-1;
+      char *chrnam=NULL;
+      for(int j=0;j<hrec->nkeys;j++){
+	if(strcmp("ID",hrec->keys[j])==0)
+	  chrnam = strdup(hrec->vals[j]);
+	if(strcmp("length",hrec->keys[j])==0)
+	  newlen = atoi(hrec->vals[j]);
+	//fprintf(stderr,"i:%d j:%d keys:%s vals:%s\n",i,j,hrec->keys[j],hrec->vals[j]);
+      }
+      //fprintf(stderr,"at: %d ID:%s len:%d\n",at,chrnam,newlen);
+      ret->target_len[at] = newlen;
+      ret->target_name[at] = chrnam;
+      at++;
+    }
+  }
+
+  return ret;
+}
+
+
 void htsstuff_seek(htsstuff *hs,char *seek){
   assert(seek);
   if(seek){
     fprintf(stderr,"\t-> Setting iterator to: %s\n",seek);fflush(stderr);
-    hs->idx=bcf_index_load(hs->fname);
+    if(hs->idx==NULL)
+      hs->idx=bcf_index_load(hs->fname);
     if(hs->idx==NULL){
       fprintf(stderr,"\t-> Problem opening index file of file: \'%s\'\n",hs->fname);
       exit(0);
@@ -19,7 +61,10 @@ void htsstuff_seek(htsstuff *hs,char *seek){
     if(hs->hts_file->format.format!=bcf){
       fprintf(stderr,"\t-> File are required to be vcf for using region specification\n");
       exit(0);
+      
     }
+    if(hs->iter)
+      hts_itr_destroy(hs->iter);
     hs->iter=bcf_itr_querys(hs->idx,hs->hdr,seek);
     assert(hs->iter);
   }
@@ -61,6 +106,7 @@ void htsstuff_destroy(htsstuff *hs){
     hts_itr_destroy(hs->iter);
   if(hs->idx)
     hts_idx_destroy(hs->idx);
+  
 
   delete hs;
 }
@@ -330,7 +376,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     return 0;
   }
   
-  if(n>=0){
+  if(n>=0){//case where we have data
     assert((n % hs->nsamples)==0 );
     int myofs=n/hs->nsamples;
     for(int ind=0;ind<hs->nsamples;ind++){
@@ -362,8 +408,40 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
   return 1;//<- what should this function return?
 }
 
+//stupid little function to wrap the iter part. This could be done much more cleverly
+int vcfReader::vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec){
+  int ret;
+  static int whichRegion =-1;
+  static int hasSeeked =0;
+  if(regions->size()==0){
+    ret  = bcf_read(hts->hts_file,hts->hdr,rec);
+    return ret;
+  }else{
+    if(hasSeeked==0){
+      whichRegion++;
+      if(whichRegion>=regions->size())
+	return -1;
+      itrname.l =0;
+      int start=regions->at(whichRegion).start;
+      int stop=regions->at(whichRegion).stop;
+      int ref=regions->at(whichRegion).refID;
+      ksprintf(&itrname,"%s:%d-%d",bamhdr->target_name[ref],start+1,stop);
+      //fprintf(stderr,"ksprintf :%s\n",itrname.s);
+      seek(itrname.s);
+      hasSeeked =1;
+      return vcfReaderwrap_reader(hts,rec);//calling again now that things has been seeked.
+    }
+    ret=bcf_itr_next(hts->hts_file,hts->iter, rec);
+    if(ret<0){
+      hasSeeked = 0;
+      return vcfReaderwrap_reader(hts,rec);
+    }
+    return ret;
+  }
+}
+//
 
-int fc=0;
+int onlyprint = 10;
 funkyPars *vcfReader::fetch(int chunkSize){
   funkyPars *r = funkyPars_init();
   r->nInd = hs->nsamples;
@@ -377,7 +455,7 @@ funkyPars *vcfReader::fetch(int chunkSize){
   
   r->posi=new int[chunkSize];
   
-  bcf1_t *rec = NULL;rec=bcf_init();assert(rec);
+  bcf1_t *rec = bcf_init();
 
   //   http://wresch.github.io/2014/11/18/process-vcf-file-with-htslib.html
   int n    = 0;  // total number of records in file
@@ -395,17 +473,16 @@ funkyPars *vcfReader::fetch(int chunkSize){
   }
   while(balcon<chunkSize) {
     //either parse a read with region or nextread
-    if(hs->iter==NULL){
-      if(((bcf_retval=bcf_read(hs->hts_file,hs->hdr,rec)))!=0)	
-	break;
-    }else{
-      if(((bcf_retval=bcf_itr_next(hs->hts_file, hs->iter, rec)))!=0)
-	break;
-    }
+    if(((bcf_retval=vcfReaderwrap_reader(hs,rec)))!=0)
+      break;
+    
     n++;
     //skip nonsnips
     if(isindel(hs->hdr,rec)){
-      fprintf(stderr,"skipping due to non snp\n");
+      if(onlyprint>0){
+	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",rec->pos+1);
+	onlyprint--;
+      }
       continue;
     }
 
