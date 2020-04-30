@@ -1,4 +1,6 @@
 #!/bin/bash
+#run locally like
+#make test BAMDIR=smallBam/
 
 PRG=""
 BAMDIR=""
@@ -42,7 +44,7 @@ if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing vcfreading"
 ./testVcf.sh $WDIR/angsd ${BAMDIR}/small2.bcf
 if [ ! $? -eq 0  ]   ;then
-    echo "Problem with -vcf-gl exit code: $?"
+    echo "Problem with -vcf-pl exit code: $?"
     cat ./testVcf.sh.log
     RVAL=1
 fi
@@ -98,6 +100,16 @@ if [ ! $? -eq 0  ]   ;then
     echo "Problem with association exit code: $?"
     cat ./testDoAsso2456.sh.log
     RVAL=1
+fi
+
+if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing haplocall"
+./testHaploCall.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with haplocall exit code: $?"
+    cat ./testHaploCall.sh.log
+    RVAL=1
+fi
 fi
 
 

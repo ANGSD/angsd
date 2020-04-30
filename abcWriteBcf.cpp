@@ -51,7 +51,7 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   ksprintf(&buf, "##angsdCommand=");
   for (int i=1; i<args->argc; i++)
     ksprintf(&buf, " %s", args->argv[i]);
-  kputc('\n', &buf);
+  aio::kputc('\n', &buf);
   bcf_hdr_append(hdr, buf.s);
   buf.l=0;
 

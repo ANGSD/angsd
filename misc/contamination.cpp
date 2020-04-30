@@ -35,7 +35,7 @@ double sd(double *a,int l){
     ts += a[i];
 
   double u = ts/(1.0*l);
-  assert(u!=0);
+  // assert(u!=0);
   ts =0;
   for(int i=0;i<l;i++)
     ts += (a[i]-u)*(a[i]-u);
@@ -831,24 +831,31 @@ int main(int argc,char**argv){
   std::vector<int> ipos;
   std::vector<int*> cnt;
   readicnts(icounts,ipos,cnt,minDepth,maxDepth);
-  dat d=count(myMap,ipos,cnt);
-  if(printcounts){
-    aMap dm=d.myMap;
-    for(aMap::iterator it=dm.begin();it!=dm.end();it++)
-      fprintf(stdout,"hapmap\t%d\t%d\t%d\t%f\n",it->first,it->second.allele1,it->second.allele2,it->second.freq);
-    for(int i=0;i<d.pos.size();i++)
-      fprintf(stdout,"counts\t%d\t%d\t%d\t%d\t%d\t%d\n",d.pos[i],d.dist[i],d.cn[i][0],d.cn[i][1],d.cn[i][2],d.cn[i][3]);
-    return 0;
+  if(ipos.size()>0){
+    dat d=count(myMap,ipos,cnt);
+    if(printcounts){
+      aMap dm=d.myMap;
+      for(aMap::iterator it=dm.begin();it!=dm.end();it++)
+	fprintf(stdout,"hapmap\t%d\t%d\t%d\t%f\n",it->first,it->second.allele1,it->second.allele2,it->second.freq);
+      for(int i=0;i<d.pos.size();i++)
+	fprintf(stdout,"counts\t%d\t%d\t%d\t%d\t%d\t%d\n",d.pos[i],d.dist[i],d.cn[i][0],d.cn[i][1],d.cn[i][2],d.cn[i][3]);
+      return 0;
+    }
+    analysis(d,nThreads,nJack,skipML);
+    for(int i=0;i<cnt.size();i++)
+      delete [] cnt[i];
+    for(int i=0;0&&i<d.cn.size();i++)//<-should cleanup here. We have copied pointers not values                                                                                    delete [] d.cn[i];
+      free(hapfile);
+    free(icounts);
+  }else{
+    double NaN=NAN;
+    fprintf(stderr,"\nMethod1: old_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e",NaN,NaN,NaN,NaN);
+    fprintf(stderr,"\nMethod1: new_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e",NaN,NaN,NaN,NaN);
+    fprintf(stderr,"\nMethod2: old_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e",NaN,NaN,NaN,NaN);
+    fprintf(stderr,"\nMethod2: new_llh Version: MoM:%f SE(MoM):%e ML:%f SE(ML):%e\n",NaN,NaN,NaN,NaN);
   }
-  analysis(d,nThreads,nJack,skipML);
-
   //cleanup
-  for(int i=0;i<cnt.size();i++)
-    delete [] cnt[i];
-  for(int i=0;0&&i<d.cn.size();i++)//<-should cleanup here. We have copied pointers not values
-    delete [] d.cn[i];
-  free(hapfile);
-  free(icounts);
+  
   return 0;
 
 }

@@ -96,14 +96,19 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
     return;
   }
   printArg(arguments->argumentFile);  
-  //for kputs output
-  bufstr.s=NULL;bufstr.l=bufstr.m=0;
 
   //make output files
   const char* postfix;
   postfix=".ibs.gz";
 
-  outfileZ = aio::openFileBG(outfiles,postfix);
+  if(doIBS>0){
+      //for kputs output
+    bufstr.s=NULL;bufstr.l=bufstr.m=0;
+
+    outfileZ = aio::openFileBG(outfiles,postfix);
+    //write header
+    bufstr.l=0;
+  }
 
   const char* postfix2;
   postfix2=".ibsMat";
@@ -113,8 +118,6 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
  
   nInd = arguments->nInd;
   
-  //write header
-  bufstr.l=0;
  
 
 
@@ -138,20 +141,21 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
     }
   }  
 
-  /// 
-  if(majorminor)
-    ksprintf(&bufstr,"chr\tpos\tmajor\tminor");
-  else
-    ksprintf(&bufstr,"chr\tpos\tmajor");
-
-  for(int i=0;i<arguments->nInd;i++)
+  ///
+  if(doIBS>0){
+    if(majorminor)
+      ksprintf(&bufstr,"chr\tpos\tmajor\tminor");
+    else
+      ksprintf(&bufstr,"chr\tpos\tmajor");
+    
+    for(int i=0;i<arguments->nInd;i++)
       ksprintf(&bufstr,"\tind%d",i);
   
   
-  ksprintf(&bufstr,"\n");
-  aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
-  bufstr.l=0;
-
+    ksprintf(&bufstr,"\n");
+    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
+    bufstr.l=0;
+  }
 }
 
 
@@ -184,8 +188,8 @@ abcIBS::~abcIBS(){
     delete [] nonMisCov;
   }
 
-
-  if(outfileZ!=NULL) bgzf_close(outfileZ);
+  if(doIBS>0)
+    if(outfileZ!=NULL) bgzf_close(outfileZ);
   if(outfileMat!=NULL) fclose(outfileMat);
   if(outfileCov!=NULL) fclose(outfileCov);
 }
@@ -223,44 +227,44 @@ void abcIBS::clean(funkyPars *pars){
 void abcIBS::printHaplo(funkyPars *pars){
   
   IBSstruct *haplo =(IBSstruct *) pars->extras[index];
-  
-  bufstr.l=0;
+  if(doIBS>0){ 
+    bufstr.l=0;
 
-  for(int s=0;s<pars->numSites;s++) {
-    if(pars->keepSites[s]==0)
-      continue;
- 
+    for(int s=0;s<pars->numSites;s++) {
+      if(pars->keepSites[s]==0)
+	continue;
+      
+      
+      if(majorminor){
+	for(int i=0;i<5;i++)
+	  intToMajorMinorAA[i] = -1 ;
+	intToMajorMinorAA[pars->major[s]]=0;
+	intToMajorMinorAA[pars->minor[s]]=1;
+	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]]);
+      }
+      else
+	ksprintf(&bufstr,"%s\t%d\t%c\t",header->target_name[pars->refId],pars->posi[s]+1,intToRef[haplo->major[s]]);
+      
+      if(output01){
+	for(int i=0;i<pars->nInd;i++){
+	  ksprintf(&bufstr,"%d\t",intToMajorMinorAA[haplo->dat[s][i]]);
+	  // ksprintf(&bufstr,"%c\t",haplo->dat[s][i]);
+	}
+	
+      }
+      else{
+	for(int i=0;i<pars->nInd;i++){
+	  ksprintf(&bufstr,"%c\t",intToRef[haplo->dat[s][i]]);
+	}
+      }
+      ksprintf(&bufstr,"\n");
+    }
     
-    if(majorminor){
-      for(int i=0;i<5;i++)
-	intToMajorMinorAA[i] = -1 ;
-      intToMajorMinorAA[pars->major[s]]=0;
-      intToMajorMinorAA[pars->minor[s]]=1;
-      ksprintf(&bufstr,"%s\t%d\t%c\t%c\t",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]]);
-    }
-    else
-      ksprintf(&bufstr,"%s\t%d\t%c\t",header->target_name[pars->refId],pars->posi[s]+1,intToRef[haplo->major[s]]);
- 
-    if(output01){
-     for(int i=0;i<pars->nInd;i++){
-      	ksprintf(&bufstr,"%d\t",intToMajorMinorAA[haplo->dat[s][i]]);
-	// ksprintf(&bufstr,"%c\t",haplo->dat[s][i]);
-      }
-
-    }
-    else{
-      for(int i=0;i<pars->nInd;i++){
-	ksprintf(&bufstr,"%c\t",intToRef[haplo->dat[s][i]]);
-      }
-    }
-    ksprintf(&bufstr,"\n");
+    if(bufstr.l>0)
+      aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
+    bufstr.l=0;
   }
-
-  if(bufstr.l>0)
-    aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
-  bufstr.l=0;
-
-
+  
   if(makeMatrix){
     for(int i=0;i<pars->nInd;i++){
       for(int j=0;j<pars->nInd;j++){
@@ -316,9 +320,9 @@ void abcIBS::getHaplo(funkyPars *pars){
       }
       
       
-      if(doIBS==1)//random base
+      if(doIBS == 1 || doIBS == -1 )//random base
 	haplo->dat[s][i] = angsd::getRandomCount(pars->counts[s],i,dep);
-      else if(doIBS==2)//most frequent base, random tie
+      else if( doIBS==2 || doIBS==-2 )//most frequent base, random tie
 	haplo->dat[s][i] = angsd::getMaxCount(pars->counts[s],i,dep);
       
       siteCounts[haplo->dat[s][i]]++;

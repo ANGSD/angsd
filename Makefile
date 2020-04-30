@@ -14,10 +14,11 @@ LIBS += -lhts
 endif
 
 #modied from htslib makefile
-FLAGS = $(CPPFLAGS) -O3 $(LDFLAGS)
+FLAGS = -O3
+FLAGS2 = $(CPPFLAGS) $(FLAGS) $(LDFLAGS)
 
-CFLAGS := $(FLAGS) $(CFLAGS)
-CXXFLAGS := $(FLAGS) $(CXXFLAGS)
+CFLAGS := $(FLAGS2) $(CFLAGS)
+CXXFLAGS := $(FLAGS2) $(CXXFLAGS)
 
 CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
@@ -31,6 +32,8 @@ INSTALL = install
 INSTALL_DIR = $(INSTALL) -dm0755
 INSTALL_PROGRAM = $(INSTALL) -Dm0755
 
+#$(info CFLAGS=$(CFLAGS))
+#$(info CXXFLAGS=$(CXXFLAGS))
 
 PROGRAMS = angsd
 
@@ -40,7 +43,7 @@ all: $(PROGRAMS) misc
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
 
-PACKAGE_VERSION  = 0.931
+PACKAGE_VERSION  = 0.933
 
 ifneq "$(wildcard .git)" ""
 PACKAGE_VERSION := $(shell git describe --always --dirty)
