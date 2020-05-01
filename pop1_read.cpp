@@ -110,7 +110,7 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     goto bam_iter_reread;
   
   extern abcGetFasta *gf;
-  if(b->core.flag&4||b->core.n_cigar==0||b->core.l_qseq==0)
+  if(b->core.flag&4||b->core.n_cigar==0||b->core.l_qseq==0||b->core.flag&1024)//discard unmapped, nocigar,no seq and dups
       goto bam_iter_reread;
     
     
