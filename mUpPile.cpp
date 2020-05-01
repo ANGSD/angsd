@@ -427,6 +427,9 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 
     char *seq =(char *) bam_get_seq(rd);
     char *quals =(char *) bam_get_qual(rd);
+    for(int i=0;i<rd->core.l_qseq;i++)
+      if(quals[i]=-1)
+	quals[i] = '~'-33;//<this is abit stupud but we add with 33 later
     int nCig = rd->core.n_cigar;
 
     uint32_t *cigs = bam_get_cigar(rd);
@@ -1599,6 +1602,10 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     delete [] sglp;
     pthread_mutex_unlock(&mUpPile_mutex);//just to make sure, its okey to clean up
   }else{
+    for(int i=0;1&&i<nFiles;i++){
+      delete [] nps[i].nds;
+      dalloc(&sglp[i]);
+    }
     delete [] nps;
     delete [] sglp;
   }

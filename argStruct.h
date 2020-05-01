@@ -42,7 +42,7 @@ typedef struct{
   int nReads;//number of reads to pop from each BAM/CRAM
   int show;
   char *fai;
-  bam_sample_t *sm;
+  bam_sample_t *sm;//for dealing with readgroups
   char *ref;
   char *anc;
 }argStruct;

@@ -5,6 +5,7 @@
 #include "multiReader.h"
 #include "parseArgs_bambi.h"
 #include "version.h"
+#include "sample.h"
 
 #define ARGS ".arg"
 void checkIfDir(char *fname){
@@ -533,7 +534,10 @@ multiReader::~multiReader(){
   if(gz!=Z_NULL)
     gzclose(gz);
   free(fname);
-  
+
+  if(args->sm)
+    bam_smpl_destroy(args->sm);
+
   for(unsigned i=0;i<args->nams.size();i++)
     free(args->nams[i]);
   if(args->fai){
