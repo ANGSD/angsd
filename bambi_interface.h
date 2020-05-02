@@ -8,7 +8,7 @@ typedef struct  tNode_t{//order is important. First 8 bytes will be modified by 
   int m;//4
   int m2;//4//possible length of insert before realloc
   char *seq;//8
-  char *qs;//8
+  unsigned char *qs;//8
   suint *posi;//16
   suint *isop;//16
   unsigned char *mapQ;//8
