@@ -650,7 +650,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
       last = std::max(sgl->last[r],last);
 
     char *seq =(char *) bam_get_seq(rd);
-    char *quals =(char *) bam_get_qual(rd);
+    unsigned char *quals =(unsigned char *) bam_get_qual(rd);
     int nCig = rd->core.n_cigar;
 
     uint32_t *cigs = bam_get_cigar(rd);
