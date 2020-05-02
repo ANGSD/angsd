@@ -3,6 +3,7 @@
 #include <cmath>
 #include <string>
 #include <errno.h>
+#include <cassert>
 #include "analysisFunction.h"
 #include "vcfReader.h"
 

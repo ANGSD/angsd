@@ -1,5 +1,9 @@
 /*
   log:
+  v33
+  program didnt output filter sites unless -printInfo was added, noticed by @cursorially. 1may 2020
+
+  
   ngsAdmix32: program now works on osx
   icpc ngsAdmix32.cpp -lz -lpthread  -O3 -o ngsAdmix32
 
@@ -417,7 +421,7 @@ FILE *openFile(const char* a,const char* b){
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
   strncat(c,b,strlen(b));
-  fprintf(stderr,"\t-> Dumping file: %s\n",c);
+  //fprintf(stderr,"\t-> Dumping file: %s\n",c);
   if(0&&fexists(c)){//ANDERS DAEMON DRAGON HATES THIS
     fprintf(stderr,"File: %s exists will exist\n",c);
     fflush(stderr);
@@ -435,7 +439,7 @@ gzFile openFileGz(const char* a,const char* b){
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
   strncat(c,b,strlen(b));
-  fprintf(stderr,"\t-> Dumping file: %s\n",c);
+  //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   if(0&&fexists(c)){//ANDERS DAEMON DRAGON HATES THIS
     fprintf(stderr,"File: %s exists will exist\n",c);
     fflush(stderr);
@@ -1270,7 +1274,7 @@ void info(){
   fprintf(stderr,"\t-fname Ancestral population frequencies\n"); 
   fprintf(stderr,"\t-qname Admixture proportions\n"); 
   fprintf(stderr,"\t-outfiles Prefix for output files\n"); 
-  fprintf(stderr,"\t-printInfo print ID and mean maf for the SNPs that were analysed\n"); 
+  fprintf(stderr,"\t-printInfo print ID and mean maf for the SNPs that were analysed,\n\t along with sites retained for analysiss\n"); 
 
   fprintf(stderr,"Setup:\n"); 
   fprintf(stderr,"\t-seed Seed for initial guess in EM\n"); 
@@ -1489,8 +1493,9 @@ int main(int argc, char **argv){
     outfiles=lname;
   }
   FILE *flog=openFile(outfiles,".log");
-  FILE *ffilter=openFile(outfiles,".filter");
-
+  FILE *ffilter=NULL;
+  if(printInfo)
+    ffilter = openFile(outfiles,".filter");
   fprintf(stderr,"Input: lname=%s nPop=%d, fname=%s qname=%s outfiles=%s\n",lname,nPop,fname,qname,outfiles);
   fprintf(stderr,"Setup: seed=%d nThreads=%d method=%d\n",seed,nThreads,method);
   fprintf(stderr,"Convergence: maxIter=%d tol=%f tolLike50=%f dymBound=%d\n",maxIter,tol,tolLike50,dymBound);
@@ -1760,7 +1765,7 @@ int main(int argc, char **argv){
     delete [] Q[i];
   delete[] Q;
   for(int i=0;1&&i<dumpedFiles.size();i++){
-    //    fprintf(stderr,"dumpedfiles are: %s\n",dumpedFiles[i]);
+    fprintf(stderr,"\t-> Dumpedfiles are: %s\n",dumpedFiles[i]);
     free(dumpedFiles[i]);
   }
   fprintf(stderr, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
@@ -1768,13 +1773,14 @@ int main(int argc, char **argv){
 
 
   // print to log file
-
-  fprintf(flog, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
-  fprintf(flog, "\t[ALL done] walltime used =  %.2f sec\n", (float)(time(NULL) - t2));  
-  fprintf(flog,"best like=%f after %d iterations\n",lold,nit);
-  fclose(flog); 
-
-  fclose(ffilter);
+  if(flog){
+    fprintf(flog, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
+    fprintf(flog, "\t[ALL done] walltime used =  %.2f sec\n", (float)(time(NULL) - t2));  
+    fprintf(flog,"best like=%f after %d iterations\n",lold,nit);
+    fclose(flog); 
+  }
+  if(ffilter)
+    fclose(ffilter);
   return 0;
 
  

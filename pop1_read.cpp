@@ -110,7 +110,7 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     goto bam_iter_reread;
   
   extern abcGetFasta *gf;
-  if(b->core.flag&4||b->core.n_cigar==0)
+  if(b->core.flag&4||b->core.n_cigar==0||b->core.l_qseq==0||b->core.flag&1024)//discard unmapped, nocigar,no seq and dups
       goto bam_iter_reread;
     
     
@@ -122,11 +122,8 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     }
     
     //check if read was bad
-    if(remove_bads ){
-      if(b->core.flag>=256)
+    if(remove_bads==1 && b->core.flag &512)
 	goto bam_iter_reread;
-    }
-    
     
     //check if orphan read, 
     if(only_proper_pairs&&(b->core.flag%2) ){//only check if pairend

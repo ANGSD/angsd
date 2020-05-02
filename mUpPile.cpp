@@ -260,7 +260,7 @@ void tnode_realloc(tNode *d,int newsize){
   d->m=newsize;
 
   d->seq=(char*)realloc(d->seq,d->m*sizeof(char));
-  d->qs =(char*) realloc(d->qs,d->m*sizeof(char));
+  d->qs =(unsigned char*) realloc(d->qs,d->m*sizeof(char));
   d->posi = (suint*)realloc(d->posi,d->m*sizeof(suint));
   d->isop = (suint*)realloc(d->isop,d->m*sizeof(suint));
   d->mapQ = (unsigned char*)realloc(d->mapQ,d->m*sizeof(unsigned char));
@@ -300,7 +300,7 @@ tNode *initNodeT(int l){
     d->m = l;
     kroundup32(d->m);
     d->seq=(char *)malloc(d->m);
-    d->qs=(char *)malloc(d->m);
+    d->qs=(unsigned char *)malloc(d->m);
     d->posi=(suint *)malloc(sizeof(suint)*d->m);
     d->isop=(suint *)malloc(sizeof(suint)*d->m);
     d->mapQ=(unsigned char *)malloc(d->m);
@@ -427,6 +427,9 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 
     char *seq =(char *) bam_get_seq(rd);
     char *quals =(char *) bam_get_qual(rd);
+    for(int i=0;i<rd->core.l_qseq;i++)
+      if(quals[i]==-1)
+	quals[i] = '~'-33;//<this is abit stupud but we add with 33 later
     int nCig = rd->core.n_cigar;
 
     uint32_t *cigs = bam_get_cigar(rd);
@@ -647,7 +650,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
       last = std::max(sgl->last[r],last);
 
     char *seq =(char *) bam_get_seq(rd);
-    char *quals =(char *) bam_get_qual(rd);
+    unsigned char *quals =(unsigned char *) bam_get_qual(rd);
     int nCig = rd->core.n_cigar;
 
     uint32_t *cigs = bam_get_cigar(rd);
@@ -728,7 +731,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	  if(tmpNode->l>=tmpNode->m){//shouldnt need to realloc each member in struct
 	    tmpNode->m = tmpNode->m*2;
 	    tmpNode->seq =(char *) realloc(tmpNode->seq,tmpNode->m);
-	    tmpNode->qs =(char *) realloc(tmpNode->qs,tmpNode->m);
+	    tmpNode->qs =(unsigned char *) realloc(tmpNode->qs,tmpNode->m);
 	    tmpNode->posi =(suint *) realloc(tmpNode->posi,sizeof(suint)*tmpNode->m);
 	    tmpNode->isop =(suint *) realloc(tmpNode->isop,sizeof(suint)*tmpNode->m);
 	    tmpNode->mapQ = (unsigned char *) realloc(tmpNode->mapQ,tmpNode->m);
@@ -1599,6 +1602,10 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     delete [] sglp;
     pthread_mutex_unlock(&mUpPile_mutex);//just to make sure, its okey to clean up
   }else{
+    for(int i=0;1&&i<nFiles;i++){
+      delete [] nps[i].nds;
+      dalloc(&sglp[i]);
+    }
     delete [] nps;
     delete [] sglp;
   }
