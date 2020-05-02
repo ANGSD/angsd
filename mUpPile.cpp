@@ -260,7 +260,7 @@ void tnode_realloc(tNode *d,int newsize){
   d->m=newsize;
 
   d->seq=(char*)realloc(d->seq,d->m*sizeof(char));
-  d->qs =(char*) realloc(d->qs,d->m*sizeof(char));
+  d->qs =(unsigned char*) realloc(d->qs,d->m*sizeof(char));
   d->posi = (suint*)realloc(d->posi,d->m*sizeof(suint));
   d->isop = (suint*)realloc(d->isop,d->m*sizeof(suint));
   d->mapQ = (unsigned char*)realloc(d->mapQ,d->m*sizeof(unsigned char));
@@ -300,7 +300,7 @@ tNode *initNodeT(int l){
     d->m = l;
     kroundup32(d->m);
     d->seq=(char *)malloc(d->m);
-    d->qs=(char *)malloc(d->m);
+    d->qs=(unsigned char *)malloc(d->m);
     d->posi=(suint *)malloc(sizeof(suint)*d->m);
     d->isop=(suint *)malloc(sizeof(suint)*d->m);
     d->mapQ=(unsigned char *)malloc(d->m);
@@ -731,7 +731,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	  if(tmpNode->l>=tmpNode->m){//shouldnt need to realloc each member in struct
 	    tmpNode->m = tmpNode->m*2;
 	    tmpNode->seq =(char *) realloc(tmpNode->seq,tmpNode->m);
-	    tmpNode->qs =(char *) realloc(tmpNode->qs,tmpNode->m);
+	    tmpNode->qs =(unsigned char *) realloc(tmpNode->qs,tmpNode->m);
 	    tmpNode->posi =(suint *) realloc(tmpNode->posi,sizeof(suint)*tmpNode->m);
 	    tmpNode->isop =(suint *) realloc(tmpNode->isop,sizeof(suint)*tmpNode->m);
 	    tmpNode->mapQ = (unsigned char *) realloc(tmpNode->mapQ,tmpNode->m);
