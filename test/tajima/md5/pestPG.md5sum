@@ -13,5 +13,5 @@ d287128a98471e0170abbb1a98d27461  tajima/output/norm.thetas.gz
 c8298ccb0c2587f417b70b24cff82e62  tajima/output/norm.thetas.idx.pestPG
 47142c0c1741b549d346e5fb7da8cdc2  tajima/output/fold.thetas.idx.win.pestPG
 9f732415df2fbbe53aa1d60ddee23695  tajima/output/norm.thetas.idx.win.pestPG
-f1c2b542b933dd9ead062c3799950f84  tajima/output/thetaFromSaf.thetas.gz
-c7af1253fca1fadb80da4a116e18438c  tajima/output/thetaFromSaf.thetas.idx
+f1c2b542b933dd9ead062c3799950f84  tajima/output/norm.thetaFromSaf.thetas.gz
+c7af1253fca1fadb80da4a116e18438c  tajima/output/norm.thetaFromSaf.thetas.idx

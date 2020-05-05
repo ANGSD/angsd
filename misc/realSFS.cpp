@@ -730,7 +730,31 @@ int saf2theta(int argc,char**argv){
       double workarray[nChr+1];
       for(int i=0;i<nChr+1;i++)//gls->mat is float lets pluginto double
 	workarray[i] = gls[0]->mat[s][i];
-
+      if(arg->fold){
+	if((nChr+1) %2 ){
+	  fprintf(stderr,"\t-> Folding odd number of categories\n");
+	  int first=0;
+	  int last=nChr;
+	  while(first<last){
+	    fprintf(stderr,"first: %d last:%d\n",first,last);
+	    workarray[first] = log(exp(workarray[first]) + exp(workarray[last]));
+	    first++;
+	    last--;
+	  }
+	  fprintf(stderr,"multiplying last with two first:%d\n",first);
+	  workarray[first] = workarray[first]+log(2.0);
+	}else{
+	  fprintf(stderr,"\t-> Folding even number of categories\n");
+	  int first=0;
+	  int last=nChr;
+	  while(first<=last){
+	    fprintf(stderr,"first: %d last:%d\n",first,last);
+	    workarray[first] = log(exp(workarray[first]) + exp(workarray[last]));//<- should be divided by two but this is a constant
+	    first++;
+	    last--;
+	  }
+	}
+      }
       //calculate post probs
       double tsum =exp(workarray[0] + prior[0]);
       for(int i=1;i<nChr+1;i++)
