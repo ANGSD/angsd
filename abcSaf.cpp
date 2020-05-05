@@ -13,50 +13,8 @@
 
 #define MINLIKE -1000.0 //this is for setting genotypelikelhoods to missing (EXPLAINED BELOW)
 
-
-
-void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<int> &p,std::vector<float> *res,int nChr){
-  assert(dat!=NULL);
-  assert(idx!=NULL);
-  assert(p.size()==res[0].size());
-  for(int i=1;i<5;i++)
-    assert(p.size()==res[i].size());//DRAGON, might be discarded during compilation
-      
-  if(p.size()!=0&&tmpChr!=NULL){
-    //write clen and chromoname for both index and bgzf
-    size_t clen = strlen(tmpChr);
-    fwrite(&clen,sizeof(size_t),1,idx);
-    fwrite(tmpChr,1,clen,idx);
-    assert(sizeof(size_t)==bgzf_write(dat,&clen,sizeof(size_t)));
-    assert(clen==bgzf_write(dat,tmpChr,clen));
-
-    //write number of sites for both index and bgzf
-    size_t tt = p.size();
-    fwrite(&tt,sizeof(size_t),1,idx);
-    assert(sizeof(size_t)==bgzf_write(dat,&tt,sizeof(size_t)));
-    //write nChr for both index and bgzf
-    fwrite(&nChr,sizeof(int),1,idx);
-    assert(sizeof(int)==bgzf_write(dat,&nChr,sizeof(int)));
-
-    //write bgzf offset into idx
-    fwrite(&offs,sizeof(int64_t),1,idx);
-    for(int i=0;i<p.size();i++)
-      aio::bgzf_write(dat,&p[i],sizeof(int));
-    for(int i=0;i<5;i++)
-      for(int j=0;j<p.size();j++)
-	aio::bgzf_write(dat,&res[i][j],sizeof(float));
-  }
-
-  //reset
-  offs = bgzf_tell(dat);
-  p.clear();
-  for(int i=0;i<5;i++)
-    res[i].clear();
-}
-
-
 namespace filipe{
-  void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim);
+  void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim);
 }
 
 
@@ -64,9 +22,7 @@ void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doSaf\t\t%d\n",doSaf);
   fprintf(argFile,"\t1: perform multisample GL estimation\n\t2: use an inbreeding version\n\t3: calculate genotype probabilities (use -doPost 3 instead)\n\t4: Assume genotype posteriors as input (still beta) \n");
-  fprintf(argFile,"\t-doThetas\t\t%d (calculate thetas)\n",noTrans);
   fprintf(argFile,"\t-underFlowProtect\t%d\n",underFlowProtect); 
-  fprintf(argFile,"\t-fold\t\t\t%d (deprecated)\n",fold);
   fprintf(argFile,"\t-anc\t\t\t%s (ancestral fasta)\n",anc);
   fprintf(argFile,"\t-noTrans\t\t%d (remove transitions)\n",noTrans);
   fprintf(argFile,"\t-pest\t\t\t%s (prior SFS)\n",pest);
@@ -83,20 +39,15 @@ void abcSaf::getOptions(argStruct *arguments){
   doPost=angsd::getArg("-doPost",doPost,arguments);
   isHap=angsd::getArg("-isHap",isHap,arguments);
   pest = angsd::getArg("-pest",pest,arguments);
-  fold=angsd::getArg("-fold",fold,arguments);
   if(doSaf==3){ //DRAGON
     fprintf(stderr,"\t-> Please use -doPost 3 instead for -doSaf 3\n");
     exit(0);
   }
   if(doSaf>0||doPost==3){
     if(pest!=NULL){
-      if(fold==0)
-	prior=angsd::readDouble(pest,arguments->nInd*2+1);
-      else
-	prior=angsd::readDouble(pest,arguments->nInd+1);
+      prior=angsd::readDouble(pest,arguments->nInd*2+1);
       int nd=arguments->nInd*2+1;
-      if(fold)
-	nd=arguments->nInd+1;
+      
       
       double tts=0;
       for(int i=0;i<nd;i++)
@@ -119,8 +70,6 @@ void abcSaf::getOptions(argStruct *arguments){
 	lbicoTab[i] = angsd::lbico(arguments->nInd,i);
     }
     mynchr = 2*arguments->nInd;
-    if(fold)
-      mynchr = arguments->nInd;
   }
 
 
@@ -128,21 +77,10 @@ void abcSaf::getOptions(argStruct *arguments){
 
   int GL = 0;
   GL = angsd::getArg("-GL",GL,arguments);
-  doThetas= angsd::getArg("-doThetas",doThetas,arguments);
 
 
-  if(doSaf==0&&doThetas==0&doPost!=3)
+  if(doSaf==0&&doPost!=3)
     return;
-  if(doThetas!=0&& doSaf==0){
-    fprintf(stderr,"\t-> Must estimate joint llh (-doSaf) when estimating thetas\n");
-    exit(0);
-  }
-
-
-  if(pest==NULL&& doThetas){
-    fprintf(stderr,"\t-> Must supply a sfs used as prior for estimating thetas\n");
-    exit(0);
-  }
 
   underFlowProtect=angsd::getArg("-underFlowProtect",underFlowProtect,arguments);
 
@@ -219,7 +157,6 @@ double **abcSaf::myComb2Tab=NULL;
 double *abcSaf::prior = NULL;
 
 abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
-  theta_res = NULL;
   tsktsktsk=0;
   tmpChr = NULL;
   isHap =0;
@@ -227,14 +164,10 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   const char *SAF = ".saf.gz";
   const char *SAFPOS =".saf.pos.gz";
   const char *SAFIDX =".saf.idx";
-  //for use when dumping binary indexed thetas files
-  const char *THETAS =".thetas.gz";
-  const char *THETASIDX =".thetas.idx";
   //for use when dumping called genotypes
   const char *GENO = ".saf.geno.gz";
   //default
   underFlowProtect = 0;
-  fold =0;
   isSim =0;
   //from command line
   anc=NULL;
@@ -243,14 +176,10 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   prior = NULL;
   doSaf=0;
   doPost =0;
-  doThetas = 0;
   outfileSAF = NULL;
   outfileSAFPOS = NULL;
   outfileSAFIDX = NULL;
-  theta_dat = NULL;
-  theta_idx = NULL;
   outfileGprobs = NULL;
-  scalings = NULL;
   nnnSites = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSaf")){
@@ -269,17 +198,13 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   }
   printArg(arguments->argumentFile);  
   newDim = 2*arguments->nInd+1;
-  if(fold && isHap){
-    fprintf(stderr,"\t-> folding for haploid hasn't been defined and implemented\n");
-    exit(0);
-  }
-
-  if(fold||isHap)
+ 
+  if(isHap)
     newDim = arguments->nInd+1;
   if(doSaf==3){
     fprintf(stderr,"\t-> -doSaf 3 Does not work in combination with -snpstat and other snpfilters\n");
     outfileGprobs = aio::openFileBG(outfiles,GENO);
-  }else if(doSaf!=0&&doThetas==0){
+  }else if(doSaf!=0){
     outfileSAF =  aio::openFileBG(outfiles,SAF);
     outfileSAFPOS =  aio::openFileBG(outfiles,SAFPOS);
     outfileSAFIDX = aio::openFile(outfiles,SAFIDX);
@@ -292,62 +217,21 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
 
     size_t tt = newDim-1;
     fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
-  }else {
-    char buf[8] = "thetav2";
-    theta_dat = aio::openFileBG(outfiles,THETAS);
-    theta_idx = aio::openFile(outfiles,THETASIDX);
-    aio::bgzf_write(theta_dat,buf,8);
-    fwrite(buf,1,8,theta_idx);
-    theta_res = new std::vector<float>[5];
-    offs_thetas = bgzf_tell(theta_dat);
-
-
-    aConst=0;
-    int nChr = 2*arguments->nInd;
-    for(int i=1;i<nChr;i++)
-      aConst += 1.0/i;
-    aConst = log(aConst);//this is a1
-    
-    
-    aConst2 = log((nChr*(nChr-1))/2.0);//choose(nChr,2)
-    aConst3 = log((1.0*nChr-1.0));
-    
-    scalings = new double [nChr+1];
-    for(int i=0;i<nChr+1;i++)
-      scalings[i] = log(i)+log(nChr-i);
-    
-    
-    if(fold){
-      for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
-	scalings[i] = log(exp(scalings[i]) + exp(scalings[2*arguments->nInd-i]))-log(2.0);//THORFINN NEW
-      
-    }
   }
-#if 0//just for printing the scalings
-    int lim = nChr;
-    if(fold)
-      lim = newDim;
-    for(int i=0;i<newDim;i++)
-      fprintf(stderr,"SCAL[%d]\t%f\n",i,scalings[i]);
 
-#endif
 }
 
 
 abcSaf::~abcSaf(){
-  if(doSaf&&doThetas==0&&doSaf!=3)
+  if(doSaf&&doSaf!=3)
     writeAll();
-
-  if(doSaf&&doThetas==1&&doSaf!=3)
-    writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res,mynchr);
 
   if(pest) free(pest);
   if(prior) delete [] prior;
   if(outfileSAF) bgzf_close(outfileSAF);;
   if(outfileSAFPOS) bgzf_close(outfileSAFPOS);
   if(outfileSAFIDX) fclose(outfileSAFIDX);
-  if(theta_dat) bgzf_close(theta_dat);
-  if(theta_idx) fclose(theta_idx);
+
   if(outfileGprobs)  bgzf_close(outfileGprobs);
   if(lbicoTab) {
     delete [] lbicoTab;
@@ -359,9 +243,7 @@ abcSaf::~abcSaf(){
   }
   if(tmpChr) free(tmpChr);
   if(anc) free(anc);
-  if(scalings) delete [] scalings;
-  if(theta_res) delete [] theta_res;
- }
+}
 
 
 void normalize_array(double *d, int len){
@@ -392,7 +274,7 @@ int isSame(double a,double b,double tolerance){
 }
 
 //18dec 2014 we now condition on the sites where the ancestral is either major or minor. 
-void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim) {
+void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim) {
   //  fprintf(stderr,"liks=%p anc=%p nsites=%d nInd=%d underflowprotect=%d fold=%d keepSites=%p r=%p\n",liks,anc,nsites,numInds,underFlowProtect,fold,keepSites,r);
   assert(doSaf==2);
   int myCounter =0;
@@ -553,59 +435,33 @@ void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
       3. we might do a fold also.
      */    
 
-    if(fold) {
-      fprintf(stderr,"Folding will be moved from abcSaf.cpp\n");
-      //newDim is set in constructor
-      for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
-	sumMinors[i] = log(sumMinors[i] + sumMinors[2*numInds-i]);
-      sumMinors[newDim-1] = log(sumMinors[newDim-1])+log(2.0);
-      //angsd::logrescale(sumMinors,newDim);
-      double ts=0;
-      for(int i=0;i<newDim;i++)
-	ts += exp(sumMinors[i]);
-      ts = log(ts);
-      for(int i=0;i<newDim;i++)
-	sumMinors[i] = sumMinors[i]-ts;
-
-
-      if(std::isnan(sumMinors[0]))
-	r->oklist[it] = 2;
-      else{
-	r->oklist[it] = 1;
-	r->pLikes[myCounter] =new float[numInds+1];
-	for(int iii=0;iii<numInds+1;iii++)
-	  r->pLikes[myCounter][iii] = sumMinors[iii];
-	//	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(numInds+1));
-	myCounter++;
-      }
-    }else{
-      for(int i=0;i<2*numInds+1;i++)
-	sumMinors[i] = log(sumMinors[i]);
-      //      angsd::logrescale(sumMinors,2*numInds+1);
-      double ts=0;
-      for(int i=0;i<newDim;i++)
-	ts += exp(sumMinors[i]);
-      ts = log(ts);
-      for(int i=0;i<newDim;i++)
-	sumMinors[i] = sumMinors[i]-ts;
+    for(int i=0;i<2*numInds+1;i++)
+      sumMinors[i] = log(sumMinors[i]);
+    //      angsd::logrescale(sumMinors,2*numInds+1);
+    double ts=0;
+    for(int i=0;i<newDim;i++)
+      ts += exp(sumMinors[i]);
+    ts = log(ts);
+    for(int i=0;i<newDim;i++)
+      sumMinors[i] = sumMinors[i]-ts;
+    
+    if(std::isnan(sumMinors[0]))
+      r->oklist[it] = 2;
+    else{
+      r->oklist[it] = 1;
+      r->pLikes[myCounter] =new float[2*numInds+1];
+      for(int iii=0;iii<2*numInds+1;iii++)
+	r->pLikes[myCounter][iii] = sumMinors[iii];
       
-      if(std::isnan(sumMinors[0]))
-	r->oklist[it] = 2;
-      else{
-	r->oklist[it] = 1;
-	r->pLikes[myCounter] =new float[2*numInds+1];
-	for(int iii=0;iii<2*numInds+1;iii++)
-	  r->pLikes[myCounter][iii] = sumMinors[iii];
-
-	//	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
-	myCounter++;
-      }
+      //	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
+      myCounter++;
     }
+    
   }
   
 }
 
-void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r,int doFold){
+void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r){
   // fprintf(stderr,"[%s] nsites:%d r:%p r->pLikes:%p\n",__FUNCTION__,nSites,r,r->pLikes);
   int myCounter =0;
   for(int s=0;s<nSites;s++){
@@ -633,11 +489,6 @@ void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,real
     for(int i=0;i<(2*nInd+1);i++)
       hj[i] =  log(hj[i])-lbicoTab[i];
        
-    if(doFold){
-      for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
-	hj[i] = log(exp(hj[i]) + exp(hj[2*nInd-i]));
-      hj[newDim-1] = hj[newDim-1]+log(2.0);
-    }
     angsd::logrescale(hj,2*nInd+1);
     if(std::isnan(hj[0]))
       r->oklist[s] = 2;
@@ -656,7 +507,7 @@ void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,real
 int homo[4] = {0,4,7,9};
 
 
-void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans) {
+void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans) {
   int myCounter =0;
   if(anc==NULL||liks==NULL){
     fprintf(stderr,"problems receiving data in [%s] will exit (likes=%p||ancestral=%p)\n",__FUNCTION__,liks,anc);
@@ -797,16 +648,12 @@ void abcSaf::algoJointHap(double **liks,char *anc,int nsites,int numInds,int und
     }
     //exit(0);
   }
-  if(fold){
-    fprintf(stderr,"folding is not implemented for -doSaf 1 with haploids. Please write developer if you would like this implemented\n");
-    exit(0);
-  }
   
 }
 
 
 
-void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int fold,int *keepSites,realRes *r,int noTrans) {
+void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans) {
   //  fprintf(stderr,"[%s]\n",__FUNCTION__);
   int myCounter =0;
   if(anc==NULL||liks==NULL){
@@ -952,46 +799,27 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
       we do 3 things.
       1. log scaling everyting
       2. rescaling to the most likely in order to avoid underflows in the optimization
-      3. we might do a fold also.
+      (3. we might do a fold also.) moved to realSFS
       
      */    
 
-    if(fold) {
-      int newDim = numInds+1;
-      for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
-	sumMinors[i] = log(sumMinors[i] + sumMinors[2*numInds-i]);//THORFINN NEW
-      sumMinors[newDim-1] = log(sumMinors[newDim-1])+log(2.0);
-      angsd::logrescale(sumMinors,newDim);
-      if(std::isnan(sumMinors[0]))
-	r->oklist[it] = 2;
-      else{
-	r->oklist[it] = 1;
-	r->pLikes[myCounter] =new float[numInds+1];
- 	for(int iii=0;iii<numInds+1;iii++)
-	  r->pLikes[myCounter][iii] = sumMinors[iii];
-	  //memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(numInds+1));
-	myCounter++;
+    for(int i=0;i<2*numInds+1;i++)
+      sumMinors[i] = log(sumMinors[i]);
+    angsd::logrescale(sumMinors,2*numInds+1);
+    //  fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
+    if(std::isnan(sumMinors[0]))
+      r->oklist[it] = 2;
+    else{
+      r->oklist[it] = 1;
+      r->pLikes[myCounter] =new float[2*numInds+1];
+      for(int iii=0;iii<2*numInds+1;iii++){
+	//	  fprintf(stderr,"iii:%f\n",sumMinors[iii]);
+	r->pLikes[myCounter][iii] = sumMinors[iii];
       }
-    }else{
-      for(int i=0;i<2*numInds+1;i++)
-	sumMinors[i] = log(sumMinors[i]);
-      angsd::logrescale(sumMinors,2*numInds+1);
-      //  fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
-      if(std::isnan(sumMinors[0]))
-	r->oklist[it] = 2;
-      else{
-	r->oklist[it] = 1;
-	r->pLikes[myCounter] =new float[2*numInds+1];
-	for(int iii=0;iii<2*numInds+1;iii++){
-	  //	  fprintf(stderr,"iii:%f\n",sumMinors[iii]);
-	  r->pLikes[myCounter][iii] = sumMinors[iii];
-	}
-	//	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
-	myCounter++;
-      }
+      //	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
+      myCounter++;
     }
   }
-  
 }
 
 
@@ -1000,7 +828,7 @@ void abcSaf::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
 
 
 
-void abcSaf::algoJointMajorMinor(double **liks,int nsites,int numInds, int *keepSites,realRes *r,int fold,char *major, char *minor) {
+void abcSaf::algoJointMajorMinor(double **liks,int nsites,int numInds, int *keepSites,realRes *r,char *major, char *minor) {
   //  fprintf(stderr,"[%s]\n",__FUNCTION__);
   int myCounter =0;
   if(liks==NULL){
@@ -1125,46 +953,27 @@ void abcSaf::algoJointMajorMinor(double **liks,int nsites,int numInds, int *keep
       we do 3 things.
       1. log scaling everyting
       2. rescaling to the most likely in order to avoid underflows in the optimization
-      3. we might do a fold also.
+      (3. we might do a fold also.) in realSFS now
       
      */    
 
-    if(fold) {
-      int newDim = numInds+1;
-      for(int i=0;i<newDim-1;i++)// we shouldn't touch the last element
-	sumMinors[i] = log(sumMinors[i] + sumMinors[2*numInds-i]);//THORFINN NEW
-      sumMinors[newDim-1] = log(sumMinors[newDim-1])+log(2.0);
-      angsd::logrescale(sumMinors,newDim);
-      if(std::isnan(sumMinors[0]))
-	r->oklist[it] = 2;
-      else{
-	r->oklist[it] = 1;
-	r->pLikes[myCounter] =new float[numInds+1];
- 	for(int iii=0;iii<numInds+1;iii++)
-	  r->pLikes[myCounter][iii] = sumMinors[iii];
-	  //memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(numInds+1));
-	myCounter++;
+    for(int i=0;i<2*numInds+1;i++)
+      sumMinors[i] = log(sumMinors[i]);
+    angsd::logrescale(sumMinors,2*numInds+1);
+    //  fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
+    if(std::isnan(sumMinors[0]))
+      r->oklist[it] = 2;
+    else{
+      r->oklist[it] = 1;
+      r->pLikes[myCounter] =new float[2*numInds+1];
+      for(int iii=0;iii<2*numInds+1;iii++){
+	//	  fprintf(stderr,"iii:%f\n",sumMinors[iii]);
+	r->pLikes[myCounter][iii] = sumMinors[iii];
       }
-    }else{
-      for(int i=0;i<2*numInds+1;i++)
-	sumMinors[i] = log(sumMinors[i]);
-      angsd::logrescale(sumMinors,2*numInds+1);
-      //  fprintf(stderr,"sumMinors[0]:%f\n",sumMinors[0]);
-      if(std::isnan(sumMinors[0]))
-	r->oklist[it] = 2;
-      else{
-	r->oklist[it] = 1;
-	r->pLikes[myCounter] =new float[2*numInds+1];
-	for(int iii=0;iii<2*numInds+1;iii++){
-	  //	  fprintf(stderr,"iii:%f\n",sumMinors[iii]);
-	  r->pLikes[myCounter][iii] = sumMinors[iii];
-	}
-	//	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
-	myCounter++;
-      }
+      //	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
+      myCounter++;
     }
   } 
-  
 }
 
 
@@ -1198,16 +1007,16 @@ void abcSaf::run(funkyPars  *p){
     r->pLikes=new float*[p->numSites];
     
     if(doSaf==1&&isHap==0)
-      algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans);
+      algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans);
     else if(doSaf==1&&isHap==1)
-      algoJointHap(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans);
+      algoJointHap(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans);
     else if(doSaf==2){
       freqStruct *freq = (freqStruct *) p->extras[6];
-      filipe::algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,fold,p->keepSites,r,noTrans,doSaf,p->major,p->minor,freq->freq,filipeIndF,newDim);
+      filipe::algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans,doSaf,p->major,p->minor,freq->freq,filipeIndF,newDim);
     }else if(doSaf==4){
-      algoJointPost(p->post,p->numSites,p->nInd,p->keepSites,r,fold);
+      algoJointPost(p->post,p->numSites,p->nInd,p->keepSites,r);
     }else if(doSaf==5){
-      algoJointMajorMinor(p->likes,p->numSites,p->nInd,p->keepSites,r,fold,p->major,p->minor);
+      algoJointMajorMinor(p->likes,p->numSites,p->nInd,p->keepSites,r,p->major,p->minor);
     }
 
     p->extras[index] = r;
@@ -1261,63 +1070,6 @@ void printFull(funkyPars *p,int index,BGZF *outfileSFS,BGZF *outfileSFSPOS,char 
   //fprintf(stderr,"asdf: nnnSites:%d\n",nnnSites);
 }
 
-
-void abcSaf::calcThetas(funkyPars *pars,int index,double *prior,std::vector<float> *vecs,std::vector<int> &myposi,int newDim){
- realRes *r=(realRes *) pars->extras[index];
- int id=0;
- for(int i=0; i<pars->numSites;i++) {
-   
-   if(r->oklist[i]==1 &&pars->keepSites[i]!=0){
-     double workarray[newDim];
-     for(int iii=0;iii<newDim;iii++)
-       workarray[iii] = r->pLikes[id][iii];
-     id++;
-     //First find thetaW: nSeg/a1
-     double pv,seq;
-     if(fold)
-       pv = 1-exp(workarray[0]);
-     else
-       pv = 1-exp(workarray[0])-exp(workarray[2*pars->nInd]);
-     
-     if(pv<0)//catch underflow
-       seq=log(0.0);
-     else
-       seq = log(pv)-aConst;//watterson
-     vecs[0].push_back(seq);
-     //     ksprintf(&kb,"%s\t%d\t%f\t",header->target_name[pars->refId],pars->posi[i]+1,seq);
-     myposi.push_back(pars->posi[i]);
-     if(fold==0) {
-       double pairwise=0;    //Find theta_pi the pairwise
-       double thL=0;    //Find thetaL sfs[i]*i;
-       double thH=0;//thetaH sfs[i]*i^2
-       for(size_t ii=1;ii<2*pars->nInd;ii++){
-	 
-	 pairwise += exp(workarray[ii]+scalings[ii] );
-	 double li=log(ii);
-	 
-	 thL += exp(workarray[ii])*ii;
-	 thH += exp(2*li+workarray[ii]);
-       }
-       vecs[1].push_back(log(pairwise)-aConst2);
-       vecs[2].push_back(workarray[1]);
-       vecs[3].push_back(log(thH)-aConst2);
-       vecs[4].push_back(log(thL)-aConst3);
-     }else{
-       double pairwise=0;    //Find theta_pi the pairwise
-       for(size_t ii=1;ii<newDim;ii++)
-	 pairwise += exp(workarray[ii]+scalings[ii] );
-       vecs[1].push_back(log(pairwise)-aConst2);
-       for(int i=2;i<=4;i++)
-	 vecs[i].push_back(log(0));
-     }
-   }else if(r->oklist[i]==2)
-     fprintf(stderr,"PROBS at: %s\t%d\n",header->target_name[pars->refId],pars->posi[i]+1);
- }
-}
-
-
-
-
 void abcSaf::print(funkyPars *p){
   if(p->numSites==0||(doSaf==0))
     return;
@@ -1352,15 +1104,11 @@ void abcSaf::print(funkyPars *p){
       }
     }
  
-    if(doThetas==0){
-      //fprintf(stderr,"\t-> newdi:%d\n",newDim);
-      if(isHap==0)
-	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
-      else
-	printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
-    }
-    else 
-      calcThetas(p,index,prior,theta_res,theta_pos,newDim);
+    if(isHap==0)
+      printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
+    else
+      printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],newDim,nnnSites);
+
   }   
 }
 
@@ -1753,12 +1501,9 @@ void abcSaf::writeAll(){
 }
 
 void abcSaf::changeChr(int refId) {
-  if(doSaf&&doThetas==0&&doSaf!=3)
+  if(doSaf&&doSaf!=3)
     writeAll();
 
-  if(doSaf&&doThetas==1&&doSaf!=3)
-    writeAllThetas(theta_dat,theta_idx,tmpChr,offs_thetas,theta_pos,theta_res,mynchr);
-  
   free(tmpChr);
   tmpChr = strdup(header->target_name[refId]);
 }
