@@ -259,9 +259,6 @@ int printMulti(args *arg){
   while(1) {
     static char *curChr=NULL;
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,1);//read nsites from data
-    if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
-      break;
-
     if(arg->oldout==0){
       for(int s=0;s<gls[0]->x;s++){
 	if(arg->chooseChr==NULL)

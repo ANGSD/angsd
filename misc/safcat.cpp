@@ -114,7 +114,9 @@ int saf_cat(int argc,char **argv){
     return 0;
   BGZF *outfileSAF =  openFileBG(outnames,SAF);
   BGZF *outfileSAFPOS =  openFileBG(outnames,SAFPOS);
+  fprintf(stderr,"\t-> Number of threads: %d\n",nThreads);
   if(nThreads>1){
+    fprintf(stderr,"\t-> Setting threads to: %d for both .saf.gz and saf.pos.gz\n",nThreads);
     bgzf_mt(outfileSAF,nThreads,256);
     bgzf_mt(outfileSAFPOS,nThreads,256);
   }
@@ -125,6 +127,7 @@ int saf_cat(int argc,char **argv){
   my_bgzf_write(outfileSAFPOS,buf,8);
   fwrite(buf,1,8,outfileSAFIDX);
   int64_t offs[2];
+  assert(0==bgzf_flush(outfileSAFPOS));assert(0==bgzf_flush(outfileSAF));
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
   
@@ -155,6 +158,7 @@ int saf_cat(int argc,char **argv){
       fwrite(&it->second.nSites,sizeof(size_t),1,outfileSAFIDX);
       fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
 
+      assert(0==bgzf_flush(outfileSAFPOS));assert(0==bgzf_flush(outfileSAF));
       offs[0] = bgzf_tell(outfileSAFPOS);
       offs[1] = bgzf_tell(outfileSAF);
     }
