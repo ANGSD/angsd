@@ -30,7 +30,7 @@ public:
   FILE *bgenFile;
   int layout;
   int sites;
-  int indis;
+  int nInd;
   header *hd;
   header *parseheader(FILE *fp);
 
@@ -49,7 +49,7 @@ public:
     //jump offset bytes
     layout = hd->layout;
     sites = hd->M;
-    indis = hd->N;
+    nInd = hd->N;
 
     //emil jump offset + 4 bytes into file (bytes of offset), from start
     fseek(fp, offset+4, SEEK_SET);
@@ -67,6 +67,16 @@ public:
   ~bgenReader(){
     
     fclose(bgenFile);
+
+    if(hd->si==1){
+
+      for(uint i=0;i<hd->N;i++){	
+	free(hd->sampleids[i]);
+      }
+      delete [] hd->sampleids;
+    }
+        
+    delete [] hd;
     //TO DO
     //delete header struct
   }

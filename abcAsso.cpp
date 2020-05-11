@@ -122,11 +122,11 @@ void abcAsso::getOptions(argStruct *arguments){
     fprintf(stderr,"Error: you must provide a phenotype file (-yBin or -yQuant) to perform association \n");
     exit(0);
    }
- if(doAsso && arguments->inputtype==INPUT_BEAGLE&&doAsso==1){
+  if(doAsso && (arguments->inputtype==INPUT_BEAGLE&&doAsso==1 || arguments->inputtype==INPUT_BGEN&&doAsso==1)){
     fprintf(stderr,"Error: Only doAsso=2 can be performed on posterior input\n");
     exit(0);
   }
-  if(doAsso && arguments->inputtype!=INPUT_BEAGLE&&(doAsso==2)&&doPost==0){
+  if(doAsso && arguments->inputtype!=INPUT_BEAGLE && arguments->inputtype!=INPUT_BGEN &&(doAsso==2)&&doPost==0){
     fprintf(stderr,"Error: For doAsso=2 you must estimate the posterior probabilites for the genotypes (-doPost 1) \n");
     exit(0);
   }
@@ -408,7 +408,7 @@ void abcAsso::run(funkyPars *pars){
   
   assoStruct *assoc = allocAssoStruct();
   pars->extras[index] = assoc;
-
+  
   if(doAsso==2 or doAsso==4 or doAsso==5 or doAsso==6 or doAsso==7){
     assoc->highWt=new int[pars->numSites];
     assoc->highHe=new int[pars->numSites];
@@ -2096,7 +2096,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
   int **keepInd  = new int*[ymat.y];
   // we can also get coef of genotype
   double **stat = new double*[ymat.y*2];
-
+  
   for(int yi=0;yi<ymat.y;yi++){
     stat[yi] = new double[pars->numSites];
     keepInd[yi]= new int[pars->numSites];
@@ -2129,7 +2129,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
   for(int s=0;s<pars->numSites;s++){//loop overs sites
     if(pars->keepSites[s]==0)
       continue;
-        
+      
     int *keepListAll = new int[pars->nInd];
     for(int i=0 ; i<pars->nInd ;i++){
       keepListAll[i]=1;
@@ -3458,10 +3458,10 @@ double abcAsso::poisScoreEnv(double *post,int numInds, double *y, double *ytilde
 void abcAsso::printDoAsso(funkyPars *pars){
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
-
   
   freqStruct *freq = (freqStruct *) pars->extras[6];
   assoStruct *assoc= (assoStruct *) pars->extras[index];
+  
   for(int yi=0;yi<ymat.y;yi++){
     bufstr.l=0;
     for(int s=0;s<pars->numSites;s++){

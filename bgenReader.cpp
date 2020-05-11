@@ -15,6 +15,33 @@
 #include <cstring> //memcpy
 
 
+
+//dumb little function to convert char allele to int allele (0->A, 1->C, 2->G, 3->T, else 4)
+int refToInt2(char c){
+  
+  int allele;
+   switch (c) {
+   case 'A':
+     allele=0;
+     break;
+   case 'C':
+     allele=1;
+     break;
+   case 'G':
+     allele=2;
+     break;
+   case 'T':
+     allele=3;
+     break;
+     //if cannot match the char
+   default:     
+     allele=4;
+   }
+
+   return(allele);
+
+}
+
 //returns 0 if not indel higher values indicates indel
 int isindel(FILE *fp){
   
@@ -27,56 +54,43 @@ int isindel(FILE *fp){
   //read in how many variant ID is
   fread(&Lid_l,sizeof(unsigned short),1,fp);  
   bytes += (sizeof(unsigned short)*1);
-  fprintf(stderr,"this much %i\n",(sizeof(unsigned short)*1));
   
   Lid =(char*) calloc(Lid_l+1,sizeof(char));
   fread(Lid,sizeof(char),Lid_l,fp);
   bytes += (sizeof(char)*Lid_l);
-  fprintf(stderr,"this much %i\n",(sizeof(char)*Lid_l));
   
   unsigned short Lrsid_l;
   char *Lrsid;
   fread(&Lrsid_l,sizeof(unsigned short),1,fp);
   bytes += (sizeof(unsigned short)*1);
-  fprintf(stderr,"this much %i\n",(sizeof(unsigned short)*1));
- 
-  
+   
   Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
   fread(Lrsid,sizeof(char),Lrsid_l,fp);
   bytes += (sizeof(char)*Lrsid_l);
-  fprintf(stderr,"this much %i\n",(sizeof(char)*Lrsid_l));
-  
-  
+    
   unsigned short Lchr_l;
   char *Lchr;
   fread(&Lchr_l,sizeof(unsigned short),1,fp);
   bytes += (sizeof(unsigned short)*1);
-  fprintf(stderr,"this much %i\n",(sizeof(unsigned short)*1));
   
   Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
   fread(Lchr,sizeof(char),Lchr_l,fp);
   bytes += (sizeof(char)*Lchr_l);
-  fprintf(stderr,"this much %i\n",(sizeof(char)*Lchr_l));
-  
-  
+    
   unsigned int vpos;
   fread(&vpos,sizeof(unsigned),1,fp);
   bytes += (sizeof(unsigned)*1);
-  fprintf(stderr,"this much %i\n",(sizeof(unsigned)*1));
   
   unsigned short nal;
   fread(&nal,sizeof(unsigned short),1,fp);
   bytes += (sizeof(unsigned short)*1);
-  fprintf(stderr,"this much %i\n",(sizeof(unsigned short)*1));
   
   unsigned la_l;
   char *la1;
   char *la2;
   fread(&la_l,sizeof(unsigned),1,fp);
   bytes += (sizeof(unsigned)*1);
-  fprintf(stderr,"this much %i\n",(sizeof(unsigned)*1));
   
-
   //we should stop if it is not a SNP
   if(la_l > 1){
     isindel = 1;
@@ -85,39 +99,16 @@ int isindel(FILE *fp){
   la1 =(char*) calloc(la_l+1,sizeof(char));
   fread(la1,sizeof(char),la_l,fp);
   bytes += (sizeof(char)*la_l);
-  fprintf(stderr,"this much %i\n",(sizeof(char)*la_l));
   
   fread(&la_l,sizeof(unsigned),1,fp);
   bytes += (sizeof(unsigned)*1);
-  fprintf(stderr,"this much %i\n",(sizeof(unsigned)*1));
-  
-  
+    
   if(la_l > 1){
     isindel = 1;
   }
 
   //jump the bytes we read back in the file - super ugo!?
   fseek(fp,-bytes,SEEK_CUR);
-
-  unsigned short Lid_l2;
-  char *Lid2;
-  //read in how many variant ID is
-  fread(&Lid_l2,sizeof(unsigned short),1,fp);
-  bytes += (sizeof(unsigned short)*1);
-  fprintf(stderr,"this much %i\n",(sizeof(unsigned short)*1));
-
-  Lid2 =(char*) calloc(Lid_l2+1,sizeof(char));
-  fread(Lid2,sizeof(char),Lid_l2,fp);
-  bytes += (sizeof(char)*Lid_l2);
-  fprintf(stderr,"this much %i\n",(sizeof(char)*Lid_l2));
-
-  fprintf(stderr,"Lid %s\n",Lid2);
-
-
-
-
-  //emil
-  fprintf(stderr,"how many bytes to read alleles %i\n",bytes);
   
   return isindel;
   
@@ -125,7 +116,6 @@ int isindel(FILE *fp){
 
 //returns chr
 int getChr(FILE *fp){
-
   
   int isindel = 0;
   //how many bites we have moved forward as I want to jump back my that much
@@ -155,6 +145,11 @@ int getChr(FILE *fp){
   fread(Lchr,sizeof(char),Lchr_l,fp);
   bytes += (sizeof(char)*Lchr_l);
 
+  //see if string is empty - meaning there is no line to read in
+  if(Lchr[0]=='\0'){
+    return -9;
+  }
+  
   //convering it to chr if not valid number throws error
   int chr = atoi(Lchr);    
   if(chr==0){
@@ -225,9 +220,6 @@ header *bgenReader::parseheader(FILE *fp){
     }
   }
 
-  //emil
-  fprintf(stderr,"HERE1\n");
-  
   return hd;
 }
 
@@ -241,20 +233,19 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
   fread(&Lid_l,sizeof(unsigned short),1,fp);
   Lid =(char*) calloc(Lid_l+1,sizeof(char));
   fread(Lid,sizeof(char),Lid_l,fp);
-
-  //emil
-  fprintf(stderr,"Lid in parsing is %s\n",Lid);
   
   unsigned short Lrsid_l;
   char *Lrsid;
   fread(&Lrsid_l,sizeof(unsigned short),1,fp);
   Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
-  fread(Lrsid,sizeof(char),Lrsid_l,fp);  
+  fread(Lrsid,sizeof(char),Lrsid_l,fp);
+  
   unsigned short Lchr_l;
   char *Lchr;
   fread(&Lchr_l,sizeof(unsigned short),1,fp);
   Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
   fread(Lchr,sizeof(char),Lchr_l,fp);
+  
   unsigned int vpos;
   fread(&vpos,sizeof(unsigned),1,fp);    
   unsigned short nal;
@@ -263,51 +254,30 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
   char *la1;
   char *la2;
   fread(&la_l,sizeof(unsigned),1,fp);
-
-  //ERROR somehwere in betwee //emil statements!!
   
-  //emil
-  fprintf(stderr,"vpos in parsing is %i\n",vpos);
-
-
-  
-  //we should stop if it is not a SNP
-  if(la_l > 1){
-    //not snp skip to next site
-  }
-
   la1 =(char*) calloc(la_l+1,sizeof(char));
   fread(la1,sizeof(char),la_l,fp);
   fread(&la_l,sizeof(unsigned),1,fp);
-  if(la_l > 1){
-    //not snp skip to next site
-  }
-
+  
   la2 =(char*) calloc(la_l+1,sizeof(char));
   fread(la2,sizeof(char),la_l,fp);
   
-  if(nal!=2){
-    //balcon is not actual site
-    //TO DO add index of actual site being read
-    fprintf(stderr,"for site %i, id %s, number of alleles is not 2 but: %u, skipping site\n",balcon,Lrsid,nal);
-    fprintf(stderr,"allele[%d]:%s\n",1,la1);
-    fprintf(stderr,"allele[%d]:%s\n",2,la2);
-        
-  }
-
   //this should actually be used for SNP-ID
   //TO DO add proper place to store chr
-  //r->refId[balcon] = atoi(Lchr);
+
+  //in order to map chr to chr from fai file (which refId points to)
+  int wacko[26] = {0,11,15,16,17,18,19,20,21,1,2,3,4,5,6,7,8,9,10,12,13,14,22,23,24};
+  //because 0 indexed
+  r->refId = wacko[atoi(Lchr)-1];
+  
   r->posi[balcon] = vpos;
   //we do not know which one is major and minor, but probaly like beagle files
   //TO DO check which one is major and minor
-  r->major[balcon] = la1[0];
-  r->minor[balcon] = la2[0];
-
-  //not sure these are needed
-  //r->id[balcon] = Lid;
-  //r->rsid[balcon] = Lrsid;
-    
+  r->major[balcon] = refToInt2(la1[0]);
+  r->minor[balcon] = refToInt2(la2[0]);
+  //so that site is analysed
+  r->keepSites[balcon] = 1;
+      
   //done reading variant information;
   // uncompressed size of genotype probs
   unsigned C;
@@ -330,12 +300,15 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
     fread(pds,sizeof(unsigned char),C,fp);
   } else if(hd->compressed==1){
     unsigned char *upds=(unsigned char*) calloc(C-4,sizeof(unsigned char));
+    //added this as otherwise, does not read from current position in file
+    fread(upds,sizeof(unsigned char),C-4,fp);  
     //zlib https://gist.github.com/arq5x/5315739
     z_stream infstream;
     infstream.zalloc = Z_NULL;
     infstream.zfree = Z_NULL;
     infstream.opaque = Z_NULL;
-    // setup "b" as the input and "c" as the compressed output
+
+    // setup "b" as the input and "c" as the compressed output    
     infstream.avail_in = C-4;
     infstream.next_in = (Bytef *)upds; // input char array
     infstream.avail_out = D; // size of output
@@ -355,10 +328,8 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
   //data is now in pds;//<- probability datastorage
   unsigned int N2;memcpy(&N2,pds,4);
 
-  //emil
-  fprintf(stderr,"hd->N is %i og N2 %i %c %c\n",hd->N,N2,la1,la2);
-  
   assert(hd->N==N2);
+  
   unsigned short nal2;memcpy(&nal2,pds+4,2);
   assert(nal==nal2);
   char pmin=pds[6];
@@ -407,23 +378,24 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
       uint p11 = to_vals[0];
       // genotype prob HE allele 1 - genotype is 4 bits or 0.5 bytes
       uint p12 = to_vals[1];
+
+      r->post[balcon][at] = (1.0*p11)/scal;
+      r->post[balcon][at+1] = (1.0*p12)/scal;
+      r->post[balcon][at+2] = 1-(1.0*p11)/scal-(1.0*p12)/scal;
       
-      r->post[balcon][3*at] = (1.0*p11)/scal;
-      r->post[balcon][3*at+1] = (1.0*p12)/scal;
-      r->post[balcon][3*at+2] = 1-(1.0*p11)/scal-(1.0*p12)/scal;
+      if(r->post[balcon][at+2]<0) //<-needed?
+	r->post[balcon][at+2] = 0;
       
-      if(r->post[balcon][3*at+2]<0) //<-needed?
-	r->post[balcon][3*at+2] = 0;
+      double sum = r->post[balcon][at]+r->post[balcon][at+1]+r->post[balcon][at+2];
       
-      float sum = r->post[balcon][3*at]+r->post[balcon][3*at+1]+r->post[balcon][3*at+2];
+      r->post[balcon][at] = r->post[balcon][at] / sum;
+      r->post[balcon][at+1] = r->post[balcon][at+1] / sum;
+      r->post[balcon][at+2] = r->post[balcon][at+2] / sum;
+
+      at+=3;
       
-      r->post[balcon][3*at] = r->post[balcon][3*at] / sum;
-      r->post[balcon][3*at+1] = r->post[balcon][3*at+1] / sum;
-      r->post[balcon][3*at+2] = r->post[balcon][3*at+2] / sum;
     }
-    
-    at+=3;
-    
+        
   }
         
   balcon++;
@@ -433,45 +405,31 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
 
 funkyPars *bgenReader::fetch(int chunkSize){
 
-    //emil
-  fprintf(stderr,"HERE2\n");
-
   funkyPars *r = funkyPars_init();
-
-    //emil
-  fprintf(stderr,"HERE3\n");
-
+  
+  //using refId for chr
+  //TO DO add chr field in funkyPars struct
+  //r->refId=new int[chunkSize];
+  r->posi=new int[chunkSize];
+  
   r->post=new double*[chunkSize];
   r->major = new char[chunkSize];
   r->minor = new char[chunkSize];
   r->keepSites = new int[chunkSize];
   r->refId = 0;
 
-  //emil
-  fprintf(stderr,"HERE4\n");
-
+  r->post = new double*[chunkSize];
+  r->nInd = nInd;
   
-  for(int i=0;i<chunkSize;i++){
-    memset(r->post,0,chunkSize*sizeof(double*));
-  }
-
-  //using refId for chr
-  //TO DO add chr field in funkyPars struct
-  //r->refId=new int[chunkSize];
-  r->posi=new int[chunkSize];
-
+  for(int s=0;s<chunkSize;s++)
+    r->post[s] = new double[nInd*3];
+  
   //keeps track of which site we are at (we might skip some non diallelic sites)
   int balcon=0;
 
   int n    = 0;  // total number of records in file
   int nsnp = 0;  // number of SNP records in file
 
-
-  //emil
-  fprintf(stderr,"HERE2\n");
-
-
-  
   //go to statement
  never_ever: //haha
   
@@ -479,48 +437,30 @@ funkyPars *bgenReader::fetch(int chunkSize){
   //member variable of vcfReader class 
   if(readAgain){
 
-    fprintf(stderr,"HOWDY\n");
     //read stored line of file    
     curChr=getChr(bgenFile);
     //parses line and puts in output structure
     parseline(bgenFile,r,balcon,hd);    
-
     readAgain = 0;
+    
   }
 
-
+  //TO DO what if fewer sites than one chunck??
   //balcon how many ok sites
-  while(balcon<chunkSize) {
-    //either parse a read with region or nextread
-    //reads 1 sites from vcf or bcffile - only has to do with regions - EMIL CAN SKIP THIS
-    //if(((bcf_retval=vcfReaderwrap_reader(hs,rec)))!=0)
-    //  break;
+  while(balcon<chunkSize && balcon<sites) {
 
-    //read header of bgen file for vcf that is done with vcfReaderwrap_reader(hs,rec)
-
-
-    fprintf(stderr,"balcon is %i\n",balcon);
     // to get chr
     curChr=getChr(bgenFile);
 
-
-    //EMIL
-    fprintf(stderr,"chr is %i\n",curChr);
-
-
-
-    
+    //meaning there is no more data to be read no chr to read..
+    if(curChr==-9){
+      break;
+    }
     
     if(prevChr==-1){
       prevChr=curChr;
-      r->refId=curChr;
     }
 
-    //EMIL
-    fprintf(stderr,"chr is %i prev %i\n",curChr,prevChr);
-
-
-    
     n++;
         
     //skip nonsnips - gives back 0 if indel
@@ -561,14 +501,13 @@ funkyPars *bgenReader::fetch(int chunkSize){
   //  goto never_ever;
 
   //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
-
     
   r->numSites=balcon;
   if(r->numSites==0){
     funkyPars_destroy(r);
     r=NULL;
   }
-  
+
   return r;
  
 }
