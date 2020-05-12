@@ -304,6 +304,8 @@ void angsd::printMatrix(Matrix<double> mat,FILE *file){
 }
 
 
+
+
 double **angsd::get3likes(funkyPars *pars){
 
   double **loglike = NULL;

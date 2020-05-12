@@ -436,13 +436,16 @@ funkyPars *bgenReader::fetch(int chunkSize){
   //if acpy not null - read read that has survived
   //member variable of vcfReader class 
   if(readAgain){
-
+    
     //read stored line of file    
     curChr=getChr(bgenFile);
     //parses line and puts in output structure
     parseline(bgenFile,r,balcon,hd);    
     readAgain = 0;
-    
+
+    //after read line we have update prevChr - current chr will be updated at the beginning of the loop
+    prevChr=curChr;
+        
   }
 
   //TO DO what if fewer sites than one chunck??
@@ -451,6 +454,12 @@ funkyPars *bgenReader::fetch(int chunkSize){
 
     // to get chr
     curChr=getChr(bgenFile);
+
+
+    //emil
+    //if(curChr>1){
+    //      fprintf(stderr,"baclon %i, chunkSize %i, sites %i, curChr %i, prevChr %i\n",balcon,chunkSize,sites,curChr,prevChr);
+    //}
 
     //meaning there is no more data to be read no chr to read..
     if(curChr==-9){
@@ -466,6 +475,7 @@ funkyPars *bgenReader::fetch(int chunkSize){
     //skip nonsnips - gives back 0 if indel
     //reads first X bytes of line to see if a SNP, then jumps back X bytes
     if(isindel(bgenFile)){
+      prevChr=curChr;
       if(onlyPrint>0){
 	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",r->posi+1);
 	onlyPrint--;
@@ -479,6 +489,7 @@ funkyPars *bgenReader::fetch(int chunkSize){
     //curChr is current chr
     //rec->rid chr we are reading
     if(prevChr!=curChr){
+          
       readAgain=1;
       //info for this site - duplicate this site
       //I do not think I have to take a copy I can just
