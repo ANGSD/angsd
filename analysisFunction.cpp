@@ -305,6 +305,123 @@ void angsd::printMatrix(Matrix<double> mat,FILE *file){
 
 
 
+//getSample
+
+angsd::Matrix<double> angsd::getSample(const char *name,int doBinary,int lens){
+
+  if(!angsd::fexists(name)){
+    fprintf(stderr,"\t-> Problems opening file: %s\n",name);
+    exit(0);
+  }
+
+  const char* delims = " \t";
+  std::ifstream pFile(name,std::ios::in);
+
+  char buffer[lens];
+  std::list<char *> firstLine;
+  std::list<char *> secondLine;
+  std::list<double *> rows;
+  int ncols=0;
+  int line=0;
+
+  //read first line to know how many cols
+  pFile.getline(buffer,lens);
+  int ncols=0;
+  char* tmp = strtok(buffer,delims);
+  while(tmp!=NULL){
+    ncols++;
+    strtok(NULL,delim);       
+  }
+  
+  //read second line to know types of each
+  std::map <std::int,char> sampleMap;
+  pFile.getline(buffer,lens);
+  int count=0;
+  char* tmp = strtok(buffer,delims);
+  while(tmp!=NULL){
+    // keep track of which column is what - 0 ID or missing, D discrete covar, C continious covar, B discrete pheno, P continious pheno
+    sampleMap[count] = tmp;
+    count++;    
+    strtok(NULL,delim);    
+  }
+
+  //which column we are at
+  int column = 0;
+  int row = 0;
+
+  std::list<double*> covRows;
+  std::list<double*> pheRows;
+  
+  //create matrix for covar and pheno
+  
+  while(!pFile.eof()){
+    pFile.getline(buffer,lens);
+    if(strlen(buffer)==0)
+      continue;
+    
+    char *tok = strtok(buffer,delims);
+    std::list<double> covRow;
+    std::list<double> pheRow;
+    
+    while(tok!=NULL){
+      
+      if(sampleMap[column] == '0'){
+	continue;
+	//covar
+      } else if(sampleMap[column] == 'D' || sampleMap[column] == 'C'){
+	covRow.push_back(atof(tok));
+	//pheno
+      } else if(sampleMap[column] == 'B' || sampleMap[column] == 'P'){
+	pheRow.push_back(atof(tok));
+      } else{
+	fprintf(stderr,"error .sample file has unreconigsed column type (D, C, B, 0 and P are allowed): %c \n",sampleMap[column]);
+	exit(0);
+      }
+      
+    }
+    
+    double *crows = new double[cowRow.size()];
+    double *prows = new double[pheRow.size()];
+
+    int i=0;
+    for(std::list<double>::iterator it=covRow.begin();it!=cowRow.end();it++)
+      crows[i++]  = *it;
+
+    i=0;
+    for(std::list<double>::iterator it=pheRow.begin();it!=pheRow.end();it++)
+      prows[i++]  = *it;
+
+    covRows.push_back(crows);
+    pheRows.push_back(prows);          
+  
+  }
+
+  //  fprintf(stderr,"%s nrows:%lu\n",__FUNCTION__,rows.size());
+  double **covData = new double*[covRows.size()];
+  double **pheData = new double*[pheRows.size()];
+
+  int i = 0;
+  for(std::list<double*>::iterator it=covRows.begin();it!=covRows.end();it++)
+    covData[i++]  = *it;
+  
+  i = 0;
+  for(std::list<double*>::iterator it=pheRows.begin();it!=pheRows.end();it++)
+    pheData[i++]  = *it;
+
+
+  //return something with two matrices...
+  //implement some doubleTrouble struct
+  
+  Matrix<double> retMat;
+  retMat.matrix=data;
+  retMat.x = rows.size();
+  retMat.y = ncols;
+  return retMat;
+
+}
+
+
+
 
 double **angsd::get3likes(funkyPars *pars){
 

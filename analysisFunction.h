@@ -31,8 +31,8 @@ namespace angsd {
       {2,5,7,8},
       {3,6,8,9}
     };
- 
-
+  
+  
   template<typename T>
   struct Matrix {
     int x;
