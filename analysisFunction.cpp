@@ -304,10 +304,7 @@ void angsd::printMatrix(Matrix<double> mat,FILE *file){
 }
 
 
-
-//getSample
-
-angsd::Matrix<double> angsd::getSample(const char *name,int doBinary,int lens){
+angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
 
   if(!angsd::fexists(name)){
     fprintf(stderr,"\t-> Problems opening file: %s\n",name);
@@ -321,8 +318,6 @@ angsd::Matrix<double> angsd::getSample(const char *name,int doBinary,int lens){
   std::list<char *> firstLine;
   std::list<char *> secondLine;
   std::list<double *> rows;
-  int ncols=0;
-  int line=0;
 
   //read first line to know how many cols
   pFile.getline(buffer,lens);
@@ -330,25 +325,31 @@ angsd::Matrix<double> angsd::getSample(const char *name,int doBinary,int lens){
   char* tmp = strtok(buffer,delims);
   while(tmp!=NULL){
     ncols++;
-    strtok(NULL,delim);       
+    tmp = strtok(NULL,delims);       
   }
   
   //read second line to know types of each
-  std::map <std::int,char> sampleMap;
+  std::vector <char> sampleMap;
   pFile.getline(buffer,lens);
   int count=0;
-  char* tmp = strtok(buffer,delims);
+  tmp = strtok(buffer,delims);
   while(tmp!=NULL){
     // keep track of which column is what - 0 ID or missing, D discrete covar, C continious covar, B discrete pheno, P continious pheno
-    sampleMap[count] = tmp;
+    sampleMap.push_back(tmp[0]);
     count++;    
-    strtok(NULL,delim);    
+    tmp = strtok(NULL,delims);    
   }
 
+  assert(count==ncols);
+  
   //which column we are at
-  int column = 0;
-  int row = 0;
+  int pheCols = 0;
+  int covCols = 0;
 
+  int column = 0;
+  // to keep track of pheno either only binary or quant
+  int isBinary = 0;
+  
   std::list<double*> covRows;
   std::list<double*> pheRows;
   
@@ -360,31 +361,47 @@ angsd::Matrix<double> angsd::getSample(const char *name,int doBinary,int lens){
       continue;
     
     char *tok = strtok(buffer,delims);
+
+    
     std::list<double> covRow;
     std::list<double> pheRow;
-    
+
+    column = 0;
     while(tok!=NULL){
-      
+
       if(sampleMap[column] == '0'){
+	column++;
+	tok = strtok(NULL,delims);            
 	continue;
 	//covar
       } else if(sampleMap[column] == 'D' || sampleMap[column] == 'C'){
+	column++;
 	covRow.push_back(atof(tok));
 	//pheno
-      } else if(sampleMap[column] == 'B' || sampleMap[column] == 'P'){
+      } else if(sampleMap[column] == 'B'){
+	//ok to have binary phenotype as double??
+	column++;
 	pheRow.push_back(atof(tok));
+	isBinary = 1;		
+      } else if(sampleMap[column] == 'P'){
+	column++;
+	pheRow.push_back(atof(tok));
+	assert(isBinary==0);	
       } else{
 	fprintf(stderr,"error .sample file has unreconigsed column type (D, C, B, 0 and P are allowed): %c \n",sampleMap[column]);
 	exit(0);
       }
-      
+      tok = strtok(NULL,delims);            
     }
     
-    double *crows = new double[cowRow.size()];
+    double *crows = new double[covRow.size()];
     double *prows = new double[pheRow.size()];
 
+    covCols = covRow.size();
+    pheCols = pheRow.size();
+
     int i=0;
-    for(std::list<double>::iterator it=covRow.begin();it!=cowRow.end();it++)
+    for(std::list<double>::iterator it=covRow.begin();it!=covRow.end();it++)
       crows[i++]  = *it;
 
     i=0;
@@ -408,18 +425,51 @@ angsd::Matrix<double> angsd::getSample(const char *name,int doBinary,int lens){
   for(std::list<double*>::iterator it=pheRows.begin();it!=pheRows.end();it++)
     pheData[i++]  = *it;
 
+  doubleTrouble<double> dT;
+  dT.matrix0=pheData;
+  dT.x0 = pheRows.size();
+  dT.y0 = pheCols;
+  dT.isBinary = isBinary;
 
-  //return something with two matrices...
-  //implement some doubleTrouble struct
+  dT.matrix1=covData;
+  dT.x1 = covRows.size();
+  dT.y1 = covCols;
   
-  Matrix<double> retMat;
-  retMat.matrix=data;
-  retMat.x = rows.size();
-  retMat.y = ncols;
-  return retMat;
+  return dT;
 
 }
 
+
+void angsd::deleteDoubleTrouble(doubleTrouble<double> dT){
+  
+  assert(dT.matrix0!=NULL && dT.matrix1!=NULL);
+  for(int i=0;i<dT.x0;i++)
+    delete [] dT.matrix0[i];
+  delete[] dT.matrix0;
+  dT.matrix0=NULL;
+  for(int i=0;i<dT.x1;i++)
+    delete [] dT.matrix1[i];
+  delete[] dT.matrix1;
+  dT.matrix1=NULL;
+  
+}
+
+
+
+void angsd::printDoubleTrouble(doubleTrouble<double> dT,FILE *file){
+  
+  fprintf(stderr,"Printing phe doubleTrouble:%p with dim=(%d,%d)\n",dT.matrix0,dT.x0,dT.y0);
+  fprintf(stderr,"Printing cov doubleTrouble:%p with dim=(%d,%d)\n",dT.matrix1,dT.x1,dT.y1);
+  
+  for(int xi=0;xi<dT.x0;xi++){
+    for(int yi=0;yi<dT.y0;yi++)
+      fprintf(file,"%f\t",dT.matrix0[xi][yi]);
+    for(int yi=0;yi<dT.y1;yi++)
+      fprintf(file,"%f\t",dT.matrix1[xi][yi]);  
+    fprintf(file,"\n");
+  }
+  
+}
 
 
 

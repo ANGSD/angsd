@@ -38,6 +38,8 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t-yCount\t\t%s\t(File containing count phenotypes)\n",yfile2);
   fprintf(argFile,"\t-yQuant\t\t%s\t(File containing phenotypes)\n",yfile3);
   fprintf(argFile,"\t-cov\t\t%s\t(File containing additional covariates)\n",covfile);
+  fprintf(argFile,"\t-sampleFile\t\t%s\t(.sample File containing phenotypes and covariates)\n",sampleFile);
+
   fprintf(argFile,"\t-model\t%d\n",model);
   fprintf(argFile,"\t1: Additive/Log-Additive (Default)\n");
   fprintf(argFile,"\t2: Dominant\n");
@@ -102,6 +104,8 @@ void abcAsso::getOptions(argStruct *arguments){
   if(yfile3!=NULL)
     isQuant=1;    
 
+  sampleFile=angsd::getArg("-sampleFile",sampleFile,arguments);  
+  
   if(doAsso==7){
     fprintf(stderr,"Warning: Wald test is not properly tested and might give inflated test statistics!\n");
   }
@@ -118,10 +122,15 @@ void abcAsso::getOptions(argStruct *arguments){
 
   }
 
-  if(doAsso && yfile1==NULL && yfile2==NULL && yfile3==NULL){
+  if(doAsso && (yfile1!=NULL || yfile2!=NULL || yfile3!=NULL) && sampleFile!=NULL){
+    fprintf(stderr,"Error: you must provide either a phenotype file (-yBin or -yQuant) or sample file (-sampleFile) not both \n");
+    exit(0);
+  }
+  
+  if(doAsso && yfile1==NULL && yfile2==NULL && yfile3==NULL && sampleFile==NULL){
     fprintf(stderr,"Error: you must provide a phenotype file (-yBin or -yQuant) to perform association \n");
     exit(0);
-   }
+  }
   if(doAsso && (arguments->inputtype==INPUT_BEAGLE&&doAsso==1 || arguments->inputtype==INPUT_BGEN&&doAsso==1)){
     fprintf(stderr,"Error: Only doAsso=2 can be performed on posterior input\n");
     exit(0);
@@ -153,6 +162,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   yfile1=NULL;
   yfile2=NULL;
   yfile3=NULL;
+  sampleFile=NULL;
   minHigh=10;
   minCount=10;
   dynCov=0;//not for users
@@ -185,13 +195,36 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   printArg(arguments->argumentFile);
 
   //read phenotype - binary or count (poisson)
-  if(isBinary)
-    ymat = angsd::getMatrix(yfile1,1,100000);  
-  else if(isCount)
-    ymat = angsd::getMatrix(yfile2,1,100000);  
-  else
-    ymat = angsd::getMatrix(yfile3,0,100000);
+  if(sampleFile==NULL){
+    if(isBinary)
+      ymat = angsd::getMatrix(yfile1,1,100000);  
+    else if(isCount)
+      ymat = angsd::getMatrix(yfile2,1,100000);  
+    else
+      ymat = angsd::getMatrix(yfile3,0,100000);
 
+  } else{
+    dT = angsd::getSample(sampleFile,100000);
+
+    ymat.matrix=dT.matrix0;
+    ymat.x = dT.x0;
+    ymat.y = dT.y0;
+    isBinary = dT.isBinary;
+
+    if(dT.x1>0){;
+      covmat.matrix=dT.matrix1;
+      covmat.x = dT.x1;
+      covmat.y = dT.y1;
+    } else{
+       covmat.x=0;
+       covmat.y=0;
+       covmat.matrix=NULL;
+    }
+  }
+
+  fprintf(stderr,"covmat %f %f %f %f %f %f %f %f %f %f %f %f %f\n",covmat.matrix[0][0],covmat.matrix[0][1],covmat.matrix[0][2],covmat.matrix[0][3],covmat.matrix[0][4],covmat.matrix[0][5],covmat.matrix[0][6],covmat.matrix[0][7],covmat.matrix[0][8],covmat.matrix[0][9],covmat.matrix[0][10]);
+  
+  
   //read covariates 
   if(covfile!=NULL)
     covmat = angsd::getMatrix(covfile,0,100000);
