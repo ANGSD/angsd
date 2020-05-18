@@ -71,7 +71,7 @@ int safversion(const char *fname){
 
 
 template <typename T>
-persaf * persaf_init(char *fname){
+persaf * persaf_init(char *fname,int verbose){
   persaf *ret = new persaf ;
   ret->fname = strdup(fname);
   ret->pos=ret->saf=NULL;ret->toKeep=NULL;
@@ -92,7 +92,8 @@ persaf * persaf_init(char *fname){
   char buf[8];
   assert(fread(buf,1,8,fp)==8);
   ret->version = safversion(fname);
-  fprintf(stderr,"\t-> Version of fname:%s is:%d\n",fname,ret->version);
+  if(verbose)
+    fprintf(stderr,"\t-> Version of fname:%s is:%d\n",fname,ret->version);
   if(ret->version!=2){
     fprintf(stderr,"\t-> Looks like you are trying to use a version of realSFS that is incompatible with the old binary output from ANGSD\n\t-> Please use realSFS.old instead (or consider redoing the saf files )\n\t-> Will exit\n");
     exit(0);
@@ -137,7 +138,8 @@ persaf * persaf_init(char *fname){
   
   char *tmp2 = (char*)calloc(strlen(fname)+100,1);//that should do it
   snprintf(tmp2,strlen(fname)+100,"%sgz",tmp);
-  fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
+  if(verbose)
+    fprintf(stderr,"\t-> Assuming .saf.gz file: %s\n",tmp2);
   ret->saf = bgzf_open(tmp2,"r");
   if(!ret->saf){
     fprintf(stderr,"\t-> Problem opening file: \'%s\'\n will exit\n",tmp2);
@@ -151,7 +153,8 @@ persaf * persaf_init(char *fname){
   }
 
   snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
-  fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
+  if(verbose)
+    fprintf(stderr,"\t-> Assuming .saf.pos.gz: %s\n",tmp2);
   ret->pos = bgzf_open(tmp2,"r");
   if(!ret->pos){
     fprintf(stderr,"\t-> Problem opening file: \'%s\'\n will exit\n",tmp2);
@@ -181,7 +184,7 @@ persaf * persaf_init(char *fname){
 
    char *bname = *argv;
    fprintf(stderr,"\t-> Assuming idxname:%s\n",bname);
-   persaf *saf = persaf_init<float>(bname);
+   persaf *saf = persaf_init<float>(bname,1);
    writesaf_header(stderr,saf);
 
    char *chooseChr = NULL;

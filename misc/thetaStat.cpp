@@ -526,7 +526,10 @@ int main(int argc,char **argv){
     fprintf(stderr,"\n\tType \'./thetaStat do_stat\' or './thetaStat print' for more information\n\n");
     return 0;
   }
-  //  fprintf(stderr,"zlibversion=%s zlibversion=%s file:%s\n",ZLIB_VERSION,zlib_version,__FILE__);
+  for(int i=0;i<argc;i++)
+    fprintf(stderr," %s",argv[i]);
+  fprintf(stderr,"\n");
+
   --argc,++argv;
   if(strcmp(*argv,"do_stat")==0){
     do_stat(--argc,++argv);

@@ -31,7 +31,7 @@ htsFile *openBAM(const char *fname,int doCheck){
   }
   const char *str = strrchr(fname,'.');
   if(doCheck==1){
-    if(str&&strcasecmp(str,".bam")!=0&&str&&strcasecmp(str,".cram")!=0){
+    if(str&&strcasecmp(str,".bam")!=0&&str&&strcasecmp(str,".cram")!=0&&strcasecmp(str,".sam")!=0){
       fprintf(stderr,"\t-> file:\"%s\" should be suffixed with \".bam\" or \".cram\"\n",fname);
       fprintf(stderr,"\t-> If you know what you are doing you can disable with -doCheck 0\"\n");
       exit(0);

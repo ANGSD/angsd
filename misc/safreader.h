@@ -24,7 +24,7 @@ typedef struct{
 
 size_t iter_read(persaf *saf, void *data, size_t length,int *pos);
 template <typename T>
-persaf* persaf_init(char *fname);
+persaf* persaf_init(char *fname,int verbose);
 void writesaf_header(FILE *fp,persaf *pp);
 void persaf_destroy(persaf *pp);
 myMap::iterator iter_init(persaf *,char *,int,int);

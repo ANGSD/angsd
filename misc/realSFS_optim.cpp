@@ -742,6 +742,10 @@ int main_opt(args *arg){
   fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
   fprintf(stderr,"\t-> Output is now simply the expected values! \n");
   fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
+  if(foldremapper)
+    delete [] foldremapper;
+  if(foldfactors)
+    delete [] foldfactors;
   return 0;
 }
 

@@ -247,9 +247,9 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
       if(count[ci]<minCov){
 	fprintf(stderr,"Error: Cov #%d only has %d non zero entries\n",ci,count[ci]);
       }
-      else
+      else{
 	nCov++;
-      
+      }
     }
     if(!dynCov&&covmat.y!=nCov){
       fprintf(stderr,"Error: Creating new covariant matrix with %d columns\n",nCov);

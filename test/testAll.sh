@@ -1,4 +1,6 @@
 #!/bin/bash
+#run locally like
+#make test BAMDIR=smallBam/
 
 PRG=""
 BAMDIR=""
@@ -30,7 +32,7 @@ RVAL=0
 
 if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing -sites"
-./testFilterSites.sh $WDIR/angsd $BAMDIR
+time ./testFilterSites.sh $WDIR/angsd $BAMDIR
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with -sites exit code: $?"
     cat ./testFilterSites.sh.log
@@ -40,16 +42,16 @@ fi
 
 if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing vcfreading"
-./testVcf.sh $WDIR/angsd ${BAMDIR}/small2.bcf
+time ./testVcf.sh $WDIR/angsd ${BAMDIR}/small2.bcf
 if [ ! $? -eq 0  ]   ;then
-    echo "Problem with -vcf-gl exit code: $?"
+    echo "Problem with -vcf-pl exit code: $?"
     cat ./testVcf.sh.log
     RVAL=1
 fi
 fi
 
 echo "Testing neutrality test statistics"
-./testTaj.sh $WDIR
+time ./testTaj.sh $WDIR
 if [ ! $? -eq 0 ] ;then
     echo "Problem with neutrality test statistics exit code: $?"
     cat ./testTaj.sh.log
@@ -57,7 +59,7 @@ if [ ! $? -eq 0 ] ;then
 fi
 
 echo "Testing fst using msms"
-./testFst.sh $WDIR
+time ./testFst.sh $WDIR
 if [ ! $? -eq 0 ] ;then
     echo "Problem with Fst test statistics exit code: $?"
     cat ./testFst.sh.log
@@ -65,7 +67,7 @@ if [ ! $? -eq 0 ] ;then
 fi
 
 echo "Testing fst_folded using msms"
-./testFst_folded.sh $WDIR
+time ./testFst_folded.sh $WDIR
 if [ ! $? -eq 0 ] ;then
     echo "Problem with Fst_folded test statistics exit code: $?"
     cat ./testFst_folded.sh.log
@@ -75,7 +77,7 @@ fi
 
 
 echo "Testing SFS"
-./testSFS.sh $WDIR
+time ./testSFS.sh $WDIR
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with SFS exit code: $?"
     cat ./testSFS.sh.log
@@ -84,7 +86,7 @@ fi
 
 if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing basic mpileup"
-./testBam.sh $WDIR/angsd $BAMDIR
+time ./testBam.sh $WDIR/angsd $BAMDIR
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with basic pileup exit code: $?"
     cat ./testBam.sh.log
@@ -93,11 +95,21 @@ fi
 fi
 
 echo "Testing association"
-./testDoAsso2456.sh $WDIR
+time ./testDoAsso2456.sh $WDIR
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with association exit code: $?"
     cat ./testDoAsso2456.sh.log
     RVAL=1
+fi
+
+if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing haplocall"
+time ./testHaploCall.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with haplocall exit code: $?"
+    cat ./testHaploCall.sh.log
+    RVAL=1
+fi
 fi
 
 

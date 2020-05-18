@@ -37,12 +37,12 @@ typedef struct{
   const aMap *revMap;
   char *infile;//contains, the -bam fname,-glf fname, -pileup fname
   std::vector<char *> nams;//contains either the above or the contents of -bam;
-  std::vector<regs> regions;//regions to use -r/-rf when using bamfiles
+  std::vector<regs> regions;//regions to use -r/-rf when using seqdata bcf/vcf bam/cram
   int nLines;//nLines;
   int nReads;//number of reads to pop from each BAM/CRAM
   int show;
   char *fai;
-  bam_sample_t *sm;
+  bam_sample_t *sm;//for dealing with readgroups
   char *ref;
   char *anc;
 }argStruct;
