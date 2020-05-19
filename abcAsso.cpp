@@ -63,7 +63,6 @@ void abcAsso::printArg(FILE *argFile){
 
 void abcAsso::getOptions(argStruct *arguments){
 
-
   doAsso=angsd::getArg("-doAsso",doAsso,arguments);
   if(doAsso==3){
     fprintf(stderr,"\t-> -doAsso 3 is deprecated from version 0.615 \n");
@@ -196,6 +195,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
 
   //read phenotype - binary or count (poisson)
   if(sampleFile==NULL){
+
     if(isBinary)
       ymat = angsd::getMatrix(yfile1,1,100000);  
     else if(isCount)
@@ -203,6 +203,15 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     else
       ymat = angsd::getMatrix(yfile3,0,100000);
 
+    //read covariates 
+    if(covfile!=NULL)
+      covmat = angsd::getMatrix(covfile,0,100000);
+    else{
+      covmat.x=0;
+      covmat.y=0;
+      covmat.matrix=NULL;
+    }
+        
   } else{
     dT = angsd::getSample(sampleFile,100000);
 
@@ -221,19 +230,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
        covmat.matrix=NULL;
     }
   }
-
-  fprintf(stderr,"covmat %f %f %f %f %f %f %f %f %f %f %f %f %f\n",covmat.matrix[0][0],covmat.matrix[0][1],covmat.matrix[0][2],covmat.matrix[0][3],covmat.matrix[0][4],covmat.matrix[0][5],covmat.matrix[0][6],covmat.matrix[0][7],covmat.matrix[0][8],covmat.matrix[0][9],covmat.matrix[0][10]);
-  
-  
-  //read covariates 
-  if(covfile!=NULL)
-    covmat = angsd::getMatrix(covfile,0,100000);
-  else{
-    covmat.x=0;
-    covmat.y=0;
-    covmat.matrix=NULL;
-  }
-  
+      
   if(covfile!=NULL&&(covmat.x!=ymat.x)){
     fprintf(stderr,"The number of covariates (%d) does not match the number of phenotypes (%d)\n",covmat.x,ymat.x);
     exit(0);
@@ -243,7 +240,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     fprintf(stderr,"Error: Only doAsso=2 can be performed on quantitative traits\n");
     exit(0);
   }
-
+  
   // check cov and ymat
   check_pars(covmat,ymat,isBinary);
 
@@ -1857,7 +1854,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
 
   double* post = new double[keepInd*3];    
   double* y = new double[3*keepInd];
-  
+
   int count=0;
   
   design->x=3*keepInd;
@@ -2184,6 +2181,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
 	if(keepList[i]==1)
 	  keepInd[yi][s]++;
       }
+
       
       double *y = new double[pars->nInd];
       for(int i=0 ; i<pars->nInd ;i++)

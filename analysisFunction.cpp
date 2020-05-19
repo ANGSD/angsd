@@ -319,11 +319,34 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
   std::list<char *> secondLine;
   std::list<double *> rows;
 
+  int hasMissing = 0;
+  int hasID_2 = 0;
+  
   //read first line to know how many cols
   pFile.getline(buffer,lens);
   int ncols=0;
   char* tmp = strtok(buffer,delims);
   while(tmp!=NULL){
+    
+    if(ncols==0 && (strcmp(tmp,"ID")!=0 && strcmp(tmp,"ID_1")!=0) ){
+      fprintf(stderr,"\t-> First column first row of file must be 'ID' or 'ID_1' is %s\n",tmp);
+      exit(0);
+    }
+
+    if(ncols==1 && strcmp(tmp,"ID_2")==0 ){
+      hasID_2 = 1;
+    } else if(ncols==1 && strcmp(tmp,"missing")==0 ){
+      hasMissing = 1;
+    }
+    
+    if(ncols==2 && strcmp(tmp,"missing")==0){
+      if(hasMissing){
+	fprintf(stderr,"\t-> Cannot have two 'missing' columns in .sample file  %s\n");
+	exit(0);
+      }
+      hasMissing = 1;
+    }
+    
     ncols++;
     tmp = strtok(NULL,delims);       
   }
@@ -334,10 +357,32 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
   int count=0;
   tmp = strtok(buffer,delims);
   while(tmp!=NULL){
+
+    if(count==0 && tmp[0]!='0'){
+      fprintf(stderr,"\t-> First column second row of file must be '0' is %c\n",tmp[0]);
+      exit(0);
+    }
+    
+    if(count<3 && hasID_2 && hasMissing && tmp[0]!='0'){
+      fprintf(stderr,"\t-> Second and third column second row of file must be '0' is %c\n",tmp[0]);
+      exit(0);
+    }
+
+    if(count<2 && !hasID_2 && hasMissing && tmp[0]!='0'){
+      fprintf(stderr,"\t-> Second column second row of file must be '0' is %c\n",tmp[0]);
+      exit(0);
+    }
+
+    if(count<2 && hasID_2 && !hasMissing && tmp[0]!='0'){
+      fprintf(stderr,"\t-> Second column second row of file must be '0' is %c\n",tmp[0]);
+      exit(0);
+    }
+        
     // keep track of which column is what - 0 ID or missing, D discrete covar, C continious covar, B discrete pheno, P continious pheno
     sampleMap.push_back(tmp[0]);
     count++;    
-    tmp = strtok(NULL,delims);    
+    tmp = strtok(NULL,delims);
+    
   }
 
   assert(count==ncols);
@@ -361,7 +406,6 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
       continue;
     
     char *tok = strtok(buffer,delims);
-
     
     std::list<double> covRow;
     std::list<double> pheRow;
@@ -391,6 +435,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
 	fprintf(stderr,"error .sample file has unreconigsed column type (D, C, B, 0 and P are allowed): %c \n",sampleMap[column]);
 	exit(0);
       }
+      
       tok = strtok(NULL,delims);            
     }
     

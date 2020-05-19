@@ -269,8 +269,9 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
   int wacko[26] = {0,11,15,16,17,18,19,20,21,1,2,3,4,5,6,7,8,9,10,12,13,14,22,23,24};
   //because 0 indexed
   r->refId = wacko[atoi(Lchr)-1];
-  
-  r->posi[balcon] = vpos;
+
+  //because it is assumed to be 0-indexed in ANGSD
+  r->posi[balcon] = vpos-1;
   //we do not know which one is major and minor, but probaly like beagle files
   //TO DO check which one is major and minor
   r->major[balcon] = refToInt2(la1[0]);
