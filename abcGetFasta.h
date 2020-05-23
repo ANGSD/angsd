@@ -1,5 +1,5 @@
-#pragma once
-
+#ifndef __ABC_FASTA_H
+#define __ABC_FASTA_H
 #include <htslib/faidx.h>
 #include "abc.h"//ONLY USED for reference stuff in mpileup output.
 #include "shared.h"//ONLY USED for reference stuff in mpileup output.
@@ -33,3 +33,5 @@ public:
   void print(funkyPars *pars);
   void clean(funkyPars *pars);
 };
+
+#endif

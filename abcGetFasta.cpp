@@ -1,3 +1,4 @@
+
 /*
   thorfinn thorfinn@binf.ku.dk 18dec 2012
   assumes zero index positions

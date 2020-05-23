@@ -1,7 +1,5 @@
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
-#include <htslib/kstring.h>
-#include <htslib/kseq.h>
 
 class abcWriteBcf:public abc{
 private:

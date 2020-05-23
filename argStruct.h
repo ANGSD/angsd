@@ -50,3 +50,4 @@ typedef struct{
 }argStruct;
 
 argStruct *setArgStruct(int argc,char **argv);
+void destroy_argStruct(argStruct *args);

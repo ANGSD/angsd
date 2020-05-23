@@ -3,6 +3,39 @@
 #include "argStruct.h"
 
 #define ARGS ".arg"
+
+void whatIsTheInput(int type){
+  switch(type){
+  case INPUT_BAM:
+    fprintf(stderr,"\t-> Inputtype is BAM/CRAM\n");
+    break;
+  case INPUT_GLF:
+    fprintf(stderr,"\t-> Inputtype is GLF\n");
+    break;
+  case INPUT_BEAGLE:
+    fprintf(stderr,"\t-> Inputtype is beagle\n");
+    break;
+  case INPUT_PILEUP:
+    fprintf(stderr,"\t-> Inputtype is pileup\n");
+    break;
+  case INPUT_VCF_GP:
+    fprintf(stderr,"\t-> Inputtype is vcf/bcf\n");
+    break;
+  case INPUT_VCF_GL:
+    fprintf(stderr,"\t-> Inputtype is vcf/bcf\n");
+    break;
+  case INPUT_GLF10_TEXT:
+    fprintf(stderr,"\t-> Inputtype is GLF10 text\n");
+    break;
+  default:{
+    fprintf(stderr,"\t-> Unknown input type\n");
+    exit(0);
+  }
+  }
+
+
+}
+
 void setInputType(argStruct *args){
 #if 0
   fprintf(stderr,"bam:%d\n",INPUT_BAM);
@@ -141,6 +174,7 @@ argStruct *setArgStruct(int argc,char **argv) {
   arguments->argv=argv;
   arguments->nReads = 50;
   arguments->sm=NULL;
+  arguments->sm=bam_smpl_init();
   arguments->usedArgs= new int[argc+1];//well here we allocate one more than needed, this is only used in the ./angsd -beagle version
   for(int i=0;i<argc;i++)
     arguments->usedArgs[i]=0;
@@ -157,7 +191,7 @@ argStruct *setArgStruct(int argc,char **argv) {
   kstr.l=0;
   for(int i=0;i<argc;i++)
     ksprintf(&kstr,"%s ",argv[i]);
-  arguments->cmdline = strdup(kstr.s);
+  arguments->cmdline = kstr.s;
   fprintf(stderr,"\t-> %s",arguments->version);
   fprintf(stderr,"\t-> %s\n",arguments->cmdline);
   //check output filename
@@ -174,9 +208,37 @@ argStruct *setArgStruct(int argc,char **argv) {
   //print arguments into logfile
   if(argc>2)
     arguments->argumentFile=aio::openFile(arguments->outfiles,ARGS);
+
   fprintf(arguments->argumentFile,"\t-> %s",arguments->version);
   fprintf(arguments->argumentFile,"\t-> %s\n",arguments->cmdline);
   setInputType(arguments);
-  //  fprintf(stderr,"setintputtype:%d\n",arguments->inputtype);exit(0);
+  whatIsTheInput(arguments->inputtype);
   return arguments;
+}
+
+
+void destroy_argStruct(argStruct *args){
+
+  for(unsigned i=0;i<args->nams.size();i++)
+    free(args->nams[i]);
+  if(args->fai){
+    free(args->fai);
+  }
+  delete []   args->usedArgs;
+  free(args->outfiles);
+  free(args->infile);
+  if(args->anc)
+    free(args->anc);
+  bam_hdr_destroy(args->hd);
+
+  if(args->argumentFile!=stderr)
+    fclose(args->argumentFile);
+  if(args->sm)
+    bam_smpl_destroy(args->sm);
+  if(args->version)
+    free(args->version);
+  if(args->cmdline)
+    free(args->cmdline);
+  delete args;
+  
 }

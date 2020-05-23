@@ -1439,7 +1439,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
     if(regions.size()==0){
       for(int i=0;i<nFiles;i++){
-	extern abcGetFasta *gf;
 	if(sglp[i].bufferedRead ==NULL)//<- no buffered no nothing
 	  continue;
 	if(sglp[i].bufferedRead->core.tid==theRef) {//buffered is on correct chr

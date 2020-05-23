@@ -1,8 +1,5 @@
-
+#pragma once
 extern int SIG_COND;
-
-
-
 
 #include <stdlib.h>
 #include <stdio.h>

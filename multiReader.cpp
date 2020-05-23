@@ -331,53 +331,17 @@ multiReader::~multiReader(){
  
   delete revMap;
 
-    switch(args->inputtype){
-  case INPUT_PILEUP:{
+  if(mpil)
     delete mpil;
-    break;
-  }
-  case INPUT_VCF_GP:{
+  if(myvcf)
     delete myvcf;
-    break;
-  }
-  case INPUT_VCF_GL:{
-    delete myvcf;
-    break;
-  }
-  case INPUT_GLF:
-  case INPUT_GLF3:{
+  if(myglf)
     delete myglf;
-    break;
-  }    
-  case INPUT_BEAGLE:{
+  if(bglObj)
     delete bglObj;
-    break;
-  }    
-  default:{
-    break;
-  }
-  }
   if(gz!=Z_NULL)
     gzclose(gz);
   free(fname);
-
-  if(args->sm)
-    bam_smpl_destroy(args->sm);
-
-  for(unsigned i=0;i<args->nams.size();i++)
-    free(args->nams[i]);
-  if(args->fai){
-    free(args->fai);
-  }
-  delete []   args->usedArgs;
-  free(args->outfiles);
-  free(args->infile);
-  if(args->anc)
-    free(args->anc);
-  bam_hdr_destroy(args->hd);
-  if(args->argumentFile!=stderr) fclose(args->argumentFile);
-  delete args;
-  
 }
 
 funkyPars *multiReader::fetch(){

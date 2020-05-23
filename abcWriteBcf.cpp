@@ -10,28 +10,15 @@
 #include "analysisFunction.h"
 #include "shared.h"
 
-
-
 #include "abcFreq.h"
 #include "abcCallGenotypes.h"
 #include "abcMajorMinor.h"
 #include "abcWriteBcf.h"
 
-
-
-void error(const char *format, ...)
-{
-    va_list ap;
-    va_start(ap, format);
-    vfprintf(stderr, format, ap);
-    va_end(ap);
-    exit(-1);
-}
-
 void abcWriteBcf::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doBcf\t%d\n",doBcf);
-  fprintf(argFile,"\t1:  (still beta, not really working)\n");
+  fprintf(argFile,"\t1:  (still beta, should be working working)\n");
   fprintf(argFile,"\n\tNB This is a wrapper around -gl -domajorminor and -dopost -dogeno\n");
 }
 
@@ -44,14 +31,10 @@ void abcWriteBcf::run(funkyPars *pars){
 //last is from abc.h
 void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr){
   assert(args);
-  ksprintf(&buf, "##angsdVersion=%s+htslib-%s\n",angsd_version(),hts_version());
+  ksprintf(&buf, "##angsdVersion=%s",args->version);
   bcf_hdr_append(hdr, buf.s);
-  
   buf.l = 0;
-  ksprintf(&buf, "##angsdCommand=");
-  for (int i=1; i<args->argc; i++)
-    ksprintf(&buf, " %s", args->argv[i]);
-  aio::kputc('\n', &buf);
+  ksprintf(&buf, "##angsdCommand=%s",args->cmdline);
   bcf_hdr_append(hdr, buf.s);
   buf.l=0;
 
@@ -110,7 +93,7 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##FORMAT=<ID=DV,Number=1,Type=Integer,Description=\"Number of high-quality non-reference bases\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
-  //fprintf(stderr,"samples from sm:%d\n",args->sm->n);
+  fprintf(stderr,"samples from sm:%d\n",args->sm->n);
   for(int i=0;i<args->sm->n;i++){
     bcf_hdr_add_sample(hdr, args->sm->smpl[i]);
   }
@@ -130,17 +113,10 @@ void abcWriteBcf::clean(funkyPars *pars){
 
 }
 
-void abcWriteBcf::print(funkyPars *pars){
+void abcWriteBcf::print(funkyPars *pars) {
   if(doBcf==0)
     return;
-  kstring_t buf;
-  if(fp==NULL){
-    buf.s=NULL;buf.l=buf.m=0;
-    fp=aio::openFileHts(outfiles,".bcf");
-    hdr = bcf_hdr_init("w");
-    rec    = bcf_init1();
-    print_bcf_header(fp,hdr,args,buf,header);
-  }
+
   lh3struct *lh3 = (lh3struct*) pars->extras[5];
   freqStruct *freq = (freqStruct *) pars->extras[6];
   genoCalls *geno = (genoCalls *) pars->extras[10];
@@ -177,7 +153,7 @@ void abcWriteBcf::print(funkyPars *pars){
     }
     
     // .. FORMAT
-    assert(geno);
+    //    assert(geno);
     if(geno){
       int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
       for(int i=0; i<pars->nInd;i++){
@@ -227,7 +203,6 @@ void abcWriteBcf::print(funkyPars *pars){
       fprintf(stderr,"Failed to write to \n");
       exit(0);
     }
-    //    fprintf(stderr,"------\n");
     bcf_clear1(rec);
   }
 }
@@ -284,8 +259,13 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
     shouldRun[index] =1;
   printArg(arguments->argumentFile);
   
-  
-  
+  kstring_t buf;
+  buf.s=NULL;buf.l=buf.m=0;
+  fp=aio::openFileHts(outfiles,".bcf");
+  hdr = bcf_hdr_init("w");
+  rec    = bcf_init1();
+  print_bcf_header(fp,hdr,args,buf,header);
+  free(buf.s);
 }
 
 
