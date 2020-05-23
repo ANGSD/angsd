@@ -1,4 +1,4 @@
-#include <libgen.h>//for checking if output dir exists 'dirname'
+
 #include <cassert>
 #include "abc.h"
 #include "shared.h"
@@ -6,20 +6,6 @@
 #include "parseArgs_bambi.h"
 #include "version.h"
 #include "sample.h"
-
-#define ARGS ".arg"
-void checkIfDir(char *fname){
-  char *dirNam2 = strdup(fname);
-  char *dirNam=dirname(dirNam2);
-  
-  if(strlen(dirNam)>1 &&!aio::fexists(dirNam)){
-    fprintf(stderr,"\t Folder: \'%s\' doesn't exist, please create\n",dirNam);
-    exit(0);
-  }
-  //free(dirNam); VALGRIND on osx wants this line
-  free(dirNam2);
-  
-}
 
 
 bam_hdr_t *getHeadFromFai(const char *fname){
@@ -101,160 +87,6 @@ aMap *buildRevTable(const bam_hdr_t *hd){
 }
 
 
-void setInputType(argStruct *args){
-#if 0
-  fprintf(stderr,"bam:%d\n",INPUT_BAM);
-  fprintf(stderr,"glf:%d\n",INPUT_GLF);
-  fprintf(stderr,"glf3:%d\n",INPUT_GLF3);
-  fprintf(stderr,"blg:%d\n",INPUT_BEAGLE);
-  fprintf(stderr,"plp:%d\n",INPUT_PILEUP);
-  fprintf(stderr,"vcf_gp:%d\n",INPUT_VCF_GP);
-  fprintf(stderr,"vcf_gl:%d\n",INPUT_VCF_GL);
-  fprintf(stderr,"glf10_text:%d\n",INPUT_GLF10_TEXT);
-#endif
-  if(args->fai){
-    free(args->fai);
-    args->fai=NULL;
-  }
-  args->fai = angsd::getArg("-fai",args->fai,args);
-  char *tmp =NULL;
-  tmp = angsd::getArg("-glf",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_GLF;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp = NULL;
-  tmp = angsd::getArg("-glf3",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_GLF3;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp = NULL;
-  tmp = angsd::getArg("-glf10_text",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_GLF10_TEXT;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-vcf-GP",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_VCF_GP;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    fprintf(stderr,"\t-> -vcf-gp has been removed from current version, will be included in later versions depending on need\n");
-    exit(0);
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-vcf-GL",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_VCF_GL;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-vcf-PL",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_VCF_GL;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-pileup",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_PILEUP;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-beagle",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_BEAGLE;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-i",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_BAM;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  int nInd = 0;
-  nInd = angsd::getArg("-nInd",nInd,args);
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-bam",tmp,args);
-  tmp = angsd::getArg("-b",tmp,args);
-  if(tmp!=NULL && args->argc>2){
-    args->inputtype=INPUT_BAM;
-    args->infile = tmp;
-    args->nams = angsd::getFilenames(args->infile,nInd);
-    
-    return;
-  }
-
-}
-
-
-
-argStruct *setArgStruct(int argc,char **argv) { 
-
-  argStruct *arguments = new argStruct;
-  arguments->argumentFile = stderr;
-  arguments->outfiles =NULL;
-  arguments->fai=arguments->anc=arguments->ref=NULL;
-  arguments->hd=NULL;
-  arguments->revMap= NULL;
-  arguments->argc=argc;
-  arguments->argv=argv;
-  arguments->nReads = 50;
-  arguments->sm=NULL;
-  arguments->usedArgs= new int[argc+1];//well here we allocate one more than needed, this is only used in the ./angsd -beagle version
-  for(int i=0;i<argc;i++)
-    arguments->usedArgs[i]=0;
-  
-  arguments->inputtype=-1;
-  arguments->infile = NULL;
-  arguments->show =0;
-  arguments->fai = NULL;
-  //check output filename
-  arguments->outfiles = angsd::getArg("-out",arguments->outfiles,arguments);
-  if(arguments->outfiles==NULL){
-    if(argc!=2)
-      fprintf(stderr,"\t-> No \'-out\' argument given, output files will be called \'angsdput\'\n");
-    arguments->outfiles = strdup("angsdput");
-  }
-  checkIfDir(arguments->outfiles);
-  
-
-  //print arguments into logfile
-  if(argc>2)
-    arguments->argumentFile=aio::openFile(arguments->outfiles,ARGS);
-   
-  setInputType(arguments);
-  //  fprintf(stderr,"setintputtype:%d\n",arguments->inputtype);exit(0);
-  return arguments;
-}
 
 void multiReader::printArg(FILE *argFile,argStruct *args){
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
@@ -308,7 +140,7 @@ void multiReader::getOptions(argStruct *arguments){
 }
 
 
-multiReader::multiReader(int argc,char**argv){
+multiReader::multiReader(argStruct *args_arg){
   gz=Z_NULL;
   myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;
   
@@ -321,13 +153,7 @@ multiReader::multiReader(int argc,char**argv){
   nInd =0;
   isSim =0;
   args=NULL;
-  args = setArgStruct(argc,argv);
-  fprintf(args->argumentFile,"\t-> Command: \n");
-  for(int i=0;i<argc;i++)
-    fprintf(args->argumentFile,"%s ",argv[i]);
-  //  fprintf(args->argumentFile,"\n\n");
-  if(args->argumentFile!=stderr)
-    fprintf(args->argumentFile,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
+  args = args_arg;
   void printTime(FILE *fp);
   printTime(args->argumentFile); 
 

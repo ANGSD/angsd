@@ -45,4 +45,8 @@ typedef struct{
   bam_sample_t *sm;//for dealing with readgroups
   char *ref;
   char *anc;
+  char *cmdline;
+  char *version;
 }argStruct;
+
+argStruct *setArgStruct(int argc,char **argv);
