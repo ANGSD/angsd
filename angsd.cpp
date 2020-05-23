@@ -201,7 +201,7 @@ int main(int argc, char** argv){
    if(argc==2){
      fprintf(stderr,"\t-> Analysis helpbox/synopsis information:\n");
      multiReader mr(args);
-     init(args);//program dies here after printing info, if a match is found
+     init((void*)args);//program dies here after printing info, if a match is found,void* to avoid circular .h inclusion
      fprintf(stderr,"\nUnknown argument supplied: \'%s\'\n\n",argv[1]);
      printProgInfo(stderr);
      exit(0);//important otherwise the abc classes will try to clean up, which doesnt make sense in this context

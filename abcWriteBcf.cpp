@@ -44,14 +44,11 @@ void abcWriteBcf::run(funkyPars *pars){
 //last is from abc.h
 void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr){
   assert(args);
-  ksprintf(&buf, "##angsdVersion=%s+htslib-%s\n",angsd_version(),hts_version());
+  ksprintf(&buf, "##angsdVersion=%s",args->version);
   bcf_hdr_append(hdr, buf.s);
   
   buf.l = 0;
-  ksprintf(&buf, "##angsdCommand=");
-  for (int i=1; i<args->argc; i++)
-    ksprintf(&buf, " %s", args->argv[i]);
-  aio::kputc('\n', &buf);
+  ksprintf(&buf, "##angsdCommand=%s",args->cmdline);
   bcf_hdr_append(hdr, buf.s);
   buf.l=0;
 

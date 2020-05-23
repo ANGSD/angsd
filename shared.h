@@ -1,25 +1,17 @@
 
 extern int SIG_COND;
 
-
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <cstring>
 #include <map>
 #include "bambi_interface.h"
 #include "argStruct.h"
-#include "version.h"
+
 #ifndef _types_t
 #define _types_t
 
-
 #define LENS 10000
-#define GZOPT "w6h"
-
-
-
 
 typedef struct {
 
@@ -59,7 +51,7 @@ funkyPars *funkyPars_init();
 void funkyPars_destroy(funkyPars *p);
 
 
-void init(argStruct *arguments);//intialize all needed objects
+void init(void *arguments);//intialize all needed objects
 void destroy_shared();//destroy all initialized objects
 void selector(funkyPars *p);
 const char *angsd_version();

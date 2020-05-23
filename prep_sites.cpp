@@ -351,7 +351,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   char* outnames_bin = append(fname,BIN);
   char* outnames_idx = append(fname,IDX);
   
-  BGZF *cfpD = bgzf_open(outnames_bin,GZOPT);
+  BGZF *cfpD = bgzf_open(outnames_bin,"w6h");
   FILE *fp=fopen(outnames_idx,"w");
   
   std::map <char*,int,ltstr> mm;//simple structure to check that input has been sorted by chr/contig

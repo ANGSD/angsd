@@ -70,7 +70,8 @@ int queueStop =0;
 int howOften = 100;
 
 
-void init(argStruct *arguments){
+void init(void *arg){
+  argStruct *arguments = (argStruct *) arg;
   if(!isatty(fileno(stderr))){
     isAtty = 0;
   }
@@ -490,8 +491,3 @@ void printFunky(funkyPars *p){
 
 }
 
-
-
-const char *angsd_version(){
-  return ANGSD_VERSION;
-}
