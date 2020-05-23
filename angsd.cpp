@@ -175,6 +175,13 @@ void parseArgStruct(argStruct *arguments){
 }
 
 int main(int argc, char** argv){
+  if(!strcasecmp("sites",argv[1])){
+    //from prep_sites.* used for indexing -sites files
+    int main_sites(int argc,char **argv);
+    main_sites(--argc,++argv);
+    return 0;
+  }
+
   argStruct *args=setArgStruct(argc,argv);  
 
   //no arguments supplied -> print info
@@ -183,12 +190,6 @@ int main(int argc, char** argv){
     return 0;
   }
   
-  if(!strcasecmp("sites",argv[1])){
-    //from prep_sites.* used for indexing -sites files
-    int main_sites(int argc,char **argv);
-    main_sites(--argc,++argv);
-    return 0;
-  }
 
   //print time
   clock_t t=clock();
