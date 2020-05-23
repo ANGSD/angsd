@@ -208,6 +208,9 @@ int main(int argc, char** argv){
    }
 
    multiReader *mr= new multiReader(args);
+   args = mr->getargs();
+
+   
 
    init(args);
    parseArgStruct(args);
@@ -254,6 +257,8 @@ int main(int argc, char** argv){
   fprintf(args->argumentFile,"\n");
   // fprintf(stderr,"\t");
   printTime(stderr);
+
+  
   
   //print out nice messages
   extern size_t total_number_of_sites_unfiltred,total_number_of_sites_filtered;
@@ -272,6 +277,5 @@ int main(int argc, char** argv){
   //check
   extern htsFormat *dingding2;
   free(dingding2);
-  destroy_argStruct(args);
   return 0;
 }

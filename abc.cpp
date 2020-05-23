@@ -41,7 +41,6 @@ int abc::tot_index =0;
 const bam_hdr_t *abc::header = NULL;
 const aMap *abc::revMap = NULL;
 char *abc::shouldRun = new char[MAX_CLASS]; 
-abcGetFasta *gf = NULL;
 
 //here we instiantiate all the analysis classes, and return them as an array of pointers to the <abc> class. First parameter will contain the number of analysis classes.
 abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
@@ -52,7 +51,6 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   abc **tskStuff =new abc*[MAX_CLASS];
   tskStuff[nit++] = new abcFilter(arguments);//0
   tskStuff[nit++] = new abcGetFasta(arguments);//1
-  gf =(abcGetFasta *) tskStuff[1];
   tskStuff[nit++] = new abcCounts(outfiles,arguments,inputtype);//2
   tskStuff[nit++] = new abcError(outfiles,arguments,inputtype);//3
   tskStuff[nit++] = new abcGL(outfiles,arguments,inputtype);//4

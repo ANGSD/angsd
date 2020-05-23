@@ -115,7 +115,7 @@ void abcGL::getOptions(argStruct *arguments){
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
   if(GL!=0 && (arguments->inputtype==INPUT_GLF || arguments->inputtype==INPUT_GLF3 || arguments->inputtype==INPUT_VCF_GL)){
-    fprintf(stderr,"\t-> Can't calculate genotype likelihoods from -glf/-glf3/VCF files, they already exists? Will exit\n");
+    fprintf(stderr,"Can't calculate genotype likelihoods from -glf/-glf3/VCF files\n");
     exit(0);
   }
   if(arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_VCF_GL||arguments->inputtype==INPUT_GLF10_TEXT)

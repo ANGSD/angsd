@@ -70,11 +70,5 @@ public:
     curChr=-1;
     pl=NULL;
   }
-  ~vcfReader(){
-    htsstuff_destroy(hs);
-    free(pl);
-    free(ln_gl);
-    free(iarr);
-    free(farr);
-    free(itrname.s);}
+  ~vcfReader(){htsstuff_destroy(hs);free(pl);free(ln_gl);free(iarr);free(farr);free(itrname.s);}
 };
