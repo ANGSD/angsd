@@ -18,7 +18,7 @@
 #include <htslib/kstring.h>
 #include "abcFreq.h"
 #include "abcHWE.h"
- 
+#include "aio.h"
 
 void abcHWE::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);

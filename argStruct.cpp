@@ -1,8 +1,43 @@
 #include <libgen.h>//for checking if output dir exists 'dirname'
-#include "analysisFunction.h"
+#include <fstream>
+#include "version.h"
 #include "argStruct.h"
+#include "aio.h"
 
 #define ARGS ".arg"
+#define LENS 10000
+
+void whatIsTheInput(int type){
+  switch(type){
+  case INPUT_BAM:
+    fprintf(stderr,"\t-> Inputtype is BAM/CRAM\n");
+    break;
+  case INPUT_GLF:
+    fprintf(stderr,"\t-> Inputtype is GLF\n");
+    break;
+  case INPUT_BEAGLE:
+    fprintf(stderr,"\t-> Inputtype is beagle\n");
+    break;
+  case INPUT_PILEUP:
+    fprintf(stderr,"\t-> Inputtype is pileup\n");
+    break;
+  case INPUT_VCF_GP:
+    fprintf(stderr,"\t-> Inputtype is vcf/bcf\n");
+    break;
+  case INPUT_VCF_GL:
+    fprintf(stderr,"\t-> Inputtype is vcf/bcf\n");
+    break;
+  case INPUT_GLF10_TEXT:
+    fprintf(stderr,"\t-> Inputtype is GLF10 text\n");
+    break;
+  default:{
+    fprintf(stderr,"\t-> Unknown input type\n");
+    exit(0);
+  }
+  }
+
+
+}
 void setInputType(argStruct *args){
 #if 0
   fprintf(stderr,"bam:%d\n",INPUT_BAM);
@@ -177,6 +212,164 @@ argStruct *setArgStruct(int argc,char **argv) {
   fprintf(arguments->argumentFile,"\t-> %s",arguments->version);
   fprintf(arguments->argumentFile,"\t-> %s\n",arguments->cmdline);
   setInputType(arguments);
-  //  fprintf(stderr,"setintputtype:%d\n",arguments->inputtype);exit(0);
+  whatIsTheInput(arguments->inputtype);
   return arguments;
 }
+
+
+
+int angsd::getArg(const char* argName,int type,argStruct *arguments){
+
+  int argPos = 1;
+  while(argPos <arguments->argc){
+    if (strcasecmp(arguments->argv[argPos],argName)==0){
+      if(arguments->argc==2)
+        return(-999);
+      //      fprintf(stderr,"HIT %s vs %s\n",argName,arguments->argv[argPos]);
+      arguments->usedArgs[argPos]=1;
+      arguments->usedArgs[argPos+1]=1;
+      if(argPos==arguments->argc-1){
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
+	exit(0);
+      }
+      return(atoi(arguments->argv[argPos+1]));  
+    }
+    argPos++;
+  }
+  return(type);
+}
+
+char* angsd::getArg(const char* argName,char* type,argStruct *arguments){
+  ///fprintf(stderr,"pre %p %s \n",type,argName);
+  int argPos = 1;
+  while(argPos <arguments->argc){
+    if (strcasecmp(arguments->argv[argPos],argName)==0){
+      if(arguments->argc==2){
+        return(strdup("-999"));
+      }
+      arguments->usedArgs[argPos]=1;
+      arguments->usedArgs[argPos+1]=1;
+      if(argPos==arguments->argc-1){
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
+	exit(0);
+      }
+      return(strdup(arguments->argv[argPos+1]));  //VALGRIND says leak. don't care very small DRAGON
+    }
+    argPos++;
+  }
+  //  fprintf(stderr,"post %p\n",type);
+  return(type);
+  
+}
+
+
+char* angsd::getArg(const char* argName, const char* type,argStruct *arguments){
+  //fprintf(stderr,"pre %p %s \n",type,argName);
+  int argPos = 1;
+  while(argPos <arguments->argc){
+    if (strcasecmp(arguments->argv[argPos],argName)==0){
+      if(arguments->argc==2){
+        return(strdup("-999"));
+      }
+      arguments->usedArgs[argPos]=1;
+      arguments->usedArgs[argPos+1]=1;
+      if(argPos==arguments->argc-1){
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
+	exit(0);
+      }
+      return(strdup(arguments->argv[argPos+1]));  //VALGRIND says leak. don't care very small DRAGON
+    }
+    argPos++;
+  }
+  //assert(0==1);
+  //  fprintf(stderr,"post %p\n",type);
+  return NULL;
+  
+}
+
+
+
+float angsd::getArg(const char* argName,float type,argStruct *arguments){
+  int argPos = 1;
+  while(argPos <arguments->argc){
+    if (strcasecmp(arguments->argv[argPos],argName)==0){
+      if(arguments->argc==2)
+        return(-999);
+      arguments->usedArgs[argPos]=1;
+      arguments->usedArgs[argPos+1]=1;
+ if(argPos==arguments->argc-1){
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
+	exit(0);
+      }
+      return(atof(arguments->argv[argPos+1]));  
+    }
+    argPos++;
+  }
+  return(type);
+}
+
+double angsd::getArg(const char* argName,double type,argStruct *arguments){
+  int argPos = 1;
+  while(argPos <arguments->argc){
+    if (strcasecmp(arguments->argv[argPos],argName)==0){
+      if(arguments->argc==2)
+        return(-999);
+      arguments->usedArgs[argPos]=1;
+      arguments->usedArgs[argPos+1]=1;
+ if(argPos==arguments->argc-1){
+	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
+	exit(0);
+      }
+      return(atof(arguments->argv[argPos+1]));  
+    }
+    argPos++;
+  }
+  return(type);
+}
+
+
+
+std::vector<char*> angsd::getFilenames(const char * name,int nInd){
+  if(strchr(name,'\r')){
+    fprintf(stderr,"\t\t-> Filelist contains carriage return. Looks like a windows file please remove hidden \'\r\' from filelist\n");
+    exit(0);
+  }
+  
+  if(!aio::fexists(name)){
+    fprintf(stderr,"[%s]\t-> Problems opening file: %s\n",__FUNCTION__,name);
+    exit(0);
+  }
+  const char* delims = " \t";
+  std::vector<char*> ret;
+  std::ifstream pFile(name,std::ios::in);
+
+  char buffer[LENS];
+  while(!pFile.eof()){
+    pFile.getline(buffer,LENS);
+    char *tok = strtok(buffer,delims);
+    while(tok!=NULL){
+      if(tok[0]!='#')
+	ret.push_back(strdup(buffer));
+      tok = strtok(NULL,delims);
+    }
+  }
+  if(nInd>0) {
+     if(ret.size()<nInd)
+      fprintf(stderr,"\t-> Number of samples is smaller than subset requested %lu vs %d\n",ret.size(),nInd);
+    else{
+      //   fprintf(stderr,"\t-> Will remove tail of filename list\n");
+      for(int ii=nInd;ii<ret.size();ii++)
+	free(ret[ii]);
+      ret.erase(ret.begin()+nInd,ret.end());//we don't free this memory, it doesn't really matter
+      // fprintf(stderr,"\t->  filename list now contains only: %lu\n",ret.size());
+    }
+#if 0
+     for(size_t ii=0;ii<ret.size();ii++)
+       fprintf(stderr,"%zu->%s\n",ii,ret[ii]);
+     fprintf(stderr,"\n");
+#endif
+  }
+
+  return ret;
+}
+

@@ -4,7 +4,7 @@
  */
 #include <cmath>
 #include "abcSmartCounts.h"
-
+#include "aio.h"
 
 unsigned char **counts = NULL;
 

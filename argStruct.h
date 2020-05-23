@@ -5,7 +5,11 @@
 #include <htslib/hts.h>
 #include <htslib/sam.h>
 #include <cstdio>
+
 #include "sample.h"
+
+enum{INPUT_BAM,INPUT_GLF,INPUT_GLF3,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP,INPUT_GLF10_TEXT};
+
 //little struct for keeping information of regions to extract
 typedef struct{
   int refID;
@@ -50,3 +54,12 @@ typedef struct{
 }argStruct;
 
 argStruct *setArgStruct(int argc,char **argv);
+
+namespace angsd {
+  int getArg(const char* argName,int type,argStruct *arguments);
+  float getArg(const char* argName,float type,argStruct *arguments);
+  char* getArg(const char* argName,char* type,argStruct *arguments);
+  char* getArg(const char* argName,const char* type,argStruct *arguments);
+  double getArg(const char* argName,double type,argStruct *arguments);
+  std::vector<char*> getFilenames(const char * name,int nInd);
+}

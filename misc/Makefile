@@ -105,7 +105,7 @@ multisafreader.hpp: Matrix.hpp realSFS_shared.o
 
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp realSFS_optim.o realSFS_shared.o realSFS_dadi.o
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../analysisFunction.o ../chisquare.o realSFS_dadi.o $(LIBS) -lz -lpthread
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../aio.o ../analysisFunction.o ../chisquare.o realSFS_dadi.o $(LIBS) -lz -lpthread
 
 hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
 	$(CXX) $(FLAGS) -c hmm_psmc.cpp

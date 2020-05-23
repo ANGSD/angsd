@@ -6,7 +6,7 @@
 #include "parseArgs_bambi.h"
 #include "version.h"
 #include "sample.h"
-
+#include "aio.h"
 
 bam_hdr_t *getHeadFromFai(const char *fname){
   std::vector<char *> chrs;

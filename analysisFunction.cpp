@@ -1,6 +1,3 @@
-
-
-
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -10,118 +7,7 @@
 #include <assert.h>
 #include <fstream>
 #include "analysisFunction.h"
-
-
-int angsd::getArg(const char* argName,int type,argStruct *arguments){
-
-  int argPos = 1;
-  while(argPos <arguments->argc){
-    if (strcasecmp(arguments->argv[argPos],argName)==0){
-      if(arguments->argc==2)
-        return(-999);
-      //      fprintf(stderr,"HIT %s vs %s\n",argName,arguments->argv[argPos]);
-      arguments->usedArgs[argPos]=1;
-      arguments->usedArgs[argPos+1]=1;
-      if(argPos==arguments->argc-1){
-	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
-	exit(0);
-      }
-      return(atoi(arguments->argv[argPos+1]));  
-    }
-    argPos++;
-  }
-  return(type);
-}
-
-char* angsd::getArg(const char* argName,char* type,argStruct *arguments){
-  ///fprintf(stderr,"pre %p %s \n",type,argName);
-  int argPos = 1;
-  while(argPos <arguments->argc){
-    if (strcasecmp(arguments->argv[argPos],argName)==0){
-      if(arguments->argc==2){
-        return(strdup("-999"));
-      }
-      arguments->usedArgs[argPos]=1;
-      arguments->usedArgs[argPos+1]=1;
-      if(argPos==arguments->argc-1){
-	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
-	exit(0);
-      }
-      return(strdup(arguments->argv[argPos+1]));  //VALGRIND says leak. don't care very small DRAGON
-    }
-    argPos++;
-  }
-  //  fprintf(stderr,"post %p\n",type);
-  return(type);
-  
-}
-
-
-char* angsd::getArg(const char* argName, const char* type,argStruct *arguments){
-  //fprintf(stderr,"pre %p %s \n",type,argName);
-  int argPos = 1;
-  while(argPos <arguments->argc){
-    if (strcasecmp(arguments->argv[argPos],argName)==0){
-      if(arguments->argc==2){
-        return(strdup("-999"));
-      }
-      arguments->usedArgs[argPos]=1;
-      arguments->usedArgs[argPos+1]=1;
-      if(argPos==arguments->argc-1){
-	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
-	exit(0);
-      }
-      return(strdup(arguments->argv[argPos+1]));  //VALGRIND says leak. don't care very small DRAGON
-    }
-    argPos++;
-  }
-  //assert(0==1);
-  //  fprintf(stderr,"post %p\n",type);
-  return NULL;
-  
-}
-
-
-
-float angsd::getArg(const char* argName,float type,argStruct *arguments){
-  int argPos = 1;
-  while(argPos <arguments->argc){
-    if (strcasecmp(arguments->argv[argPos],argName)==0){
-      if(arguments->argc==2)
-        return(-999);
-      arguments->usedArgs[argPos]=1;
-      arguments->usedArgs[argPos+1]=1;
- if(argPos==arguments->argc-1){
-	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
-	exit(0);
-      }
-      return(atof(arguments->argv[argPos+1]));  
-    }
-    argPos++;
-  }
-  return(type);
-}
-
-double angsd::getArg(const char* argName,double type,argStruct *arguments){
-  int argPos = 1;
-  while(argPos <arguments->argc){
-    if (strcasecmp(arguments->argv[argPos],argName)==0){
-      if(arguments->argc==2)
-        return(-999);
-      arguments->usedArgs[argPos]=1;
-      arguments->usedArgs[argPos+1]=1;
- if(argPos==arguments->argc-1){
-	fprintf(stderr,"\t-> Must supply a parameter for: %s\n",argName);
-	exit(0);
-      }
-      return(atof(arguments->argv[argPos+1]));  
-    }
-    argPos++;
-  }
-  return(type);
-}
-
-
+#include "aio.h"
 
 double angsd::addProtect2(double a,double b){
   //function does: log(exp(a)+exp(b)) while protecting for underflow
@@ -545,52 +431,6 @@ void angsd::logrescale(double *ary,int len){
   
   
 }
-
-
-std::vector<char*> angsd::getFilenames(const char * name,int nInd){
-  if(strchr(name,'\r')){
-    fprintf(stderr,"\t\t-> Filelist contains carriage return. Looks like a windows file please remove hidden \'\r\' from filelist\n");
-    exit(0);
-  }
-  
-  if(!fexists(name)){
-    fprintf(stderr,"[%s]\t-> Problems opening file: %s\n",__FUNCTION__,name);
-    exit(0);
-  }
-  const char* delims = " \t";
-  std::vector<char*> ret;
-  std::ifstream pFile(name,std::ios::in);
-
-  char buffer[LENS];
-  while(!pFile.eof()){
-    pFile.getline(buffer,LENS);
-    char *tok = strtok(buffer,delims);
-    while(tok!=NULL){
-      if(tok[0]!='#')
-	ret.push_back(strdup(buffer));
-      tok = strtok(NULL,delims);
-    }
-  }
-  if(nInd>0) {
-     if(ret.size()<nInd)
-      fprintf(stderr,"\t-> Number of samples is smaller than subset requested %lu vs %d\n",ret.size(),nInd);
-    else{
-      //   fprintf(stderr,"\t-> Will remove tail of filename list\n");
-      for(int ii=nInd;ii<ret.size();ii++)
-	free(ret[ii]);
-      ret.erase(ret.begin()+nInd,ret.end());//we don't free this memory, it doesn't really matter
-      // fprintf(stderr,"\t->  filename list now contains only: %lu\n",ret.size());
-    }
-#if 0
-     for(size_t ii=0;ii<ret.size();ii++)
-       fprintf(stderr,"%zu->%s\n",ii,ret[ii]);
-     fprintf(stderr,"\n");
-#endif
-  }
-
-  return ret;
-}
-
 
 void print_array(FILE *fp,double *ary,int len){
   for(int i=0;i<len-1;i++)
@@ -1271,91 +1111,6 @@ char intToRef[5] = {'A','C','G','T','N'};
 char intToIupac[15] = {'A','C','G','T','R','Y','S','W','K','M','B','D','H','V','N'};
 
 
-int aio::fexists(const char* str){///@param str Filename given as a string.
-  struct stat buffer ;
-  return (stat(str, &buffer )==0 ); /// @return Function returns 1 if file exists.
-}
-
-size_t aio::fsize(const char* fname){
-  struct stat st ;
-  stat(fname,&st);
-  return st.st_size;
-}
-
-std::vector <char *> dumpedFiles;//small hack for getting a nice vector of outputfiles
-FILE *aio::openFile(const char* a,const char* b){
-  if(0)
-    fprintf(stderr,"[%s] %s %s",__FUNCTION__,a,b);
-  char *c = new char[strlen(a)+strlen(b)+1];
-  strcpy(c,a);
-  strncat(c,b,strlen(b));
-  //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
-  dumpedFiles.push_back(strdup(c));
-  FILE *fp = NULL;
-  fp = fopen(c,"w");
-  if(fp==NULL){
-    fprintf(stderr,"\t-> Problem opening file: \'%s\' check permissions\n",c);
-    exit(0);
-  }
-  delete [] c;
-  return fp;
-}
-
-BGZF *aio::openFileBG(const char* a,const char* b){
-
-  char *c = new char[strlen(a)+strlen(b)+1];
-  strcpy(c,a);
-  strncat(c,b,strlen(b));
-  dumpedFiles.push_back(strdup(c));
-  BGZF *fp = bgzf_open(c,GZOPT);
-  delete [] c;
-  return fp;
-}
-
-htsFile *aio::openFileHts(const char* a,const char* b){
-
-  char *c = new char[strlen(a)+strlen(b)+1];
-  strcpy(c,a);
-  strncat(c,b,strlen(b));
-  dumpedFiles.push_back(strdup(c));
-  htsFile *fp = hts_open(c,"w");
-  delete [] c;
-  return fp;
-}
-
-FILE *aio::getFILE(const char*fname,const char* mode){
-  int writeFile = 0;
-  for(size_t i=0;i<strlen(mode);i++)
-    if(mode[i]=='w')
-      writeFile = 1;
-  FILE *fp;
-  if(NULL==(fp=fopen(fname,mode))){
-    fprintf(stderr,"\t-> Error opening FILE handle for file:%s exiting\n",fname);
-    exit(0);
-  }
-  return fp;
-}
-
-//checks that newer is newer than older
-int aio::isNewer(const char *newer,const char *older){
-   if (strstr(older, "ftp://") == older || strstr(older, "http://") == older)
-     return 0;
-  //  fprintf(stderr,"newer:%s older:%s\n",newer,older);
-  // return 0;
-  struct stat one;
-  struct stat two;
-  stat(newer, &one );
-  stat(older, &two );
-  
-  return one.st_mtime>=two.st_mtime;
-}
-
-ssize_t aio::bgzf_write(BGZF *fp, const void *data, size_t length){
-  if(length>0)
-    return ::bgzf_write(fp,data,length);
-  return 0;
-}
-
 void angsd::norm(double *d,size_t len){
   double ts=0;
   for(int i=0;i<len;i++)
@@ -1365,27 +1120,6 @@ void angsd::norm(double *d,size_t len){
     d[i] /= ts;
 
 }
-
-int aio::tgets(gzFile gz,char**buf,int *l){
-  int rlen = 0;
- neverUseGoto:
-  char *tok = gzgets(gz,*buf+rlen,*l-rlen);
-  if(!tok)
-    return rlen;
-  int tmp = tok?strlen(tok):0;
-  if(tok[tmp-1]!='\n'){
-    rlen += tmp;
-    *l *= 2;
-    *buf = (char*) realloc(*buf,*l);
-    goto neverUseGoto;
-  }
-  rlen += tmp;
-  return rlen;
-}
-
-
-
-
 
 
 // em freqeuncy assuming HWE
@@ -1499,15 +1233,4 @@ double phi(double x){
     double y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
 
     return 0.5*(1.0 + sign*y);
-}
-
-//kputw-kputc-kputs breaks in newer versions of htslib
-int aio::kputw(int c,kstring_t *s){
-  return ksprintf(s,"%d",c);
-}
-int aio::kputc(char c,kstring_t *s){
-  return ksprintf(s,"%c",c);
-}
-int aio::kputs(char *c,kstring_t *s){
-  return ksprintf(s,"%s",c);
 }

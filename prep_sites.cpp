@@ -6,7 +6,6 @@
 */
 
 #ifdef __WITH_MAIN__
-#define GZOPT "w6h"
 #endif
 
 
@@ -15,7 +14,8 @@
 #include <cassert>
 #define kv_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #include "prep_sites.h"
-
+#include "aio.h"
+#include "analysisFunction.h"
 #define BIN ".bin"
 #define IDX ".idx"
 

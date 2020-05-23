@@ -22,6 +22,7 @@
 #include "abcHWE.h"
 #include "abcCallGenotypes.h"
 #include <htslib/kstring.h>
+#include "aio.h"
 
 /*
   wilcox manwhitney u test, whatever ,implementation is from wiki

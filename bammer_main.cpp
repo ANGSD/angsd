@@ -14,7 +14,7 @@
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
 #include "sample.h"
-
+#include "aio.h"
 
 extern int SIG_COND;
 #define bam_nt16_rev_table seq_nt16_str

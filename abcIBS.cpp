@@ -6,13 +6,13 @@
   part of angsd
   NB for cov. maf > 0.001 is hardcoded (don't want the world to explode)
 */
-
+#include <cassert>
 #include <cmath>
 #include <cstdlib>
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "abcIBS.h"
-#include <cassert>
+#include "aio.h"
 
 void abcIBS::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);

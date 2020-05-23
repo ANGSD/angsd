@@ -4,7 +4,7 @@
 
 #include "analysisFunction.h"
 #include "abcMismatch.h"
-
+#include "aio.h"
 
 #define rlen 400
 #define qslen 64

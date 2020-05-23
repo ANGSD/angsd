@@ -8,8 +8,8 @@
 #include "analysisFunction.h"
 #include <pthread.h>
 #include "abc.h"
-
 #include "abcSaf.h"
+#include "aio.h"
 
 #define MINLIKE -1000.0 //this is for setting genotypelikelhoods to missing (EXPLAINED BELOW)
 

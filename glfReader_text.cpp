@@ -1,6 +1,7 @@
 #include <cassert>
 #include "analysisFunction.h"
 #include "glfReader_text.h"
+#include "aio.h"
 
 glfReader_text::~glfReader_text(){
   free(buffer);

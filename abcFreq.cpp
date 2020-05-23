@@ -17,6 +17,7 @@
 #include "abcSaf.h"
 #include "abcFilter.h"
 #include "analysisFunction.h"
+#include "aio.h"
 
 int abcFreq::emIter = EM_NITER;
 double abcFreq::EM_start = EM_START;

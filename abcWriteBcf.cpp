@@ -16,7 +16,7 @@
 #include "abcCallGenotypes.h"
 #include "abcMajorMinor.h"
 #include "abcWriteBcf.h"
-
+#include "aio.h"
 
 
 void error(const char *format, ...)

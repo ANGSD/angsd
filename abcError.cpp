@@ -5,6 +5,7 @@
 #include "analysisFunction.h"
 #include "abcError.h"
 #include "abcFreq.h"
+#include "aio.h"
 
 //from analysisMaf.cpp
 double phatFun(suint *counts,int nFiles,double eps,char major,char minor) ;
