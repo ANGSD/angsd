@@ -189,78 +189,7 @@ void buildreorder(int swap[10],char **alleles,int len){
     fprintf(stderr,"TT swap[%d]:%d\n",9,swap[9]);
 #endif
 }
-#if 0
-//copied from vcf.c in htslib to understand accessing of these variables
-int vcf_format_tsk(const bcf_hdr_t *h, const bcf1_t *v)
-{
-  kstring_t *s=(kstring_t *)malloc(sizeof(kstring_t));
-  int i;
-  bcf_unpack((bcf1_t*)v, BCF_UN_ALL);
-  kputs(h->id[BCF_DT_CTG][v->rid].key, s); // CHROM
-  kputc('\t', s); kputw(v->pos + 1, s); // POS
-  kputc('\t', s); kputs(v->d.id ? v->d.id : ".", s); // ID
-  kputc('\t', s); // REF
-  if (v->n_allele > 0) kputs(v->d.allele[0], s);
-  else kputc('.', s);
-  kputc('\t', s); // ALT
-  if (v->n_allele > 1) {
-    for (i = 1; i < v->n_allele; ++i) {
-      if (i > 1) kputc(',', s);
-      kputs(v->d.allele[i], s);
-    }
-  } else kputc('.', s);
-  kputc('\t', s); // QUAL
-  if ( bcf_float_is_missing(v->qual) ) kputc('.', s); // QUAL
-  else kputd(v->qual, s);
-  kputc('\t', s); // FILTER
-  if (v->d.n_flt) {
-    for (i = 0; i < v->d.n_flt; ++i) {
-      if (i) kputc(';', s);
-      kputs(h->id[BCF_DT_ID][v->d.flt[i]].key, s);
-    }
-  } else kputc('.', s);
-  kputc('\t', s); // INFO
-  if (v->n_info) {
-    int first = 1;
-    for (i = 0; i < v->n_info; ++i) {
-      bcf_info_t *z = &v->d.info[i];
-      if ( !z->vptr ) continue;
-      if ( !first ) kputc(';', s);
-      first = 0;
-            if (z->key >= h->n[BCF_DT_ID]) {
-	      hts_log_error("Invalid BCF, the INFO index is too large");
-	      errno = EINVAL;
-	      return -1;
-            }
-            kputs(h->id[BCF_DT_ID][z->key].key, s);
-	    fprintf(stderr,"%s: \n",h->id[BCF_DT_ID][z->key].key);
-            if (z->len <= 0) continue;
-            kputc('=', s);
-            if (z->len == 1)
-            {
-	      switch (z->type)
-                {
-		case BCF_BT_INT8:  if ( z->v1.i==bcf_int8_missing ) kputc('.', s); else kputw(z->v1.i, s); break;
-		case BCF_BT_INT16: if ( z->v1.i==bcf_int16_missing ) kputc('.', s); else kputw(z->v1.i, s); break;
-		case BCF_BT_INT32: if ( z->v1.i==bcf_int32_missing ) kputc('.', s); else kputw(z->v1.i, s); break;
-		case BCF_BT_FLOAT: if ( bcf_float_is_missing(z->v1.f) ) kputc('.', s); else kputd(z->v1.f, s); break;
-		case BCF_BT_CHAR:  kputc(z->v1.i, s); break;
-		default: hts_log_error("Unexpected type %d", z->type); exit(1); break;
-                }
-            }
-            else bcf_fmt_array(s, z->len, z->type, z->vptr);
-    }
-    if ( first ) kputc('.', s);
-  } else kputc('.', s);
-  // FORMAT and individual information
 
-    kputc('\n', s);
-    fprintf(stderr,"kstirngts: %s\n",s->s);
-    free(s->s);free(s);
-      
-    return 0;
-}
-#endif
 //returns which info field is the INDEL
 int whichisindel(const bcf_hdr_t *h){
   int hit =-1;
@@ -443,7 +372,7 @@ int vcfReader::vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec){
 //
 
 int onlyprint = 10;
-funkyPars *vcfReader::fetch(int chunkSize){
+funkyPars *vcfReader::fetch(int chunkSize) {
   funkyPars *r = funkyPars_init();
   r->nInd = hs->nsamples;
   r->likes=new double*[chunkSize];
@@ -513,7 +442,25 @@ funkyPars *vcfReader::fetch(int chunkSize){
     r=NULL;
   }
   return r;
- 
 }
 
-
+bcf_hdr_t *vcfreader_hs_bcf_hdr  = NULL;//nasty hack global dragon
+vcfReader::vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *regions_a){
+  itrname.s=NULL;itrname.l=itrname.m =0;
+  regions = regions_a;
+  farr=NULL;
+  iarr=NULL;
+  mfarr=0;
+  miarr=0;
+  ln_gl_m = 1024;
+  ln_gl =(float *) malloc(sizeof(float)*ln_gl_m);
+  pl_or_gl = pl_or_gl_a;
+  hs=htsstuff_init(fname,seek);
+  vcfreader_hs_bcf_hdr = hs->hdr;
+  bamhdr = bcf_hdr_2_bam_hdr_t(hs);
+  acpy=NULL;
+  for(int i=0;i<PHREDMAX;i++)
+    pl2ln[i] = log(pow(10.0,-0.1*i));
+  curChr=-1;
+  pl=NULL;
+}

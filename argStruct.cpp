@@ -196,6 +196,13 @@ argStruct *setArgStruct(int argc,char **argv) {
   ksprintf(&kstr,"angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__);
   arguments->version = strdup(kstr.s);
   kstr.l=0;
+  time_t rawtime;
+  struct tm * timeinfo; 
+  time ( &rawtime );
+  timeinfo = localtime ( &rawtime );
+  ksprintf (&kstr, "%s", asctime (timeinfo) );
+  arguments->datetime = strdup(kstr.s);
+  kstr.l = 0;
   for(int i=0;i<argc;i++)
     ksprintf(&kstr,"%s ",argv[i]);
   arguments->cmdline = kstr.s;
@@ -384,7 +391,8 @@ std::vector<char*> angsd::getFilenames(const char * name,int nInd){
      free(args->cmdline);
    if(args->version)
      free(args->version);
-   
+   if(args->datetime)
+     free(args->datetime);
    if(args->sm)
      bam_smpl_destroy(args->sm);
    

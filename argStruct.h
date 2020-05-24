@@ -63,6 +63,7 @@ typedef struct{
   char *cmdline;
   char *version;
   bufReader *rd;
+  char *datetime;
 }argStruct;
 
 void destroy_argStruct(argStruct *arg);
