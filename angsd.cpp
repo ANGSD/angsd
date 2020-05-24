@@ -18,6 +18,7 @@
 #include <htslib/hts.h>
 #include "cigstat.h"
 #include "shared.h"
+#include "argStruct.h"
 #include "multiReader.h"
 
 
@@ -197,7 +198,7 @@ int main(int argc, char** argv){
 
    //intialize our signal handler for ctrl+c
    catchkill();
-
+   
    if(argc==2){
      fprintf(stderr,"\t-> Analysis helpbox/synopsis information:\n");
      multiReader mr(args);
@@ -209,9 +210,6 @@ int main(int argc, char** argv){
    }
 
    multiReader *mr= new multiReader(args);
-   args = mr->getargs();
-
-   
 
    init(args);
    parseArgStruct(args);
@@ -278,5 +276,6 @@ int main(int argc, char** argv){
   //check
   extern htsFormat *dingding2;
   free(dingding2);
+  destroy_argStruct(args);
   return 0;
 }

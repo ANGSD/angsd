@@ -20,17 +20,6 @@ typedef struct{
 }readPool;
 
 
-typedef struct{
-  htsFile *fp;
-  char *fn;
-  bam_hdr_t *hdr;
-  int isEOF;
-  int regionDone;
-  hts_idx_t *idx;
-  hts_itr_t *itr;
-  regs regions;
-}bufReader;
-
 readPool makePoolb(int l);
 void dalloc (readPool *ret);
 

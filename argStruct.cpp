@@ -1,3 +1,4 @@
+#include <cassert>
 #include <libgen.h>//for checking if output dir exists 'dirname'
 #include <fstream>
 #include "version.h"
@@ -33,11 +34,10 @@ void whatIsTheInput(int type){
   default:{
     fprintf(stderr,"\t-> Unknown input type\n");
     exit(0);
+   }
   }
-  }
-
-
 }
+
 void setInputType(argStruct *args){
 #if 0
   fprintf(stderr,"bam:%d\n",INPUT_BAM);
@@ -149,7 +149,10 @@ void setInputType(argStruct *args){
     
     return;
   }
+  if(args->inputtype==INPUT_BAM){
+    
 
+  }
 }
 
 void checkIfDir(char *fname){
@@ -176,6 +179,9 @@ argStruct *setArgStruct(int argc,char **argv) {
   arguments->argv=argv;
   arguments->nReads = 50;
   arguments->sm=NULL;
+  arguments->sm=bam_smpl_init();
+  assert(arguments->sm);
+ 
   arguments->usedArgs= new int[argc+1];//well here we allocate one more than needed, this is only used in the ./angsd -beagle version
   for(int i=0;i<argc;i++)
     arguments->usedArgs[i]=0;
@@ -192,7 +198,7 @@ argStruct *setArgStruct(int argc,char **argv) {
   kstr.l=0;
   for(int i=0;i<argc;i++)
     ksprintf(&kstr,"%s ",argv[i]);
-  arguments->cmdline = strdup(kstr.s);
+  arguments->cmdline = kstr.s;
   fprintf(stderr,"\t-> %s",arguments->version);
   fprintf(stderr,"\t-> %s\n",arguments->cmdline);
   //check output filename
@@ -373,3 +379,25 @@ std::vector<char*> angsd::getFilenames(const char * name,int nInd){
   return ret;
 }
 
+ void destroy_argStruct(argStruct *args){
+   if(args->cmdline)
+     free(args->cmdline);
+   if(args->version)
+     free(args->version);
+   
+   if(args->sm)
+     bam_smpl_destroy(args->sm);
+   
+   for(unsigned i=0;i<args->nams.size();i++)
+     free(args->nams[i]);
+   if(args->fai)
+     free(args->fai);
+   delete []   args->usedArgs;
+   free(args->outfiles);
+   free(args->infile);
+   if(args->anc)
+     free(args->anc);
+   bam_hdr_destroy(args->hd);
+   if(args->argumentFile!=stderr) fclose(args->argumentFile);
+   delete args;
+ }

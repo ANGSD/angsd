@@ -17,6 +17,17 @@ typedef struct{
   int stop;
 }regs;
 
+typedef struct{
+  htsFile *fp;
+  char *fn;
+  bam_hdr_t *hdr;
+  int isEOF;
+  int regionDone;
+  hts_idx_t *idx;
+  hts_itr_t *itr;
+  regs regions;
+}bufReader;
+
 struct ltstr
 {
   bool operator()(const char* s1, const char* s2) const
@@ -51,8 +62,10 @@ typedef struct{
   char *anc;
   char *cmdline;
   char *version;
+  bufReader *rd;
 }argStruct;
 
+void destroy_argStruct(argStruct *arg);
 argStruct *setArgStruct(int argc,char **argv);
 
 namespace angsd {
@@ -63,3 +76,4 @@ namespace angsd {
   double getArg(const char* argName,double type,argStruct *arguments);
   std::vector<char*> getFilenames(const char * name,int nInd);
 }
+

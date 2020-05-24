@@ -220,27 +220,21 @@ void printReg(FILE *fp,std::vector<regs> &regions){
 extern abc **allMethods;
 abcGetFasta *gf=NULL;
 
+void init_bamreaders(argStruct *args){
+
+
+}
+
+
 int bammer_main(argStruct *args){
-
   gf=(abcGetFasta *) allMethods[1];
-
-  //read bamfiles
-  extern int checkBamHeaders;
-  extern int doCheck;
-  extern char *fai_fname;
-  args->sm = NULL;
-  args->sm=bam_smpl_init();
-  assert(args->sm);
-  bufReader *rd = initializeBufReaders2(args->nams,checkBamHeaders,doCheck,fai_fname,args->sm);
-  fprintf(stderr, "[%s] %d samples in %lu input files\n", __func__, args->sm->n, args->nams.size());
   extern int maxThreads;
-  
-  uppile(args->show,maxThreads,rd,args->nReads,args->nams.size(),args->regions,gf);
+  uppile(args->show,maxThreads,args->rd,args->nReads,args->nams.size(),args->regions,gf);
 
   //cleanup stuff
   for(unsigned i=0;i<args->nams.size();i++)
-    dalloc_bufReader(rd[i]);
+    dalloc_bufReader(args->rd[i]);
   
-  delete [] rd;
+  delete [] args->rd;
   return 0;
 }

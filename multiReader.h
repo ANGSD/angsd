@@ -31,7 +31,6 @@ private:
   int pl_or_gl; // <-pl: pl_or_gl=0,gl:pl_or_gl=1
 public:
   multiReader(argStruct *arg);
-  argStruct *getargs(){return args;}
   funkyPars *fetch();
   ~multiReader();
 };

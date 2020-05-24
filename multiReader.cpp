@@ -1,4 +1,3 @@
-
 #include <cassert>
 #include "abc.h"
 #include "shared.h"
@@ -43,37 +42,6 @@ bam_hdr_t *getHeadFromFai(const char *fname){
   fclose(fp);
   return ret;
 }
-
-/*
-bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
-  bam_hdr_t *ret = bam_hdr_init();
-  ret->l_text = 0;
-  ret->text =NULL;
-  const char **seqnames = NULL;
-  int nseq;
-  seqnames = bcf_hdr_seqnames(hs->hdr, &nseq); assert(seqnames);
-  for (int i=0; i<hs->hdr->nhrec; i++){
-    bcf_hrec_t *hrec=hs->hdr->hrec[i];
-    if(strcmp(hrec->key,"contig")==0){
-      fprintf(stderr,"%d) hrec->value:%s key:%s\n",i,hrec->value,hrec->key);
-      for(int j=0;j<hrec->nkeys;j++)
-	fprintf(stderr,"i:%d j:%d keys:%s vals:%s\n",i,j,hrec->keys[j],hrec->vals[j]);
-    }
-  }
-  exit(0);
-  
-  ret->n_targets = nseq;
-  ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
-  ret->target_name = (char**) malloc(sizeof(char*)*nseq);
-  for(size_t i=0;i<nseq;i++){
-    //    fprintf(stderr,"i:%d is:%d\n",i,bcf_hdr_id2length())
-    ret->target_len[i] =0x7fffffff;// strlen(seqnames[i]);
-    ret->target_name[i] =strdup(seqnames[i]);
-  }
-  free(seqnames);
-  return ret;
-}
-*/
 
 aMap *buildRevTable(const bam_hdr_t *hd){
   assert(hd);
@@ -270,7 +238,16 @@ multiReader::multiReader(argStruct *args_arg){
     }
     
   }
-
+  
+  if(args->inputtype==INPUT_BAM){
+    //read bamfiles
+    extern int checkBamHeaders;
+    extern int doCheck;
+    extern char *fai_fname;
+    bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,int doCheck,char *fai_fname,bam_sample_t *sm);
+    args->rd = initializeBufReaders2(args->nams,checkBamHeaders,doCheck,fai_fname,args->sm);
+    fprintf(stderr, "[%s] %d samples in %lu input files\n", __func__, args->sm->n, args->nams.size());
+  }
 
   
   if(fname==NULL)
@@ -306,7 +283,6 @@ multiReader::multiReader(argStruct *args_arg){
     bglObj = new beagle_reader(gz,args->revMap,intName,args->nInd);
     break;
   }
-    
   default:{
     break;
   }
@@ -331,52 +307,20 @@ multiReader::~multiReader(){
  
   delete revMap;
 
-    switch(args->inputtype){
-  case INPUT_PILEUP:{
+  if(mpil)
     delete mpil;
-    break;
-  }
-  case INPUT_VCF_GP:{
+  if(myvcf)
     delete myvcf;
-    break;
-  }
-  case INPUT_VCF_GL:{
-    delete myvcf;
-    break;
-  }
-  case INPUT_GLF:
-  case INPUT_GLF3:{
+  if(myglf)
     delete myglf;
-    break;
-  }    
-  case INPUT_BEAGLE:{
+  if(bglObj)
     delete bglObj;
-    break;
-  }    
-  default:{
-    break;
-  }
-  }
+
   if(gz!=Z_NULL)
     gzclose(gz);
   free(fname);
 
-  if(args->sm)
-    bam_smpl_destroy(args->sm);
-
-  for(unsigned i=0;i<args->nams.size();i++)
-    free(args->nams[i]);
-  if(args->fai){
-    free(args->fai);
-  }
-  delete []   args->usedArgs;
-  free(args->outfiles);
-  free(args->infile);
-  if(args->anc)
-    free(args->anc);
-  bam_hdr_destroy(args->hd);
-  if(args->argumentFile!=stderr) fclose(args->argumentFile);
-  delete args;
+ 
   
 }
 
