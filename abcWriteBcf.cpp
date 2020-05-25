@@ -252,6 +252,8 @@ void abcWriteBcf::getOptions(argStruct *arguments){
 extern bcf_hdr_t *vcfreader_hs_bcf_hdr;
 //constructor
 abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputtype){
+  rec=NULL;
+  hdr=NULL;
   fp=NULL;
   doBcf =0;
   args=arguments;
@@ -303,7 +305,9 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
 
 
 abcWriteBcf::~abcWriteBcf(){
-  bcf_destroy(rec);
-  bcf_hdr_destroy(hdr);
+  if(rec)
+    bcf_destroy(rec);
+  if(hdr)
+    bcf_hdr_destroy(hdr);
   if(fp!=NULL) hts_close(fp);
 }
