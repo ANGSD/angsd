@@ -7,7 +7,6 @@
 #include "analysisFunction.h"
 #include "vcfReader.h"
 
-
 bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
   bam_hdr_t *ret = bam_hdr_init();
   ret->l_text = 0;
@@ -47,7 +46,6 @@ bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
 
   return ret;
 }
-
 
 void htsstuff_seek(htsstuff *hs,char *seek){
   assert(seek);

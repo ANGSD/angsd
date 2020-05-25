@@ -296,6 +296,7 @@ multiReader::multiReader(argStruct *args_arg){
     fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
     fprintf(stderr,"\t   6. -sites does NOT work with vcf input but -r does\n");
     fprintf(stderr,"\t   7. vcffilereading is still BETA, please report strange behaviour\n");
+    fprintf(stderr,"\t   8. Consider adding \'-doMajorMinor 1\'\n");
   }
 }
 
