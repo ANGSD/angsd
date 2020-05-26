@@ -39,126 +39,37 @@ int refToInt2(char c){
    }
 
    return(allele);
-
+   
 }
 
 //returns 0 if not indel higher values indicates indel
-int isindel(FILE *fp){
+int isindel(bgenLine *bgen){
   
   int isindel = 0;
-  //how many bites we have moved forward as I want to jump back my that much
-  int bytes = 0;
-    
-  unsigned short Lid_l;
-  char *Lid;
-  //read in how many variant ID is
-  fread(&Lid_l,sizeof(unsigned short),1,fp);  
-  bytes += (sizeof(unsigned short)*1);
-  
-  Lid =(char*) calloc(Lid_l+1,sizeof(char));
-  fread(Lid,sizeof(char),Lid_l,fp);
-  bytes += (sizeof(char)*Lid_l);
-  
-  unsigned short Lrsid_l;
-  char *Lrsid;
-  fread(&Lrsid_l,sizeof(unsigned short),1,fp);
-  bytes += (sizeof(unsigned short)*1);
-   
-  Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
-  fread(Lrsid,sizeof(char),Lrsid_l,fp);
-  bytes += (sizeof(char)*Lrsid_l);
-    
-  unsigned short Lchr_l;
-  char *Lchr;
-  fread(&Lchr_l,sizeof(unsigned short),1,fp);
-  bytes += (sizeof(unsigned short)*1);
-  
-  Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
-  fread(Lchr,sizeof(char),Lchr_l,fp);
-  bytes += (sizeof(char)*Lchr_l);
-    
-  unsigned int vpos;
-  fread(&vpos,sizeof(unsigned),1,fp);
-  bytes += (sizeof(unsigned)*1);
-  
-  unsigned short nal;
-  fread(&nal,sizeof(unsigned short),1,fp);
-  bytes += (sizeof(unsigned short)*1);
-  
-  unsigned la_l;
-  char *la1;
-  char *la2;
-  fread(&la_l,sizeof(unsigned),1,fp);
-  bytes += (sizeof(unsigned)*1);
   
   //we should stop if it is not a SNP
-  if(la_l > 1){
+  if(bgen->la_l1 > 1 | bgen->la_l2 > 1){
     isindel = 1;
   }
-
-  la1 =(char*) calloc(la_l+1,sizeof(char));
-  fread(la1,sizeof(char),la_l,fp);
-  bytes += (sizeof(char)*la_l);
-  
-  fread(&la_l,sizeof(unsigned),1,fp);
-  bytes += (sizeof(unsigned)*1);
-    
-  if(la_l > 1){
-    isindel = 1;
-  }
-
-  //jump the bytes we read back in the file - super ugo!?
-  fseek(fp,-bytes,SEEK_CUR);
   
   return isindel;
   
 }
 
 //returns chr
-int getChr(FILE *fp){
-  
-  int isindel = 0;
-  //how many bites we have moved forward as I want to jump back my that much
-  int bytes = 0;
-    
-  unsigned short Lid_l;
-  char *Lid;
-  //read in how many variant ID is
-  fread(&Lid_l,sizeof(unsigned short),1,fp);
-  bytes += (sizeof(unsigned short)*1);
-  
-  Lid =(char*) calloc(Lid_l+1,sizeof(char));
-  fread(Lid,sizeof(char),Lid_l,fp);
-  bytes += (sizeof(char)*Lid_l);
-  unsigned short Lrsid_l;
-  char *Lrsid;
-  fread(&Lrsid_l,sizeof(unsigned short),1,fp);
-  bytes += (sizeof(unsigned short)*1);
-  Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
-  fread(Lrsid,sizeof(char),Lrsid_l,fp);
-  bytes += (sizeof(char)*Lrsid_l);
-  unsigned short Lchr_l;
-  char *Lchr;
-  fread(&Lchr_l,sizeof(unsigned short),1,fp);
-  bytes += (sizeof(unsigned short)*1);
-  Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
-  fread(Lchr,sizeof(char),Lchr_l,fp);
-  bytes += (sizeof(char)*Lchr_l);
+int getChr(bgenLine *bgen){
 
   //see if string is empty - meaning there is no line to read in
-  if(Lchr[0]=='\0'){
+  if(bgen->Lchr[0]=='\0'){
     return -9;
   }
   
   //convering it to chr if not valid number throws error
-  int chr = atoi(Lchr);    
+  int chr = atoi(bgen->Lchr);    
   if(chr==0){
-    fprintf(stderr,"\t-> Chromosome is not a valid number! Chromosome is: \'%s\'\n",Lchr);
+    fprintf(stderr,"\t-> Chromosome is not a valid number! Chromosome is: \'%s\'\n",bgen->Lchr);
     exit(0);
   }
-  
-  //jump the bytes we read back in the file - super ugo!?
-  fseek(fp,-bytes,SEEK_CUR);
 
   return chr;
   
@@ -194,14 +105,11 @@ header *bgenReader::parseheader(FILE *fp){
   if(hd->layout==0){
     fprintf(stderr,"file has unsupported layout\n");
     assert(0!=1);
-  } else if(hd->layout ==1)
-    fprintf(stderr,"file has layout v 1.1\n");
-  else if(hd->layout ==2){
-    fprintf(stderr,"file has layout v 1.2 \n");
-  }else{
-    fprintf(stderr,"file has unsupported layout\n");
-    assert(0!=1);//never happens according to spec
+  } else if(hd->layout!=1 & hd->layout!=2){
+     fprintf(stderr,"file has unsupported layout\n");
+     exit(0);
   }
+    
   //move them 31 places to the right (leftmost bit) - could also have used &
   hd->si = flags>>31;
   if(hd->si==1){
@@ -223,62 +131,52 @@ header *bgenReader::parseheader(FILE *fp){
   return hd;
 }
 
+void cleanBgen(bgenLine *bgen){
+
+  free(bgen->Lchr);
+  free(bgen->Lrsid);
+  free(bgen->Lid);
+  free(bgen->la1);
+  free(bgen->la2);
+  
+}
+
 //implement this for .bgen simply parse a line and store it
 // reads stuff into funkyPars *r
-void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
+bgenLine *bgenReader::parseline(FILE *fp,header *hd){
+
+  bgen->indis = hd->N;
 
   unsigned short Lid_l;
   char *Lid;
   //read in how many variant ID is
   fread(&Lid_l,sizeof(unsigned short),1,fp);
-  Lid =(char*) calloc(Lid_l+1,sizeof(char));
-  fread(Lid,sizeof(char),Lid_l,fp);
+  bgen->Lid =(char*) calloc(Lid_l+1,sizeof(char));
+  fread(bgen->Lid,sizeof(char),Lid_l,fp);
   
   unsigned short Lrsid_l;
-  char *Lrsid;
   fread(&Lrsid_l,sizeof(unsigned short),1,fp);
-  Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
-  fread(Lrsid,sizeof(char),Lrsid_l,fp);
-  
+  bgen->Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
+  fread(bgen->Lrsid,sizeof(char),Lrsid_l,fp);
+
   unsigned short Lchr_l;
-  char *Lchr;
   fread(&Lchr_l,sizeof(unsigned short),1,fp);
-  Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
-  fread(Lchr,sizeof(char),Lchr_l,fp);
-  
-  unsigned int vpos;
-  fread(&vpos,sizeof(unsigned),1,fp);    
-  unsigned short nal;
-  fread(&nal,sizeof(unsigned short),1,fp);
-  unsigned la_l;
+  bgen->Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
+  fread(bgen->Lchr,sizeof(char),Lchr_l,fp);
+
+  fread(&bgen->vpos,sizeof(unsigned),1,fp);    
+  fread(&bgen->nal,sizeof(unsigned short),1,fp);
   char *la1;
   char *la2;
-  fread(&la_l,sizeof(unsigned),1,fp);
-  
-  la1 =(char*) calloc(la_l+1,sizeof(char));
-  fread(la1,sizeof(char),la_l,fp);
-  fread(&la_l,sizeof(unsigned),1,fp);
-  
-  la2 =(char*) calloc(la_l+1,sizeof(char));
-  fread(la2,sizeof(char),la_l,fp);
-  
-  //this should actually be used for SNP-ID
-  //TO DO add proper place to store chr
+  fread(&bgen->la_l1,sizeof(unsigned),1,fp);
 
-  //in order to map chr to chr from fai file (which refId points to)
-  int wacko[26] = {0,11,15,16,17,18,19,20,21,1,2,3,4,5,6,7,8,9,10,12,13,14,22,23,24};
-  //because 0 indexed
-  r->refId = wacko[atoi(Lchr)-1];
-
-  //because it is assumed to be 0-indexed in ANGSD
-  r->posi[balcon] = vpos-1;
-  //we do not know which one is major and minor, but probaly like beagle files
-  //TO DO check which one is major and minor
-  r->major[balcon] = refToInt2(la1[0]);
-  r->minor[balcon] = refToInt2(la2[0]);
-  //so that site is analysed
-  r->keepSites[balcon] = 1;
-      
+  bgen->la1 =(char*) calloc(bgen->la_l1+1,sizeof(char));
+  fread(bgen->la1,sizeof(char),bgen->la_l1,fp);
+  fread(&bgen->la_l2,sizeof(unsigned),1,fp);
+  
+  bgen->la2 =(char*) calloc(bgen->la_l2+1,sizeof(char));
+  fread(bgen->la2,sizeof(char),bgen->la_l2,fp);
+        
   //done reading variant information;
   // uncompressed size of genotype probs
   unsigned C;
@@ -297,10 +195,11 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
   // we allocate 10 extra bytes, so that when we read in 8 bytes, we will not go into unallocated memory
   unsigned char *pds=(unsigned char*) calloc(4*(D/4+10),sizeof(unsigned char));
   
+  unsigned char *upds=(unsigned char*) calloc(C-4,sizeof(unsigned char));
+  
   if(hd->compressed==0){
     fread(pds,sizeof(unsigned char),C,fp);
   } else if(hd->compressed==1){
-    unsigned char *upds=(unsigned char*) calloc(C-4,sizeof(unsigned char));
     //added this as otherwise, does not read from current position in file
     fread(upds,sizeof(unsigned char),C-4,fp);  
     //zlib https://gist.github.com/arq5x/5315739
@@ -321,18 +220,17 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
     inflateEnd(&infstream);
   } else if(hd->compressed==2) {
     //zstd
-    unsigned char *upds=(unsigned char*) calloc(C-4,sizeof(unsigned char));
     fread(upds,sizeof(unsigned char),C-4,fp);  
     ZSTD_decompress(pds,D,upds,C-4);
   }
-  
+
   //data is now in pds;//<- probability datastorage
   unsigned int N2;memcpy(&N2,pds,4);
 
-  assert(hd->N==N2);
-  
+  assert(hd->N==N2); 
+
   unsigned short nal2;memcpy(&nal2,pds+4,2);
-  assert(nal==nal2);
+  assert(bgen->nal==nal2);
   char pmin=pds[6];
   char pmax=pds[7];
   char pmis[hd->N];//missingness and ploidy
@@ -376,53 +274,85 @@ void bgenReader::parseline(FILE *fp,funkyPars *r,int &balcon,header *hd){
     
     //below should be the same
     if( ii %2 ){
+
       uint p11 = to_vals[0];
       // genotype prob HE allele 1 - genotype is 4 bits or 0.5 bytes
       uint p12 = to_vals[1];
 
-      r->post[balcon][at] = (1.0*p11)/scal;
-      r->post[balcon][at+1] = (1.0*p12)/scal;
-      r->post[balcon][at+2] = 1-(1.0*p11)/scal-(1.0*p12)/scal;
+      bgen->probs[at] = (1.0*p11)/scal;
+      bgen->probs[at+1] = (1.0*p12)/scal;
+      bgen->probs[at+2] = 1-(1.0*p11)/scal-(1.0*p12)/scal;
       
-      if(r->post[balcon][at+2]<0) //<-needed?
-	r->post[balcon][at+2] = 0;
+      if(bgen->probs[at+2]<0) //<-needed?
+	bgen->probs[at+2] = 0;
       
-      double sum = r->post[balcon][at]+r->post[balcon][at+1]+r->post[balcon][at+2];
+      double sum = bgen->probs[at]+bgen->probs[at+1]+bgen->probs[at+2];
       
-      r->post[balcon][at] = r->post[balcon][at] / sum;
-      r->post[balcon][at+1] = r->post[balcon][at+1] / sum;
-      r->post[balcon][at+2] = r->post[balcon][at+2] / sum;
+      bgen->probs[at] = bgen->probs[at] / sum;
+      bgen->probs[at+1] = bgen->probs[at+1] / sum;
+      bgen->probs[at+2] = bgen->probs[at+2] / sum;
 
       at+=3;
       
     }
         
   }
-        
-  balcon++;
 
+  free(pds);
+  free(upds);
+
+  return bgen;
+  
 }
 
 
-funkyPars *bgenReader::fetch(int chunkSize){
+void bgenReader::funkyCopy(bgenLine *bgen, funkyPars *r, int &balcon){    
+  
+  //to translate chr from fai indexing to normal indexing 1,2,3,4,5,...
+  int wacko[26] = {0,11,15,16,17,18,19,20,21,1,2,3,4,5,6,7,8,9,10,12,13,14,22,23,24};
+  //because 0 indexed
+  r->refId = wacko[atoi(bgen->Lchr)-1];
+
+  //because it is assumed to be 0-indexed in ANGSD
+  r->posi[balcon] = bgen->vpos-1;
+  //we do not know which one is major and minor, but probaly like beagle files
+  //TO DO check which one is major and minor
+  r->major[balcon] = refToInt2(bgen->la1[0]);
+  r->minor[balcon] = refToInt2(bgen->la2[0]);
+  //so that site is analysed
+  r->keepSites[balcon] = 1;
+
+  for(int at=0;at<3*bgen->indis;at+=3){
+    //jumps 3 at a time
+    r->post[balcon][at] = bgen->probs[at];
+    r->post[balcon][at+1] = bgen->probs[at+1];
+    r->post[balcon][at+2] = bgen->probs[at+2];
+  }
+
+  balcon++;
+  
+}
+
+
+funkyPars *bgenReader::fetch(int chunksize){
 
   funkyPars *r = funkyPars_init();
   
   //using refId for chr
   //TO DO add chr field in funkyPars struct
   //r->refId=new int[chunkSize];
-  r->posi=new int[chunkSize];
+  r->posi=new int[chunksize];
   
-  r->post=new double*[chunkSize];
-  r->major = new char[chunkSize];
-  r->minor = new char[chunkSize];
-  r->keepSites = new int[chunkSize];
+  r->post=new double*[chunksize];
+  r->major = new char[chunksize];
+  r->minor = new char[chunksize];
+  r->keepSites = new int[chunksize];
   r->refId = 0;
 
-  r->post = new double*[chunkSize];
+  r->post = new double*[chunksize];
   r->nInd = nInd;
   
-  for(int s=0;s<chunkSize;s++)
+  for(int s=0;s<chunksize;s++)
     r->post[s] = new double[nInd*3];
   
   //keeps track of which site we are at (we might skip some non diallelic sites)
@@ -430,18 +360,24 @@ funkyPars *bgenReader::fetch(int chunkSize){
 
   int n    = 0;  // total number of records in file
   int nsnp = 0;  // number of SNP records in file
-
+  
   //go to statement
  never_ever: //haha
   
   //if acpy not null - read read that has survived
   //member variable of vcfReader class 
   if(readAgain){
+
+    fprintf(stderr,"READ AGAIN!\n");
     
     //read stored line of file    
-    curChr=getChr(bgenFile);
-    //parses line and puts in output structure
-    parseline(bgenFile,r,balcon,hd);    
+    //bgen = parseline(bgenFile,hd);
+    //curChr=getChr(bgen);
+        
+    funkyCopy(bgen,r,balcon);
+
+    cleanBgen(bgen);
+    
     readAgain = 0;
 
     //after read line we have update prevChr - current chr will be updated at the beginning of the loop
@@ -451,17 +387,16 @@ funkyPars *bgenReader::fetch(int chunkSize){
 
   //TO DO what if fewer sites than one chunck??
   //balcon how many ok sites
-  while(balcon<chunkSize && balcon<sites) {
+  while(balcon<chunksize && balcon<sites && sitesRead<sites) {
+
+    bgen = parseline(bgenFile,hd);
 
     // to get chr
-    curChr=getChr(bgenFile);
+    curChr=getChr(bgen);
 
-
-    //emil
-    //if(curChr>1){
-    //      fprintf(stderr,"baclon %i, chunkSize %i, sites %i, curChr %i, prevChr %i\n",balcon,chunkSize,sites,curChr,prevChr);
-    //}
-
+    //keep track of how many sites read in total
+    sitesRead++;    
+    
     //meaning there is no more data to be read no chr to read..
     if(curChr==-9){
       break;
@@ -470,12 +405,12 @@ funkyPars *bgenReader::fetch(int chunkSize){
     if(prevChr==-1){
       prevChr=curChr;
     }
-
+      
     n++;
         
     //skip nonsnips - gives back 0 if indel
     //reads first X bytes of line to see if a SNP, then jumps back X bytes
-    if(isindel(bgenFile)){
+    if(isindel(bgen)){
       prevChr=curChr;
       if(onlyPrint>0){
 	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",r->posi+1);
@@ -483,16 +418,14 @@ funkyPars *bgenReader::fetch(int chunkSize){
       }      
       continue;
     }
-
+        
     nsnp++;
 
     //if we are changing chromosomes
-    //curChr is current chr
-    //rec->rid chr we are reading
     if(prevChr!=curChr){
-          
+
       readAgain=1;
-      //info for this site - duplicate this site
+  
       //I do not think I have to take a copy I can just
       if(balcon==0){
 	goto never_ever;
@@ -500,22 +433,30 @@ funkyPars *bgenReader::fetch(int chunkSize){
       //acpy=bgen_dup(rec);
       break;
     }
-    
-    //make parseLine return if not diallelic or not SNP and then just continue
-    parseline(bgenFile,r,balcon,hd);
 
+    //copy data from line into funkyPars
+    funkyCopy(bgen,r,balcon);
+
+    cleanBgen(bgen);
+    
     prevChr=curChr;
 
   }
 
+  //to delete sites, if we do not have a whole chunck, but we have allocated a whole chunck
+  if(balcon<chunksize){    
+    for(int s=balcon;s<chunksize;s++)
+      delete [] r->post[s];
+  }
+  
   // to catch when no more data for this chr and chunk is over
   //if(balcon==0&&bcf_retval==0)
   //  goto never_ever;
 
   //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
-    
+  
   r->numSites=balcon;
-  if(r->numSites==0){
+  if(r->numSites==0){    
     funkyPars_destroy(r);
     r=NULL;
   }

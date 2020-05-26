@@ -378,19 +378,17 @@ funkyPars *funkyPars_init(){
 void funkyPars_destroy(funkyPars *p) {
   //clean up data related to each analysis class;
   if(p->numSites!=0){
+    
     for(int i=0;i<andersSux;i++)
       if(shouldRun[i])
 	allMethods[i]->clean(p);
   }
   
   //cleanup begin  
-
-  delete[] p->keepSites;
-  
+  delete[] p->keepSites;  
   delete []  p->anc;
   delete [] p->ref;
   
-
   //cleanup extra stuff
   if(p->chk!=NULL){
     //    fprintf(stderr,"cleanuing up chunkyT\n");
@@ -429,7 +427,7 @@ void funkyPars_destroy(funkyPars *p) {
     for(int i=0;i<p->numSites;i++)
       delete [] p->likes[i];
     delete [] p->likes;
-    p->post=NULL;
+    p->likes=NULL;
   }
   delete p;
 
@@ -479,10 +477,11 @@ void printFunky(funkyPars *p){
 	if(shouldRun[i])
 	  allMethods[i]->print(p);
     }
-   
+    
     funkyPars_destroy(p);
     
   }else{
+    
     funkyPars_destroy(p);
     pthread_mutex_unlock(&mUpPile_mutex);
     fprintf(stderr,"\n");//after last positions print add a neu line mutafuka

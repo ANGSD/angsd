@@ -341,7 +341,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
     
     if(ncols==2 && strcmp(tmp,"missing")==0){
       if(hasMissing){
-	fprintf(stderr,"\t-> Cannot have two 'missing' columns in .sample file  %s\n");
+	fprintf(stderr,"\t-> Cannot have two 'missing' columns in .sample file\n");
 	exit(0);
       }
       hasMissing = 1;
@@ -446,7 +446,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
     pheCols = pheRow.size();
 
     int i=0;
-    for(std::list<double>::iterator it=covRow.begin();it!=covRow.end();it++)
+    for(std::list<double>::iterator it=covRow.begin();it!=covRow.end();it++)    
       crows[i++]  = *it;
 
     i=0;
@@ -454,7 +454,8 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
       prows[i++]  = *it;
 
     covRows.push_back(crows);
-    pheRows.push_back(prows);          
+    pheRows.push_back(prows);
+
   
   }
 
@@ -469,7 +470,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
   i = 0;
   for(std::list<double*>::iterator it=pheRows.begin();it!=pheRows.end();it++)
     pheData[i++]  = *it;
-
+  
   doubleTrouble<double> dT;
   dT.matrix0=pheData;
   dT.x0 = pheRows.size();
@@ -479,7 +480,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
   dT.matrix1=covData;
   dT.x1 = covRows.size();
   dT.y1 = covCols;
-  
+
   return dT;
 
 }

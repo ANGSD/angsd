@@ -358,9 +358,12 @@ abcAsso::~abcAsso(){
 
 
 void abcAsso::clean(funkyPars *pars){
+
+
+  
   if(doAsso==0)
     return;
-
+  
   assoStruct *assoc =(assoStruct*) pars->extras[index];
 
   if(assoc->stat!=NULL)
@@ -398,8 +401,18 @@ void abcAsso::clean(funkyPars *pars){
     for( int yi =0;yi<ymat.y;yi++)
       delete[] assoc->keepInd[yi];
   delete[] assoc->keepInd;
+
   
   delete assoc;
+
+  //to delete if has not been deleted in other abc Classes
+  if(pars->post!=NULL){
+    for(int i=0;i<pars->numSites;i++)
+      delete [] pars->post[i];
+    delete [] pars->post;
+    pars->post =NULL;
+  }
+  
 }
 
 
@@ -444,7 +457,7 @@ void abcAsso::run(funkyPars *pars){
     assoc->highHe=new int[pars->numSites];
     assoc->highHo=new int[pars->numSites];
   }
-  
+
   if(doAsso==1){
     frequencyAsso(pars,assoc);
   } else if(doAsso==2){
@@ -469,8 +482,7 @@ void abcAsso::run(funkyPars *pars){
     assoc->emIter=new int[pars->numSites];
     emAssoWald(pars,assoc);    
   }
-
-
+  
 }
 
 void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary){
@@ -2133,7 +2145,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
   }
     
   angsd::Matrix<double> designNull;
-  designNull.x=pars->nInd;
+  designNull.x=3*pars->nInd;
   //covars + intercept
   designNull.y=covmat.y+1;
   designNull.matrix=new double*[3*pars->nInd];
@@ -2211,7 +2223,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
 
   delete [] start;
 
-  designNull.x=pars->nInd;
+  designNull.x=3*pars->nInd;
   design.x=3*pars->nInd;
   postAll.x=3*pars->nInd;
   
@@ -2550,7 +2562,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   }
   
   angsd::Matrix<double> designNull;
-  designNull.x=pars->nInd;
+  designNull.x=3*pars->nInd;
   //covars + intercept
   designNull.y=covmat.y+1;
   designNull.matrix=new double*[3*pars->nInd];
@@ -2631,7 +2643,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   delete [] start;
   delete chisq1;
   
-  designNull.x=pars->nInd;
+  designNull.x=3*pars->nInd;
   design.x=3*pars->nInd;
   postAll.x=3*pars->nInd;
   

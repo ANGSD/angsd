@@ -469,16 +469,14 @@ void abcFreq::clean(funkyPars *pars) {
   delete [] freq->lrt_EM_unknown;
   delete [] freq->phat;
   delete freq;
-
-  
-  if(pars->post!=NULL){
+    
+  if(pars->post!=NULL){    
     for(int i=0;i<pars->numSites;i++)
-      delete [] pars->post[i];
+      delete [] pars->post[i];    
     delete [] pars->post;
     pars->post =NULL;
   }
-
-
+    
 }
 
 freqStruct *allocFreqStruct(){
