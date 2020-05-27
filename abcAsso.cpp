@@ -180,8 +180,9 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     if(!strcasecmp(arguments->argv[1],"-doAsso")){
       printArg(stdout);
       exit(0);
-    }else
+    } else{
       return;
+    }
   }
   
   getOptions(arguments);
@@ -358,8 +359,6 @@ abcAsso::~abcAsso(){
 
 
 void abcAsso::clean(funkyPars *pars){
-
-
   
   if(doAsso==0)
     return;
@@ -411,8 +410,7 @@ void abcAsso::clean(funkyPars *pars){
       delete [] pars->post[i];
     delete [] pars->post;
     pars->post =NULL;
-  }
-  
+  }  
 }
 
 
@@ -3525,6 +3523,9 @@ void abcAsso::printDoAsso(funkyPars *pars){
       }
     }
     aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);bufstr.l=0;
+
   }
+
+
 }
 

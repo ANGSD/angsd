@@ -1,18 +1,21 @@
 #include <stdio.h>
 #include <vector>
 #include <cmath>
-//#include <string>
 #include <errno.h>
 #include <cassert>
+#include <cstdio>//fprintf etc
+#include <cstdlib>// calloc etc
+#include <zlib.h>// zlib
+#include <cstring> //memcpy
 #include "analysisFunction.h"
 #include "bgenReader.h"
 
 
-#include <cstdio>//fprintf etc
-#include <cstdlib>// calloc etc
+#ifdef __ZSTD__
 #include <zstd.h>// zstandard
-#include <zlib.h>// zlib
-#include <cstring> //memcpy
+#endif
+
+
 
 
 
@@ -106,8 +109,8 @@ header *bgenReader::parseheader(FILE *fp){
     fprintf(stderr,"file has unsupported layout\n");
     assert(0!=1);
   } else if(hd->layout!=1 & hd->layout!=2){
-     fprintf(stderr,"file has unsupported layout\n");
-     exit(0);
+    fprintf(stderr,"file has unsupported layout\n");
+    exit(0);
   }
     
   //move them 31 places to the right (leftmost bit) - could also have used &
@@ -187,6 +190,18 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
     fread(&D,sizeof(unsigned),1,fp);
   else
     D=C;
+
+  int zstdOK = 0;
+  
+  //to check that ZSTD is avaiable if a ZSTD file is supplied
+#ifdef __ZSTD__
+  zstdOK = 1;  
+#endif
+  
+  if(!zstdOK & hd->compressed==2){
+    fprintf(stderr,"file has ZSTD compression, however it has not been compiled with the ZSTD library!\n");
+    exit(0);    
+  }
   
   //now do magic decompression
   // probability data storage,
@@ -218,11 +233,14 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
     inflateInit(&infstream);
     inflate(&infstream, Z_NO_FLUSH);
     inflateEnd(&infstream);
-  } else if(hd->compressed==2) {
+  } 
+#ifdef __ZSTD__
+  else if(hd->compressed==2) {
     //zstd
-    fread(upds,sizeof(unsigned char),C-4,fp);  
+    fread(upds,sizeof(unsigned char),C-4,fp);
     ZSTD_decompress(pds,D,upds,C-4);
   }
+#endif  
 
   //data is now in pds;//<- probability datastorage
   unsigned int N2;memcpy(&N2,pds,4);
@@ -445,8 +463,9 @@ funkyPars *bgenReader::fetch(int chunksize){
 
   //to delete sites, if we do not have a whole chunck, but we have allocated a whole chunck
   if(balcon<chunksize){    
-    for(int s=balcon;s<chunksize;s++)
+    for(int s=balcon;s<chunksize;s++){
       delete [] r->post[s];
+    }
   }
   
   // to catch when no more data for this chr and chunk is over
