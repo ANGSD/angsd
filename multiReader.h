@@ -3,6 +3,7 @@
 #include "glfReader.h"
 #include "vcfReader.h"
 #include "beagleReader.h"
+#include "bgenReader.h"
 #include "argStruct.h"
 #include "mpileup.h"
 #include "parseArgs_bambi.h"
@@ -15,6 +16,7 @@ private:
   glfReader_text *myglf_text;
   vcfReader *myvcf;
   beagle_reader *bglObj;
+  bgenReader *bgenObj;
   mpileup *mpil;
   char *fname;
   int intName; // intrepret SNP name as chr_pos

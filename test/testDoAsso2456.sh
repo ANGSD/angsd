@@ -35,10 +35,24 @@ asso5binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
 asso6binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
 
-## check results LRT and beta for each of the 8 analyses give back RVAL which one that fails
+tmp=`$WDIR/angsd -doMaf 4 -bgen ${ASSODIR}/testB13zlib.bgen -fai hg19.fa.fai  -sampleFile ${ASSODIR}/test.sample -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso2binbgennew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+
+tmp=`$WDIR/angsd -doMaf 4 -bgen ${ASSODIR}/testB13zlib.bgen -fai hg19.fa.fai  -sampleFile ${ASSODIR}/test.sample -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso4binbgennew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+
+tmp=`$WDIR/angsd -doMaf 4 -bgen ${ASSODIR}/testB13zlib.bgen -fai hg19.fa.fai  -sampleFile ${ASSODIR}/test.sample -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso5binbgennew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+
+tmp=`$WDIR/angsd -doMaf 4 -bgen ${ASSODIR}/testB13zlib.bgen -fai hg19.fa.fai  -sampleFile ${ASSODIR}/test.sample -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
+asso6binbgennew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+
+## check results LRT and beta for each of the 12 analyses give back RVAL which one that fails
+
+RVAL=0
 
 asso2=1.607704
-RVAL=0
+
 if [ ! "$asso2" = "$asso2new"  ] ;then
     echo "--------------"
     echo "Problem with score test"
@@ -107,6 +121,42 @@ if [ ! "$asso6bin" = "$asso6binnew"  ] ;then
     echo "Problem with binary dosage test"
     echo "--------------"
     RVAL=9
+fi
+
+asso2binbgen=1.620294
+
+if [ ! "$asso2binbgen" = "$asso2binbgennew"  ] ;then
+    echo "--------------"
+    echo "Problem with binary score test"
+    echo "--------------"
+    RVAL=10
+fi
+
+asso4binbgen=1.540588
+
+if [ ! "$asso4binbgen" = "$asso4binbgennew"  ] ;then
+    echo "--------------"
+    echo "Problem with binary latent genotype test"
+    echo "--------------"
+    RVAL=11
+fi
+
+asso5binbgen=1.620294
+
+if [ ! "$asso5binbgen" = "$asso5binbgennew"  ] ;then
+    echo "--------------"
+    echo "Problem with binary hybrid test"
+    echo "--------------"
+    RVAL=12
+fi
+
+asso6binbgen=1.540588
+
+if [ ! "$asso6binbgen" = "$asso6binbgennew"  ] ;then
+    echo "--------------"
+    echo "Problem with binary dosage test"
+    echo "--------------"
+    RVAL=13
 fi
 
 exit $RVAL
