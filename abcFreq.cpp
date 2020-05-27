@@ -208,16 +208,16 @@ void abcFreq::getOptions(argStruct *arguments){
 
   if(abs(doMaf)==0 &&doPost==0)
     return;
-  if(inputtype!=INPUT_VCF_GP&&inputtype!=INPUT_BEAGLE&&inputtype!=0&&doMajorMinor==0&&inputtype!=INPUT_VCF_GL){
+  if(inputtype!=INPUT_VCF_GP&&inputtype!=INPUT_BEAGLE&&inputtype!=INPUT_BGEN&&inputtype!=0&&doMajorMinor==0&&inputtype!=INPUT_VCF_GL){
     fprintf(stderr,"You must specify \'-doMajorMinor\' to infer major/minor \n");
     exit(0);
   }
 
-  if(inputtype==INPUT_BEAGLE&&abs(doMaf)!=4){
+  if((inputtype==INPUT_BEAGLE||inputtype==INPUT_BGEN)&&abs(doMaf)!=4){
     fprintf(stderr,"Only \'-doMaf 4\' can not be performed on posterior input\n");
     exit(0);
   }
-  if(inputtype!=INPUT_BEAGLE&&inputtype!=INPUT_VCF_GP&&abs(doMaf)==4){
+  if(inputtype!=INPUT_BEAGLE&&inputtype!=INPUT_BGEN&&inputtype!=INPUT_VCF_GP&&abs(doMaf)==4){
     fprintf(stderr,"\t \'-doMaf 4\' can only be performed on genotype probabilities provided by the user (-beagle).\n");
     exit(0);
   }
@@ -231,7 +231,7 @@ void abcFreq::getOptions(argStruct *arguments){
     fprintf(stderr,"Error: -doMaf 4 cannot be used for a likelihood ratio test (doSNP) \n");
     exit(0);
   }
-  if(inputtype==INPUT_BEAGLE&&doPost){
+  if((inputtype==INPUT_BEAGLE||inputtype==INPUT_BGEN)&&doPost){
     fprintf(stderr,"Error: Cannot estimate post (doPost) based on posterior probabilites\n");
     exit(0);
   }
@@ -470,16 +470,15 @@ void abcFreq::clean(funkyPars *pars) {
   delete [] freq->lrt_EM_unknown;
   delete [] freq->phat;
   delete freq;
-
-  
+    
   if(pars->post!=NULL){
-    for(int i=0;i<pars->numSites;i++)
-      delete [] pars->post[i];
+    for(int i=0;i<pars->numSites;i++){
+      delete [] pars->post[i];      
+    }    
     delete [] pars->post;
     pars->post =NULL;
   }
-
-
+    
 }
 
 freqStruct *allocFreqStruct(){

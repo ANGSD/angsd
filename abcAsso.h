@@ -58,7 +58,9 @@ public:
   char *yfile1;
   char *yfile2;
   char *yfile3;
-  
+  char *sampleFile;
+
+  angsd::doubleTrouble<double> dT;
   angsd::Matrix<double> ymat;
   angsd::Matrix<double> covmat;
   void check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary);

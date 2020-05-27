@@ -48,6 +48,7 @@ void setInputType(argStruct *args){
   fprintf(stderr,"vcf_gp:%d\n",INPUT_VCF_GP);
   fprintf(stderr,"vcf_gl:%d\n",INPUT_VCF_GL);
   fprintf(stderr,"glf10_text:%d\n",INPUT_GLF10_TEXT);
+  fprintf(stderr,"bgen:%d\n",INPUT_BGEN);
 #endif
   if(args->fai){
     free(args->fai);
@@ -128,6 +129,15 @@ void setInputType(argStruct *args){
     return;
   }
   free(tmp);
+  tmp=NULL;
+  tmp = angsd::getArg("-bgen",tmp,args);
+  if(tmp!=NULL){
+    args->inputtype=INPUT_BGEN;
+    args->infile = tmp;
+    args->nams.push_back(strdup(args->infile));
+    return;
+  }
+  free(tmp); 
   tmp=NULL;
   tmp = angsd::getArg("-i",tmp,args);
   if(tmp!=NULL){

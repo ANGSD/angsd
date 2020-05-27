@@ -55,11 +55,11 @@ aMap *buildRevTable(const bam_hdr_t *hd){
 }
 
 
-
 void multiReader::printArg(FILE *argFile,argStruct *args){
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
   fprintf(argFile,"\t-nLines\t%d\t(Number of lines to read)\n",nLines);
   fprintf(argFile,"\t-beagle\t%s\t(Beagle Filename (can be .gz))\n",fname);
+  fprintf(argFile,"\t-bgen\t%s\t(Bgen Filename)\n",fname);
   fprintf(argFile,"\t-vcf-GL\t%s\t(vcf Filename (can be bcf compressed or uncompressed))\n",fname);
   fprintf(argFile,"\t-vcf-PL\t%s\t(vcf Filename (can be bcf compressed or uncompressed))\n",fname);
   fprintf(argFile,"\t-vcf-GP\t%s\t(vcf Filename (can be bcf compressed or uncompressed))(*not used)\n",fname);
@@ -82,6 +82,7 @@ void multiReader::getOptions(argStruct *arguments){
   nLines=angsd::getArg("-nLines",nLines,arguments);
   arguments->nLines = nLines;
   fname=angsd::getArg("-beagle",fname,arguments);
+  fname=angsd::getArg("-bgen",fname,arguments);
   fname=angsd::getArg("-pileup",fname,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
   fname=angsd::getArg("-glf",fname,arguments);
@@ -110,7 +111,7 @@ void multiReader::getOptions(argStruct *arguments){
 
 multiReader::multiReader(argStruct *args_arg){
   gz=Z_NULL;
-  myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;
+  myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;bgenObj=NULL;
   
   nLines=50;
   
@@ -130,6 +131,7 @@ multiReader::multiReader(argStruct *args_arg){
 
   if(args->argc==2) {
     if((!strcasecmp(args->argv[1],"-beagle")) ||
+       (!strcasecmp(args->argv[1],"-bgen")) ||
        (!strcasecmp(args->argv[1],"-glf")) ||
        (!strcasecmp(args->argv[1],"-glf3")) ||
        (!strcasecmp(args->argv[1],"-pileup")) ||
@@ -190,7 +192,7 @@ multiReader::multiReader(argStruct *args_arg){
     }
   }
  
-  if(!(INPUT_VCF_GL||INPUT_VCF_GP)){
+  if(!(INPUT_VCF_GL||INPUT_VCF_GP||INPUT_BGEN)){
     if(args->hd==NULL){
       fprintf(stderr,"For non-bams you should include -fai arguments\n");
       exit(0);
@@ -283,6 +285,12 @@ multiReader::multiReader(argStruct *args_arg){
     bglObj = new beagle_reader(gz,args->revMap,intName,args->nInd);
     break;
   }
+    
+  case INPUT_BGEN:{
+    bgenObj = new bgenReader(args->infile,intName,args->nInd);
+    break;
+  }
+    
   default:{
     break;
   }
@@ -316,6 +324,8 @@ multiReader::~multiReader(){
     delete myglf;
   if(bglObj)
     delete bglObj;
+  if(bgenObj)
+    delete bgenObj;
 
   if(gz!=Z_NULL)
     gzclose(gz);
@@ -353,6 +363,10 @@ funkyPars *multiReader::fetch(){
   }
   case INPUT_BEAGLE:{
     fp = bglObj->fetch(nLines); 
+    break;
+  }
+  case INPUT_BGEN:{
+    fp = bgenObj->fetch(nLines); 
     break;
   }
   case INPUT_BAM:{

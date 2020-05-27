@@ -190,6 +190,221 @@ void angsd::printMatrix(Matrix<double> mat,FILE *file){
 }
 
 
+angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
+
+  if(!angsd::fexists(name)){
+    fprintf(stderr,"\t-> Problems opening file: %s\n",name);
+    exit(0);
+  }
+
+  const char* delims = " \t";
+  std::ifstream pFile(name,std::ios::in);
+
+  char buffer[lens];
+  std::list<char *> firstLine;
+  std::list<char *> secondLine;
+  std::list<double *> rows;
+
+  int hasMissing = 0;
+  int hasID_2 = 0;
+  
+  //read first line to know how many cols
+  pFile.getline(buffer,lens);
+  int ncols=0;
+  char* tmp = strtok(buffer,delims);
+  while(tmp!=NULL){
+    
+    if(ncols==0 && (strcmp(tmp,"ID")!=0 && strcmp(tmp,"ID_1")!=0) ){
+      fprintf(stderr,"\t-> First column first row of file must be 'ID' or 'ID_1' is %s\n",tmp);
+      exit(0);
+    }
+
+    if(ncols==1 && strcmp(tmp,"ID_2")==0 ){
+      hasID_2 = 1;
+    } else if(ncols==1 && strcmp(tmp,"missing")==0 ){
+      hasMissing = 1;
+    }
+    
+    if(ncols==2 && strcmp(tmp,"missing")==0){
+      if(hasMissing){
+	fprintf(stderr,"\t-> Cannot have two 'missing' columns in .sample file\n");
+	exit(0);
+      }
+      hasMissing = 1;
+    }
+    
+    ncols++;
+    tmp = strtok(NULL,delims);       
+  }
+  
+  //read second line to know types of each
+  std::vector <char> sampleMap;
+  pFile.getline(buffer,lens);
+  int count=0;
+  tmp = strtok(buffer,delims);
+  while(tmp!=NULL){
+
+    if(count==0 && tmp[0]!='0'){
+      fprintf(stderr,"\t-> First column second row of file must be '0' is %c\n",tmp[0]);
+      exit(0);
+    }
+    
+    if(count<3 && hasID_2 && hasMissing && tmp[0]!='0'){
+      fprintf(stderr,"\t-> Second and third column second row of file must be '0' is %c\n",tmp[0]);
+      exit(0);
+    }
+
+    if(count<2 && !hasID_2 && hasMissing && tmp[0]!='0'){
+      fprintf(stderr,"\t-> Second column second row of file must be '0' is %c\n",tmp[0]);
+      exit(0);
+    }
+
+    if(count<2 && hasID_2 && !hasMissing && tmp[0]!='0'){
+      fprintf(stderr,"\t-> Second column second row of file must be '0' is %c\n",tmp[0]);
+      exit(0);
+    }
+        
+    // keep track of which column is what - 0 ID or missing, D discrete covar, C continious covar, B discrete pheno, P continious pheno
+    sampleMap.push_back(tmp[0]);
+    count++;    
+    tmp = strtok(NULL,delims);
+    
+  }
+
+  assert(count==ncols);
+  
+  //which column we are at
+  int pheCols = 0;
+  int covCols = 0;
+
+  int column = 0;
+  // to keep track of pheno either only binary or quant
+  int isBinary = 0;
+  
+  std::list<double*> covRows;
+  std::list<double*> pheRows;
+  
+  //create matrix for covar and pheno
+  
+  while(!pFile.eof()){
+    pFile.getline(buffer,lens);
+    if(strlen(buffer)==0)
+      continue;
+    
+    char *tok = strtok(buffer,delims);
+    
+    std::list<double> covRow;
+    std::list<double> pheRow;
+
+    column = 0;
+    while(tok!=NULL){
+
+      if(sampleMap[column] == '0'){
+	column++;
+	tok = strtok(NULL,delims);            
+	continue;
+	//covar
+      } else if(sampleMap[column] == 'D' || sampleMap[column] == 'C'){
+	column++;
+	covRow.push_back(atof(tok));
+	//pheno
+      } else if(sampleMap[column] == 'B'){
+	//ok to have binary phenotype as double??
+	column++;
+	pheRow.push_back(atof(tok));
+	isBinary = 1;		
+      } else if(sampleMap[column] == 'P'){
+	column++;
+	pheRow.push_back(atof(tok));
+	assert(isBinary==0);	
+      } else{
+	fprintf(stderr,"error .sample file has unreconigsed column type (D, C, B, 0 and P are allowed): %c \n",sampleMap[column]);
+	exit(0);
+      }
+      
+      tok = strtok(NULL,delims);            
+    }
+    
+    double *crows = new double[covRow.size()];
+    double *prows = new double[pheRow.size()];
+
+    covCols = covRow.size();
+    pheCols = pheRow.size();
+
+    int i=0;
+    for(std::list<double>::iterator it=covRow.begin();it!=covRow.end();it++)    
+      crows[i++]  = *it;
+
+    i=0;
+    for(std::list<double>::iterator it=pheRow.begin();it!=pheRow.end();it++)
+      prows[i++]  = *it;
+
+    covRows.push_back(crows);
+    pheRows.push_back(prows);
+
+  
+  }
+
+  //  fprintf(stderr,"%s nrows:%lu\n",__FUNCTION__,rows.size());
+  double **covData = new double*[covRows.size()];
+  double **pheData = new double*[pheRows.size()];
+
+  int i = 0;
+  for(std::list<double*>::iterator it=covRows.begin();it!=covRows.end();it++)
+    covData[i++]  = *it;
+  
+  i = 0;
+  for(std::list<double*>::iterator it=pheRows.begin();it!=pheRows.end();it++)
+    pheData[i++]  = *it;
+  
+  doubleTrouble<double> dT;
+  dT.matrix0=pheData;
+  dT.x0 = pheRows.size();
+  dT.y0 = pheCols;
+  dT.isBinary = isBinary;
+
+  dT.matrix1=covData;
+  dT.x1 = covRows.size();
+  dT.y1 = covCols;
+
+  return dT;
+
+}
+
+
+void angsd::deleteDoubleTrouble(doubleTrouble<double> dT){
+  
+  assert(dT.matrix0!=NULL && dT.matrix1!=NULL);
+  for(int i=0;i<dT.x0;i++)
+    delete [] dT.matrix0[i];
+  delete[] dT.matrix0;
+  dT.matrix0=NULL;
+  for(int i=0;i<dT.x1;i++)
+    delete [] dT.matrix1[i];
+  delete[] dT.matrix1;
+  dT.matrix1=NULL;
+  
+}
+
+
+
+void angsd::printDoubleTrouble(doubleTrouble<double> dT,FILE *file){
+  
+  fprintf(stderr,"Printing phe doubleTrouble:%p with dim=(%d,%d)\n",dT.matrix0,dT.x0,dT.y0);
+  fprintf(stderr,"Printing cov doubleTrouble:%p with dim=(%d,%d)\n",dT.matrix1,dT.x1,dT.y1);
+  
+  for(int xi=0;xi<dT.x0;xi++){
+    for(int yi=0;yi<dT.y0;yi++)
+      fprintf(file,"%f\t",dT.matrix0[xi][yi]);
+    for(int yi=0;yi<dT.y1;yi++)
+      fprintf(file,"%f\t",dT.matrix1[xi][yi]);  
+    fprintf(file,"\n");
+  }
+  
+}
+
+
+
 double **angsd::get3likes(funkyPars *pars){
 
   double **loglike = NULL;

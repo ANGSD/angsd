@@ -39,6 +39,8 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t-yCount\t\t%s\t(File containing count phenotypes)\n",yfile2);
   fprintf(argFile,"\t-yQuant\t\t%s\t(File containing phenotypes)\n",yfile3);
   fprintf(argFile,"\t-cov\t\t%s\t(File containing additional covariates)\n",covfile);
+  fprintf(argFile,"\t-sampleFile\t\t%s\t(.sample File containing phenotypes and covariates)\n",sampleFile);
+
   fprintf(argFile,"\t-model\t%d\n",model);
   fprintf(argFile,"\t1: Additive/Log-Additive (Default)\n");
   fprintf(argFile,"\t2: Dominant\n");
@@ -61,7 +63,6 @@ void abcAsso::printArg(FILE *argFile){
 
 
 void abcAsso::getOptions(argStruct *arguments){
-
 
   doAsso=angsd::getArg("-doAsso",doAsso,arguments);
   if(doAsso==3){
@@ -103,6 +104,8 @@ void abcAsso::getOptions(argStruct *arguments){
   if(yfile3!=NULL)
     isQuant=1;    
 
+  sampleFile=angsd::getArg("-sampleFile",sampleFile,arguments);  
+  
   if(doAsso==7){
     fprintf(stderr,"Warning: Wald test is not properly tested and might give inflated test statistics!\n");
   }
@@ -119,15 +122,20 @@ void abcAsso::getOptions(argStruct *arguments){
 
   }
 
-  if(doAsso && yfile1==NULL && yfile2==NULL && yfile3==NULL){
+  if(doAsso && (yfile1!=NULL || yfile2!=NULL || yfile3!=NULL) && sampleFile!=NULL){
+    fprintf(stderr,"Error: you must provide either a phenotype file (-yBin or -yQuant) or sample file (-sampleFile) not both \n");
+    exit(0);
+  }
+  
+  if(doAsso && yfile1==NULL && yfile2==NULL && yfile3==NULL && sampleFile==NULL){
     fprintf(stderr,"Error: you must provide a phenotype file (-yBin or -yQuant) to perform association \n");
     exit(0);
-   }
- if(doAsso && arguments->inputtype==INPUT_BEAGLE&&doAsso==1){
+  }
+  if(doAsso && (arguments->inputtype==INPUT_BEAGLE&&doAsso==1 || arguments->inputtype==INPUT_BGEN&&doAsso==1)){
     fprintf(stderr,"Error: Only doAsso=2 can be performed on posterior input\n");
     exit(0);
   }
-  if(doAsso && arguments->inputtype!=INPUT_BEAGLE&&(doAsso==2)&&doPost==0){
+  if(doAsso && arguments->inputtype!=INPUT_BEAGLE && arguments->inputtype!=INPUT_BGEN &&(doAsso==2)&&doPost==0){
     fprintf(stderr,"Error: For doAsso=2 you must estimate the posterior probabilites for the genotypes (-doPost 1) \n");
     exit(0);
   }
@@ -154,6 +162,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   yfile1=NULL;
   yfile2=NULL;
   yfile3=NULL;
+  sampleFile=NULL;
   minHigh=10;
   minCount=10;
   dynCov=0;//not for users
@@ -172,8 +181,9 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     if(!strcasecmp(arguments->argv[1],"-doAsso")){
       printArg(stdout);
       exit(0);
-    }else
+    } else{
       return;
+    }
   }
   
   getOptions(arguments);
@@ -186,22 +196,43 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   printArg(arguments->argumentFile);
 
   //read phenotype - binary or count (poisson)
-  if(isBinary)
-    ymat = angsd::getMatrix(yfile1,1,100000);  
-  else if(isCount)
-    ymat = angsd::getMatrix(yfile2,1,100000);  
-  else
-    ymat = angsd::getMatrix(yfile3,0,100000);
+  if(sampleFile==NULL){
 
-  //read covariates 
-  if(covfile!=NULL)
-    covmat = angsd::getMatrix(covfile,0,100000);
-  else{
-    covmat.x=0;
-    covmat.y=0;
-    covmat.matrix=NULL;
+    if(isBinary)
+      ymat = angsd::getMatrix(yfile1,1,100000);  
+    else if(isCount)
+      ymat = angsd::getMatrix(yfile2,1,100000);  
+    else
+      ymat = angsd::getMatrix(yfile3,0,100000);
+
+    //read covariates 
+    if(covfile!=NULL)
+      covmat = angsd::getMatrix(covfile,0,100000);
+    else{
+      covmat.x=0;
+      covmat.y=0;
+      covmat.matrix=NULL;
+    }
+        
+  } else{
+    dT = angsd::getSample(sampleFile,100000);
+
+    ymat.matrix=dT.matrix0;
+    ymat.x = dT.x0;
+    ymat.y = dT.y0;
+    isBinary = dT.isBinary;
+
+    if(dT.x1>0){;
+      covmat.matrix=dT.matrix1;
+      covmat.x = dT.x1;
+      covmat.y = dT.y1;
+    } else{
+       covmat.x=0;
+       covmat.y=0;
+       covmat.matrix=NULL;
+    }
   }
-  
+      
   if(covfile!=NULL&&(covmat.x!=ymat.x)){
     fprintf(stderr,"The number of covariates (%d) does not match the number of phenotypes (%d)\n",covmat.x,ymat.x);
     exit(0);
@@ -211,7 +242,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     fprintf(stderr,"Error: Only doAsso=2 can be performed on quantitative traits\n");
     exit(0);
   }
-
+  
   // check cov and ymat
   check_pars(covmat,ymat,isBinary);
 
@@ -329,9 +360,10 @@ abcAsso::~abcAsso(){
 
 
 void abcAsso::clean(funkyPars *pars){
+  
   if(doAsso==0)
     return;
-
+  
   assoStruct *assoc =(assoStruct*) pars->extras[index];
 
   if(assoc->stat!=NULL)
@@ -369,8 +401,17 @@ void abcAsso::clean(funkyPars *pars){
     for( int yi =0;yi<ymat.y;yi++)
       delete[] assoc->keepInd[yi];
   delete[] assoc->keepInd;
+
   
   delete assoc;
+
+  //to delete if has not been deleted in other abc Classes
+  if(pars->post!=NULL){
+    for(int i=0;i<pars->numSites;i++)
+      delete [] pars->post[i];
+    delete [] pars->post;
+    pars->post =NULL;
+  }  
 }
 
 
@@ -409,13 +450,13 @@ void abcAsso::run(funkyPars *pars){
   
   assoStruct *assoc = allocAssoStruct();
   pars->extras[index] = assoc;
-
+  
   if(doAsso==2 or doAsso==4 or doAsso==5 or doAsso==6 or doAsso==7){
     assoc->highWt=new int[pars->numSites];
     assoc->highHe=new int[pars->numSites];
     assoc->highHo=new int[pars->numSites];
   }
-  
+
   if(doAsso==1){
     frequencyAsso(pars,assoc);
   } else if(doAsso==2){
@@ -440,8 +481,7 @@ void abcAsso::run(funkyPars *pars){
     assoc->emIter=new int[pars->numSites];
     emAssoWald(pars,assoc);    
   }
-
-
+  
 }
 
 void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary){
@@ -1825,7 +1865,7 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
 
   double* post = new double[keepInd*3];    
   double* y = new double[3*keepInd];
-  
+
   int count=0;
   
   design->x=3*keepInd;
@@ -2097,14 +2137,14 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
   int **keepInd  = new int*[ymat.y];
   // we can also get coef of genotype
   double **stat = new double*[ymat.y*2];
-
+  
   for(int yi=0;yi<ymat.y;yi++){
     stat[yi] = new double[pars->numSites];
     keepInd[yi]= new int[pars->numSites];
   }
     
   angsd::Matrix<double> designNull;
-  designNull.x=pars->nInd;
+  designNull.x=3*pars->nInd;
   //covars + intercept
   designNull.y=covmat.y+1;
   designNull.matrix=new double*[3*pars->nInd];
@@ -2130,7 +2170,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
   for(int s=0;s<pars->numSites;s++){//loop overs sites
     if(pars->keepSites[s]==0)
       continue;
-        
+      
     int *keepListAll = new int[pars->nInd];
     for(int i=0 ; i<pars->nInd ;i++){
       keepListAll[i]=1;
@@ -2152,6 +2192,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
 	if(keepList[i]==1)
 	  keepInd[yi][s]++;
       }
+
       
       double *y = new double[pars->nInd];
       for(int i=0 ; i<pars->nInd ;i++)
@@ -2181,7 +2222,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
 
   delete [] start;
 
-  designNull.x=pars->nInd;
+  designNull.x=3*pars->nInd;
   design.x=3*pars->nInd;
   postAll.x=3*pars->nInd;
   
@@ -2520,7 +2561,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   }
   
   angsd::Matrix<double> designNull;
-  designNull.x=pars->nInd;
+  designNull.x=3*pars->nInd;
   //covars + intercept
   designNull.y=covmat.y+1;
   designNull.matrix=new double*[3*pars->nInd];
@@ -2601,7 +2642,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
   delete [] start;
   delete chisq1;
   
-  designNull.x=pars->nInd;
+  designNull.x=3*pars->nInd;
   design.x=3*pars->nInd;
   postAll.x=3*pars->nInd;
   
@@ -3459,10 +3500,10 @@ double abcAsso::poisScoreEnv(double *post,int numInds, double *y, double *ytilde
 void abcAsso::printDoAsso(funkyPars *pars){
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
-
   
   freqStruct *freq = (freqStruct *) pars->extras[6];
   assoStruct *assoc= (assoStruct *) pars->extras[index];
+  
   for(int yi=0;yi<ymat.y;yi++){
     bufstr.l=0;
     for(int s=0;s<pars->numSites;s++){
@@ -3483,6 +3524,9 @@ void abcAsso::printDoAsso(funkyPars *pars){
       }
     }
     aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);bufstr.l=0;
+
   }
+
+
 }
 

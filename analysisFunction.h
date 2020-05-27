@@ -31,14 +31,26 @@ namespace angsd {
       {2,5,7,8},
       {3,6,8,9}
     };
- 
-
+  
+  
   template<typename T>
   struct Matrix {
     int x;
     int y;
     T **matrix;
   };
+
+  template<typename T>
+  struct doubleTrouble {
+    int x0;
+    int y0;
+    T **matrix0;
+    int isBinary;
+    int x1;
+    int y1;
+    T **matrix1;
+  };
+    
   void norm(double *d,size_t len);
   double getMax(double a,double b, double c);
   double addProtect2(double a,double b);
@@ -58,6 +70,9 @@ namespace angsd {
   void deleteMatrix(Matrix<double> mat);
   void deleteMatrixInt(Matrix<int> mat);
   void printMatrix(Matrix<double> mat,FILE *file);
+  doubleTrouble<double> getSample(const char *name,int lens);
+  void deleteDoubleTrouble(doubleTrouble<double> dT);
+  void printDoubleTrouble(doubleTrouble<double> dT,FILE *file);  
   void logrescale(double *ary,int len);
   int svd_inverse(double mat[],int xLen, int yLen);
   double dnorm(double x,double mean,double sd,int ifLog);
@@ -74,30 +89,27 @@ namespace angsd {
   int getIupacCountTotal(suint *d, int nInd, double iRatio);
   double estFreq(double *loglike,int numInds);
 
-
   template <typename T>
   T * allocArray(size_t len,T defval){
     T *ret= new T[len];
     for(size_t i=0;i<len;i++)
       ret[i]=defval;
-    return ret;
-    
-
+    return ret;    
   }
+  
   template <typename T>
   T * allocArray(size_t len){
     T *ret= new T[len];
-    return ret;
-    
+    return ret;    
   }
 
   template <typename T>
   T sum(const T *ary,size_t len){
-  T s =0;
-  for(size_t i=0;i<len ; i++)
-    s+=ary[i];
-  //  printf("sum:%f\n",s);
-  return s;
+    T s =0;
+    for(size_t i=0;i<len ; i++)
+      s+=ary[i];
+    //  printf("sum:%f\n",s);
+    return s;
   }
 
   void print_array(FILE *fp,double *ary,int len);
@@ -105,6 +117,7 @@ namespace angsd {
 
   double *readDouble(const char*fname,int hint);
   int whichMax(double *d,int len);
+  
 }
 
 

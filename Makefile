@@ -20,6 +20,12 @@ FLAGS2 = $(CPPFLAGS) $(FLAGS) $(LDFLAGS)
 CFLAGS := $(FLAGS2) $(CFLAGS)
 CXXFLAGS := $(FLAGS2) $(CXXFLAGS)
 
+#for compiling with ZSTD which is used for .bgen file format
+ifeq ($(WITH_ZSTD),1)
+LIBS += -lzstd
+CXXFLAGS += -D__ZSTD__
+endif
+
 CSRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CSRC:.c=.o) $(CXXSRC:.cpp=.o)
