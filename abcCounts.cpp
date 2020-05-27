@@ -4,11 +4,12 @@
   Class that works with counts
 */
 
+#include <htslib/kstring.h>
 #include <cassert>
 #include "analysisFunction.h"
 #include "abc.h"
 #include "abcCounts.h"
-#include <htslib/kstring.h>
+#include "aio.h"
 
 void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"---------------\n%s:\n",__FILE__);

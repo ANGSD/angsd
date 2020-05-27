@@ -20,6 +20,7 @@
 
 #include "abcFreq.h"
 #include "abcAsso.h"
+#include "aio.h"
 
 void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);

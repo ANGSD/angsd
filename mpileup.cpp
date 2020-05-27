@@ -1,8 +1,10 @@
-#include "mpileup.h"
-#include "mUpPile.h"
 #include <ctype.h>
 #include <cassert>
 #include "pooled_alloc.h"
+#include "mpileup.h"
+#include "mUpPile.h"
+#include "aio.h"
+
 extern tpool_alloc_t *tnodes;
 
 mpileup::mpileup(int nInd_a,gzFile gz_a,const aMap* revMap_a,int minQ_a){

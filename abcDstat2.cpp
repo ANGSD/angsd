@@ -6,6 +6,7 @@
 #include <htslib/kstring.h>
 #include "abc.h"
 #include "abcDstat2.h"
+#include "aio.h"
 
 typedef struct {
   double **NUM;

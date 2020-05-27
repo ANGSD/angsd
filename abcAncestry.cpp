@@ -1,8 +1,9 @@
+#include <cassert>
 #include <ctype.h>
 #include "shared.h"
 #include "analysisFunction.h"
 #include "abcAncestry.h"
-#include <cassert>
+#include "aio.h"
 
 void abcAncestry::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);

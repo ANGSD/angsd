@@ -6,7 +6,6 @@
 */
 
 #ifdef __WITH_MAIN__
-#define GZOPT "w6h"
 #endif
 
 
@@ -15,7 +14,8 @@
 #include <cassert>
 #define kv_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #include "prep_sites.h"
-
+#include "aio.h"
+#include "analysisFunction.h"
 #define BIN ".bin"
 #define IDX ".idx"
 
@@ -124,15 +124,20 @@ void set(tary<T> *ta,size_t pos,T val){
   ta->d[pos] =val;
 }
 
-void filt_print(FILE *fp,filt*f,char *chr){
-  fprintf(stderr,"\n---------------\nfp:%p\nbg:%p\nhasExtra:%d nchr:%lu\n",f->fp,f->bg,f->hasExtra,f->offs.size());
+void filt_print(FILE *fp,filt*f,char *chr,int onlyHeader){
+  fprintf(fp,"@@\tfp:%p\tqbg:%p\thasExtra:%d nchr:%lu\n",f->fp,f->bg,f->hasExtra,f->offs.size());
   for(std::map<char*,asdf_dats,ltstr>::const_iterator it=f->offs.begin();it!=f->offs.end();++it){
-    fprintf(stderr,"chr:\t\'%s\'\t",it->first);
-    fprintf(stderr,"last:\t\'%lu\'\t",it->second.len);
-    fprintf(stderr,"\toffs:%" PRId64 "\n",it->second.offs);
+    if(chr)
+      it=f->offs.find(chr);
+    if(it==f->offs.end())
+      break;
+    fprintf(fp,"@@\tchr:\t\'%s\'\t",it->first);
+    fprintf(fp,"last:\t\'%lu\'\t",it->second.len);
+    fprintf(fp,"\toffs:%" PRId64 "\n",it->second.offs);
+    if(chr)
+      break;
   }
-  fprintf(stderr,"------------\n");
-  for(std::map<char*,asdf_dats,ltstr>::const_iterator it=f->offs.begin();it!=f->offs.end();++it){
+  for(std::map<char*,asdf_dats,ltstr>::const_iterator it=f->offs.begin();onlyHeader==0&&it!=f->offs.end();++it){
     //if we have supplied a single chr
     if(chr!=NULL)
       filt_readSites(f,chr,0);
@@ -299,6 +304,7 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
   }else
     mm[strdup(last)]=1;
   //write data and index stuff
+  assert(0==bgzf_flush(BFP));
   int64_t retVal =bgzf_tell(BFP);//now contains the offset to which we should point.
   
   //write chrname
@@ -345,7 +351,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   char* outnames_bin = append(fname,BIN);
   char* outnames_idx = append(fname,IDX);
   
-  BGZF *cfpD = bgzf_open(outnames_bin,GZOPT);
+  BGZF *cfpD = bgzf_open(outnames_bin,"w6h");
   FILE *fp=fopen(outnames_idx,"w");
   
   std::map <char*,int,ltstr> mm;//simple structure to check that input has been sorted by chr/contig
@@ -574,20 +580,28 @@ void filt_init(int argc,char**argv){
 }
 
 int main_sites(int argc,char **argv){
-#if 0
-  for(int i=0;i<argc;i++)
-    fprintf(stderr,"argv[%d]:%s\n",i,argv[i]);
-#endif
   if(argc==1){
-    fprintf(stderr,"\tsites print filename\t\tPrint index file\n\tsites index filename [-r offset -compl doCompl]\tgenerate binary index file\n");
+    fprintf(stderr,"\tExamples:\n\t1) ./angsd sites index filename.txt [-r offset -compl doCompl]\n");
+    fprintf(stderr,"\t2) ./angsd sites print filename.txt [chromosome]\n");
+    fprintf(stderr,"\t3) ./angsd sites print_header filename.txt [chromosome]\n");
     return 0;
   }
   --argc;++argv;
   if(!strcasecmp(*argv,"index")){
     filt_init(--argc,++argv);
   }else if(!strcasecmp(*argv,"print")){
+    char *chr = NULL;
+    if(argc>2)
+      chr=argv[2];
     filt *f = filt_read(*++argv);
-    filt_print(stdout,f,NULL);
+    filt_print(stdout,f,chr,0);
+    filt_dalloc(f);
+  }else if(!strcasecmp(*argv,"print_header")){
+    char *chr = NULL;
+    if(argc>2)
+      chr=argv[2];
+    filt *f = filt_read(*++argv);
+    filt_print(stdout,f,chr,1);
     filt_dalloc(f);
   }else
     fprintf(stderr,"Unknown option: \'%s\'\n",*argv);

@@ -33,7 +33,7 @@
 #include "shared.h" //<-contains the struct defintino for funkypars
 #include "analysisFunction.h" //<-contains some utility functions, usefull for parsing args
 #include "abcTemplate.h"//contains the analysis class defition associated with this file
-
+#include "aio.h"
 //#include "phys_genolike_calc.h"
 
 

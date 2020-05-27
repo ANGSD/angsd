@@ -32,8 +32,7 @@ private:
   aMap *revMap;
   int pl_or_gl; // <-pl: pl_or_gl=0,gl:pl_or_gl=1
 public:
-  multiReader(int,char**);
-  argStruct *getargs(){return args;}
+  multiReader(argStruct *arg);
   funkyPars *fetch();
   ~multiReader();
 };

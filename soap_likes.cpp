@@ -25,7 +25,7 @@
 #include "bambi_interface.h"
 #include "soap_likes.h"
 #include "analysisFunction.h"
-
+#include "aio.h"
 //calc_offset into an array of dim 256 256 4 4
 int co(int a, int b, int c, int d){
   return (a<<12 | b<<4 | c<<2|d );

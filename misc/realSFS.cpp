@@ -1,5 +1,4 @@
 /*
-
   The functionality of this file, has replaced the old emOptim and testfolded.c programs.
 
   part of ANGSD
@@ -16,7 +15,7 @@
   april 20, removed 2dsfs as special scenario
   april 20, split out the safreader into seperate cpp/h
   may 5, seems to work well now
-  */
+*/
 
 #include <cstdio>
 #include <vector>
@@ -40,7 +39,7 @@
 int SIG_COND =1;
 int howOften =5e6;//how often should we print out (just to make sure something is happening)
 #include "multisafreader.hpp"
-
+#include "../aio.h"
 int really_kill =3;
 int VERBOSE = 1;
 /*
@@ -730,7 +729,31 @@ int saf2theta(int argc,char**argv){
       double workarray[nChr+1];
       for(int i=0;i<nChr+1;i++)//gls->mat is float lets pluginto double
 	workarray[i] = gls[0]->mat[s][i];
-
+      if(arg->fold){
+	if((nChr+1) %2 ){
+	  //	  fprintf(stderr,"\t-> Folding odd number of categories\n");
+	  int first=0;
+	  int last=nChr;
+	  while(first<last){
+	    //	    fprintf(stderr,"first: %d last:%d\n",first,last);
+	    workarray[first] = log(exp(workarray[first]) + exp(workarray[last]));
+	    first++;
+	    last--;
+	  }
+	  //	  fprintf(stderr,"multiplying last with two first:%d\n",first);
+	  workarray[first] = workarray[first]+log(2.0);
+	}else{
+	  //fprintf(stderr,"\t-> Folding even number of categories\n");
+	  int first=0;
+	  int last=nChr;
+	  while(first<=last){
+	    //fprintf(stderr,"first: %d last:%d\n",first,last);
+	    workarray[first] = log(exp(workarray[first]) + exp(workarray[last]));//<- should be divided by two but this is a constant
+	    first++;
+	    last--;
+	  }
+	}
+      }
       //calculate post probs
       double tsum =exp(workarray[0] + prior[0]);
       for(int i=1;i<nChr+1;i++)

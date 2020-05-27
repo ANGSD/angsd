@@ -1,9 +1,10 @@
 #pragma once
-#include "../prep_sites.h"
+
 #include <cstdlib>
 #include <sys/stat.h>
 #include <htslib/bgzf.h>
 #include <cstring>
+#include "../prep_sites.h"
 
 void normalize(double *tmp,size_t len);
 size_t fsize(const char* fname);

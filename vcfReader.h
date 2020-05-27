@@ -52,23 +52,6 @@ public:
   funkyPars *fetch(int chunkSize);
   void seek(char *seek){htsstuff_seek(hs,seek);}
   int vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec);
-  vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *regions_a){
-    itrname.s=NULL;itrname.l=itrname.m =0;
-    regions = regions_a;
-    farr=NULL;
-    iarr=NULL;
-    mfarr=0;
-    miarr=0;
-    ln_gl_m = 1024;
-    ln_gl =(float *) malloc(sizeof(float)*ln_gl_m);
-    pl_or_gl = pl_or_gl_a;
-    hs=htsstuff_init(fname,seek);
-    bamhdr = bcf_hdr_2_bam_hdr_t(hs);
-    acpy=NULL;
-    for(int i=0;i<PHREDMAX;i++)
-      pl2ln[i] = log(pow(10.0,-0.1*i));
-    curChr=-1;
-    pl=NULL;
-  }
+  vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *regions_a);
   ~vcfReader(){htsstuff_destroy(hs);free(pl);free(ln_gl);free(iarr);free(farr);free(itrname.s);}
 };

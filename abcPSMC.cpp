@@ -8,8 +8,7 @@
 #include "shared.h"
 #include <htslib/kstring.h>
 #include "abcPSMC.h"
-
-
+#include "aio.h"
 
 void abcPSMC::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);

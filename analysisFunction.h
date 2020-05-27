@@ -52,11 +52,6 @@ namespace angsd {
   };
     
   void norm(double *d,size_t len);
-  int getArg(const char* argName,int type,argStruct *arguments);
-  float getArg(const char* argName,float type,argStruct *arguments);
-  char* getArg(const char* argName,char* type,argStruct *arguments);
-  char* getArg(const char* argName,const char* type,argStruct *arguments);
-  double getArg(const char* argName,double type,argStruct *arguments);
   double getMax(double a,double b, double c);
   double addProtect2(double a,double b);
   double addProtect3(double a,double b, double c);
@@ -85,7 +80,6 @@ namespace angsd {
   double sd(double* phe, int size );
   double poisson(double k,  double lambda, int ifLog);
   double to_pval(Chisqdist *chisq,double f);
-  std::vector<char*> getFilenames(const char * name,int nInd);
   char *strpop(char **str,char split);
   int getRandomCount(suint *d, int i,  int depth = -1);
   int getMaxCount(suint *d, int i, int depth = -1);
@@ -126,22 +120,7 @@ namespace angsd {
   
 }
 
-//angsd io
-namespace aio{
-  size_t fsize(const char* fname);
-  int fexists(const char* str);//{///@param str Filename given as a string.
-  FILE *openFile(const char* a,const char* b);
-  FILE *getFILE(const char*fname,const char* mode);
-  BGZF *openFileBG(const char* a,const char* b);
-  htsFile *openFileHts(const char * a, const char*b);
-  int isNewer(const char *newer,const char *older);
-  ssize_t bgzf_write(BGZF *fp, const void *data, size_t length);
-  int tgets(gzFile gz,char**buf,int *l);
-  //kputw breaks in newer versions of htslib
-  int kputw(int c,kstring_t *s);
-  int kputc(char c,kstring_t *s);
-  int kputs(char *c,kstring_t *s);
-}
+
 #endif
 
 

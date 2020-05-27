@@ -1,4 +1,3 @@
-#include <libgen.h>//for checking if output dir exists 'dirname'
 #include <cassert>
 #include "abc.h"
 #include "shared.h"
@@ -6,21 +5,7 @@
 #include "parseArgs_bambi.h"
 #include "version.h"
 #include "sample.h"
-
-#define ARGS ".arg"
-void checkIfDir(char *fname){
-  char *dirNam2 = strdup(fname);
-  char *dirNam=dirname(dirNam2);
-  
-  if(strlen(dirNam)>1 &&!aio::fexists(dirNam)){
-    fprintf(stderr,"\t Folder: \'%s\' doesn't exist, please create\n",dirNam);
-    exit(0);
-  }
-  //free(dirNam); VALGRIND on osx wants this line
-  free(dirNam2);
-  
-}
-
+#include "aio.h"
 
 bam_hdr_t *getHeadFromFai(const char *fname){
   std::vector<char *> chrs;
@@ -58,37 +43,6 @@ bam_hdr_t *getHeadFromFai(const char *fname){
   return ret;
 }
 
-/*
-bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
-  bam_hdr_t *ret = bam_hdr_init();
-  ret->l_text = 0;
-  ret->text =NULL;
-  const char **seqnames = NULL;
-  int nseq;
-  seqnames = bcf_hdr_seqnames(hs->hdr, &nseq); assert(seqnames);
-  for (int i=0; i<hs->hdr->nhrec; i++){
-    bcf_hrec_t *hrec=hs->hdr->hrec[i];
-    if(strcmp(hrec->key,"contig")==0){
-      fprintf(stderr,"%d) hrec->value:%s key:%s\n",i,hrec->value,hrec->key);
-      for(int j=0;j<hrec->nkeys;j++)
-	fprintf(stderr,"i:%d j:%d keys:%s vals:%s\n",i,j,hrec->keys[j],hrec->vals[j]);
-    }
-  }
-  exit(0);
-  
-  ret->n_targets = nseq;
-  ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
-  ret->target_name = (char**) malloc(sizeof(char*)*nseq);
-  for(size_t i=0;i<nseq;i++){
-    //    fprintf(stderr,"i:%d is:%d\n",i,bcf_hdr_id2length())
-    ret->target_len[i] =0x7fffffff;// strlen(seqnames[i]);
-    ret->target_name[i] =strdup(seqnames[i]);
-  }
-  free(seqnames);
-  return ret;
-}
-*/
-
 aMap *buildRevTable(const bam_hdr_t *hd){
   assert(hd);
   aMap *ret = new aMap;
@@ -98,173 +52,6 @@ aMap *buildRevTable(const bam_hdr_t *hd){
   for(aMap::iterator it= ret->begin();0&&it!=ret->end();++it)
     fprintf(stderr,"%s %d\n",it->first,it->second);
   return ret;
-}
-
-
-void setInputType(argStruct *args){
-#if 0
-  fprintf(stderr,"bam:%d\n",INPUT_BAM);
-  fprintf(stderr,"glf:%d\n",INPUT_GLF);
-  fprintf(stderr,"glf3:%d\n",INPUT_GLF3);
-  fprintf(stderr,"blg:%d\n",INPUT_BEAGLE);
-  fprintf(stderr,"plp:%d\n",INPUT_PILEUP);
-  fprintf(stderr,"vcf_gp:%d\n",INPUT_VCF_GP);
-  fprintf(stderr,"vcf_gl:%d\n",INPUT_VCF_GL);
-  fprintf(stderr,"glf10_text:%d\n",INPUT_GLF10_TEXT);
-  fprintf(stderr,"bgen:%d\n",INPUT_BGEN);
-#endif
-  if(args->fai){
-    free(args->fai);
-    args->fai=NULL;
-  }
-  args->fai = angsd::getArg("-fai",args->fai,args);
-  char *tmp =NULL;
-  tmp = angsd::getArg("-glf",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_GLF;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp = NULL;
-  tmp = angsd::getArg("-glf3",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_GLF3;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp = NULL;
-  tmp = angsd::getArg("-glf10_text",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_GLF10_TEXT;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-vcf-GP",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_VCF_GP;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    fprintf(stderr,"\t-> -vcf-gp has been removed from current version, will be included in later versions depending on need\n");
-    exit(0);
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-vcf-GL",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_VCF_GL;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-vcf-PL",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_VCF_GL;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-pileup",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_PILEUP;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-beagle",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_BEAGLE;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-bgen",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_BGEN;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  free(tmp);
-
-  tmp=NULL;
-  tmp = angsd::getArg("-i",tmp,args);
-  if(tmp!=NULL){
-    args->inputtype=INPUT_BAM;
-    args->infile = tmp;
-    args->nams.push_back(strdup(args->infile));
-    return;
-  }
-  int nInd = 0;
-  nInd = angsd::getArg("-nInd",nInd,args);
-  free(tmp);
-  tmp=NULL;
-  tmp = angsd::getArg("-bam",tmp,args);
-  tmp = angsd::getArg("-b",tmp,args);
-  if(tmp!=NULL && args->argc>2){
-    args->inputtype=INPUT_BAM;
-    args->infile = tmp;
-    args->nams = angsd::getFilenames(args->infile,nInd);
-    
-    return;
-  }
-
-}
-
-
-
-argStruct *setArgStruct(int argc,char **argv) { 
-
-  argStruct *arguments = new argStruct;
-  arguments->argumentFile = stderr;
-  arguments->outfiles =NULL;
-  arguments->fai=arguments->anc=arguments->ref=NULL;
-  arguments->hd=NULL;
-  arguments->revMap= NULL;
-  arguments->argc=argc;
-  arguments->argv=argv;
-  arguments->nReads = 50;
-  arguments->sm=NULL;
-  arguments->usedArgs= new int[argc+1];//well here we allocate one more than needed, this is only used in the ./angsd -beagle version
-  for(int i=0;i<argc;i++)
-    arguments->usedArgs[i]=0;
-  
-  arguments->inputtype=-1;
-  arguments->infile = NULL;
-  arguments->show =0;
-  arguments->fai = NULL;
-  //check output filename
-  arguments->outfiles = angsd::getArg("-out",arguments->outfiles,arguments);
-  if(arguments->outfiles==NULL){
-    if(argc!=2)
-      fprintf(stderr,"\t-> No \'-out\' argument given, output files will be called \'angsdput\'\n");
-    arguments->outfiles = strdup("angsdput");
-  }
-  checkIfDir(arguments->outfiles);
-  
-
-  //print arguments into logfile
-  if(argc>2)
-    arguments->argumentFile=aio::openFile(arguments->outfiles,ARGS);
-   
-  setInputType(arguments);
-  //  fprintf(stderr,"setintputtype:%d\n",arguments->inputtype);exit(0);
-  return arguments;
 }
 
 void multiReader::printArg(FILE *argFile,argStruct *args){
@@ -321,7 +108,7 @@ void multiReader::getOptions(argStruct *arguments){
 }
 
 
-multiReader::multiReader(int argc,char**argv){
+multiReader::multiReader(argStruct *args_arg){
   gz=Z_NULL;
   myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;bgenObj=NULL;
   
@@ -334,13 +121,7 @@ multiReader::multiReader(int argc,char**argv){
   nInd =0;
   isSim =0;
   args=NULL;
-  args = setArgStruct(argc,argv);
-  fprintf(args->argumentFile,"\t-> Command: \n");
-  for(int i=0;i<argc;i++)
-    fprintf(args->argumentFile,"%s ",argv[i]);
-  //  fprintf(args->argumentFile,"\n\n");
-  if(args->argumentFile!=stderr)
-    fprintf(args->argumentFile,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
+  args = args_arg;
   void printTime(FILE *fp);
   printTime(args->argumentFile); 
 
@@ -458,7 +239,16 @@ multiReader::multiReader(int argc,char**argv){
     }
     
   }
-
+  
+  if(args->inputtype==INPUT_BAM){
+    //read bamfiles
+    extern int checkBamHeaders;
+    extern int doCheck;
+    extern char *fai_fname;
+    bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,int doCheck,char *fai_fname,bam_sample_t *sm);
+    args->rd = initializeBufReaders2(args->nams,checkBamHeaders,doCheck,fai_fname,args->sm);
+    fprintf(stderr, "[%s] %d samples in %lu input files\n", __func__, args->sm->n, args->nams.size());
+  }
 
   
   if(fname==NULL)
@@ -513,6 +303,7 @@ multiReader::multiReader(int argc,char**argv){
     fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
     fprintf(stderr,"\t   6. -sites does NOT work with vcf input but -r does\n");
     fprintf(stderr,"\t   7. vcffilereading is still BETA, please report strange behaviour\n");
+    fprintf(stderr,"\t   8. Consider adding \'-doMajorMinor 1\'\n");
   }
 }
 
@@ -524,57 +315,22 @@ multiReader::~multiReader(){
  
   delete revMap;
 
-    switch(args->inputtype){
-  case INPUT_PILEUP:{
+  if(mpil)
     delete mpil;
-    break;
-  }
-  case INPUT_VCF_GP:{
+  if(myvcf)
     delete myvcf;
-    break;
-  }
-  case INPUT_VCF_GL:{
-    delete myvcf;
-    break;
-  }
-  case INPUT_GLF:
-  case INPUT_GLF3:{
+  if(myglf)
     delete myglf;
-    break;
-  }    
-  case INPUT_BEAGLE:{
+  if(bglObj)
     delete bglObj;
-    break;
-  }
-  case INPUT_BGEN:{
+  if(bgenObj)
     delete bgenObj;
-    break;
-  }
-    
-  default:{
-    break;
-  }
-  }
+  
   if(gz!=Z_NULL)
     gzclose(gz);
   free(fname);
 
-  if(args->sm)
-    bam_smpl_destroy(args->sm);
-
-  for(unsigned i=0;i<args->nams.size();i++)
-    free(args->nams[i]);
-  if(args->fai){
-    free(args->fai);
-  }
-  delete []   args->usedArgs;
-  free(args->outfiles);
-  free(args->infile);
-  if(args->anc)
-    free(args->anc);
-  bam_hdr_destroy(args->hd);
-  if(args->argumentFile!=stderr) fclose(args->argumentFile);
-  delete args;
+ 
   
 }
 

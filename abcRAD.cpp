@@ -29,7 +29,7 @@
 #include <ctype.h> //<-used for isupper/islower
 #include <cmath> //in order to construct large array/objects
 #include <stdlib.h>
-
+#include "aio.h"
 #include "shared.h" //<-contains the struct defintino for funkypars
 #include "analysisFunction.h" //<-contains some utility functions, usefull for parsing args
 #include "abcRAD.h"//contains the analysis class defition associated with this file

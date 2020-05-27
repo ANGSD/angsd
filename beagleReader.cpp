@@ -2,6 +2,7 @@
 #include <cassert>
 #include "analysisFunction.h"
 #include "beagleReader.h"
+#include "aio.h"
 
 beagle_reader::~beagle_reader(){
   free(buffer);

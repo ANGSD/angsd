@@ -10,7 +10,7 @@
 #include <htslib/kstring.h>
 #include "abcFreq.h"
 #include "abcHWE_F.h"
- 
+#include "aio.h"
 
 void abcHWE_F::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
