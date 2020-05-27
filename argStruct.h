@@ -8,7 +8,7 @@
 
 #include "sample.h"
 
-enum{INPUT_BAM,INPUT_GLF,INPUT_GLF3,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP,INPUT_GLF10_TEXT};
+enum{INPUT_BAM,INPUT_GLF,INPUT_GLF3,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP,INPUT_GLF10_TEXT,INPUT_BGEN};
 
 //little struct for keeping information of regions to extract
 typedef struct{
