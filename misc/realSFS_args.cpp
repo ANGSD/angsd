@@ -4,6 +4,7 @@
 
 args * getArgs(int argc,char **argv){
   args *p = new args;
+  p->verbose =0;
   p->bootstrap = 0;
   p->resample_chr = 0;
   p->chooseChr=NULL;
@@ -33,6 +34,8 @@ args * getArgs(int argc,char **argv){
       p->tole = atof(*(++argv));
     else  if(!strcasecmp(*argv,"-P"))
       p->nThreads = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-v"))
+       p->verbose = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-win"))
       p->win = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-type"))

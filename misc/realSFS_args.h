@@ -3,6 +3,7 @@
 #include "safreader.h"
 #include <vector>
 typedef struct {
+  int verbose;
   char *chooseChr;
   int start;
   int stop;

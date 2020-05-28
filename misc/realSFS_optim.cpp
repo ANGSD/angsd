@@ -407,7 +407,7 @@ void destroy(emPars<T> *a,int nThreads ){
 
 
 template <typename T>
-double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls){
+double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls,int verbose){
   if(bootnSites)
     emp = setThreadPars<T>(gls,sfs,nThreads,dim,bootnSites);
   else
@@ -432,7 +432,12 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
     lik = like_master<T>(nThreads);
 
     fprintf(stderr,"[%d] lik=%f diff=%e sr:%e\n",it,lik,fabs(lik-oldLik),sr2);
-
+    if(verbose){
+      fprintf(stdout,"%d\t%f",it,lik);
+      for(int i=0;i<dim;i++)
+	fprintf(stdout,"\t%f",sfs[i]);
+      fprintf(stdout,"\n");
+    }
     if((fabs(lik-oldLik)<tole)||(0&&(sqrt(sr2)<tole))){//should update simfiles...
       oldLik=lik;
       break;
@@ -445,7 +450,7 @@ destroy<T>(emp,nThreads);
 
 
 template <typename T>
-double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls,int useSq){
+double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls,int useSq,int verbose){
   if(bootnSites)
     emp = setThreadPars<T>(gls,p,nThreads,dim,bootnSites);
   else
@@ -530,6 +535,12 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     //like_master is using sfs[] to calculate like
     lik = like_master<T>(nThreads);
     fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e\n",iter,lik,fabs(lik-oldLik),alpha,sr2);
+    if(verbose){
+      fprintf(stdout,"%d\t%f",iter,lik);
+      for(int i=0;i<dim;i++)
+	fprintf(stdout,"\t%f",p[i]);
+      fprintf(stdout,"\n");
+    }
     if(std::isnan(lik)) {
       fprintf(stderr,"\t-> Observed NaN in accelerated EM, will use last reliable value. Consider using as input for ordinary em\n");
       fprintf(stderr,"\t-> E.g ./realSFS -sfs current.output -m 0 >new.output\n");//thanks morten rasmussen
@@ -643,22 +654,22 @@ int main_opt(args *arg){
   neverusegoto:
     if(arg->bootstrap)
       fprintf(stderr,"Will do bootstrap replicate %d/%d\n",b+1,arg->bootstrap);
-    if(arg->sfsfname.size()!=0)
-	readSFS(arg->sfsfname[0],ndim,sfs);
-      else{
-	if(arg->seed==-1){
-	  for(int i=0;i<ndim;i++)
-	    sfs[i] = (i+1)/((double)(ndim));
-	}else{
-	  for(int i=0;i<ndim;i++){
-	    double r=drand48();
-	    while(r==0.0)
-	      r = drand48();
-	    sfs[i] = r;
-	  }
+    if(arg->sfsfname.size()!=0){
+      fprintf(stderr,"\t-> Reading SFS from file: \'%s\'\n",arg->sfsfname[0]);
+      readSFS(arg->sfsfname[0],ndim,sfs);
+    } else{
+      if(arg->seed==-1){
+	for(int i=0;i<ndim;i++)
+	  sfs[i] = (i+1)/((double)(ndim));
+      }else{
+	for(int i=0;i<ndim;i++){
+	  double r=drand48();
+	  while(r==0.0)
+	    r = drand48();
+	  sfs[i] = r;
 	}
-	
       }
+    }
     if(foldremapper) { //implies 1 or 2 pops
 #if 0
       fprintf(stdout,"SFSIN");
@@ -710,9 +721,9 @@ int main_opt(args *arg){
       double lik;
 
       if(arg->emAccl==0)
-	lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls);
+	lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->verbose);
       else
-	lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl);
+	lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl,arg->verbose);
 
       fprintf(stderr,"likelihood: %f\n",lik);
       fprintf(stderr,"------------\n");
