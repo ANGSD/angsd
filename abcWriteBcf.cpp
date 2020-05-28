@@ -16,7 +16,7 @@
 #include "abcCallGenotypes.h"
 #include "abcMajorMinor.h"
 #include "abcWriteBcf.h"
-
+#include "aio.h"
 
 
 void error(const char *format, ...)
@@ -43,18 +43,7 @@ void abcWriteBcf::run(funkyPars *pars){
 
 //last is from abc.h
 void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr){
-  assert(args);
-  ksprintf(&buf, "##angsdVersion=%s+htslib-%s\n",angsd_version(),hts_version());
-  bcf_hdr_append(hdr, buf.s);
-  
-  buf.l = 0;
-  ksprintf(&buf, "##angsdCommand=");
-  for (int i=1; i<args->argc; i++)
-    ksprintf(&buf, " %s", args->argv[i]);
-  aio::kputc('\n', &buf);
-  bcf_hdr_append(hdr, buf.s);
-  buf.l=0;
-
+ 
   if(args->ref){
     buf.l = 0;
     ksprintf(&buf, "##reference=file://%s\n", args->ref);
@@ -111,6 +100,16 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
   //fprintf(stderr,"samples from sm:%d\n",args->sm->n);
+  buf.l =0;
+  assert(args);
+  ksprintf(&buf, "##angsdVersion=%s",args->version);
+  bcf_hdr_append(hdr, buf.s);
+  
+  buf.l = 0;
+  ksprintf(&buf, "##angsdCommand=%s;Date=%s",args->cmdline,args->datetime);
+  bcf_hdr_append(hdr, buf.s);
+  buf.l=0;
+
   for(int i=0;i<args->sm->n;i++){
     bcf_hdr_add_sample(hdr, args->sm->smpl[i]);
   }
@@ -121,26 +120,15 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   buf.l=0;
 }
 
-
-
 void abcWriteBcf::clean(funkyPars *pars){
   if(doBcf==0)
     return;
-    
-
 }
 
 void abcWriteBcf::print(funkyPars *pars){
   if(doBcf==0)
     return;
-  kstring_t buf;
-  if(fp==NULL){
-    buf.s=NULL;buf.l=buf.m=0;
-    fp=aio::openFileHts(outfiles,".bcf");
-    hdr = bcf_hdr_init("w");
-    rec    = bcf_init1();
-    print_bcf_header(fp,hdr,args,buf,header);
-  }
+ 
   lh3struct *lh3 = (lh3struct*) pars->extras[5];
   freqStruct *freq = (freqStruct *) pars->extras[6];
   genoCalls *geno = (genoCalls *) pars->extras[10];
@@ -177,7 +165,8 @@ void abcWriteBcf::print(funkyPars *pars){
     }
     
     // .. FORMAT
-    assert(geno);
+    // assert(geno);
+    //    fprintf(stderr,"bcf_hdr_nsamples(hdr): %d\n",bcf_hdr_nsamples(hdr));
     if(geno){
       int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
       for(int i=0; i<pars->nInd;i++){
@@ -255,13 +244,16 @@ void abcWriteBcf::getOptions(argStruct *arguments){
 
   if(doPost==0||doMajorMinor==0||gl==0){
     fprintf(stderr,"\nPotential problem. -doBcf is a wrapper around -doMajorMinor -doPost and -gl. These values must therefore be set\n\n");
-    exit(0);
+    //    exit(0);
   }
   
   
 }
+extern bcf_hdr_t *vcfreader_hs_bcf_hdr;
 //constructor
 abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputtype){
+  rec=NULL;
+  hdr=NULL;
   fp=NULL;
   doBcf =0;
   args=arguments;
@@ -284,11 +276,38 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
     shouldRun[index] =1;
   printArg(arguments->argumentFile);
   
+  kstring_t buf;
+  buf.s=NULL;
+  buf.l=buf.m=0;
+  fp=aio::openFileHts(outfiles,".bcf");
   
-  
+  rec    = bcf_init1();
+  if(arguments->inputtype==INPUT_BAM){
+    hdr = bcf_hdr_init("w");
+    print_bcf_header(fp,hdr,args,buf,header);
+  } else if(arguments->inputtype==INPUT_VCF_GP||arguments->inputtype==INPUT_VCF_GL){
+    fprintf(stderr,"\t-> Building bcf header\n");
+    hdr = vcfreader_hs_bcf_hdr;
+    ksprintf(&buf, "##angsdVersion=%s",args->version);
+    bcf_hdr_append(hdr, buf.s);
+    buf.l = 0;
+    ksprintf(&buf, "##angsdCommand=%s;Date=%s",args->cmdline,args->datetime);
+    bcf_hdr_append(hdr, buf.s);
+    buf.l=0;
+    if ( bcf_hdr_write(fp, hdr)!=0 )
+      fprintf(stderr,"Failed to write bcf\n");
+    //hts_close(fp);exit(0);
+  }
+
+  if(buf.s)
+    free(buf.s);
 }
 
 
 abcWriteBcf::~abcWriteBcf(){
+  if(rec)
+    bcf_destroy(rec);
+  if(hdr)
+    bcf_hdr_destroy(hdr);
   if(fp!=NULL) hts_close(fp);
 }

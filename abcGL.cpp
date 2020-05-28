@@ -17,21 +17,18 @@
   2) beagle output (requires estimation of major/minor)\
   3) binary beagle
   4) text output of the 10 llhs persample
-
 */
-
-
 
 #include <cmath>
 #include <assert.h>
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "abc.h"
-
 #include "abcGL.h"
 #include "abcError.h"
 #include "phys_likes.h"
 #include "abcMajorMinor.h"
+#include "aio.h"
 
 extern int refToInt[256];
 

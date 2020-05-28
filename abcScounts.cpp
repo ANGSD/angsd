@@ -1,10 +1,9 @@
 #include <ctype.h>
+#include <cassert>
 #include "shared.h"
 #include "analysisFunction.h"
 #include "abcScounts.h"
-#include <cassert>
-
-
+#include "aio.h"
 
 typedef unsigned char uchar;
 

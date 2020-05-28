@@ -5,6 +5,8 @@
 #include "analysisFunction.h"
 #include "shared.h"
 #include "abcHetPlas.h"
+#include "aio.h"
+
 #define MAX_QS 256
 
 //struct which contains the results for a single chunk

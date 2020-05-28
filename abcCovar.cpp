@@ -4,7 +4,7 @@
 #include "analysisFunction.h"
 #include "abcCovar.h"
 #include "abcFreq.h"
-
+#include "aio.h"
 
 typedef struct{
   double *res; 

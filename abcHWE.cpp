@@ -18,13 +18,15 @@
 #include <htslib/kstring.h>
 #include "abcFreq.h"
 #include "abcHWE.h"
- 
+#include "aio.h"
 
 void abcHWE::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doHWE\t%d\n",doHWE);
   fprintf(argFile,"\t-minHWEpval\t%f\n",minHWEpval);
   fprintf(argFile,"\t-maxHWEpval\t%f\n",maxHWEpval);
+  fprintf(argFile,"\t-maxHetFreq\t%f\n",maxHetFreq);//nspope;hetFilter
+  fprintf(argFile,"\t-minHetFreq\t%f\n",minHetFreq);//nspope;hetFilter
   fprintf(argFile,"\n");
 }
 
@@ -37,6 +39,8 @@ void abcHWE::getOptions(argStruct *arguments){
 
   minHWEpval = angsd::getArg("-minHWEpval",minHWEpval,arguments);
   maxHWEpval = angsd::getArg("-maxHWEpval",maxHWEpval,arguments);
+  maxHetFreq = angsd::getArg("-maxHetFreq",maxHetFreq,arguments);//nspope;hetFilter
+  minHetFreq = angsd::getArg("-minHetFreq",minHetFreq,arguments);//nspope;hetFilter
    
   
   if(arguments->inputtype==INPUT_BEAGLE||arguments->inputtype==INPUT_VCF_GP){
@@ -55,6 +59,8 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   doHWE = 0;
   maxHWEpval = -1;
   minHWEpval = -1;
+  maxHetFreq = -1;//nspope;hetFilter
+  minHetFreq = -1;//nspope;hetFilter
   testMe=0;
   tolStop = 0.00001;
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
@@ -77,8 +83,14 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
   outfileZ = aio::openFileBG(outfiles,postfix);
 
   //print header
-  const char *str = "Chromo\tPosition\tMajor\tMinor\thweFreq\tFreq\tF\tLRT\tp-value\n";
-  aio::bgzf_write(outfileZ,str,strlen(str));
+  if (maxHetFreq != -1 || minHetFreq != -1) //nspope;maxHetFilter
+  {
+    const char *str = "Chromo\tPosition\tMajor\tMinor\thweFreq\tFreq\tF\tLRT\tp-value\thetFreq\n";
+    aio::bgzf_write(outfileZ,str,strlen(str));
+  } else {
+    const char *str = "Chromo\tPosition\tMajor\tMinor\thweFreq\tFreq\tF\tLRT\tp-value\n";
+    aio::bgzf_write(outfileZ,str,strlen(str));
+  }
   
 }
 
@@ -98,6 +110,7 @@ void abcHWE::clean(funkyPars *pars){
   funkyHWE *hweStruct =(funkyHWE *) pars->extras[index];
   delete[] hweStruct->freq;
   delete[] hweStruct->freqHWE;
+  delete[] hweStruct->hetfreq;//nspope;hetFilter
   delete[] hweStruct->F;
   delete[] hweStruct->like0;
   delete[] hweStruct->pval;
@@ -118,7 +131,11 @@ void abcHWE::print(funkyPars *pars){
    
     float lrt= 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
   
-    ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],hweStruct->freqHWE[s],hweStruct->freq[s],hweStruct->F[s],lrt,hweStruct->pval[s]);
+    if (maxHetFreq!=-1 || minHetFreq!=-1){//nspope;hetFilter
+      ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],hweStruct->freqHWE[s],hweStruct->freq[s],hweStruct->F[s],lrt,hweStruct->pval[s],hweStruct->hetfreq[s]);
+    } else {
+      ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%f\t%e\t%e\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],hweStruct->freqHWE[s],hweStruct->freq[s],hweStruct->F[s],lrt,hweStruct->pval[s]);
+    }
 
   }
   aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);bufstr.l=0;
@@ -134,6 +151,7 @@ void abcHWE::run(funkyPars *pars){
 
   double *freq = new double[pars->numSites];
   double *freqHWE = new double[pars->numSites];
+  double *hetfreq = new double[pars->numSites];//nspope;hetFilter
   double *F = new double[pars->numSites];
   double *like0 = new double[pars->numSites];
   double *likeF = new double[pars->numSites];
@@ -188,15 +206,19 @@ void abcHWE::run(funkyPars *pars){
     
     if(minHWEpval!=-1 && pval[s] < minHWEpval)
       pars->keepSites[s] = 0;
-    
 
-    
+    //nspope;hetFilter 
+    hetfreq[s] = 2.*(1.-x[1])*x[0]*(1.-x[0]);
+    if( (maxHetFreq!=-1 && hetfreq[s] > maxHetFreq) || 
+        (minHetFreq!=-1 && hetfreq[s] < minHetFreq) ) 
+      pars->keepSites[s] = 0;
     
   }
 
 
   hweStruct->freq=freq;
   hweStruct->freqHWE=freqHWE;
+  hweStruct->hetfreq=hetfreq;//nspope;hetFilter
   hweStruct->F=F;
   hweStruct->like0=like0;
   hweStruct->pval=pval;

@@ -12,6 +12,7 @@
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "abcHaploCall.h"
+#include "aio.h"
 
 void abcHaploCall::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);

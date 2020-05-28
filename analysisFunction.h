@@ -31,20 +31,27 @@ namespace angsd {
       {2,5,7,8},
       {3,6,8,9}
     };
- 
-
+  
+  
   template<typename T>
   struct Matrix {
     int x;
     int y;
     T **matrix;
   };
+
+  template<typename T>
+  struct doubleTrouble {
+    int x0;
+    int y0;
+    T **matrix0;
+    int isBinary;
+    int x1;
+    int y1;
+    T **matrix1;
+  };
+    
   void norm(double *d,size_t len);
-  int getArg(const char* argName,int type,argStruct *arguments);
-  float getArg(const char* argName,float type,argStruct *arguments);
-  char* getArg(const char* argName,char* type,argStruct *arguments);
-  char* getArg(const char* argName,const char* type,argStruct *arguments);
-  double getArg(const char* argName,double type,argStruct *arguments);
   double getMax(double a,double b, double c);
   double addProtect2(double a,double b);
   double addProtect3(double a,double b, double c);
@@ -63,6 +70,9 @@ namespace angsd {
   void deleteMatrix(Matrix<double> mat);
   void deleteMatrixInt(Matrix<int> mat);
   void printMatrix(Matrix<double> mat,FILE *file);
+  doubleTrouble<double> getSample(const char *name,int lens);
+  void deleteDoubleTrouble(doubleTrouble<double> dT);
+  void printDoubleTrouble(doubleTrouble<double> dT,FILE *file);  
   void logrescale(double *ary,int len);
   int svd_inverse(double mat[],int xLen, int yLen);
   double dnorm(double x,double mean,double sd,int ifLog);
@@ -70,7 +80,6 @@ namespace angsd {
   double sd(double* phe, int size );
   double poisson(double k,  double lambda, int ifLog);
   double to_pval(Chisqdist *chisq,double f);
-  std::vector<char*> getFilenames(const char * name,int nInd);
   char *strpop(char **str,char split);
   int getRandomCount(suint *d, int i,  int depth = -1);
   int getMaxCount(suint *d, int i, int depth = -1);
@@ -80,30 +89,27 @@ namespace angsd {
   int getIupacCountTotal(suint *d, int nInd, double iRatio);
   double estFreq(double *loglike,int numInds);
 
-
   template <typename T>
   T * allocArray(size_t len,T defval){
     T *ret= new T[len];
     for(size_t i=0;i<len;i++)
       ret[i]=defval;
-    return ret;
-    
-
+    return ret;    
   }
+  
   template <typename T>
   T * allocArray(size_t len){
     T *ret= new T[len];
-    return ret;
-    
+    return ret;    
   }
 
   template <typename T>
   T sum(const T *ary,size_t len){
-  T s =0;
-  for(size_t i=0;i<len ; i++)
-    s+=ary[i];
-  //  printf("sum:%f\n",s);
-  return s;
+    T s =0;
+    for(size_t i=0;i<len ; i++)
+      s+=ary[i];
+    //  printf("sum:%f\n",s);
+    return s;
   }
 
   void print_array(FILE *fp,double *ary,int len);
@@ -111,24 +117,10 @@ namespace angsd {
 
   double *readDouble(const char*fname,int hint);
   int whichMax(double *d,int len);
+  
 }
 
-//angsd io
-namespace aio{
-  size_t fsize(const char* fname);
-  int fexists(const char* str);//{///@param str Filename given as a string.
-  FILE *openFile(const char* a,const char* b);
-  FILE *getFILE(const char*fname,const char* mode);
-  BGZF *openFileBG(const char* a,const char* b);
-  htsFile *openFileHts(const char * a, const char*b);
-  int isNewer(const char *newer,const char *older);
-  ssize_t bgzf_write(BGZF *fp, const void *data, size_t length);
-  int tgets(gzFile gz,char**buf,int *l);
-  //kputw breaks in newer versions of htslib
-  int kputw(int c,kstring_t *s);
-  int kputc(char c,kstring_t *s);
-  int kputs(char *c,kstring_t *s);
-}
+
 #endif
 
 

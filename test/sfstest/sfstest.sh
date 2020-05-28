@@ -5,7 +5,7 @@ WDIR=$1
 
 GLFINPUT=input/sfstest.glf.gz
 
-LOG=../testSFS.sh.log
+LOG=../../testSFS.sh.log
 
 ##rm old
 rm -rf input/ output/ ${LOG}

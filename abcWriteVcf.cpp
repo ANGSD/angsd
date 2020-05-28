@@ -11,6 +11,8 @@
 #include "abcCallGenotypes.h"
 #include "abcMajorMinor.h"
 #include "abcWriteVcf.h"
+#include "aio.h"
+
 void abcWriteVcf::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doVcf\t%d\n",doVcf);

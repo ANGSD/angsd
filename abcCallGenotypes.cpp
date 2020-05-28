@@ -9,7 +9,7 @@
 
 #include "analysisFunction.h"
 #include "abcCallGenotypes.h"
-
+#include "aio.h"
 
 //filename of dumped file
 #define GENO ".geno.gz"

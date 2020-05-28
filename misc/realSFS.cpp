@@ -1,5 +1,4 @@
 /*
-
   The functionality of this file, has replaced the old emOptim and testfolded.c programs.
 
   part of ANGSD
@@ -16,7 +15,7 @@
   april 20, removed 2dsfs as special scenario
   april 20, split out the safreader into seperate cpp/h
   may 5, seems to work well now
-  */
+*/
 
 #include <cstdio>
 #include <vector>
@@ -40,7 +39,7 @@
 int SIG_COND =1;
 int howOften =5e6;//how often should we print out (just to make sure something is happening)
 #include "multisafreader.hpp"
-
+#include "../aio.h"
 int really_kill =3;
 int VERBOSE = 1;
 /*

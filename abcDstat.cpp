@@ -8,15 +8,12 @@
 
 #include <cmath>
 #include <cstdlib>
-
 #include "shared.h"
 #include "analysisFunction.h"
-
 #include <htslib/kstring.h>
 #include "abc.h"
-
 #include "abcDstat.h"
-
+#include "aio.h"
 
 
 void abcDstat::printArg(FILE *argFile){

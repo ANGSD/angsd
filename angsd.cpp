@@ -18,6 +18,7 @@
 #include <htslib/hts.h>
 #include "cigstat.h"
 #include "shared.h"
+#include "argStruct.h"
 #include "multiReader.h"
 
 
@@ -175,44 +176,40 @@ void parseArgStruct(argStruct *arguments){
 }
 
 int main(int argc, char** argv){
-   fprintf(stderr,"\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
+  if(argc>1&&!strcasecmp("sites",argv[1])){
+    //from prep_sites.* used for indexing -sites files
+    int main_sites(int argc,char **argv);
+    main_sites(--argc,++argv);
+    return 0;
+  }
+
+  argStruct *args=setArgStruct(argc,argv);  
+
   //no arguments supplied -> print info
   if(argc==1||(argc==2&&(strcasecmp(argv[1],"--version")==0||strcasecmp(argv[1],"--help")==0))){//if haven't been supplied with arguments, load default,print, and exit
     printProgInfo(stderr);
     return 0;
   }
-   
-   if(!strcasecmp("sites",argv[1])){
-     //from prep_sites.* used for indexing -sites files
-     int main_sites(int argc,char **argv);
-     main_sites(--argc,++argv);
-     return 0;
-   }
+  
 
-   //print time
-   clock_t t=clock();
-   time_t t2=time(NULL);
+  //print time
+  clock_t t=clock();
+  time_t t2=time(NULL);
 
    //intialize our signal handler for ctrl+c
    catchkill();
-
-   argStruct *args=NULL;
+   
    if(argc==2){
      fprintf(stderr,"\t-> Analysis helpbox/synopsis information:\n");
-     multiReader mr(argc,argv);
-     args = mr.getargs();
-     
-     init(args);//program dies here after printing info, if a match is found
+     multiReader mr(args);
+     init((void*)args);//program dies here after printing info, if a match is found,void* to avoid circular .h inclusion
      fprintf(stderr,"\nUnknown argument supplied: \'%s\'\n\n",argv[1]);
      printProgInfo(stderr);
      exit(0);//important otherwise the abc classes will try to clean up, which doesnt make sense in this context
      //     return 0;
    }
 
-   multiReader *mr= new multiReader(argc,argv);
-   args = mr->getargs();
-
-   
+   multiReader *mr= new multiReader(args);
 
    init(args);
    parseArgStruct(args);
@@ -279,5 +276,6 @@ int main(int argc, char** argv){
   //check
   extern htsFormat *dingding2;
   free(dingding2);
+  destroy_argStruct(args);
   return 0;
 }

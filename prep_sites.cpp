@@ -6,7 +6,6 @@
 */
 
 #ifdef __WITH_MAIN__
-#define GZOPT "w6h"
 #endif
 
 
@@ -15,7 +14,8 @@
 #include <cassert>
 #define kv_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #include "prep_sites.h"
-
+#include "aio.h"
+#include "analysisFunction.h"
 #define BIN ".bin"
 #define IDX ".idx"
 
@@ -351,7 +351,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   char* outnames_bin = append(fname,BIN);
   char* outnames_idx = append(fname,IDX);
   
-  BGZF *cfpD = bgzf_open(outnames_bin,GZOPT);
+  BGZF *cfpD = bgzf_open(outnames_bin,"w6h");
   FILE *fp=fopen(outnames_idx,"w");
   
   std::map <char*,int,ltstr> mm;//simple structure to check that input has been sorted by chr/contig

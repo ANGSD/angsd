@@ -6,6 +6,8 @@
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "cigstat.h"
+#include "aio.h"
+
 #define max_rlen 1024
 
 size_t **cig_counts = NULL;

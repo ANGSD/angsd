@@ -9,6 +9,7 @@
 #include <htslib/kstring.h>
 #include "abc.h"
 #include "abcWriteFasta.h"
+#include "aio.h"
 
 void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);

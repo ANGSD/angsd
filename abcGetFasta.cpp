@@ -17,7 +17,7 @@
 #include "pthread.h"
 #include "abc.h"
 #include "abcGetFasta.h"
-
+#include "aio.h"
 
 //this will initialize our data
 perFasta *init(const char *fname){

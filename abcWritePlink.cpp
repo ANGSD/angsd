@@ -9,6 +9,8 @@
 #include <htslib/kstring.h>
 #include "abcCallGenotypes.h"
 #include "abcWritePlink.h"
+#include "aio.h"
+
 void abcWritePlink::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doPlink\t%d\n",doPlink);
