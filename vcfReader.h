@@ -37,7 +37,7 @@ float pl2ln[PHREDMAX];
   //type=0 -> PL
   //type=1 -> GL
   int parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type);
-  int pl_or_gl;
+  int pl_gl_gp;
   int ln_gl_m;
   float *ln_gl;
   float *farr;

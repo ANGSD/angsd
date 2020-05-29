@@ -213,11 +213,20 @@ multiReader::multiReader(argStruct *args_arg){
     if(tmptmp!=NULL)
       pl_or_gl =0;
     free(tmptmp);tmptmp=NULL;
+    
     tmptmp=angsd::getArg("-vcf-gl",tmptmp,args);
-
     if(tmptmp!=NULL)
       pl_or_gl =1;
     free(tmptmp);tmptmp=NULL;
+    
+    tmptmp=angsd::getArg("-vcf-gp",tmptmp,args);
+    if(tmptmp!=NULL)
+      pl_or_gl =2;
+    free(tmptmp);tmptmp=NULL;
+
+
+
+    
     myvcf = new vcfReader(args->infile,NULL,pl_or_gl,&args->regions);
     args->hd=myvcf->bamhdr;
     args->nInd = myvcf->hs->nsamples;

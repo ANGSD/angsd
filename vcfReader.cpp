@@ -230,7 +230,9 @@ int isindel(const bcf_hdr_t *h, const bcf1_t *v){
 
 //type=0 -> PL
 //type=1 -> GL
+//type=2 -> GP
 int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type){
+  assert(type>=0&&type<=2);
   int n;
   if(isindel(hs->hdr,rec)!=0)
     return 0;
@@ -242,11 +244,43 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
   buildreorder(myreorder,rec->d.allele,rec->n_allele);
   
   
-  double *dupergl = new double[10*hs->nsamples];
-  for(int i=0;i<10*hs->nsamples;i++)
-    dupergl[i] = log(0);
-  //parse PL
-  if(type==0) {
+  double *dupergl = NULL;
+  double *dupergp = NULL;
+  if(type==0||type==1){
+    dupergl= new double[10*hs->nsamples];
+    for(int i=0;i<10*hs->nsamples;i++)
+      dupergl[i] = log(0);
+  }else if(type==2){
+    dupergp= new double[3*hs->nsamples];
+    for(int i=0;i<3*hs->nsamples;i++)
+      dupergp[i] = 0;
+  }
+  
+  if(type==2) {
+    n = bcf_get_format_float(hs->hdr, rec, "GP", &farr, &mfarr);
+    if(n<0){
+      // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
+      // no PL tag is available
+      fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching GP tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
+      return 0;
+    }{
+      // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
+      for (int i=0; i<n; i++){
+	if (bcf_float_is_missing(farr[i]) ){
+	  bcf_float_set_missing(ln_gl[i]);
+	  fprintf(stderr,"Check this file:line: %s:%d\n",__FILE__,__LINE__);
+	} else if ( farr[i]==bcf_float_vector_end ){
+	  fprintf(stderr,"Check this file:line: %s:%d\n",__FILE__,__LINE__);
+	  bcf_float_set_vector_end(ln_gl[i]);
+	} else{
+	  dupergp[i] = farr[i];
+
+	}
+	//	fprintf(stderr, "%f %f\n", farr[i], ln_gl[i]);
+      }
+    }
+  } else  if(type==0) {
+    //parse PL
     n = bcf_get_format_int32(hs->hdr, rec, "PL", &iarr, &miarr);
     if(n>=ln_gl_m){
       ln_gl_m *=2;
@@ -303,32 +337,38 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, PL or GL\n");
     return 0;
   }
-  
-  if(n>=0){//case where we have data
-    assert((n % hs->nsamples)==0 );
-    int myofs=n/hs->nsamples;
-    for(int ind=0;ind<hs->nsamples;ind++){
-      int rollback =0;
-      for(int o=0;o<10;o++){
-	if(myreorder[o]!=-1)
-	  dupergl[ind*10+o] = ln_gl[ind*myofs+myreorder[o]];
-	if(std::isnan(dupergl[ind*10+o])){
-	  rollback = 1;
-	  break;
+
+  if(type==0||type==1){
+    if(n>=0){//case where we have data
+      assert((n % hs->nsamples)==0 );
+      int myofs=n/hs->nsamples;
+      for(int ind=0;ind<hs->nsamples;ind++){
+	int rollback =0;
+	for(int o=0;o<10;o++){
+	  if(myreorder[o]!=-1)
+	    dupergl[ind*10+o] = ln_gl[ind*myofs+myreorder[o]];
+	  if(std::isnan(dupergl[ind*10+o])){
+	    rollback = 1;
+	    break;
+	  }
 	}
+	for(int o=0;rollback&&o<10;o++)
+	  if(myreorder[o]!=-1)
+	    dupergl[ind*10+o] = -0.0;
       }
-      for(int o=0;rollback&&o<10;o++)
-	if(myreorder[o]!=-1)
-	  dupergl[ind*10+o] = -0.0;
-      
     }
   }
-  r->likes[balcon] = dupergl;
-  for(int i=0;0&i<hs->nsamples;i++){
-    for(int j=0;j<10;j++)
-      fprintf(stderr,"%f\t",r->likes[balcon][i*10+j]);
-    fprintf(stderr,"\n");
-  }
+  if(type==0||type==1){
+    r->likes[balcon] = dupergl;
+#if 0
+    for(int i=0;i<hs->nsamples;i++){
+      for(int j=0;j<10;j++)
+	fprintf(stderr,"%f\t",r->likes[balcon][i*10+j]);
+      fprintf(stderr,"\n");
+    }
+#endif
+  }else if(type==2)
+    r->post[balcon] = dupergp;
   r->refId=rec->rid;
   r->posi[balcon] = rec->pos;
   r->keepSites[balcon] = hs->nsamples;
@@ -395,7 +435,7 @@ funkyPars *vcfReader::fetch(int chunkSize) {
 
   if(acpy){
     curChr=acpy->rid;
-    parseline(acpy,hs,r,balcon,pl_or_gl);
+    parseline(acpy,hs,r,balcon,pl_gl_gp);
     bcf_destroy(acpy);
     acpy=NULL;
   }
@@ -427,7 +467,7 @@ funkyPars *vcfReader::fetch(int chunkSize) {
     }
 
     //regular case
-    parseline(rec,hs,r,balcon,pl_or_gl);
+    parseline(rec,hs,r,balcon,pl_gl_gp);
   }
   if(balcon==0&&bcf_retval==0)
     goto never;
@@ -452,7 +492,7 @@ vcfReader::vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *re
   miarr=0;
   ln_gl_m = 1024;
   ln_gl =(float *) malloc(sizeof(float)*ln_gl_m);
-  pl_or_gl = pl_or_gl_a;
+  pl_gl_gp = pl_or_gl_a;
   hs=htsstuff_init(fname,seek);
   vcfreader_hs_bcf_hdr = hs->hdr;
   bamhdr = bcf_hdr_2_bam_hdr_t(hs);

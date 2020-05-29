@@ -91,8 +91,6 @@ void setInputType(argStruct *args){
     args->inputtype=INPUT_VCF_GP;
     args->infile = tmp;
     args->nams.push_back(strdup(args->infile));
-    fprintf(stderr,"\t-> -vcf-gp has been removed from current version, will be included in later versions depending on need\n");
-    exit(0);
     return;
   }
   free(tmp);
