@@ -387,15 +387,12 @@ void abcFreq::print(funkyPars *pars) {
     aio::kputc(intToRef[pars->major[s]],&bufstr);aio::kputc('\t',&bufstr);
     aio::kputc(intToRef[pars->minor[s]],&bufstr);aio::kputc('\t',&bufstr);
 
-
     //plugin ref, anc if exists
     if(pars->ref!=NULL)
       {aio::kputc(intToRef[pars->ref[s]],&bufstr);aio::kputc('\t',&bufstr);}
     if(pars->anc!=NULL)
       {aio::kputc(intToRef[pars->anc[s]],&bufstr);aio::kputc('\t',&bufstr);}
 
-    
-    
     if(doMaf &1)
       ksprintf(&bufstr,"%f\t",freq->freq_EM[s]);
     if(doMaf &2)
@@ -410,7 +407,7 @@ void abcFreq::print(funkyPars *pars) {
       if(doMaf &2)
 	ksprintf(&bufstr,"%e\t",angsd::to_pval(chisq1,freq->lrt_EM_unknown[s]));
     }
-
+    
     aio::kputw(pars->keepSites[s],&bufstr);aio::kputc('\n',&bufstr);
   }
   if(outfileZ!=NULL){

@@ -13,6 +13,7 @@
 extern int refToInt[256];
 extern char intToRef[5];
 extern char intToIupac[15];
+extern char refToChar[256];
 
 
 

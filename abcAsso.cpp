@@ -131,11 +131,11 @@ void abcAsso::getOptions(argStruct *arguments){
     fprintf(stderr,"Error: you must provide a phenotype file (-yBin or -yQuant) to perform association \n");
     exit(0);
   }
-  if(doAsso && (arguments->inputtype==INPUT_BEAGLE&&doAsso==1 || arguments->inputtype==INPUT_BGEN&&doAsso==1)){
+  if(doAsso && (arguments->inputtype==INPUT_BEAGLE&&doAsso==1 || arguments->inputtype==INPUT_BGEN&&doAsso==1 || arguments->inputtype==INPUT_VCF_GP&doAsso==1)){
     fprintf(stderr,"Error: Only doAsso=2 can be performed on posterior input\n");
     exit(0);
   }
-  if(doAsso && arguments->inputtype!=INPUT_BEAGLE && arguments->inputtype!=INPUT_BGEN &&(doAsso==2)&&doPost==0){
+  if(doAsso && arguments->inputtype!=INPUT_VCF_GP && arguments->inputtype!=INPUT_BEAGLE && arguments->inputtype!=INPUT_BGEN &&(doAsso==2|doAsso==4|doAsso==5|doAsso==6)&&doPost==0){
     fprintf(stderr,"Error: For doAsso=2 you must estimate the posterior probabilites for the genotypes (-doPost 1) \n");
     exit(0);
   }
