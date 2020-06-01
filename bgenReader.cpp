@@ -10,40 +10,9 @@
 #include "analysisFunction.h"
 #include "bgenReader.h"
 
-
 #ifdef __ZSTD__
 #include <zstd.h>// zstandard
 #endif
-
-
-
-
-
-//dumb little function to convert char allele to int allele (0->A, 1->C, 2->G, 3->T, else 4)
-int refToInt2(char c){
-  
-  int allele;
-   switch (c) {
-   case 'A':
-     allele=0;
-     break;
-   case 'C':
-     allele=1;
-     break;
-   case 'G':
-     allele=2;
-     break;
-   case 'T':
-     allele=3;
-     break;
-     //if cannot match the char
-   default:     
-     allele=4;
-   }
-
-   return(allele);
-   
-}
 
 //returns 0 if not indel higher values indicates indel
 int isindel(bgenLine *bgen){
@@ -77,9 +46,6 @@ int getChr(bgenLine *bgen){
   return chr;
   
 }
-
-
-
 
 header *bgenReader::parseheader(FILE *fp){
 
@@ -335,10 +301,10 @@ void bgenReader::funkyCopy(bgenLine *bgen, funkyPars *r, int &balcon){
   r->posi[balcon] = bgen->vpos-1;
   //we do not know which one is major and minor, but probaly like beagle files
   //TO DO check which one is major and minor
-  r->major[balcon] = refToInt2(bgen->la1[0]);
-  r->minor[balcon] = refToInt2(bgen->la2[0]);
-  //so that site is analysed
-  r->keepSites[balcon] = 1;
+  r->major[balcon] = refToChar[bgen->la1[0]];
+  r->minor[balcon] = refToChar[bgen->la2[0]];
+  //so that site is analysed - apparently also how many individuals are included in abcFreq
+  r->keepSites[balcon] = bgen->indis;
 
   for(int at=0;at<3*bgen->indis;at+=3){
     //jumps 3 at a time

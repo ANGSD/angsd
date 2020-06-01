@@ -192,7 +192,7 @@ multiReader::multiReader(argStruct *args_arg){
     }
   }
  
-  if(!(INPUT_VCF_GL||INPUT_VCF_GP||INPUT_BGEN)){
+  if(!(INPUT_VCF_GL||INPUT_VCF_GP)){
     if(args->hd==NULL){
       fprintf(stderr,"For non-bams you should include -fai arguments\n");
       exit(0);
@@ -213,11 +213,20 @@ multiReader::multiReader(argStruct *args_arg){
     if(tmptmp!=NULL)
       pl_or_gl =0;
     free(tmptmp);tmptmp=NULL;
+    
     tmptmp=angsd::getArg("-vcf-gl",tmptmp,args);
-
     if(tmptmp!=NULL)
       pl_or_gl =1;
     free(tmptmp);tmptmp=NULL;
+    
+    tmptmp=angsd::getArg("-vcf-gp",tmptmp,args);
+    if(tmptmp!=NULL)
+      pl_or_gl =2;
+    free(tmptmp);tmptmp=NULL;
+
+
+
+    
     myvcf = new vcfReader(args->infile,NULL,pl_or_gl,&args->regions);
     args->hd=myvcf->bamhdr;
     args->nInd = myvcf->hs->nsamples;

@@ -1,0 +1,5 @@
+##fileformat=VCFv4.2
+##contig=<ID=1,length=249250621>
+##FORMAT=<ID=GP,Type=Float,Number=G,Description="Genotype call probabilities">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	sample_0	sample_1	sample_2	sample_3	sample_4	sample_5	sample_6	sample_7	sample_8	sample_9	sample_10	sample_11	sample_12	sample_13	sample_14	sample_15	sample_16	sample_17	sample_18	sample_19	sample_20	sample_21	sample_22	sample_23	sample_24	sample_25	sample_26	sample_27	sample_28	sample_29	sample_30	sample_31	sample_32	sample_33	sample_34	sample_35	sample_36	sample_37	sample_38	sample_39	sample_40	sample_41	sample_42	sample_43	sample_44	sample_45	sample_46	sample_47
+1	1000000	1_1000000,SNP1	G	T	.	.	.	GP	1,0,0	1,0,0	0,1,0	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,0,1	0,1,0	1,0,0
