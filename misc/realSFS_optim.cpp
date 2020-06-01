@@ -516,8 +516,8 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       pnew[j] = oldp[j] + 2.0 * alpha * q1[j] + alpha*alpha * (q2[j] - q1[j]);
       ts += pnew[j];
     }
-    if(ts!=1.0)
-      fprintf(stderr,"\t-> Sum of parameters is not one? This could be due to loss of precision value:%e 1-value:%e\n",ts,1-ts);
+    if(fabs(1-ts)>1e-8)
+      fprintf(stderr,"\t-> Sum of parameters is not one? This could be due to loss of precision value:%e 1-value:%e \n",ts,1-ts);
 #if 1 //fix for going out of bound
     int printOutOfBounds = 0;
     for(size_t j=0;j<dim;j++){
