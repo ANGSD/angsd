@@ -71,14 +71,20 @@ header *bgenReader::parseheader(FILE *fp){
   assert(hd->compressed>=0&&hd->compressed<3);
   //take the five first bits and move 2 to the right (2-5 bit)
   hd->layout = (flags>>2) & 15;
+  //we only have implemented for layout 2, which is the recommended version
   if(hd->layout==0){
-    fprintf(stderr,"file has unsupported layout\n");
-    assert(0!=1);
-  } else if(hd->layout!=1 & hd->layout!=2){
-    fprintf(stderr,"file has unsupported layout\n");
+    fprintf(stderr,"file has unsupported layout: 0\n");
+    exit(0);
+  } else if(hd->layout==1){
+    fprintf(stderr,"file has layout 1 which is currently unsupported in ANGSD\n");
+    exit(0);
+  } else if(hd->layout==2){
+    //fprintf(stderr,"file has supported layout\n");
+  } else{
+    fprintf(stderr,"file has unsupported layout: %i\n",hd->layout);
     exit(0);
   }
-    
+
   //move them 31 places to the right (leftmost bit) - could also have used &
   hd->si = flags>>31;
   if(hd->si==1){
