@@ -118,6 +118,17 @@ int *makefoldadjust(int *ary,int len){
   }
   for(int i=0;0&&i<len;i++)
     fprintf(stderr,"%d %d\n",i, ret[i]);
+
+  int issame =1;
+  for(int i=1;i<len;i++)
+    if(ret[i]!=ret[0]){
+      issame =0;
+    }
+  if(issame){
+    fprintf(stderr,"\t-> isSame:%d adjusting foldfactors\n",issame);
+    for(int i=0;i<len;i++)
+      ret[i] = 1;
+  }
   return ret;
 }
 
