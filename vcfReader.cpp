@@ -237,6 +237,10 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
   if(isindel(hs->hdr,rec)!=0)
     return 0;
 
+  //suggested by emil joersboe
+  r->major[balcon] = refToChar[rec->d.allele[0][0]];
+  r->minor[balcon] = refToChar[rec->d.allele[1][0]];
+  
   // pl data for each call
 
   int myreorder[10];
@@ -369,8 +373,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 #endif
   }else if(type==2){
     r->post[balcon] = dupergp;
-    r->major[balcon] = refToChar[rec->d.allele[0][0]];
-    r->minor[balcon] = refToChar[rec->d.allele[1][0]];
+
   }
   r->refId=rec->rid;
   r->posi[balcon] = rec->pos;
