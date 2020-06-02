@@ -237,7 +237,6 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
   if(isindel(hs->hdr,rec)!=0)
     return 0;
 
-  //suggested by emil joersboe
   r->major[balcon] = refToChar[rec->d.allele[0][0]];
   r->minor[balcon] = refToChar[rec->d.allele[1][0]];
   
@@ -419,14 +418,17 @@ int onlyprint = 10;
 funkyPars *vcfReader::fetch(int chunkSize) {
   funkyPars *r = funkyPars_init();
   r->nInd = hs->nsamples;
-  r->likes=new double*[chunkSize];
-  r->post=new double*[chunkSize];
+  if(pl_gl_gp==0||pl_gl_gp==1)
+    r->likes=new double*[chunkSize];
+  else if(pl_gl_gp==2)
+    r->post=new double*[chunkSize];
   r->keepSites = new int[chunkSize];
   r->major = new char[chunkSize];
   r->minor = new char[chunkSize];  
   for(int i=0;i<chunkSize;i++){
     memset(r->likes,0,chunkSize*sizeof(double*));
-    memset(r->post,0,chunkSize*sizeof(double*));
+    if(pl_gl_gp==2)
+      memset(r->post,0,chunkSize*sizeof(double*));
   }
   
   r->posi=new int[chunkSize];
