@@ -511,29 +511,54 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     alpha =std::max(stepMin*1.0,std::min(1.0*stepMax,alpha));
     
     //the magical step
-    for(size_t j=0;j<dim;j++)
-      pnew[j] = oldp[j] + 2.0 * alpha * q1[j] + alpha*alpha * (q2[j] - q1[j]);
-#if 1 //fix for going out of bound
+    double ts =0;
     for(size_t j=0;j<dim;j++){
-      if(pnew[j]<ttol)
-	pnew[j]=ttol;
-      if(pnew[j]>1-ttol)
-	pnew[j]=1-ttol;
+      pnew[j] = oldp[j] + 2.0 * alpha * q1[j] + alpha*alpha * (q2[j] - q1[j]);
+      ts += pnew[j];
     }
-    normalize(pnew,dim);
+    if(fabs(1-ts)>1e-8)
+      fprintf(stderr,"\t-> Sum of parameters is not one? This could be due to loss of precision value:%e 1-value:%e \n",ts,1-ts);
+#if 1 //fix for going out of bound
+    int printOutOfBounds = 0;
+    for(size_t j=0;j<dim;j++){
+      if(pnew[j]<ttol){
+	printOutOfBounds =1;
+	pnew[j]=ttol;
+      }if(pnew[j]>1-ttol){
+	printOutOfBounds =1;
+	pnew[j]=1-ttol;
+      }
+    }
+    if(printOutOfBounds){
+      fprintf(stderr,"\t-> Instability detected, consider running with standard em \'-m 0\'\n");
+      normalize(pnew,dim);
+    }
 #endif
+    int extra =0;
     if(fabs(alpha-1) >0.01){
       //this is clearly to stabilize
       //      double tmp[dim];
       memcpy(p,pnew,sizeof(double)*dim);
       emStep_master<T>(tmp,nThreads);
       memcpy(pnew,tmp,sizeof(double)*dim);
+      extra =1;
       iter++;
     }
     memcpy(p,pnew,sizeof(double)*dim);
     
     //like_master is using sfs[] to calculate like
     lik = like_master<T>(nThreads);
+    if(lik<oldLik){
+      fprintf(stderr,"\t-> New like is worse? new:%e old:%e diff:%e will skip accelerated EM in this round\n",lik,oldLik,lik-oldLik);
+      memcpy(p,p2,sizeof(double)*dim);
+      lik = like_master<T>(nThreads);
+      stepMax =1;
+      mstep=4;
+      stepMin =1;
+      if(extra)
+	iter--;
+    }
+    
     fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e\n",iter,lik,fabs(lik-oldLik),alpha,sr2);
     if(verbose){
       fprintf(stdout,"%d\t%f",iter,lik);
@@ -542,14 +567,13 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       fprintf(stdout,"\n");
     }
     if(std::isnan(lik)) {
+      //this should not happen
       fprintf(stderr,"\t-> Observed NaN in accelerated EM, will use last reliable value. Consider using as input for ordinary em\n");
       fprintf(stderr,"\t-> E.g ./realSFS -sfs current.output -m 0 >new.output\n");//thanks morten rasmussen
       memcpy(p,p2,sizeof(double)*dim);
       break;
     }
     
-    if(0&&lik<oldLik)//this should at some point be investigated further //
-      fprintf(stderr,"\t-> New like is worse?\n");
 #if 1
     if(fabs(lik-oldLik)<tole){
       oldLik=lik;
@@ -734,6 +758,7 @@ int main_opt(args *arg){
 	fprintf(stdout,"%f ",((double)gls[0]->x)*sfs[x]);
       fprintf(stdout,"\n");
       fflush(stdout);
+
 #endif
       if(++b<arg->bootstrap)
 	goto neverusegoto;
@@ -753,6 +778,7 @@ int main_opt(args *arg){
   fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
   fprintf(stderr,"\t-> Output is now simply the expected values! \n");
   fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
+  fprintf(stderr,"\n\t-> Please check that it has converged!\n\t-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run\n\t-> -maxIter INT -tole FLOAT\n");
   if(foldremapper)
     delete [] foldremapper;
   if(foldfactors)
