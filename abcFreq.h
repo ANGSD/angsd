@@ -47,6 +47,7 @@ private:
   int beagleProb;
   int minInd;
   int inputIsBeagle;
+  int skipMissing;
 public:
   int algoGeno(double *liks,int major_offset,int minor_offset,int numInds,int underFlowProtect,double *pest,double *postp);
   static double *indF;

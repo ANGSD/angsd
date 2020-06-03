@@ -82,6 +82,7 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"\t-minMaf  \t%f\t(Remove sites with MAF below)\n",minMaf);
   fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",SNP_pval);
   fprintf(argFile,"\t-rmTriallelic\t%f\t(Remove sites with a pvalue lower)\n",rmTriallelic);
+  fprintf(argFile,"\t-skipMissing\t%d\t(Set post to 0.33 if missing (do not use freq as prior))\n",skipMissing);
   fprintf(argFile,"Extras:\n");
   fprintf(argFile,"\t-ref\t%s\t(Filename for fasta reference)\n",refName);
   fprintf(argFile,"\t-anc\t%s\t(Filename for fasta ancestral)\n",ancName);
@@ -102,7 +103,7 @@ int isPowerOfTwo (unsigned int x)
  
 void abcFreq::getOptions(argStruct *arguments){
   int inputtype = arguments->inputtype;
-  
+  skipMissing=angsd::getArg("-skipMissing",skipMissing,arguments);
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
   doPost=angsd::getArg("-doPost",doPost,arguments);
 
@@ -254,6 +255,7 @@ void abcFreq::getOptions(argStruct *arguments){
 
 //constructor
 abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
+  skipMissing = 1;
   underflowprotect =0;
   minInd = 0;
   chisq1=chisq2=chisq3=NULL;
@@ -493,7 +495,7 @@ freqStruct *allocFreqStruct(){
 }
 
 //filipes
-void make_post_F(double *like,double *post,double freqEst,int nInd){
+void make_post_F(double *like,double *post,double freqEst,int nInd,int skipMissing){
   //fprintf(stderr,"[%s]\n",__FUNCTION__);
   double *indF = abcFreq::indF;
   for(int i=0;i<nInd;i++){
@@ -505,15 +507,19 @@ void make_post_F(double *like,double *post,double freqEst,int nInd){
     post[i*3+0]=exp(post[i*3+0]-norm);
     post[i*3+1]=exp(post[i*3+1]-norm);
     post[i*3+2]=exp(post[i*3+2]-norm);
+    if(skipMissing){
+      if(like[i*3]==like[i*3+1]&&like[i*3]==like[i*3+2])
+	post[i*3]=post[i*3+1]=post[i*3+2] = 1.0/3.0;
+    }
   }
   //
 }
 
 
 
-void make_post(double *like,double *post,double freqEst,int nInd){
+void make_post(double *like,double *post,double freqEst,int nInd,int skipMissing){
   if(abcFreq::indF!=NULL){
-    make_post_F(like,post,freqEst,nInd);
+    make_post_F(like,post,freqEst,nInd,skipMissing);
     return;
   }
   for(int i=0;i<nInd;i++){
@@ -527,6 +533,10 @@ void make_post(double *like,double *post,double freqEst,int nInd){
     post[i*3+1]=exp(post[i*3+1]-norm);
     post[i*3+2]=exp(post[i*3+2]-norm);
     //	  fprintf(stderr,"%f %f %f\n",post[0][i*3+0],post[0][i*3+1],post[0][i*3+2]);
+    if(skipMissing){
+      if(like[i*3]==like[i*3+1]&&like[i*3]==like[i*3+2])
+	post[i*3]=post[i*3+1]=post[i*3+2] = 1.0/3.0;
+    }
   }
 }
 
@@ -584,7 +594,7 @@ void abcFreq::run(funkyPars *pars) {
       }
 
       if(doPost==1)  //maf prior
-	 make_post(like[s],post[s],freq->freq[s],pars->nInd);
+	make_post(like[s],post[s],freq->freq[s],pars->nInd,skipMissing);
       else if(doPost==2) {//uniform prior
 	for(int i=0;i<pars->nInd;i++){
 	  double norm = angsd::addProtect3(like[s][i*3+0],like[s][i*3+1],like[s][i*3+2]);
@@ -603,7 +613,7 @@ void abcFreq::run(funkyPars *pars) {
 	//ac for this pos: fl->ac[pars->posi[s]]
 	//	fprintf(stderr,"chr: %s pos: %d freq:%f\n",header->target_name[pars->refId],pars->posi[s]+1,fl->af[pars->posi[s]]);
 	if(fl->keeps[pars->posi[s]]==0)
-	  make_post(like[s],post[s],freq->freq[s],pars->nInd);
+	  make_post(like[s],post[s],freq->freq[s],pars->nInd,skipMissing);
 	else{
 	  double exp_obs_allels_in_ngs= freq->freq[s]*pars->keepSites[s];
 	  //	  fprintf(stderr,"pars->keepSite:%d\n",pars->k)
@@ -611,7 +621,7 @@ void abcFreq::run(funkyPars *pars) {
 	  double aan = fl->an[pars->posi[s]];
 	  double af = (aac+exp_obs_allels_in_ngs)/(1.0*(aan+pars->keepSites[s]));
 	  fprintf(stderr,"aac:%f aan:%f nal_in_ngs:%f af:%f\n",aac,aan,exp_obs_allels_in_ngs,af);
-	  make_post(like[s],post[s],af,pars->nInd);
+	  make_post(like[s],post[s],af,pars->nInd,skipMissing);
 	}
 
       }
