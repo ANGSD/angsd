@@ -40,6 +40,7 @@ private:
   int curChr;
   int prevChr;
   int onlyPrint;
+  const aMap *revMap;
 
 public:
   //for reading in chunk of bgen file
@@ -56,7 +57,7 @@ public:
   void funkyCopy(bgenLine *bgen, funkyPars *r, int &balcon);
   
   //constructor of class
-  bgenReader(char *fname,  int intName_a,int &nInd_a){
+  bgenReader(char *fname, const aMap *revMap_a,  int intName_a,int &nInd_a){
 
     FILE *fp=fopen(fname,"rb");
     assert(fp!=NULL);
@@ -87,6 +88,8 @@ public:
     curChr=-1;
     prevChr=-1;
     onlyPrint=0;
+
+    revMap=revMap_a;
     
   }
 

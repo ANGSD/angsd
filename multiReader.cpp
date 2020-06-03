@@ -296,7 +296,7 @@ multiReader::multiReader(argStruct *args_arg){
   }
     
   case INPUT_BGEN:{
-    bgenObj = new bgenReader(args->infile,intName,args->nInd);
+    bgenObj = new bgenReader(args->infile,args->revMap,intName,args->nInd);
     break;
   }
     

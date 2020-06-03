@@ -370,10 +370,11 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
       fprintf(stderr,"\n");
     }
 #endif
-  }else if(type==2){
+    
+  } else if(type==2){
     r->post[balcon] = dupergp;
-
   }
+  
   r->refId=rec->rid;
   r->posi[balcon] = rec->pos;
   r->keepSites[balcon] = hs->nsamples;
@@ -426,9 +427,11 @@ funkyPars *vcfReader::fetch(int chunkSize) {
   r->major = new char[chunkSize];
   r->minor = new char[chunkSize];  
   for(int i=0;i<chunkSize;i++){
-    memset(r->likes,0,chunkSize*sizeof(double*));
-    if(pl_gl_gp==2)
+    if(pl_gl_gp==0||pl_gl_gp==1){
+      memset(r->likes,0,chunkSize*sizeof(double*));
+    } else if(pl_gl_gp==2){
       memset(r->post,0,chunkSize*sizeof(double*));
+    }
   }
   
   r->posi=new int[chunkSize];

@@ -297,11 +297,14 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
 
 
 void bgenReader::funkyCopy(bgenLine *bgen, funkyPars *r, int &balcon){    
-  
-  //to translate chr from fai indexing to normal indexing 1,2,3,4,5,...
-  int wacko[26] = {0,11,15,16,17,18,19,20,21,1,2,3,4,5,6,7,8,9,10,12,13,14,22,23,24};
-  //because 0 indexed
-  r->refId = wacko[atoi(bgen->Lchr)-1];
+
+
+  aMap ::const_iterator it = revMap->find(bgen->Lchr);
+  if(it==revMap->end()){
+    fprintf(stderr,"\t-> Problem finding chr:%s from faifile\n",bgen->Lchr);
+    exit(0);
+  }
+  r->refId = it->second;
 
   //because it is assumed to be 0-indexed in ANGSD
   r->posi[balcon] = bgen->vpos-1;
@@ -357,8 +360,6 @@ funkyPars *bgenReader::fetch(int chunksize){
   //if acpy not null - read read that has survived
   //member variable of vcfReader class 
   if(readAgain){
-
-    fprintf(stderr,"READ AGAIN!\n");
     
     //read stored line of file    
     //bgen = parseline(bgenFile,hd);
