@@ -1,6 +1,6 @@
 /*
-  This is a class that dumps plink file output
- */
+  This is a class that dumps BCF output
+*/
 
 #include <assert.h>
 #include <htslib/hts.h>
@@ -38,7 +38,6 @@ void abcWriteBcf::printArg(FILE *argFile){
 void abcWriteBcf::run(funkyPars *pars){
   if(doBcf==0)
     return ;
- 
 }
 
 //last is from abc.h
@@ -195,7 +194,7 @@ void abcWriteBcf::print(funkyPars *pars){
       bcf_update_format_int32(hdr, rec, "DP", tmpfa,bcf_hdr_nsamples(hdr) );
       free(tmpfa);
     }
-    assert(lh3);
+    //   assert(lh3);
     if(lh3){
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
       int32_t *tmpi = (int32_t*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(int32_t));
@@ -213,7 +212,7 @@ void abcWriteBcf::print(funkyPars *pars){
     }
 
     if ( bcf_write1(fp, hdr, rec)!=0 ){
-      fprintf(stderr,"Failed to write to \n");
+      fprintf(stderr,"Failed to write %s:%d\n",__FILE__,__LINE__);
       exit(0);
     }
     //    fprintf(stderr,"------\n");
@@ -251,7 +250,7 @@ void abcWriteBcf::getOptions(argStruct *arguments){
 }
 extern bcf_hdr_t *vcfreader_hs_bcf_hdr;
 //constructor
-abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputtype){
+abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputtype) {
   rec=NULL;
   hdr=NULL;
   fp=NULL;
@@ -287,7 +286,8 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
     print_bcf_header(fp,hdr,args,buf,header);
   } else if(arguments->inputtype==INPUT_VCF_GP||arguments->inputtype==INPUT_VCF_GL){
     fprintf(stderr,"\t-> Building bcf header\n");
-    hdr = vcfreader_hs_bcf_hdr;
+    hdr = bcf_hdr_dup(vcfreader_hs_bcf_hdr);
+    bcf_hdr_append(hdr,"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
     ksprintf(&buf, "##angsdVersion=%s",args->version);
     bcf_hdr_append(hdr, buf.s);
     buf.l = 0;
@@ -295,10 +295,8 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
     bcf_hdr_append(hdr, buf.s);
     buf.l=0;
     if ( bcf_hdr_write(fp, hdr)!=0 )
-      fprintf(stderr,"Failed to write bcf\n");
-    //hts_close(fp);exit(0);
+      fprintf(stderr,"Failed to write bcf %s:%d\n",__FILE__,__LINE__);
   }
-
   if(buf.s)
     free(buf.s);
 }
