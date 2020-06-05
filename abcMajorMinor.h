@@ -13,6 +13,7 @@ class abcMajorMinor:public abc{
   char *pest;
   int skipTriallelic;
   void majorMinorGL(funkyPars *pars,int doMajorMinor);
+  int majorMinorEBD(funkyPars *pars,int doMajorMinor);
   int doVcf;
   int doGlf;
   int rmTrans;

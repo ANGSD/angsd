@@ -10,7 +10,8 @@
   3) wont populate the majorminor but will use the information from -sites
   4) set the major to the reference allele
   5) set the major to the ancestral allele
-
+  6) use ebd to pick 2 alleles
+  7) use ebd to pick ref and most likely (similar to SAMtools/BCFtools)
 
   models used are:
   1)
@@ -19,6 +20,8 @@
   2)
   Li Y, Vinckenbosch N, Tian G, Huerta-Sanchez E, Jiang T, Jiang H, Albrechtsen A, Andersen G, Cao H, Korneliussen T, et al., 2010. Resequencing of 200 human exomes identifies an excess of low-frequency non-synonymous coding variants. Nat Genet 42:969–972. 
 
+  3)
+  dragon add refs to ebd paper
 
 */
 
@@ -55,6 +58,8 @@ void abcMajorMinor::printArg(FILE *argFile){
   fprintf(argFile,"\t3: use major and minor from a file (requires -sites file.txt)\n");
   fprintf(argFile,"\t4: Use reference allele as major (requires -ref)\n");
   fprintf(argFile,"\t5: Use ancestral allele as major (requires -anc)\n");
+  fprintf(argFile,"\t6: Use EBD for major and minor (requires read data)\n");
+  fprintf(argFile,"\t7: Use EBD for minor (Major is ref) (requires -ref and read data, (similar to SAMtools))\n");
   fprintf(argFile,"\t-rmTrans: remove transitions %d\n",rmTrans);
   fprintf(argFile,"\t-skipTriallelic\t%d\n",skipTriallelic);
 }
@@ -97,11 +102,15 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   free(anc);
   GL=angsd::getArg("-GL",GL,arguments);
 
+  if((doMajorMinor==6||doMajorMinor==7)&&(inputtype!=INPUT_BAM||inputtype!=INPUT_PILEUP)){
+    fprintf(stderr,"\t-> Potential problem: EBD based major minor analyses requires read data BAM/CRAM or pileup\n");
+    exit(0);
+  }
 
- if(inputtype==INPUT_BEAGLE&&doMajorMinor){
-   fprintf(stderr,"\t-> Potential problem: Cannot estimate the major and minor based on posterior probabilities\n");
-   exit(0);
- }
+  if(inputtype==INPUT_BEAGLE&&doMajorMinor){
+    fprintf(stderr,"\t-> Potential problem: Cannot estimate the major and minor based on posterior probabilities\n");
+    exit(0);
+  }
  if(inputtype!=INPUT_GLF && inputtype!=INPUT_GLF3 && inputtype!=INPUT_VCF_GL && doMajorMinor==1 && GL==0 &&inputtype!=INPUT_GLF10_TEXT){
    fprintf(stderr,"\t-> Potential problem: -doMajorMinor 1 is based on genotype likelihoods, you must specify a genotype likelihood model -GL \n");
    exit(0);
@@ -310,6 +319,10 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
   }
 }
 
+int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
+  
+}
+
 void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *minor,int *keepSites,int doMajorMinor,char *ref,char *anc) {
   assert(counts!=NULL);
 
@@ -364,7 +377,7 @@ void abcMajorMinor::run(funkyPars *pars){
   if(doMajorMinor==0)
     return;
   if(doMajorMinor==1 && pars->likes==NULL){
-    fprintf(stderr,"[%s.%s():%d] Problem here:\n",__FILE__,__FUNCTION__,__LINE__);
+    fprintf(stderr,"[%s.%s():%d] Problem here: you need genotype likelihoods for -gl 1\n",__FILE__,__FUNCTION__,__LINE__);
     exit(0);
   }
   extern abc **allMethods;
@@ -375,11 +388,9 @@ void abcMajorMinor::run(funkyPars *pars){
   for(int i=0;i<pars->numSites;i++)
     pars->major[i]=pars->minor[i] = 4;
 
-
-  //allocate and initialize
-    
-  //unless we want to base the majominor on counts we always use the gls
-  if(doMajorMinor!=2 && doMajorMinor!=3)
+  if(doMajorMinor==6||doMajorMinor==7)
+    majorMinorEBD(pars,doMajorMinor);
+  else if(doMajorMinor!=2 && doMajorMinor!=3)
     majorMinorGL(pars,doMajorMinor);
   else if(doMajorMinor==2)
     majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
@@ -396,6 +407,8 @@ void abcMajorMinor::run(funkyPars *pars){
   else
     fprintf(stderr,"[%s.%s()%d] Should never happen\n",__FILE__,__FUNCTION__,__LINE__);
 
+  
+  
   if(rmTrans){
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s] == 0)
@@ -462,8 +475,6 @@ void abcMajorMinor::run(funkyPars *pars){
 	lh3->lh3[s][i*3+1]=val[1];
 	lh3->lh3[s][i*3+2]=val[2];
       }
-      
-
     }
   }
 
