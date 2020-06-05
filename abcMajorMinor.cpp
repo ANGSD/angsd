@@ -319,8 +319,22 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
   }
 }
 
+extern int minQ;//<- I think this is from multireader but should be checked
 int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
-  
+   for(int s=0;s<pars->numSites;s++){
+     if(pars->keepSites[s]==0)
+       continue;
+     double EBD[4*pars->nInd];
+     for(int i=0;i<pars->nInd;i++){
+       tNode *nd = pars->chk->nd[s][i];
+       EBD[i*4]=EBD[i*4+1]=EBD[i*4+1]=EBD[i*4+3]=0.0;
+       for(int j=0;j<nd->l;j++){
+	 if(nd->qs[i]<minQ)
+	   continue;
+	 EBD[4*i+refToInt[nd->seq[j]]] += nd->qs[j];
+       }
+     }
+   }
 }
 
 void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *minor,int *keepSites,int doMajorMinor,char *ref,char *anc) {
