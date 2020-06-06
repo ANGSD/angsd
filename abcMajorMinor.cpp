@@ -102,7 +102,7 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   free(anc);
   GL=angsd::getArg("-GL",GL,arguments);
 
-  if((doMajorMinor==6||doMajorMinor==7)&&(inputtype!=INPUT_BAM||inputtype!=INPUT_PILEUP)){
+  if((doMajorMinor==6||doMajorMinor==7)&&(inputtype!=INPUT_BAM&&inputtype!=INPUT_PILEUP)){
     fprintf(stderr,"\t-> Potential problem: EBD based major minor analyses requires read data BAM/CRAM or pileup\n");
     exit(0);
   }
@@ -324,16 +324,67 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
    for(int s=0;s<pars->numSites;s++){
      if(pars->keepSites[s]==0)
        continue;
-     double EBD[4*pars->nInd];
+     float EBD[4*pars->nInd];
+     float qsum[5] = {0,0,0,0,0};
      for(int i=0;i<pars->nInd;i++){
+       fprintf(stderr,"i:%d nd:%p\n",i,pars->chk->nd[s][i]);
        tNode *nd = pars->chk->nd[s][i];
-       EBD[i*4]=EBD[i*4+1]=EBD[i*4+1]=EBD[i*4+3]=0.0;
-       for(int j=0;j<nd->l;j++){
-	 if(nd->qs[i]<minQ)
+       EBD[i*4]=EBD[i*4+1]=EBD[i*4+2]=EBD[i*4+3]=0.0;
+       float tmpsum = 0;
+       for(int j=0;(nd&&j<nd->l);j++){
+
+	 if(nd->qs[j]<minQ)
 	   continue;
-	 EBD[4*i+refToInt[nd->seq[j]]] += nd->qs[j];
+	 int b =refToInt[nd->seq[j]];
+	 int q = nd->qs[j];
+	 //block below are adjustments similar to bcftools mpileup parsing
+	 if (q > nd->mapQ[j]) q = nd->mapQ[j];
+	 if (q > 63) q = 63;
+	 if (q < 4) q = 4;       // MQ=0 reads count as BQ=4
+	 fprintf(stderr,"b:%d qs:%d mapq:%d\n",b,nd->mapQ[j]);
+	 EBD[4*i+b] += q;
+	 //fprintf(stderr,"ebd: %f\n",EBD[4*i+refToInt[nd->seq[j]]]);
+	 tmpsum += q;
+       }
+       fprintf(stderr,"tmpsum: %f\n",tmpsum);
+       for(int j=0;j<4;j++){
+	 if(tmpsum>0){
+	   qsum[j] += EBD[4*i+j]/tmpsum;
+	   fprintf(stderr,"qsum[%d]:%f EBD[%d]:%f\n",j,qsum[j],EBD[4*i+j]);
+	 }
        }
      }
+     // sort qsum in ascending order (insertion sort)
+     // from bam2bcf.c 6june2020, fancy little block of code
+     float *ptr[5], *tmp;
+     int i,j;
+     for ( i=0; i<5; i++) ptr[i] = &qsum[i];
+     for (i=1; i<4; i++)
+       for (j=i; j>0 && *ptr[j] < *ptr[j-1]; j--)
+	 tmp = ptr[j], ptr[j] = ptr[j-1], ptr[j-1] = tmp;
+     for(int i=0;i<4;i++)
+       fprintf(stderr,"%d) %f index:%d\n",i,*ptr[i],ptr[i]-qsum);
+     
+     if(doMajorMinor==6){
+       int first = ptr[3]-qsum;
+       int second = ptr[2]-qsum;
+       //fprintf(stderr,"first: %d second:%d\n",first,second);
+       pars->major[s]=first;
+       pars->minor[s]=second;
+     }else if(doMajorMinor==7){
+       pars->major[s] = refToInt[pars->ref[s]];
+       fprintf(stderr,"major is: %d\n",pars->major[s]);
+       for(int j=3;j>0;j--){
+	 int whichbase=ptr[j]-qsum;
+	 fprintf(stderr,"ptr[%d]: %f wb:%d\n",j,*ptr[j],whichbase);
+	 if(whichbase==pars->major[s])
+	   continue;
+	 pars->minor[s] = ptr[j]-qsum;
+	 break;
+       }
+       
+     }
+     //     fprintf(stderr,"maj:%d min:%d \n",pars->major[s],pars->minor[s]);
    }
 }
 
