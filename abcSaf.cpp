@@ -13,10 +13,37 @@
 
 #define MINLIKE -1000.0 //this is for setting genotypelikelhoods to missing (EXPLAINED BELOW)
 
-namespace filipe{
-  void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim);
-}
+//TODO: move to header
+namespace filipe
+{
+  void algoJoint(double **liks,
+                 char *anc,
+                 int nsites,
+                 int numInds,
+                 int underFlowProtect, 
+                 int *keepSites,
+                 realRes *r,
+                 int noTrans,
+                 int doSaf,
+                 char *major,
+                 char *minor,
+                 double *freq,
+                 double *indF);
 
+  void algoJointHap(double **liks,
+                    char *anc,
+                    int nsites,
+                    int numInds,
+                    int underFlowProtect, 
+                    int *keepSites,
+                    realRes *r,
+                    int noTrans,
+                    int doSaf,
+                    char *major,
+                    char *minor,
+                    double *freq,
+                    double *indF);
+}
 
 void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"--------------\n%s:\n",__FILE__);
@@ -28,26 +55,24 @@ void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"\t-pest\t\t\t%s (prior SFS)\n",pest);
   fprintf(argFile,"\t-isHap\t\t\t%d (is haploid beta!)\n",isHap);
   fprintf(argFile,"\t-doPost\t\t\t%d (doPost 3,used for accesing saf based variables)\n",doPost);
-  fprintf(argFile,"NB:\n\t  If -pest is supplied in addition to -doSaf then the output will then be posterior probability of the sample allelefrequency for each site\n");
-
+  fprintf(argFile,"NB:\n\t  If -pest is supplied in addition to -doSaf then the output will then be posterior probability of the sample allele frequency for each site\n");
 }
 
 void abcSaf::getOptions(argStruct *arguments){
-  doSaf=angsd::getArg("-doSaf",doSaf,arguments);
-  //  if(doSaf==0)
-  //  return;
-  doPost=angsd::getArg("-doPost",doPost,arguments);
-  isHap=angsd::getArg("-isHap",isHap,arguments);
+  doSaf = angsd::getArg("-doSaf",doSaf,arguments);
+  doPost = angsd::getArg("-doPost",doPost,arguments);
+  isHap = angsd::getArg("-isHap",isHap,arguments);
   pest = angsd::getArg("-pest",pest,arguments);
+
   if(doSaf==3){ //DRAGON
     fprintf(stderr,"\t-> Please use -doPost 3 instead for -doSaf 3\n");
     exit(0);
   }
+
   if(doSaf>0||doPost==3){
     if(pest!=NULL){
       prior=angsd::readDouble(pest,arguments->nInd*2+1);
       int nd=arguments->nInd*2+1;
-      
       
       double tts=0;
       for(int i=0;i<nd;i++)
@@ -72,21 +97,18 @@ void abcSaf::getOptions(argStruct *arguments){
     mynchr = 2*arguments->nInd;
   }
 
-
   noTrans = angsd::getArg("-noTrans",noTrans,arguments);
 
   int GL = 0;
   GL = angsd::getArg("-GL",GL,arguments);
-
 
   if(doSaf==0&&doPost!=3)
     return;
 
   underFlowProtect=angsd::getArg("-underFlowProtect",underFlowProtect,arguments);
 
-
-  int isSim =0;
-  isSim=angsd::getArg("-isSim",isSim,arguments);
+  int isSim = 0;
+  isSim = angsd::getArg("-isSim",isSim,arguments);
 
   if(doSaf==0)
     return;
@@ -255,7 +277,6 @@ void normalize_array(double *d, int len){
     d[i]=d[i]/s;
 }
 
-
 void normalize_array2(double *d, int len){
   double s =0;
   for(int i=0;i<len;i++)
@@ -266,199 +287,247 @@ void normalize_array2(double *d, int len){
     d[i]=d[i]-s;
 }
 
-
-
-
 int isSame(double a,double b,double tolerance){
   return (fabs(a-b)<tolerance);
 }
 
-//18dec 2014 we now condition on the sites where the ancestral is either major or minor. 
-void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim) {
-  //  fprintf(stderr,"liks=%p anc=%p nsites=%d nInd=%d underflowprotect=%d fold=%d keepSites=%p r=%p\n",liks,anc,nsites,numInds,underFlowProtect,fold,keepSites,r);
+double saf_like_dip (double *p, double *h, int N, int j, int underFlowProtect)
+{
+  double tmp;
+  tmp = underFlowProtect ? log(0.) : 0.;
+
+  if(j >= 0 && j <= N)
+  {
+    if(underFlowProtect==1)
+      tmp = angsd::addProtect2(tmp, log(N-j) + log(N-j-1) + p[0] + h[j]);
+    else
+      tmp += (N-j)*(N-j-1)*p[0]*h[j];
+
+    if(j-1 >= 0)
+    {
+      if(underFlowProtect==1)
+        tmp = angsd::addProtect2(tmp, log(j) + log(N-j) + p[1] + h[j-1]);
+      else
+        tmp += j*(N-j)*p[1]*h[j-1];
+      
+      if(j-2 >= 0)
+      {
+        if(underFlowProtect==1)
+          tmp = angsd::addProtect2(tmp, log(j) + log(j-1) + p[2] + h[j-2]);
+        else
+          tmp += j*(j-1)*p[2]*h[j-2];
+      }
+    }
+  }
+
+  if(std::isnan(tmp)){
+    fprintf(stderr, "is nan: %d\n", j);
+    tmp = underFlowProtect ? log(0.) : 0.;
+  }
+
+  return tmp;
+}
+
+// NSP: have only worked on this, but is nearly ready to test. Just need to hear back from Thorfinn about re-use of prior.
+void filipe::algoJoint(double **liks, 
+                       char *anc, int nsites, 
+                       int numInds, 
+                       int underFlowProtect, 
+                       int *keepSites, 
+                       realRes *r, 
+                       int noTrans, 
+                       int doSaf, 
+                       char *major, 
+                       char *minor, 
+                       double *freq, 
+                       double *indF) {
+
   assert(doSaf==2);
-  int myCounter =0;
+  int counter = 0;
 
   if(anc==NULL||liks==NULL){
-    fprintf(stderr,"problems receiving data in [%s] will exit (likes=%p||ancestral=%p)\n",__FUNCTION__,liks,anc);
+    fprintf(stderr, "problems reading data in [%s] will exit (likes=%p||ancestral=%p)\n", __FUNCTION__, liks, anc);
     exit(0);
   }
-  double sumMinors[2*numInds+1];  //the sum of the 3 different minors
-  double m[numInds][3];  //HWE priors
 
-  for(int it=0; it<nsites; it++)  {//loop over sites
-    int ancB,derB;
-    ancB= anc[it];
-    derB=-1;
-    
+  double m[numInds][3]; //HWE priors
 
+  for(int it=0; it<nsites; it++){ //loop over sites
+    int ancB, derB;
+    ancB = anc[it];
+    derB = -1;
 
-    if(ancB==4 || keepSites[it]==0){//skip if no ancestral information
-      keepSites[it] =0; //
-      continue;
-    }
-    //if the ancestral is neither major or the minor skip site
-    if(ancB!=major[it]&&ancB!=minor[it]){
-      keepSites[it] =0; //
+    // if no ancestral information skip site
+    if(ancB==4 || keepSites[it]==0){
+      keepSites[it] = 0; //
       continue;
     }
 
-    //set the resultarray to zeros
-    for(int sm=0 ; sm<(2*numInds+1) ; sm++ ) sumMinors[sm] = 0;
-    
-    // Assign freqs to ancestral and non-ancestral alleles
+    // if the ancestral is neither major or the minor skip site
+    if(ancB!=major[it] && ancB!=minor[it]){
+      keepSites[it] = 0; 
+      continue;
+    }
+
+    // assign freqs to ancestral and non-ancestral alleles
     double anc_freq, non_anc_freq;
     
     anc_freq = non_anc_freq = freq[it];
     if(ancB == major[it]){
       anc_freq = 1-freq[it];
       derB = minor[it];
-    }else {
+    } else {
       non_anc_freq = 1-freq[it];
       derB = major[it];
     }
 
+    // TODO: should set keepSite[it] = 0 here, as for above?
     if(noTrans){
-      if((ancB==2&&derB==0)||(ancB==0&&derB==2))
-	continue;
-      if((ancB==1&&derB==3)||(ancB==3&&derB==1))
-	continue;
+      if((ancB==2&&derB==0) || (ancB==0&&derB==2))
+        continue;
+      if((ancB==1&&derB==3) || (ancB==3&&derB==1))
+        continue;
     }
 
-    assert(ancB!=-1&&derB!=-1);
+    assert(ancB!=-1 && derB!=-1);
     
     double totmax = 0.0;
     
-    int Aa_offset = angsd::majorminor[derB][ancB];//0-9
-    int AA_offset = angsd::majorminor[derB][derB];//0-9
-    int aa_offset = angsd::majorminor[ancB][ancB];//0-9
+    int Aa_offset = angsd::majorminor[derB][ancB];
+    int AA_offset = angsd::majorminor[derB][derB];
+    int aa_offset = angsd::majorminor[ancB][ancB];
     
-    double hj[2*numInds+1];
-    for(int index=0;index<(2*numInds+1);index++)
-      if(underFlowProtect==0)
-	hj[index]=0;
-      else
-	hj[index]=log(0);
+    double hj[numChr+1];
+    for(int index=0; index<numChr+1; index++)
+      hj[index] = underFlowProtect ? log(0.) : 0.;
     
-    double PAA,PAa,Paa;
+    double PAA, PAa, Paa;
     
-    for(int i=0 ; i<numInds ;i++) {
+    for(int i=0; i<numInds; i++){
+
       m[i][0] = pow(anc_freq,2.0) + anc_freq*non_anc_freq*indF[i];
       m[i][1] = 2.0*anc_freq*non_anc_freq - 2.0*anc_freq*non_anc_freq*indF[i];
       m[i][2] = pow(non_anc_freq,2.0) + anc_freq*non_anc_freq*indF[i];
     
-      double GAA,GAa,Gaa;
+      double GAA, GAa, Gaa;
 
-      //fix issues where frequency is estimated to zero. Returns very small value
-      GAA = ((m[i][2] != 0) ? (log(m[i][2])+liks[it][i*10+AA_offset]) : log(DBL_MIN));
-      GAa = ((m[i][1] != 0) ? (log(m[i][1])+liks[it][i*10+Aa_offset]) : log(DBL_MIN));
-      Gaa = ((m[i][0] != 0) ? (log(m[i][0])+liks[it][i*10+aa_offset]) : log(DBL_MIN));
+      // if frequency is zero set to very small value
+      GAA = m[i][2] != 0. ? log(m[i][2])+liks[it][i*10+AA_offset] : log(DBL_MIN);
+      GAa = m[i][1] != 0. ? log(m[i][1])+liks[it][i*10+Aa_offset] : log(DBL_MIN);
+      Gaa = m[i][0] != 0. ? log(m[i][0])+liks[it][i*10+aa_offset] : log(DBL_MIN);
       
-      double mymax;
-      if (Gaa > GAa && Gaa > GAA) mymax = Gaa;
-      else if (GAa > GAA) mymax = GAa;
-      else mymax = GAA;
-      
-      if(mymax<MINLIKE){
-	Gaa = 0;
-	GAa = 0;
-	GAA = 0;
-	totmax = totmax + mymax;
-      }else{
-	Gaa=Gaa-mymax;
-	GAa=GAa-mymax;
-	GAA=GAA-mymax;
-	totmax = totmax + mymax;
+      double Gmax;
+      int Gmle;
+      if (Gaa > GAa && Gaa > GAA) {
+        Gmax = Gaa;
+        Gmle = 0;
+      } else if (GAa > GAA) {
+        Gmax = GAa;
+        Gmle = 1;
+      } else {
+        Gmax = GAA;
+        Gmle = 2;
       }
       
-      if(underFlowProtect==0){
-	PAA=exp(GAA);
-	PAa=exp(GAa);
-	Paa=exp(Gaa);
-      }else{
-	PAA =(GAA);
-	PAa =(GAa);
-	Paa =(Gaa);
+      if (Gmax<MINLIKE) {
+        Gaa = 0;
+        GAa = 0;
+        GAA = 0;
+      } else {
+        Gaa = Gaa - Gmax;
+        GAa = GAa - Gmax;
+        GAA = GAA - Gmax;
+      }
+
+      if (!underFlowProtect) {
+        PAA = exp(GAA);
+        PAa = exp(GAa);
+        Paa = exp(Gaa);
+      } else {
+        PAA = GAA;
+        PAa = GAa;
+        Paa = Gaa;
       }
       
-      
-      if(std::isnan(Paa)||std::isnan(PAa)||std::isnan(Paa))
-	fprintf(stderr,"Possible underflow  PAA=%f\tPAa=%f\tPaa=%f\n",PAA,PAa,Paa);
+      if(std::isnan(Paa) || std::isnan(PAa) || std::isnan(Paa))
+        fprintf(stderr, "Possible underflow PAA=%f\tPAa=%f\tPaa=%f\n", PAA, PAa, Paa);
+
+      // banded DP algorithm from Han et al 2015 Bioinformatics
+      double p[3];
+      int bestguess, left, right, left0, right0;
+      bool small_enough;
+      double like;
 
       if(i==0){
-	hj[0] =Paa;
-	hj[1] =PAa;
-	hj[2] =PAA;
-      }else{
-	for(int j=2*(i+1); j>1;j--){
-	  double tmp;
-	  if(underFlowProtect==1)
-	    tmp = angsd::addProtect3(log(m[i][2])+PAA+hj[j-2],log(m[i][1])+PAa+hj[j-1],log(m[i][0])+Paa+hj[j]);
-	  else
-	    tmp = m[i][2]*PAA*hj[j-2] + m[i][1]*PAa*hj[j-1] + m[i][0]*Paa*hj[j];
-	  
-	  if(std::isnan(tmp)){
-	      fprintf(stderr,"is nan:%d\n",j );
-	      hj[j] = 0;
-	      break;
-	  }else
-	    hj[j] = tmp;
-	}
-	if(underFlowProtect==1){
-	  hj[1] = angsd::addProtect2(log(m[i][0])+Paa+hj[1],log(m[i][1])+PAa+hj[0]);
-	  hj[0] = log(m[i][0]) + Paa + hj[0];
-	}
-	else{
-	  hj[1] = m[i][0]*Paa*hj[1] + m[i][1]*PAa*hj[0];
-	  hj[0] = m[i][0]*Paa*hj[0];
-	}
-      }
+        // initialize
+        hj[0] = Paa;
+        hj[1] = PAa;
+        hj[2] = PAA;
+        left  = 0;
+        right = 2;
+      } else {
+        p[2] = underFlowProtect ? log(PAA)+log(m[i][2]) : PAA*m[i][2]; // is this right? why multiply by m[i] twice?
+        p[1] = underFlowProtect ? log(PAa)+log(m[i][1]) : PAa*m[i][1];
+        p[0] = underFlowProtect ? log(Paa)+log(m[i][0]) : Paa*m[i][0];
+
+        // use MLE as starting point for bandwidth
+        // TODO: if i'm right and it's a bug above, use Gmle instead
+        bestguess = (p[0]>p[1] && p[0]>p[2]) ? 0 :
+                    (p[1]>p[2] ? 1 : 2);
+
+        // push left boundary
+        left += bestguess;
+        left0 = left;
+        while (true)
+        {
+          like = saf_like_dip (p, hj, numChr, left, underFlowProtect);
+          hj[left] = like;
+          small_enough = like < (underFlowProtect ? log(SCORE_TOL) : SCORE_TOL);
+          if (left == 0 || small_enough)
+            break;
+          left -= 1;
+        }
+
+        // push right boundary
+        right += bestguess;
+        right0 = right;
+        while (true)
+        {
+          like = saf_like_dip (p, hj, numChr, right, underFlowProtect);
+          hj[right] = like;
+          small_enough = like < (underFlowProtect ? log(SCORE_TOL) : SCORE_TOL);
+          if (right == numChr || small_enough)
+            break;
+          right += 1;
+        }
+
+        for(j = left0+1; j<right0; ++j)
+          hj[j] = saf_like_dip (p, hj, numChr, j, underFlowProtect);
     }
 
-    for(int i=0;i<(2*numInds+1);i++)
-      if(underFlowProtect==0){
-	sumMinors[i] += hj[i];
-	// sumMinors[i] += hj[i]/(1-hj[0]-hj[2*numInds]); //As in the PLoS ONE paper
-      }else{
-	sumMinors[i] = exp(angsd::addProtect2(log(sumMinors[i]),hj[i]));
-	//sumMinors[i] =
-	//	exp(angsd::addProtect2(log(sumMinors[i]),hj[i]-log(1-hj[0]-hj[2*numInds])));
-	//As in the PLoS ONE paper
-      }
-     
-
-    //sumMinors is in normal space, not log
-    /*
-      we do 3 things.
-      1. log scaling everyting
-      2. rescaling to the most likely in order to avoid underflows in the optimization
-      3. we might do a fold also.
-     */    
-
-    for(int i=0;i<2*numInds+1;i++)
-      sumMinors[i] = log(sumMinors[i]);
-    //      angsd::logrescale(sumMinors,2*numInds+1);
-    double ts=0;
-    for(int i=0;i<newDim;i++)
-      ts += exp(sumMinors[i]);
+    // normalize and put in logspace
+    double ts = 0;
+    for(int j=left; j<=right; ++j){
+      ts += underFlowProtect ? exp(hj[j]) : hj[j];
+      if (!underFlowProtect)
+        hj[j] = log(hj[j]);
+    }
     ts = log(ts);
-    for(int i=0;i<newDim;i++)
-      sumMinors[i] = sumMinors[i]-ts;
+    for(int j=left; j<=right; ++j)
+      hj[j] = hj[j]-ts;
     
-    if(std::isnan(sumMinors[0]))
+    if(std::isnan(hj[left])){
       r->oklist[it] = 2;
-    else{
+    } else {
       r->oklist[it] = 1;
-      r->pLikes[myCounter] =new float[2*numInds+1];
-      for(int iii=0;iii<2*numInds+1;iii++)
-	r->pLikes[myCounter][iii] = sumMinors[iii];
-      
-      //	memcpy(r->pLikes[myCounter],sumMinors,sizeof(double)*(2*numInds+1));
-      myCounter++;
+      r->pLikes[counter] = new float[right-left+1];
+      r->pStart[counter] = left;
+      r->pSize[counter] = right-left+1;
+      for(int j=0; j < r->pSize[counter]; j++)
+        r->pLikes[counter][j] = hj[left+j];
+      counter++;
     }
-    
   }
-  
 }
 
 void abcSaf::algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r){
