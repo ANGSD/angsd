@@ -10,7 +10,7 @@ args * getArgs(int argc,char **argv){
   p->chooseChr=NULL;
   p->start=p->stop=-1;
   p->maxIter=1e2;
-  p->tole=1e-6;
+  p->tole=1e-10;
   p->nThreads=4;
   p->nSites =0;
   p->onlyOnce = 0;
@@ -20,7 +20,7 @@ args * getArgs(int argc,char **argv){
   p->win=p->step=-1;
   p->type =0;
   p->oldout =0;
-  p->seed =0;
+  p->seed = -1;;
   p->fl = NULL;
   p->whichFst = 0;
   p->fold=0;
