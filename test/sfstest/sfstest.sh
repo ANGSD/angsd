@@ -36,7 +36,7 @@ cd ..
 $WDIR/misc/realSFS output/sfstest.saf.idx -P 4 -nSites 10000000 -m 0 -seed -1 >output/em.log  2>>${LOG} ||exit 5
 
 cd output
-md5sum  -c mlRes.md5sum &>>${LOG} ||exit 7
+md5sum  -c mlRes2.md5sum &>>${LOG} ||exit 7
 
 
 
