@@ -166,6 +166,9 @@ multiReader::multiReader(argStruct *args_arg){
       case INPUT_BEAGLE:
 	printAndExit=1;
 	break;
+      case INPUT_BGEN:
+	printAndExit=1;
+	break;
       case INPUT_PILEUP:
 	printAndExit=1;
 	break;

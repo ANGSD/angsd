@@ -207,6 +207,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
 
   int hasMissing = 0;
   int hasID_2 = 0;
+  int hasPheno = 0;
   
   //read first line to know how many cols
   pFile.getline(buffer,lens);
@@ -312,11 +313,13 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
 	//ok to have binary phenotype as double??
 	column++;
 	pheRow.push_back(atof(tok));
-	isBinary = 1;		
+	isBinary = 1;
+	hasPheno = 1;
       } else if(sampleMap[column] == 'P'){
 	column++;
 	pheRow.push_back(atof(tok));
-	assert(isBinary==0);	
+	assert(isBinary==0);
+	hasPheno = 1;
       } else{
 	fprintf(stderr,"error .sample file has unreconigsed column type (D, C, B, 0 and P are allowed): %c \n",sampleMap[column]);
 	exit(0);
@@ -341,8 +344,14 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
 
     covRows.push_back(crows);
     pheRows.push_back(prows);
-
   
+  }
+
+  //checks that any phenos have been read
+  if(not hasPheno){
+    fprintf(stderr,"##############################################\n");
+    fprintf(stderr,"## WARNING: NO PHENOTYPE PRESENT IN .sample FILE!!\n");
+    fprintf(stderr,"##############################################\n");    
   }
 
   //  fprintf(stderr,"%s nrows:%lu\n",__FUNCTION__,rows.size());
