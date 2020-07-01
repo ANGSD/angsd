@@ -60,7 +60,7 @@ void print_dadi(std::vector<double *> &priors,std::vector<Matrix<T> *> &gls,int 
 	tmp[i] = gls[p]->mat[s][i]*prior[i];
       normalize(tmp,ndim);
       counts[p] = whichmax(tmp,ndim);
-      isvar += (counts[p]>1&&counts[p]<ndim-1)?1:0;
+      isvar += ((counts[p]==0)||(counts[p]==(ndim-1)))?0:1;
       prop[p] = tmp[counts[p]];
       isvar += counts[p];
     }
