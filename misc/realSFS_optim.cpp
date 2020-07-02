@@ -426,19 +426,29 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
   }
 
   double tmp[dim];
+  double expected[dim];
+  for(int i=0;i<dim;i++)
+    expected[i] = sfs[i]; 
 
   for(int it=0;SIG_COND&&it<maxIter;it++) {
     emStep_master<T>(tmp,nThreads);
     double sr2 = 0;
+    double exp_diff = 0;
+    int exp_which_diff = -1;
     for(int i=0;i<dim;i++){
       sr2 += (sfs[i]-tmp[i])*(sfs[i]-tmp[i]);
       sfs[i]= tmp[i];
-      
+      double tmpdiff = fabs(tmp[i]*gls[0]->x-expected[i]);
+      if(tmpdiff>exp_diff){
+	exp_diff = tmpdiff;
+	exp_which_diff = i;
+      }
+      expected[i] = gls[0]->x*tmp[i];
     }
 
     lik = like_master<T>(nThreads);
 
-    fprintf(stderr,"[%d] lik=%f diff=%e sr:%e\n",it,lik,fabs(lik-oldLik),sr2);
+    fprintf(stderr,"[%d] lik=%f diff=%e sr:%e nsites_difference[%d]: %e\n",it,lik,fabs(lik-oldLik),sr2,exp_which_diff,exp_diff);
     if(verbose){
       fprintf(stdout,"%d\t%f",it,lik);
       for(int i=0;i<dim;i++)
@@ -487,6 +497,9 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   int stepMin = 1;
   
   int iter =0;
+  double expected[dim];
+  for(int i=0;i<dim;i++)
+    expected[i] = p[i]; 
 
   while(SIG_COND&&iter<maxIter){
     emStep_master<T>(p1,nThreads);
@@ -572,8 +585,17 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       if(extra)//if have been doing the stabilizing step
 	iter--;
     }
-    
-    fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e\n",iter,lik,fabs(lik-oldLik),alpha,sr2);
+    double exp_diff = 0;
+    int exp_which_diff = -1;
+    for(int i=0;i<dim;i++){
+      double tmpdiff = fabs(p[i]*gls[0]->x-expected[i]);
+      if(tmpdiff>exp_diff){
+	exp_diff = tmpdiff;
+	exp_which_diff = i;
+      }
+      expected[i] = gls[0]->x*p[i];
+    }    
+    fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e nsites_difference[%d]: %e\n",iter,lik,fabs(lik-oldLik),alpha,sr2,exp_which_diff,exp_diff);
     if(verbose){
       fprintf(stdout,"%d\t%f",iter,lik);
       for(int i=0;i<dim;i++)
