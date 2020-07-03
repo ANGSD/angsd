@@ -399,8 +399,12 @@ void banded_saf_algo_dip (double* hj, int& lower, int& upper, double* p, const i
     sm += underFlowProtect ? exp(hj[j]) : hj[j];
   }
   sm = log(sm);
+  for(int j=0; j<lower; ++j)
+    hj[j] = underFlowProtect ? log(0.) : 0.;
   for(int j=lower; j<=upper; ++j)
     hj[j] = underFlowProtect ? hj - sm : exp(log(hj) - sm);
+  for(int j=upper+1; j<=numChr; ++j)
+    hj[j] = underFlowProtect ? log(0.) : 0.;
 }
 
 void saf_sparsify_and_normalize (double* hj, int& lower, int& upper, const int underFlowProtect)
