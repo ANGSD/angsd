@@ -2,6 +2,7 @@
 typedef struct{
   char *oklist;//<- {0,1,2}, length=numSites, 0 don't keep 1 do keep 2 error
   float **pLikes;
+  int **pBound;
 }realRes;
 
 
