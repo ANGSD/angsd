@@ -21,6 +21,7 @@ class abcSaf : public abc{
   int tsktsktsk;
   int isHap;
   double *filipeIndF;
+  double scoreTol;
   int ishap;
   int newDim;
   int64_t offs[2];
@@ -31,6 +32,7 @@ class abcSaf : public abc{
   void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans);
   void algoJointHap(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans);
   void algoJointMajorMinor(double **liks,int nsites,int numInds, int *keepSites,realRes *r, char *major, char *minor);
+  void algoJointMajorMinorHap(double **liks,int nsites,int numInds, int *keepSites,realRes *r, char *major, char *minor);
 
   void writeAll();
   int mynchr;
