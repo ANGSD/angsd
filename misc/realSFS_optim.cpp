@@ -158,6 +158,7 @@ void *like_slave(void *p){
 
 template <typename T>
 double like_master(int nThreads){
+  normalize(emp[0].sfs,emp[0].dim);
   for(size_t i=0;i<nThreads;i++){
     int rc = pthread_create(&thd[i],NULL,like_slave<T>,(void*) i);
     if(rc)
@@ -417,21 +418,37 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
   oldLik = like_master<T>(nThreads);
   
   fprintf(stderr,"startlik=%f\n",oldLik);fflush(stderr);
+  if(verbose){
+    fprintf(stdout,"%d\t%f",-1,oldLik);
+    for(int i=0;i<dim;i++)
+      fprintf(stdout,"\t%f",sfs[i]);
+    fprintf(stdout,"\n");
+  }
 
   double tmp[dim];
+  double expected[dim];
+  for(int i=0;i<dim;i++)
+    expected[i] = sfs[i]; 
 
   for(int it=0;SIG_COND&&it<maxIter;it++) {
     emStep_master<T>(tmp,nThreads);
     double sr2 = 0;
+    double exp_diff = 0;
+    int exp_which_diff = -1;
     for(int i=0;i<dim;i++){
       sr2 += (sfs[i]-tmp[i])*(sfs[i]-tmp[i]);
       sfs[i]= tmp[i];
-      
+      double tmpdiff = fabs(tmp[i]*gls[0]->x-expected[i]);
+      if(tmpdiff>exp_diff){
+	exp_diff = tmpdiff;
+	exp_which_diff = i;
+      }
+      expected[i] = gls[0]->x*tmp[i];
     }
 
     lik = like_master<T>(nThreads);
 
-    fprintf(stderr,"[%d] lik=%f diff=%e sr:%e\n",it,lik,fabs(lik-oldLik),sr2);
+    fprintf(stderr,"[%d] lik=%f diff=%e sr:%e nsites_difference[%d]: %e\n",it,lik,fabs(lik-oldLik),sr2,exp_which_diff,exp_diff);
     if(verbose){
       fprintf(stdout,"%d\t%f",it,lik);
       for(int i=0;i<dim;i++)
@@ -455,17 +472,24 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     emp = setThreadPars<T>(gls,p,nThreads,dim,bootnSites);
   else
     emp = setThreadPars<T>(gls,p,nThreads,dim,gls[0]->x);
+  //double *p contains the 'start' that is used for em step and needs to be updated
   fprintf(stderr,"------------\n");
   double oldLik,lik;
   oldLik = like_master<T>(nThreads);
   
   fprintf(stderr,"startlik=%f\n",oldLik);fflush(stderr);
+  if(verbose){
+    fprintf(stdout,"%d\t%f",-1,oldLik);
+    for(int i=0;i<dim;i++)
+      fprintf(stdout,"\t%f",p[i]);
+    fprintf(stdout,"\n");
+  }
 
-  double *p1 = new double[dim];
-  double *p2 = new double[dim];
+  double *p1 = new double[dim];// first guess
+  double *p2 = new double[dim];// second guess
   double *q1 = new double[dim];
   double *q2 = new double[dim];
-  double *pnew = new double[dim];
+  double *pnew = new double[dim];//final guess
   double *oldp = new double[dim];
   double *tmp = new double[dim];
   int stepMax = 1;
@@ -473,6 +497,9 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   int stepMin = 1;
   
   int iter =0;
+  double expected[dim];
+  for(int i=0;i<dim;i++)
+    expected[i] = p[i]; 
 
   while(SIG_COND&&iter<maxIter){
     emStep_master<T>(p1,nThreads);
@@ -482,7 +509,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       q1[i] = p1[i]-p[i];
       sr2 += q1[i]*q1[i];
     }
-
+    // oldp,p1,p2,pnew
     memcpy(oldp,p,sizeof(double)*dim);
     memcpy(p,p1,sizeof(double)*dim);  
     if(sqrt(sr2)<tole){
@@ -529,13 +556,12 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
 	pnew[j]=1-ttol;
       }
     }
-    if(printOutOfBounds){
-      fprintf(stderr,"\t-> Instability detected, consider running with standard em \'-m 0\'\n");
-      normalize(pnew,dim);
-    }
+    if(printOutOfBounds)
+      fprintf(stderr,"\t-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step\n");
 #endif
+
     int extra =0;
-    if(fabs(alpha-1) >0.01){
+    if(printOutOfBounds==0&&fabs(alpha-1) >0.01){
       //this is clearly to stabilize
       //      double tmp[dim];
       memcpy(p,pnew,sizeof(double)*dim);
@@ -548,18 +574,28 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     
     //like_master is using sfs[] to calculate like
     lik = like_master<T>(nThreads);
-    if(lik<oldLik){
-      fprintf(stderr,"\t-> New like is worse? new:%e old:%e diff:%e will skip accelerated EM in this round\n",lik,oldLik,lik-oldLik);
+    if(lik<oldLik||printOutOfBounds==1){
+      if(printOutOfBounds==0)
+	fprintf(stderr,"\t-> New like is worse? new:%e old:%e diff:%e will skip accelerated EM in this round\n",lik,oldLik,lik-oldLik);
       memcpy(p,p2,sizeof(double)*dim);
       lik = like_master<T>(nThreads);
       stepMax =1;
       mstep=4;
       stepMin =1;
-      if(extra)
+      if(extra)//if have been doing the stabilizing step
 	iter--;
     }
-    
-    fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e\n",iter,lik,fabs(lik-oldLik),alpha,sr2);
+    double exp_diff = 0;
+    int exp_which_diff = -1;
+    for(int i=0;i<dim;i++){
+      double tmpdiff = fabs(p[i]*gls[0]->x-expected[i]);
+      if(tmpdiff>exp_diff){
+	exp_diff = tmpdiff;
+	exp_which_diff = i;
+      }
+      expected[i] = gls[0]->x*p[i];
+    }    
+    fprintf(stderr,"lik[%d]=%f diff=%e alpha:%f sr2:%e nsites_difference[%d]: %e\n",iter,lik,fabs(lik-oldLik),alpha,sr2,exp_which_diff,exp_diff);
     if(verbose){
       fprintf(stdout,"%d\t%f",iter,lik);
       for(int i=0;i<dim;i++)
@@ -684,7 +720,8 @@ int main_opt(args *arg){
     } else{
       if(arg->seed==-1){
 	for(int i=0;i<ndim;i++)
-	  sfs[i] = (i+1)/((double)(ndim));
+	  //	  sfs[i] = ((double)(ndim))/(i+1);
+	  sfs[i] = 1;
       }else{
 	for(int i=0;i<ndim;i++){
 	  double r=drand48();

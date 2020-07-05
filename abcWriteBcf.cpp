@@ -9,9 +9,6 @@
 #include <htslib/kseq.h>
 #include "analysisFunction.h"
 #include "shared.h"
-
-
-
 #include "abcFreq.h"
 #include "abcCallGenotypes.h"
 #include "abcMajorMinor.h"
@@ -98,6 +95,7 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##FORMAT=<ID=DV,Number=1,Type=Integer,Description=\"Number of high-quality non-reference bases\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">");
   //fprintf(stderr,"samples from sm:%d\n",args->sm->n);
   buf.l =0;
   assert(args);
@@ -194,21 +192,58 @@ void abcWriteBcf::print(funkyPars *pars){
       bcf_update_format_int32(hdr, rec, "DP", tmpfa,bcf_hdr_nsamples(hdr) );
       free(tmpfa);
     }
-    //   assert(lh3);
-    if(lh3){
+    if(pars->likes[s]){
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
       int32_t *tmpi = (int32_t*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(int32_t));
-      double *ary = lh3->lh3[s];
-      for(int i=0;i<bcf_hdr_nsamples(hdr);i++)
+
+      int major = pars->major[s];
+      int minor = pars->minor[s];
+      assert(major!=4&&minor!=4);
+      for(int i=0;i<bcf_hdr_nsamples(hdr);i++){
+	double val[3];
+	val[0] = pars->likes[s][i*10+angsd::majorminor[major][major]];
+	val[1] = pars->likes[s][i*10+angsd::majorminor[major][minor]];
+	val[2] = pars->likes[s][i*10+angsd::majorminor[minor][minor]];
+	
+	//fixed awkward case where all gls are -Inf, should only happen with -gl 6
+	if(std::isinf(val[0])&&std::isinf(val[1])&&std::isinf(val[2]))
+	  val[0]=val[1]=val[2]=0;
+	//angsd::logrescale(val,3);	
 	for(int j=0;j<3;j++){
-	  tmpfa[i*3+j] = ary[i*3+j]/M_LN10;
-	  tmpi[i*3+j] =(int) -log10(exp(ary[i*3+j]))*10.0;
-	  //	  fprintf(stderr,"pl:%d raw:%f\n",tmpi[i*3+j],ary[i*3+j]);
+	  tmpfa[i*3+j] = val[j]/M_LN10;
+	  double tmptmp = -log10(exp(val[j]))*10.0;
+	  tmpi[i*3+j] = round(tmptmp);
 	}
+      }
       bcf_update_format_float(hdr, rec, "GL", tmpfa,3*bcf_hdr_nsamples(hdr) );
       bcf_update_format_int32(hdr, rec, "PL", tmpi,3*bcf_hdr_nsamples(hdr) );
       free(tmpfa);
       free(tmpi);
+    }
+    if(pars->post[s]){
+      float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
+
+      for(int i=0;i<bcf_hdr_nsamples(hdr);i++){
+	double *val = pars->post[s] +i*3;
+	//	fprintf(stderr,"va: %f %f %f\n",val[0],val[1],val[2]);
+	//fixed awkward case where all gls are -Inf, should only happen with -gl 6
+	if(std::isinf(val[0])&&std::isinf(val[1])&&std::isinf(val[2]))
+	  val[0]=val[1]=val[2]=0;
+
+	//angsd::logrescale(val,3);	
+	for(int j=0;j<3;j++){
+	  tmpfa[i*3+j] = -log10(val[j])*10.0; 
+	}
+	double mmax = std::min(tmpfa[i*3],std::min(tmpfa[3*i+1],tmpfa[3*i+2]));
+	//	fprintf(stderr,"min:%f\n",mmax);
+	for(int j=0;j<3;j++)
+	  tmpfa[i*3+j] -= mmax;
+	//angsd::logrescale(tmpfa+i*3,3);	
+      }
+      bcf_update_format_float(hdr, rec, "GP", tmpfa,3*bcf_hdr_nsamples(hdr) );
+
+      free(tmpfa);
+
     }
 
     if ( bcf_write1(fp, hdr, rec)!=0 ){
@@ -288,6 +323,8 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
     fprintf(stderr,"\t-> Building bcf header\n");
     hdr = bcf_hdr_dup(vcfreader_hs_bcf_hdr);
     bcf_hdr_append(hdr,"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
+    bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
+    bcf_hdr_append(hdr,"##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">");
     ksprintf(&buf, "##angsdVersion=%s",args->version);
     bcf_hdr_append(hdr, buf.s);
     buf.l = 0;

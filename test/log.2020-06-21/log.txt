@@ -1,0 +1,209 @@
+##tajima analyses
+[fvr124@compute12-snm-willerslev angsd]$ cat test/tajima/output/norm.saf.em.ml
+9.721582 69243.216421 30968.099251 19511.268378 13070.321411 9794.037222 7497.670931 6809.711556 5481.832003 4909.152248 4138.014511 3484.611984 3431.469153 2990.866337 2988.897212 2820.087710 2314.682851 2348.495160 2152.924435 2327.835266 2445.634016 2209.481191 2144.537018 2297.612169 2370.982758 2462.527097 2546.681418 2664.935223 2781.799366 2771.132930 3231.122516 3327.792493 3547.960045 3764.713014 3534.219594 4093.215043 4461.944970 5338.162553 5674.429510 6277.494202 16.707252 
+[fvr124@compute12-snm-willerslev angsd]$ cat ~/angsd/test/tajima/output/norm.saf.em.ml
+9.700797 69243.238246 30968.098167 19511.268424 13070.321409 9794.037222 7497.670931 6809.711556 5481.832003 4909.152248 4138.014511 3484.611984 3431.469153 2990.866337 2988.897212 2820.087710 2314.682851 2348.495160 2152.924435 2327.835266 2445.634016 2209.481191 2144.537018 2297.612169 2370.982758 2462.527097 2546.681418 2664.935223 2781.799366 2771.132930 3231.122516 3327.792493 3547.960045 3764.713014 3534.219594 4093.215043 4461.944970 5338.162553 5674.429510 6277.494202 16.707252 
+
+[fvr124@compute12-snm-willerslev angsd]$ cat test/tajima/output/norm.thetaFromSaf.thetas.idx.pestPG
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)   Chr     WinCenter       tW      tP      tF      tH      tL      Tajima  fuf    fud      fayh    zeng    nSites
+(0,264255)(1,264256)(0,264256)  1       132128  62119.681147    55291.467937    69243.378765    98841.973804    77066.720881    -0.414250       -0.423020      -0.296850        -0.562553       0.195684        264255
+[fvr124@compute12-snm-willerslev angsd]$ cat ~/angsd/test/tajima/output/norm.thetaFromSaf.thetas.idx.pestPG
+#(indexStart,indexStop)(firstPos_withData,lastPos_withData)(WinStart,WinStop)   Chr     WinCenter       tW      tP      tF      tH      tL      Tajima  fuf    fud      fayh    zeng    nSites
+(0,264255)(1,264256)(0,264256)  1       132128  62119.685924    55291.468907    69243.400113    98841.973827    77066.721376    -0.414250       -0.423021      -0.296851        -0.562553       0.195683        264255
+[fvr124@compute12-snm-willerslev angsd]$ 
+> a<-read.table('test/tajima/output/norm.thetaFromSaf.thetas.idx.win.pestPG',as.is=T)
+> b<-read.table('~/angsd/test/tajima/output/norm.thetaFromSaf.thetas.idx.win.pestPG',as.is=T)
+> range(a[,-c(1:3)]-b[,-c(1:3)])
+[1] -0.000675  0.000001
+> 
+##fst stuff
+[fvr124@compute12-snm-willerslev angsd]$ cat test/fst/output/*.res
+0.114638        0.186979
+0.114638        0.186979
+0.121007        0.192111
+0.069461        0.125000
+pbs.pop1        0.143399
+pbs.pop2        0.063600
+pbs.pop3        0.069932
+0.121007        0.192111
+0.069461        0.125000
+[fvr124@compute12-snm-willerslev angsd]$ cat ~/angsd/test/fst/output/*.res
+0.114638        0.186980
+0.114638        0.186980
+0.121007        0.192111
+0.069462        0.125002
+pbs.pop1        0.143399
+pbs.pop2        0.063601
+pbs.pop3        0.069932
+0.121007        0.192111
+0.069462        0.125002
+
+> a<-scan('test/fst/output/pop1.pop2.saf.idx.ml')
+Read 195 items
+> b<-scan('~/angsd/test/fst/output/pop1.pop2.saf.idx.ml')
+Read 195 items
+> range(a-b)
+[1] -0.147363  0.133298
+> a<-scan('test/fst/output/pop1.pop3.saf.idx.ml')
+Read 247 items
+> b<-scan('~/angsd/test/fst/output/pop1.pop3.saf.idx.ml')
+Read 247 items
+> range(a-b)
+[1] -0.006873  0.008554
+> a<-scan('test/fst/output/pop2.pop3.saf.idx.ml')
+Read 285 items
+> b<-scan('~/angsd/test/fst/output/pop2.pop3.saf.idx.ml')
+Read 285 items
+> range(a-b)
+[1] -0.185742  0.120114
+> 
+
+[fvr124@compute12-snm-willerslev angsd]$ cat ~/angsd/test/fst/output/pop1.saf.idx.ml 
+14980.824131 14101.833775 6221.150237 3735.956566 2569.267989 1984.728445 1581.318434 1393.850813 1176.571679 1054.583363 996.603511 892.483118 395.827940 
+[fvr124@compute12-snm-willerslev angsd]$ cat test/fst/output/pop1.saf.idx.ml 
+14980.824129 14101.833832 6221.150119 3735.956675 2569.267896 1984.728549 1581.318312 1393.850920 1176.571622 1054.583379 996.603507 892.483120 395.827940 
+[fvr124@compute12-snm-willerslev angsd]$ cat test/fst/input/pop1.true
+14972   14137   6210    3693    2568    2011    1574    1403    1178    1045    1018    886     390 
+
+[fvr124@compute12-snm-willerslev angsd]$ cat test/fst/output/pop2.saf.idx.ml 
+24490.171373 6997.557202 3492.579234 2416.186113 1838.400326 1596.894192 1404.399741 1207.834587 1157.298293 1090.146149 783.684251 916.161563 775.456738 739.221102 2179.009135 
+[fvr124@compute12-snm-willerslev angsd]$ cat ~/angsd/test/fst/output/pop2.saf.idx.ml 
+24490.171265 6997.557456 3492.578954 2416.186240 1838.400466 1596.893913 1404.400038 1207.834262 1157.298636 1090.145837 783.684470 916.161484 775.456727 739.221122 2179.009129 
+[fvr124@compute12-snm-willerslev angsd]$ cat test/fst/input/pop2.true
+24472   7034    3460    2414    1877    1584    1400    1198    1170    1088    788     903     782     735     2180
+
+[fvr124@compute12-snm-willerslev angsd]$ cat test/fst/output/pop3.saf.idx.ml 
+23170.608388 7376.240175 2865.480539 2127.460757 1635.428131 1500.261326 1247.361845 1151.261251 1142.894142 1281.065139 826.908775 799.886932 798.017789 582.682985 524.500743 644.615756 694.285802 675.677298 2040.362227 
+[fvr124@compute12-snm-willerslev angsd]$ cat ~/angsd/test/fst/output/pop3.saf.idx.ml 
+23170.608211 7376.240288 2865.481469 2127.457801 1635.432361 1500.258472 1247.361825 1151.262490 1142.895413 1281.060135 826.913169 799.887104 798.015631 582.683155 524.502269 644.614601 694.286052 675.677358 2040.362194 
+[fvr124@compute12-snm-willerslev angsd]$ cat test/fst/input/pop3.true
+23211   7342    2842    2144    1628    1513    1254    1137    1162    1244    845     809     780     585     536 647      689     682     2035   
+
+##now fst folded
+
+[fvr124@compute12-snm-willerslev test]$ cat fst_folded/output/*.res
+0.083414        0.166348
+0.083414        0.166348
+0.088040        0.177016
+0.048398        0.103619
+pbs.pop1        0.133684
+pbs.pop2        0.048255
+pbs.pop3        0.061135
+0.088040        0.177016
+0.048398        0.103619
+[fvr124@compute12-snm-willerslev test]$ cat ~/angsd/test/fst_folded/output/*.res
+0.083414        0.166348
+0.083414        0.166348
+0.088040        0.177016
+0.048398        0.103619
+pbs.pop1        0.133684
+pbs.pop2        0.048256
+pbs.pop3        0.061135
+0.088040        0.177016
+0.048398        0.103619
+
+[fvr124@compute12-snm-willerslev angsd]$ for i in 1 2 3;do cat test/fst_folded/output/pop${i}.saf.idx.ml;cat ~/angsd/test/fst_folded/output/pop${i}.saf.idx.ml;done
+19622.929726 14955.998976 7077.911468 4108.582974 2913.533060 2296.528967 1789.966338 1458.440233 1146.250671 1080.455701 927.186348 773.586726 792.449110 696.081778 615.172323 527.235650 539.142579 560.840680 482.249297 462.114419 439.855724 423.483044 402.707465 393.886076 433.157147 390.552873 150.700648 
+19622.931223 14955.993444 7077.920924 4108.573567 2913.537949 2296.530006 1789.960376 1458.446223 1146.251030 1080.454827 927.172805 773.612412 792.430455 696.090233 615.158599 527.254802 539.133766 560.837870 482.251169 462.117484 439.853049 423.483500 402.707041 393.887134 433.156403 390.553072 150.700637 
+33357.799861 8418.991499 3158.461861 1800.150017 1627.911144 1381.352248 1162.683952 999.725369 1097.430190 860.046392 924.747049 605.859063 627.009826 771.804721 547.732666 538.665223 487.577928 599.285912 449.426820 410.964117 585.707994 497.544148 400.925512 351.844286 363.606323 451.105568 406.663738 335.716694 411.801943 418.615475 1409.842460 
+33357.799677 8418.991950 3158.461341 1800.150339 1627.911173 1381.351982 1162.684315 999.725132 1097.430112 860.046379 924.748295 605.855081 627.017900 771.792292 547.748091 538.648720 487.593313 599.273920 449.434687 410.959943 585.709572 497.543563 400.925899 351.843967 363.606667 451.105279 406.663812 335.716797 411.801823 418.615534 1409.842447 
+33638.231819 8684.686345 2598.600526 1554.979722 1305.778791 1386.467839 1069.861466 1215.816378 778.661895 879.001303 696.257547 673.198492 539.534995 548.637268 525.740022 614.460870 501.846372 538.361396 365.713309 438.135649 338.168907 356.992636 410.936814 405.355798 385.967861 363.014403 348.605286 397.865552 408.262580 513.663502 275.761917 371.814684 329.443770 454.864114 1546.310175 
+33638.230824 8684.688267 2598.599891 1554.977656 1305.781759 1386.467216 1069.861230 1215.814365 778.663794 879.001795 696.259307 673.190218 539.546436 548.624371 525.759880 614.434950 501.871064 538.338874 365.734313 438.117372 338.182821 356.983888 410.942561 405.352284 385.969015 363.013789 348.605596 397.867124 408.261159 513.660576 275.766933 371.812203 329.444079 454.864279 1546.310114 
+
+
+[fvr124@compute12-snm-willerslev test]$ cat fst_folded/input/pop1.true
+19651   14934   7099    4098    2909    2286    1773    1507    1147    1049    923     773     783     694     640     522     543     569     469     464     436     408     409     403     431     388       153
+[fvr124@compute12-snm-willerslev test]$ cat fst_folded/input/pop2.true
+33362   8414    3162    1775    1651    1411    1130    1013    1051    898     901     629     658     722     563     543     471     619     442     425     556     518     409     347     356     450       408     334     408     431     1404
+[fvr124@compute12-snm-willerslev test]$ cat fst_folded/input/pop3.true
+33596   8762    2566    1546    1299    1414    1054    1205    805     849     714     665     565     513     553     581     522     511     397     418     362     349     400     415     374     384       336     410     403     500     291     361     348     451     1542    [fvr124@compute12-snm-willerslev test]$ 
+
+
+
+> a<-scan('fst_folded/output/pop1.pop2.saf.idx.ml')
+Read 837 items
+> b<-scan('~/angsd/test/fst_folded/output/pop1.pop2.saf.idx.ml')
+Read 837 items
+> range(a-b)
+[1] -0.511042  0.242255
+> a<-scan('fst_folded/output/pop1.pop3.saf.idx.ml')
+Read 945 items
+> b<-scan('~/angsd/test/fst_folded/output/pop1.pop3.saf.idx.ml')
+Read 945 items
+> range(a-b)
+[1] -0.336258  0.207876
+> a<-scan('fst_folded/output/pop2.pop3.saf.idx.ml')
+Read 1085 items
+> b<-scan('~/angsd/test/fst_folded/output/pop2.pop3.saf.idx.ml')
+Read 1085 items
+> range(a-b)
+[1] -0.015738  0.015352
+>
+
+
+> a<-scan('fst_folded/output/pop2.pop3.saf.idx.ml')
+Read 1085 items
+> b<-scan('fst_folded/input/pop2.pop3.true')
+Read 1085 items
+> range(a-b)
+[1] -84.36498  55.75165
+> mean(a-b)
+[1] -1.843319e-09
+> mean(a-b);range(a-b);var(a-b)
+[1] -1.843319e-09
+[1] -84.36498  55.75165
+[1] 47.5229
+> a<-scan('fst_folded/output/pop1.pop3.saf.idx.ml')
+Read 945 items
+> b<-scan('fst_folded/input/pop1.pop3.true')
+Read 945 items
+> mean(a-b);range(a-b);var(a-b)
+[1] 3.174603e-09
+[1] -32.71636  51.57106
+[1] 48.30957
+> a<-scan('fst_folded/output/pop1.pop2.saf.idx.ml')
+Read 837 items
+> b<-scan('fst_folded/input/pop1.pop2.true')
+Read 837 items
+> mean(a-b);range(a-b);var(a-b)
+[1] 1.433692e-08
+[1] -53.53550  52.50243
+[1] 50.90532
+
+> a<-scan('fst_folded/output/pop1.pop2.saf.idx.ml.fold')
+Read 837 items
+> b<-scan('~/angsd/test/fst_folded/output/pop1.pop2.saf.idx.ml.fold')
+Read 837 items
+> mean(a-b);range(a-b);var(a-b)
+[1] -1.194744e-09
+[1] -0.216707  0.184758
+[1] 0.000261346
+> a<-scan('fst_folded/output/pop1.pop3.saf.idx.ml.fold')
+Read 945 items
+> b<-scan('~/angsd/test/fst_folded/output/pop1.pop3.saf.idx.ml.fold')
+Read 945 items
+> mean(a-b);range(a-b);var(a-b)
+[1] -7.407406e-09
+[1] -0.336815  0.252531
+[1] 0.001052243
+> a<-scan('fst_folded/output/pop2.pop3.saf.idx.ml.fold')
+Read 1085 items
+> b<-scan('~/angsd/test/fst_folded/output/pop2.pop3.saf.idx.ml.fold')
+Read 1085 items
+> mean(a-b);range(a-b);var(a-b)
+[1] 2.764978e-09
+[1] -0.382797  0.340282
+[1] 0.000968869
+
+
+[fvr124@compute12-snm-willerslev output]$ cat em.log
+30488.691781 5562.640231 2682.120875 1810.222041 1295.622535 1029.510509 936.787151 796.468600 644.052313 628.859533 506.533924 499.255424 455.847737 414.122771 340.237065 375.739934 318.003204 348.061242 311.681600 270.720204 284.821324
+[fvr124@compute12-snm-willerslev output]$ cat ~/angsd/test/sfstest/output/em.log
+30488.691775 5562.640258 2682.120804 1810.222142 1295.622621 1029.509521 936.790456 796.461390 644.063435 628.846217 506.547504 499.244108 455.855066 414.118936 340.238965 375.738849 318.003762 348.061006 311.681670 270.720191 284.821325
+[fvr124@compute12-snm-willerslev output]$
+
+> a<-read.table('../sfstest/output/sfstestGC.geno.gz')
+> b<-read.table('~/angsd/test/sfstest/output/sfstestGC.geno.gz')
+> range(a-b)
+[1] -1.2e-05  1.2e-05
+> 
