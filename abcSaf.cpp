@@ -744,12 +744,12 @@ void abcSaf::algoJointPost(double **post,
       r->pBound[counter][0] = lower;
       r->pBound[counter][1] = upper - lower + 1;
 
-      //debug
-      fprintf(stdout, "%u\t%u\t%u", counter, lower, upper-lower+1);
-      k=0;
-      for(int j=lower; j<=upper; ++j)
-        fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
-      fprintf(stdout, "\n");
+      ////debug
+      //fprintf(stdout, "%u\t%u\t%u", counter, lower, upper-lower+1);
+      //k=0;
+      //for(int j=lower; j<=upper; ++j)
+      //  fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
+      //fprintf(stdout, "\n");
       
       counter++;
     }
@@ -871,12 +871,12 @@ void abcSaf::algoJointHap(double **liks,
       r->pBound[counter][0] = lower_all;
       r->pBound[counter][1] = upper_all-lower_all+1;
 
-      //debug
-      fprintf(stdout, "%u\t%u\t%u", counter, lower_all, upper_all-lower_all+1);
-      k=0;
-      for(int j=lower_all; j<=upper_all; ++j)
-        fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
-      fprintf(stdout, "\n");
+      ////debug
+      //fprintf(stdout, "%u\t%u\t%u", counter, lower_all, upper_all-lower_all+1);
+      //k=0;
+      //for(int j=lower_all; j<=upper_all; ++j)
+      //  fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
+      //fprintf(stdout, "\n");
 
       counter++;
     }
@@ -1006,12 +1006,12 @@ void abcSaf::algoJoint(double **liks,
       r->pBound[counter][0] = lower_all;
       r->pBound[counter][1] = upper_all-lower_all+1;
 
-      //debug
-      fprintf(stdout, "%u\t%u\t%u", counter, lower_all, upper_all-lower_all+1);
-      k=0;
-      for(int j=lower_all; j<=upper_all; ++j)
-        fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
-      fprintf(stdout, "\n");
+      ////debug
+      //fprintf(stdout, "%u\t%u\t%u", counter, lower_all, upper_all-lower_all+1);
+      //k=0;
+      //for(int j=lower_all; j<=upper_all; ++j)
+      //  fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
+      //fprintf(stdout, "\n");
 
       counter++;
     }
@@ -1123,12 +1123,12 @@ void abcSaf::algoJointMajorMinor(double **liks,
       r->pBound[counter][0] = lower;
       r->pBound[counter][1] = upper-lower+1;
 
-      //debug
-      fprintf(stdout, "%u\t%u\t%u", counter, lower, upper-lower+1);
-      k=0;
-      for(int j=lower; j<=upper; ++j)
-        fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
-      fprintf(stdout, "\n");
+      ////debug
+      //fprintf(stdout, "%u\t%u\t%u", counter, lower, upper-lower+1);
+      //k=0;
+      //for(int j=lower; j<=upper; ++j)
+      //  fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
+      //fprintf(stdout, "\n");
 
       counter++;
     }
@@ -1232,12 +1232,12 @@ void abcSaf::algoJointMajorMinorHap(double **liks,
       r->pBound[counter][0] = lower;
       r->pBound[counter][1] = upper-lower+1;
 
-      //debug
-      fprintf(stdout, "%u\t%u\t%u", counter, lower, upper-lower+1);
-      k=0;
-      for(int j=lower; j<=upper; ++j)
-        fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
-      fprintf(stdout, "\n");
+      ////debug
+      //fprintf(stdout, "%u\t%u\t%u", counter, lower, upper-lower+1);
+      //k=0;
+      //for(int j=lower; j<=upper; ++j)
+      //  fprintf(stdout, "\t%f", r->pLikes[counter][k++]);
+      //fprintf(stdout, "\n");
 
       counter++;
     }

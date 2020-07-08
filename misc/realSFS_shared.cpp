@@ -49,16 +49,13 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       chooseChr=NULL;
       goto aGotoHereIsTheEasiest;
     }
-
   }
-
 
   //hit will contain the depth across different populations
   keep<char> *hit =NULL;
 
   //  if(saf.size()>1)
   hit =keep_alloc<char>();//
-  
   
   //this loop will populate a 'hit' array containing the effective (differnt pops) depth
   //if we only have one population, then just return after iter_init
@@ -68,12 +65,11 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     if(fl!=NULL&&i==0){
       filt_readSites(fl,chooseChr,saf[0]->ppos[it->second.nSites-1]);
       if(fl!=NULL&&fl->keeps==NULL){
-	chooseChr=NULL;
-	goto aGotoHereIsTheEasiest;
+        chooseChr=NULL;
+        goto aGotoHereIsTheEasiest;
       }
-
     }
-    
+
     //    fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
     //    assert(it!=saf[i]->mm.end());  
     if(it==saf[i]->mm.end()){
@@ -84,21 +80,21 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       keep_destroy(hit);
       return 0;
     }if(saf[i]->ppos[it->second.nSites-1] >= hit->m)
-      realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
+    realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
     assert(hit->m>0);
     for(size_t j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++){
       if(j>saf[i]->toKeep->first&&saf[i]->ppos[j] <= saf[i]->ppos[j-1]){
-	fprintf(stderr,"\t-> Potential big problem, ordering of positions indicates that sites has not been sorted ? \n");
-	fprintf(stderr,"\t-> chromoname: \'%s\' pos[%lu]:%d vs pos[%lu-1]:%d\n",chooseChr,j,saf[i]->ppos[j],j,saf[i]->ppos[j-1]);
-	fprintf(stderr,"\t-> Consider running ./realSFS check your.saf.idx for each pop\n");
+        fprintf(stderr,"\t-> Potential big problem, ordering of positions indicates that sites has not been sorted ? \n");
+        fprintf(stderr,"\t-> chromoname: \'%s\' pos[%lu]:%d vs pos[%lu-1]:%d\n",chooseChr,j,saf[i]->ppos[j],j,saf[i]->ppos[j-1]);
+        fprintf(stderr,"\t-> Consider running ./realSFS check your.saf.idx for each pop\n");
       }
       //      fprintf(stderr,"fl:%p fl->keeps:%p\n",fl,fl!=NULL?fl->keeps:NULL);
       if(i==0&&fl!=NULL&&fl->keeps!=NULL){//we only check for -sites for the first saf.
-	
-	if( saf[i]->toKeep->d[j] && fl->keeps[saf[i]->ppos[j]])
-	  hit->d[saf[i]->ppos[j]]++;
+
+        if( saf[i]->toKeep->d[j] && fl->keeps[saf[i]->ppos[j]])
+          hit->d[saf[i]->ppos[j]]++;
       }else if(saf[i]->toKeep->d[j])
-	hit->d[saf[i]->ppos[j]]++;
+        hit->d[saf[i]->ppos[j]]++;
     }
   }
 
@@ -149,7 +145,6 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   return 1;
 }
 
-
 size_t parspace(std::vector<persaf *> &saf){
   size_t ndim = 1;
   for(int i=0;i<saf.size();i++){
@@ -159,8 +154,6 @@ size_t parspace(std::vector<persaf *> &saf){
   fprintf(stderr,"\t-> Dimension of parameter space: %lu\n",ndim);
   return ndim;
 }
-
-
 
 void setGloc(std::vector<persaf *> &saf,size_t nSites){
 #if 1
@@ -175,7 +168,6 @@ void delGloc(std::vector<persaf *> &saf,size_t nSites){
     delete [] posiG[i];
   delete [] posiG;
 }
-
 
 size_t helper(persaf * pp,char *chr){
   if(chr==NULL)
@@ -201,9 +193,6 @@ size_t calc_nsites(std::vector<persaf *> &pp,args *ar){
   return res;
 }
 
-
-
-
 //just approximate
 template <typename T>
 size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
@@ -215,7 +204,6 @@ size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
 }
 
 template size_t fsizes<float>(std::vector<persaf *> &pp, size_t nSites);
-
 
 /*
   over elaborate function to read a sfs. Assumption is that input file contains the expected values.
