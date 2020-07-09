@@ -24,7 +24,9 @@ args * getArgs(int argc,char **argv){
   p->fl = NULL;
   p->whichFst = 0;
   p->fold=0;
+  p->remapping=0;
   p->ref=p->anc=NULL;
+  p->banded=0;
   if(argc==0)
     return p;
 
@@ -34,6 +36,8 @@ args * getArgs(int argc,char **argv){
       p->tole = atof(*(++argv));
     else  if(!strcasecmp(*argv,"-P"))
       p->nThreads = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-cores"))
+      p->nThreads = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-v"))
        p->verbose = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-win"))
@@ -42,6 +46,8 @@ args * getArgs(int argc,char **argv){
       p->type = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-fold"))
       p->fold = atoi(*(++argv));  
+    else  if(!strcasecmp(*argv,"-remapping"))
+      p->remapping = atoi(*(++argv));  
     else  if(!strcasecmp(*argv,"-ref"))
       p->ref = strdup(*(++argv));  
     else  if(!strcasecmp(*argv,"-anc"))
@@ -52,26 +58,29 @@ args * getArgs(int argc,char **argv){
       p->bootstrap = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-resample_chr"))
       p->resample_chr = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-maxIter"))
+    else  if(!strcasecmp(*argv,"-banded"))
+      p->banded = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-maxiter"))
       p->maxIter = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-oldout"))
       p->oldout = atoi(*(++argv));
-    else  if(!strcasecmp(*argv,"-nSites"))
+    else  if(!strcasecmp(*argv,"-nsites"))
       p->nSites = atol(*(++argv));
     else  if(!strcasecmp(*argv,"-m"))
       p->emAccl = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-emaccl"))
+      p->emAccl = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-seed"))
       p->seed = atol(*(++argv));
-    else  if(!strcasecmp(*argv,"-onlyOnce"))
+    else  if(!strcasecmp(*argv,"-onlyonce"))
       p->onlyOnce = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-r")){
       p->chooseChr = get_region(*(++argv),p->start,p->stop);
       if(!p->chooseChr)
-	return NULL;
+        return NULL;
     }
     else  if(!strcasecmp(*argv,"-whichFst"))
       p->whichFst = atoi(*(++argv));
-
     else  if(!strcasecmp(*argv,"-sfs")){
       p->sfsfname.push_back(strdup(*(++argv)));
     }
