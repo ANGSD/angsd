@@ -33,7 +33,7 @@ int redo_baq =0;
 int cigstat =0;
 void *rghash=NULL;
 char *rghash_name=NULL;
-
+int setqscore = -1;
 
 int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,const aMap *revMap) {
   aMap::const_iterator it;
@@ -155,6 +155,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-C\t\t%d\tadjust mapQ for excessive mismatches (as SAMtools), supply -ref\n",adjustMapQ);
   fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (1=normal baq 2= extended(as SAMtools)), supply -ref\n",baq);
   fprintf(argFile,"\t-redo-baq\t\t%d (recompute baq, instead of using BQ tag)\n",redo_baq);
+  fprintf(argFile,"\t-setQscore\t%d\tSet qscore to this value, relevant for missing qscores\n",setqscore);
   //  fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   // fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders %d\tExit if difference in BAM headers\n",checkBamHeaders);
@@ -194,6 +195,7 @@ void setArgsBam(argStruct *arguments){
   trim = angsd::getArg("-trim",trim,arguments);
   trim5 = angsd::getArg("-trim5",trim5,arguments);
   trim3 = angsd::getArg("-trim3",trim3,arguments);
+  setqscore = angsd::getArg("-setqscore",setqscore,arguments);
   arguments->ref=angsd::getArg("-ref",arguments->ref,arguments);
   arguments->anc=angsd::getArg("-anc",arguments->anc,arguments);
   rghash_name= angsd::getArg("+RG",rghash_name,arguments);

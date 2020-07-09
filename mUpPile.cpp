@@ -651,6 +651,14 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 
     char *seq =(char *) bam_get_seq(rd);
     unsigned char *quals =(unsigned char *) bam_get_qual(rd);
+
+    //some files have missing quality scores, we set those to a prob of 0.05% of error or use setqscore
+    extern int setqscore;
+    if(quals[0]==255||setqscore!=1){
+      for(int i=0;i<rd->core.l_qseq;i++ )
+	quals[i] = setqscore!=-1?setqscore:23;
+    }
+
     int nCig = rd->core.n_cigar;
 
     uint32_t *cigs = bam_get_cigar(rd);
