@@ -614,8 +614,12 @@ int main_opt(args *arg){
       fprintf(stderr,"likelihood: %f\n",lik);
       fprintf(stderr,"------------\n");
 
+      // TODO: nsp check this. When bootstrapping contigs the number of sites can change.
       for(int x=0;x<ndim;x++)
-        fprintf(stdout, "%f ", foldkeep[x]*nSites*sfs[x]);
+        if (bootnSites)
+          fprintf(stdout, "%f ", foldkeep[x]*bootnSites*sfs[x]);
+        else
+          fprintf(stdout, "%f ", foldkeep[x]*gls[0]->x*sfs[x]);
       fprintf(stdout,"\n");
       fflush(stdout);
 
