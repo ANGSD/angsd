@@ -489,4 +489,3 @@ void printFunky(funkyPars *p){
   }
 
 }
-

@@ -255,4 +255,3 @@ void abcWriteFasta::run(funkyPars *pars){
 
   }
 }
-
