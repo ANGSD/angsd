@@ -124,6 +124,7 @@ persaf * persaf_init(char *fname, int verbose)
     chr[clen] = '\0';
 
     datum d;
+    d.nSites = d.sumBand=d.pos=d.saf=0;
     if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
       exit(0);
