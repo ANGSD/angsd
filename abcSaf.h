@@ -26,6 +26,7 @@ class abcSaf : public abc{
   int newDim;
   int64_t offs[2];
   int nnnSites;
+  size_t sumBand;
   char *tmpChr;
   void algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r);
   void algoGeno(int refId,double **liks,char *major,char *minor,int nsites,int numInds,kstring_t *sfsfile,int underFlowProtect, int *posi,int *keepSites,double *pest);

@@ -195,12 +195,31 @@ size_t calc_nsites(std::vector<persaf *> &pp,args *ar){
 
 //just approximate
 template <typename T>
-size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
+size_t fsizes_v2(std::vector<persaf *> &pp, size_t nSites){
   size_t res = 0;
   for(int i=0;i<pp.size();i++){
     res += nSites*(pp[i]->nChr+1)*sizeof(T)+nSites*sizeof( T*);
   }
   return res;
+}
+
+//this is abit stupid, but we calculate the average nr of bins persite and multiply with nSites
+template <typename T>
+size_t fsizes_v3(std::vector<persaf *> &pp, size_t nSites){
+  size_t res = 0;
+  for(int i=0;i<pp.size();i++){
+    double avgPerSite = (pp[i]->sumBand+2*pp[i]->nSites)/((double) pp[i]->nSites);
+    res += nSites*avgPerSite*sizeof(T)+nSites*sizeof( T*)+nSites*sizeof(int);
+    //     the safllhs                 the safllhs[]      the positions                        
+  }
+  return res;
+}
+template <typename T>
+size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
+  if(pp[0]->version==2)
+    return fsizes_v2<T>(pp,nSites);
+  if(pp[0]->version==3)
+    return fsizes_v3<T>(pp,nSites);
 }
 
 template size_t fsizes<float>(std::vector<persaf *> &pp, size_t nSites);

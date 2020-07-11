@@ -481,17 +481,15 @@ int main_opt(args *arg){
   }
 
   // for v4 memory check doesn't apply... TODO: could guesstimate based on file size??
-  if(saf[0]->version==2 && fsizes<T>(saf,nSites)>getTotalSystemMemory())
+  if(fsizes<T>(saf,nSites)>getTotalSystemMemory()){
     fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
-  fprintf(stderr,"\t-> nSites: %lu\n",nSites);
-  if(saf[0]->version==2)
-  {
-    float bytes_req_megs =(float) fsizes<T>(saf,nSites)/1024/1024;
-    float mem_avail_megs =(float) getTotalSystemMemory()/1024/1024;//in percentile
-    //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
-    fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is at least: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+    fprintf(stderr,"\t-> nSites: %lu\n",nSites);
   }
-
+  float bytes_req_megs=(float) fsizes<T>(saf,nSites)/1024/1024;
+  float mem_avail_megs =(float) getTotalSystemMemory()/1024/1024;//in percentile
+  //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
+  fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is at least: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+  
   std::vector<Matrix<T> *> gls;
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));

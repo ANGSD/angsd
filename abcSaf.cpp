@@ -27,13 +27,14 @@ void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"\t-doSaf\t\t%d\n",doSaf);
   fprintf(argFile,"\t   1: SAF calculation integrating over possible minor alleles\n\t   2: SAF calculation incorporating inbreeding\n\t   3: Calculate genotype probabilities using SAF (DEPRECATED; use -doPost 3)\n\t   4: SAF calculation from genotype posteriors (input is beagle text format)\n\t   5: SAF calculation conditioning on minor allele from -doMajorMinor\n");
   fprintf(argFile,"\t -underFlowProtect\t%d\n",underFlowProtect); 
-  fprintf(argFile,"\t -anc\t%s (ancestral fasta)\n",anc);
-  fprintf(argFile,"\t -noTrans\t%d (remove transitions)\n",noTrans);
-  fprintf(argFile,"\t -pest\t%s (prior SFS)\n",pest);
-  fprintf(argFile,"\t -isHap\t%d (samples are haploid; works with -doSaf 1 or 5)\n",isHap);
-  fprintf(argFile,"\t -scoreTol\t%.10f (tolerance for score-limited algorithm)\n",scoreTol);
-  fprintf(argFile,"\t -doPost\t%d (doPost 3, used for accessing SAF based variables)\n",doPost);
-  fprintf(argFile,"NB: If -pest is supplied in addition to -doSaf then the output will be posterior probabilities of the sample allele frequency for each site\n");
+  fprintf(argFile,"\t -anc\t\t%s\t(ancestral fasta)\n",anc);
+  fprintf(argFile,"\t -noTrans\t%d\t(remove transitions)\n",noTrans);
+  fprintf(argFile,"\t -pest\t\t%s\t(prior SFS)\n",pest);
+  fprintf(argFile,"\t -isHap\t\t%d\t(samples are haploid; works with -doSaf 1 or 5)\n",isHap);
+  fprintf(argFile,"\t -scoreTol\t%.1e\t(tolerance for score-limited algorithm)\n",scoreTol);
+  fprintf(argFile,"\t\t\tadsf\n",scoreTol);
+  fprintf(argFile,"\t -doPost\t%d\t(doPost 3, used for accessing SAF based variables)\n",doPost);
+  fprintf(argFile,"\nNB: If -pest is supplied in addition to -doSaf then the output will be posterior probabilities of the sample allele frequency for each site\n");
   fprintf(argFile,"NB: Increasing -scoreTol will trade accuracy for reduced computation time and storage\n");
 }
 
@@ -163,6 +164,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   tsktsktsk = 0;
   tmpChr = NULL;
   isHap = 0;
+  sumBand = 0;
   //for use when dumping binary indexed saf files
   const char *SAF = ".saf.gz";
   const char *SAFPOS =".saf.pos.gz";
@@ -1314,12 +1316,14 @@ void abcSaf::clean(funkyPars *p){
   delete r;
 }
 
-void printFull(funkyPars *p, 
+//return value is now the number of sites used
+//sumBand is now the sum of bins with data
+int printFull(funkyPars *p, 
                int index, 
                BGZF *outfileSFS, 
                BGZF *outfileSFSPOS, 
                char *chr, 
-               int &nnnSites)
+               size_t &sumBand)
 {
   realRes *r = (realRes *) p->extras[index];
   int counter = 0;
@@ -1327,8 +1331,8 @@ void printFull(funkyPars *p,
     if(r->oklist[s]==1 && p->keepSites[s]){
       aio::bgzf_write(outfileSFS, r->pBound[counter], sizeof(int)*2);
       aio::bgzf_write(outfileSFS, r->pLikes[counter], sizeof(float)*r->pBound[counter][1]);
+      sumBand += r->pBound[counter][1];
       counter++;
-      nnnSites++;
     }
   }
 
@@ -1339,6 +1343,7 @@ void printFull(funkyPars *p,
     else if (r->oklist[i]==2)
       fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
   }
+  return counter;
 }
 
 void abcSaf::print(funkyPars *p)
@@ -1392,7 +1397,7 @@ void abcSaf::print(funkyPars *p)
       }
     }
  
-    printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],nnnSites);
+    nnnSites += printFull(p,index,outfileSAF,outfileSAFPOS,header->target_name[p->refId],sumBand);
   }   
 }
 
@@ -1771,6 +1776,7 @@ void abcSaf::writeAll(){
     fwrite(tmpChr,1,clen,outfileSAFIDX);
     size_t tt = nnnSites;
     fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
+    fwrite(&sumBand,sizeof(size_t),1,outfileSAFIDX);
     fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
   }//else
    // fprintf(stderr,"enpty chr\n");
@@ -1779,6 +1785,7 @@ void abcSaf::writeAll(){
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
   nnnSites=0;
+  sumBand = 0;
 }
 
 void abcSaf::changeChr(int refId) {

@@ -29,13 +29,19 @@ void persaf_destroy(persaf *pp)
 
 void writesaf_header(FILE *fp, persaf *pp)
 {
-  fprintf(fp,"\t\tInformation from index file: nChr:%lu nSites:%lu\n", pp->nChr, pp->nSites);
-  
+  if(pp->version==2)
+    fprintf(fp,"\t\tInformation from index file: nChr:%lu nSites:%lu\n", pp->nChr, pp->nSites);
+  if(pp->version==3)
+    fprintf(fp,"\t\tInformation from index file: nChr:%lu nSites:%lu sumBand: %lu\n", pp->nChr, pp->nSites,pp->sumBand);
+      
   int i=0;
   for(myMap::const_iterator it=pp->mm.begin();it!=pp->mm.end();++it)
   {
     datum d = it->second;
-    fprintf(fp,"\t\t%d\t%s\t%zu\t%ld\t%ld\n",i++,it->first,d.nSites,(long int)d.pos,(long int)d.saf);
+    if(pp->version==2)
+      fprintf(fp,"\t\t%d\t%s\t%zu\t%ld\t%ld\n",i++,it->first,d.nSites,(long int)d.pos,(long int)d.saf);
+    if(pp->version==3)
+      fprintf(fp,"\t\t%d\t%s\t%zu\t%lu\t%ld\t%ld\n",i++,it->first,d.nSites,d.sumBand,(long int)d.pos,(long int)d.saf);
   }
 }
 
@@ -80,7 +86,7 @@ persaf * persaf_init(char *fname, int verbose)
   ret->ppos = NULL;
   ret->kind = 0;
   ret->dontRead = 0;
-
+  ret->sumBand = 0;
   size_t clen;
   if(!fexists(fname)){
     fprintf(stderr, "[persaf::persaf_init] Problem opening file: \'%s\'\n", fname);
@@ -97,7 +103,7 @@ persaf * persaf_init(char *fname, int verbose)
   char buf[8];
   assert(fread(buf,1,8,fp)==8);
   ret->version = safversion(fname);
-
+  
   if(verbose)
     fprintf(stderr, "[persaf::persaf_init] Version of %s is %d\n", fname, ret->version);
   if(!(ret->version==2 || ret->version==3)){
@@ -123,6 +129,15 @@ persaf * persaf_init(char *fname, int verbose)
       exit(0);
     }
     ret->nSites += d.nSites;
+    if(ret->version==3){
+      if(1!=fread(&d.sumBand,sizeof(size_t),1,fp)){
+	fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
+	exit(0);
+      }
+      fprintf(stderr,"d.sumband: %d\n",d.sumBand);
+      ret->sumBand += d.sumBand;
+    }
+    
     if(1!=fread(&d.pos,sizeof(int64_t),1,fp)){
       fprintf(stderr,"[%s->%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
       exit(0);

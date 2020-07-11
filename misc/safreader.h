@@ -8,8 +8,9 @@
 #include "header.h"
 
 typedef struct{
-  size_t nSites;
-  size_t nChr;
+  size_t nSites;//sum of all sites
+  size_t sumBand;
+  size_t nChr;//nr of chromosomes(bins)
   myMap mm;
   BGZF *pos;
   BGZF *saf;
