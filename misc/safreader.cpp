@@ -266,8 +266,13 @@ myMap::iterator iter_init(persaf *pp, char *chr, int start, int stop)
   return it;
 }
 
+//style is added to tweak memory usage
+//0) all sites take up nchr+1 floats
+//1) sites only take up band+2.
+//0) allocates only once
+//1) will only allocate what is needed but will need to free and realloc
 template <typename T>
-size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos)
+size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos,int style)
 {
   //   fprintf(stderr,"[%s] kind:%d saf->ppos:%p\n",__FUNCTION__,saf->kind,saf->ppos);//exit(0);
   
@@ -321,4 +326,4 @@ size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos)
   goto reread;
 }
 
-template size_t iter_read(persaf *saf, float *&data, float *buffer, int *pos);
+template size_t iter_read(persaf *saf, float *&data, float *buffer, int *pos,int style);

@@ -503,7 +503,7 @@ void print(int argc,char **argv)
     size_t ret;
     int pos;
 
-    while((ret=iter_read(pars->saf[0], flt, buffer, &pos)))
+    while((ret=iter_read(pars->saf[0], flt, buffer, &pos,0)))
     {
       fprintf(stdout,"%s\t%d", it->first, pos+1);
 
