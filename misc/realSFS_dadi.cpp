@@ -173,4 +173,3 @@ int main_dadi(int argc, char** argv){
 }
 
 template int main_dadi<float>(int ,char**);
-

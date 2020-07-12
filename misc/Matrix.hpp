@@ -49,8 +49,7 @@ Matrix<T> *alloc(size_t x, size_t y){
   ret->x = x;
   ret->y = y;
   ret->mat = new T*[ret->x];
-  for(int i=0; i<ret->x; ++i)
-    ret->mat[i] = NULL;
+  memset(ret->mat,0,sizeof(T*)*ret->x);
   ret->buffer = new T[ret->y];
   ret->x = 0;
   return ret;

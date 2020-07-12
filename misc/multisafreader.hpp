@@ -12,7 +12,7 @@ void readGL(persaf *fp, size_t nSites, size_t dim, Matrix<T> *ret, int *pp, int 
     if(i>0 && (i%howOften)==0)
       fprintf(stderr,"\r\t-> Has read %f million sites now at: %lu      ", howOften/1e6, i);
     int pos;
-    size_t bytes_read = iter_read(fp, ret->mat[i], ret->buffer, &pos,0);
+    size_t bytes_read = iter_read(fp, ret->mat[i], ret->buffer, &pos);
     if(pp!=NULL)
       pp[i] = pos;
     if(bytes_read!=0 && bytes_read < sizeof(T)*ret->mat[i][1])

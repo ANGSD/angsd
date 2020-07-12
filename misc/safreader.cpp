@@ -266,16 +266,9 @@ myMap::iterator iter_init(persaf *pp, char *chr, int start, int stop)
   return it;
 }
 
-//style is added to tweak memory usage
-//0) all sites take up nchr+1 floats
-//1) sites only take up band+2.
-//0) allocates only once
-//1) will only allocate what is needed but will need to free and realloc
 template <typename T>
-size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos,int style)
+size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos)
 {
-  //   fprintf(stderr,"[%s] kind:%d saf->ppos:%p\n",__FUNCTION__,saf->kind,saf->ppos);//exit(0);
-  
   assert(buffer);
   
   int band[2];
@@ -302,7 +295,7 @@ size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos,int style)
     band[0] = 0;
     band[1] = saf->nChr+1;
   }
-
+  //not really sure why this was set conditional of saf->kind
   ret = saf->kind!=1 ? bgzf_read(saf->saf, buffer, band[1]*sizeof(T)) : band[1];
   if(ret==0)
     return ret;
@@ -316,7 +309,11 @@ size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos,int style)
 
   if(saf->toKeep==NULL || saf->toKeep->d[saf->at])
   {
-    data = new float[band[1]+2];
+    if(data==NULL ||band[1]>data[1]){
+      delete [] data;
+      data = new float[band[1]+2];  
+    }
+    
     data[0] = static_cast<T>(band[0]);
     data[1] = static_cast<T>(band[1]);
     memcpy(data+2, buffer, band[1]*sizeof(T));
@@ -326,4 +323,4 @@ size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos,int style)
   goto reread;
 }
 
-template size_t iter_read(persaf *saf, float *&data, float *buffer, int *pos,int style);
+template size_t iter_read(persaf *saf, float *&data, float *buffer, int *pos);

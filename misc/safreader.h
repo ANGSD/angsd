@@ -23,7 +23,7 @@ typedef struct{
   int dontRead;
 }persaf;
 
-template <typename T> size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos,int style);
+template <typename T> size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos);
 template <typename T> persaf* persaf_init(char *fname, int verbose);
 void writesaf_header(FILE *fp, persaf *pp);
 void persaf_destroy(persaf *pp);
