@@ -998,6 +998,7 @@ void abcSaf::algoJoint(double **liks,
     else
     {
       r->oklist[it] = 1;
+      fprintf(stderr,"upper_all: %d lover_all:%d upper_ll-lower_all+1:%d\n",upper_all,lower_all,upper_all-lower_all+1);
       r->pLikes[counter] = new float[upper_all-lower_all+1];
       r->pBound[counter] = new int[2];
 
