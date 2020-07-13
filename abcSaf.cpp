@@ -899,7 +899,7 @@ void abcSaf::algoJoint(double **liks,
 
   if(anc==NULL||liks==NULL)
   {
-    fprintf(stderr, "problems receiving data in [%s] will exit (likes=%p||ancestral=%p)\n", __FUNCTION__, liks, anc);
+    fprintf(stderr, "\t-> problems receiving data in [%s] will exit (likes=%p||ancestral=%p)\n", __FUNCTION__, liks, anc);
     exit(0);
   }
 
@@ -912,6 +912,25 @@ void abcSaf::algoJoint(double **liks,
     { //skip if no ancestral information
       keepSites[it] = 0;
       continue;
+    }
+    {//check that fixing the ancestral produces meaningfull results (anc is not major or minor)
+      //AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
+      double glsum[4]={0,0,0,0};
+      for(int ss=0;ss<numInds;ss++){
+	glsum[0] += liks[it][10*ss];
+	glsum[1] += liks[it][10*ss+4];
+	glsum[2] += liks[it][10*ss+7];
+	glsum[3] += liks[it][10*ss+9];
+      }
+      int howmanysmaller =0;
+      for(int i=0;i<4;i++){
+	//fprintf(stderr,"anc: %d gl[%d]: %f\n",anc[it],i,glsum[i]);
+	  if(glsum[i]<=glsum[anc[it]])
+	    howmanysmaller++;
+      }
+      if(howmanysmaller==2)
+	continue;
+      //fprintf(stderr,"How many smaller: %d\n",howmanysmaller);
     }
 
     for(int j=0; j<numChr+1; j++)
