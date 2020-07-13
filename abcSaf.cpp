@@ -998,7 +998,7 @@ void abcSaf::algoJoint(double **liks,
     else
     {
       r->oklist[it] = 1;
-      fprintf(stderr,"upper_all: %d lover_all:%d upper_ll-lower_all+1:%d\n",upper_all,lower_all,upper_all-lower_all+1);
+      //      fprintf(stderr,"upper_all: %d lover_all:%d upper_ll-lower_all+1:%d\n",upper_all,lower_all,upper_all-lower_all+1);
       r->pLikes[counter] = new float[upper_all-lower_all+1];
       r->pBound[counter] = new int[2];
 
@@ -1341,8 +1341,13 @@ int printFull(funkyPars *p,
     int mypos = p->posi[i];
     if(r->oklist[i]==1&&p->keepSites[i])
       aio::bgzf_write(outfileSFSPOS, &mypos, sizeof(int));
-    else if (r->oklist[i]==2)
-      fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
+    else if (r->oklist[i]==2){
+      if(p->major!=NULL && p->minor!=NULL)
+	fprintf(stderr,"PROBS at: %s\t%d anc: %d major: %d minor: %d\n",chr,p->posi[i]+1,p->anc[i],p->major[i],p->minor[i]);
+      else
+	fprintf(stderr,"PROBS at: %s\t%d\n",chr,p->posi[i]+1);
+
+    }
   }
   return counter;
 }
