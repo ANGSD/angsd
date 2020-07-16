@@ -882,23 +882,24 @@ void abcSaf::algoJoint(double **liks,
       keepSites[it] = 0;
       continue;
     }
-    {//check that fixing the ancestral produces meaningfull results (anc is not major or minor)
+
+    { //check that fixing the ancestral produces meaningful results (anc is not major or minor)
       //AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
-      double glsum[4]={0,0,0,0};
-      for(int ss=0;ss<numInds;ss++){
-	glsum[0] += liks[it][10*ss];
-	glsum[1] += liks[it][10*ss+4];
-	glsum[2] += liks[it][10*ss+7];
-	glsum[3] += liks[it][10*ss+9];
+      double glsum[4] = {0,0,0,0};
+      for(int ss=0; ss<numInds; ss++){
+        glsum[0] += liks[it][10*ss];
+        glsum[1] += liks[it][10*ss+4];
+        glsum[2] += liks[it][10*ss+7];
+        glsum[3] += liks[it][10*ss+9];
       }
-      int howmanysmaller =0;
-      for(int i=0;i<4;i++){
-	//fprintf(stderr,"anc: %d gl[%d]: %f\n",anc[it],i,glsum[i]);
-	  if(glsum[i]<=glsum[anc[it]])
-	    howmanysmaller++;
+      int howmanysmaller = 0;
+      for(int i=0; i<4; i++){
+        //fprintf(stderr,"anc: %d gl[%d]: %f\n",anc[it],i,glsum[i]);
+        if(glsum[i]<=glsum[anc[it]])
+          howmanysmaller++;
       }
       if(howmanysmaller==2)
-	continue;
+        continue;
       //fprintf(stderr,"How many smaller: %d\n",howmanysmaller);
     }
 
@@ -982,7 +983,6 @@ void abcSaf::algoJoint(double **liks,
     else
     {
       r->oklist[it] = 1;
-      //      fprintf(stderr,"upper_all: %d lover_all:%d upper_ll-lower_all+1:%d\n",upper_all,lower_all,upper_all-lower_all+1);
       r->pLikes[counter] = new float[upper_all-lower_all+1];
       r->pBound[counter] = new int[2];
 
