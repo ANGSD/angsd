@@ -30,8 +30,8 @@ class abcSaf : public abc{
   char *tmpChr;
   void algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r);
   void algoGeno(int refId,double **liks,char *major,char *minor,int nsites,int numInds,kstring_t *sfsfile,int underFlowProtect, int *posi,int *keepSites,double *pest);
-  void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans);
-  void algoJointHap(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans);
+  void algoJoint(double **liks,char *anc,int nsites,int numInds, int *keepSites,realRes *r,int noTrans);
+  void algoJointHap(double **liks,char *anc,int nsites,int numInds, int *keepSites,realRes *r,int noTrans);
   void algoJointMajorMinor(double **liks,int nsites,int numInds, int *keepSites,realRes *r, char *major, char *minor);
   void algoJointMajorMinorHap(double **liks,int nsites,int numInds, int *keepSites,realRes *r, char *major, char *minor);
 
