@@ -328,6 +328,7 @@ void info() {
   fprintf(stderr,"\t\t-errate\tThe sequencing error rate [0.0075]\n");
   fprintf(stderr,"\t\t-depth\tMean sequencing depth [5]\n");
   fprintf(stderr,"\t\t-pvar\tProbability that a site is variable in the population [0.015]\n");
+  fprintf(stderr,"\t\t-div\tProbability that an invariable site is not the ancestral allele default 0\n");
   fprintf(stderr,"\t\t-mfreq\tMinimum population frequency [0.0001]\n");
   fprintf(stderr,"\t\t-F\tinbreeding coefficient for each population [0]\n");
   fprintf(stderr,"\t\t-model\t0=fixed errate 1=variable errate [1]\n");
@@ -356,6 +357,7 @@ int main(int argc, char *argv[]) { // read input parameters
   double pfreq=0.0, pfreq1=0.0, pfreq2=0.0, pvar= 0.015, meandepth = 5, errate = 0.0075, F=0.0, F1=0.0, F2=0.0, minfreq=0.0001;
   double basefreq[4] = {0.25, 0.25, 0.25, 0.25}; // background frequencies
   int nthreads = 4;
+  float divergence= 0;
   // as pointers
 /*  int *freqspec = NULL; // whole sample
   int *freqspec1 = NULL; // 1st pop
@@ -422,6 +424,7 @@ int main(int argc, char *argv[]) { // read input parameters
     else if(strcmp(argv[argPos],"-errate")==0)   errate  = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-depth")==0) meandepth  = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-pvar")==0)  pvar  = atof(argv[argPos+1]);
+    else if(strcmp(argv[argPos],"-div")==0)  divergence  = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-@")==0)  nthreads  = atoi(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-mfreq")==0)  minfreq  = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-outfiles")==0) outfiles  = (argv[argPos+1]);
@@ -456,7 +459,7 @@ int main(int argc, char *argv[]) { // read input parameters
   myConst = -log(minfreq);
   
   // print input arguments
-  fprintf(stderr,"\t->Using args: -npop %d -nind %d -nind1 %d -nind2 %d -errate %f -depth %f -pvar %f -mfreq %f -nsites %d -F %f -F1 %f -F2 %f -model %d -simpleRand %d -base_freq %f %f %f %f\n", npop, nind, nind1, nind2, errate, meandepth, pvar, minfreq, nsites, F, F1, F2, model, simpleRand, basefreq[0], basefreq[1], basefreq[2], basefreq[3]); 
+  fprintf(stderr,"\t->Using args: -npop %d -nind %d -nind1 %d -nind2 %d -errate %f -depth %f -pvar %f -mfreq %f -nsites %d -F %f -F1 %f -F2 %f -model %d -simpleRand %d -base_freq %f %f %f %f -@ %d -div %f\n", npop, nind, nind1, nind2, errate, meandepth, pvar, minfreq, nsites, F, F1, F2, model, simpleRand, basefreq[0], basefreq[1], basefreq[2], basefreq[3],nthreads,divergence); 
   
   /// output files
   //   and  get gz and file
@@ -508,7 +511,7 @@ int main(int argc, char *argv[]) { // read input parameters
   }
 
   // write args file
-  fprintf(argfile,"\t->Using args: -npop %d -nind %d -nind1 %d -nind2 %d -errate %f -depth %f -pvar %f -mfreq %f -nsites %d -F %f -F1 %f -F2 %f -model %d -simpleRand %d -base_freq %f %f %f %f\n", npop, nind, nind1, nind2, errate, meandepth, pvar, minfreq, nsites, F, F1, F2, model, simpleRand, basefreq[0], basefreq[1], basefreq[2], basefreq[3]); 
+  fprintf(argfile,"\t->Using args: -npop %d -nind %d -nind1 %d -nind2 %d -errate %f -depth %f -pvar %f -mfreq %f -nsites %d -F %f -F1 %f -F2 %f -model %d -simpleRand %d -base_freq %f %f %f %f -@ %d -div %f\n", npop, nind, nind1, nind2, errate, meandepth, pvar, minfreq, nsites, F, F1, F2, model, simpleRand, basefreq[0], basefreq[1], basefreq[2], basefreq[3],nthreads,divergence); 
 
   /// COMPUTE
   
@@ -546,8 +549,10 @@ int main(int argc, char *argv[]) { // read input parameters
 
       var=0; // not variable (boolean)
       // assign alleles to genotype
-      genotype[0]=genotype[1]=0; // all ancestral A
-
+      if(uniform()>divergence)
+	genotype[0]=genotype[1]=0; // all ancestral A
+      else
+	genotype[0]=genotype[1]=3; // all ancestral A
       /*debug code*/
       basecheck[genotype[0]] = 2*nind; // all individuals are monorphic for ancestral A, basechecks are arrays of 4 elements counting the nr of alleles 0,1,2,3
       if (npop==2) {
