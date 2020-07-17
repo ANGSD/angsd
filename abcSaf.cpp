@@ -898,7 +898,7 @@ void abcSaf::algoJoint(double **liks,
         if(glsum[i]<=glsum[anc[it]])
           howmanysmaller++;
       }
-      if(howmanysmaller==2)
+      if(0&&howmanysmaller==2)
         continue;
       //fprintf(stderr,"How many smaller: %d\n",howmanysmaller);
     }
