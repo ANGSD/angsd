@@ -285,37 +285,27 @@ double logSumExp (double a, double b)
   return log(a + b) + mx;
 }
 
-double saf_like_hap (double *p, double *h, int N, int j, int underFlowProtect)
+double saf_like_hap (double *p, double *h, int N, int j)
 {
   double tmp;
-  tmp = underFlowProtect ? NEG_INF : 0.;
+  tmp = 0.;
 
   if(j >= 0 && j < N)
-  {
-    if(underFlowProtect)
-      tmp = logSumExp(tmp, log(N-j) + p[0] + h[j]);
-    else
-      tmp += (N-j)*p[0]*h[j];
-  }
+    tmp += (N-j)*p[0]*h[j];
 
   if(j-1 >= 0)
-  {
-      if(underFlowProtect)
-        tmp = logSumExp(tmp, log(j) + p[1] + h[j-1]);
-      else
-        tmp += j*p[1]*h[j-1];
-  }
+    tmp += j*p[1]*h[j-1];
 
   if(std::isnan(tmp))
   {
     fprintf(stderr, "is nan: %d\n", j);
-    tmp = underFlowProtect ? NEG_INF : 0.;
+    tmp = 0.;
   }
 
   return tmp;
 }
 
-void banded_saf_algo_hap (double* hj, int& lower, int& upper, double* p, const int i, const int numChr, const int underFlowProtect, const double tol)
+void banded_saf_algo_hap (double* hj, int& lower, int& upper, double* p, const int i, const int numChr, const double tol)
 {
   int mle = p[0] > p[1] ? 0 : 1; //missing: 1
   lower += mle;
@@ -323,97 +313,80 @@ void banded_saf_algo_hap (double* hj, int& lower, int& upper, double* p, const i
 
   while (true)
   {
-    if (lower == 0 || saf_like_hap(p, hj, numChr, lower, underFlowProtect) < (underFlowProtect ? log(tol) : tol))
+    if (lower == 0 || saf_like_hap(p, hj, numChr, lower) < tol)
       break;
     lower -= 1;
   }
 
   while (true)
   {
-    if (upper == numChr || saf_like_hap(p, hj, numChr, upper, underFlowProtect) < (underFlowProtect ? log(tol) : tol))
+    if (upper == numChr || saf_like_hap(p, hj, numChr, upper) < tol)
       break;
     upper += 1;
   }
 
   for (int j=upper; j>=lower; --j)
-    hj[j] = saf_like_hap (p, hj, numChr, j, underFlowProtect);
+    hj[j] = saf_like_hap (p, hj, numChr, j);
 }
 
-void saf_algo_hap (double* hj, int& lower, int& upper, double& sm, double& score_tol, double* p, const int i, const int numChr, const int underFlowProtect)
+void saf_algo_hap (double* hj, int& lower, int& upper, double& sm, double& score_tol, double* p, const int i, const int numChr)
 {
   int lower_old = lower,
       upper_old = upper;
 
-  banded_saf_algo_hap(hj, lower, upper, p, i, numChr, underFlowProtect, score_tol);
+  banded_saf_algo_hap(hj, lower, upper, p, i, numChr, score_tol);
 
   // normalize
   double den = 0.;
   for (int j=lower; j<=upper; ++j)
-    den = underFlowProtect ? logSumExp(den, hj[j]) : den + hj[j];
+    if (hj[j] > den)
+      den = hj[j];
   for (int j=lower; j<=upper; ++j)
-    hj[j] = underFlowProtect ? hj[j] - den : hj[j] / den;
+    hj[j] /= den;
 
   // clean up edges
   for (int j=lower_old; j<lower; ++j) 
-    hj[j] = underFlowProtect ? NEG_INF : 0.;
+    hj[j] = 0.;
   for (int j=upper_old; j>upper; --j) 
-    hj[j] = underFlowProtect ? NEG_INF : 0.;
+    hj[j] = 0.;
 
   // track normalizing constant
-  if (underFlowProtect)
-    sm += den;
-  else
-    sm += log(den);
+  sm += log(den);
 }
 
-double saf_like_dip (double *p, double *h, int N, int j, int underFlowProtect)
+double saf_like_dip (double *p, double *h, int N, int j)
 {
   double tmp;
-  tmp = underFlowProtect ? NEG_INF : 0.;
+  tmp = 0.;
 
   if(j >= 0 && j < N)
-  {
-    if(underFlowProtect)
-      tmp = logSumExp(tmp, log((N-j)*(N-j-1)) + p[0] + h[j]);
-    else
-      tmp += (N-j)*(N-j-1)*p[0]*h[j];
-  }
+    tmp += (N-j)*(N-j-1)*p[0]*h[j];
 
   if(j-1 >= 0 && j < N)
-  {
-      if(underFlowProtect)
-        tmp = logSumExp(tmp, log(2 * j) + log(N-j) + p[1] + h[j-1]);
-      else
-        tmp += 2*j*(N-j)*p[1]*h[j-1];
-  }
+    tmp += 2*j*(N-j)*p[1]*h[j-1];
 
   if(j-2 >= 0 && j <= N)
-  {
-    if(underFlowProtect)
-      tmp = logSumExp(tmp, log(j) + log(j-1) + p[2] + h[j-2]);
-    else
-      tmp += j*(j-1)*p[2]*h[j-2];
-  }
+    tmp += j*(j-1)*p[2]*h[j-2];
 
   if(std::isnan(tmp))
   {
     fprintf(stderr, "is nan: %d\n", j);
-    tmp = underFlowProtect ? NEG_INF : 0.;
+    tmp = 0.;
   }
 
   return tmp;
 }
 
-void vanilla_saf_algo_dip (double* hj, int& lower, int& upper, double* p, const int i, const int numChr, const int underFlowProtect, const double tol)
+void vanilla_saf_algo_dip (double* hj, int& lower, int& upper, double* p, const int i, const int numChr, const double tol)
 {
   lower = 0;
   upper = 2*(i+1);
   
   for(int j=upper; j>=lower; j--)
-    hj[j] = saf_like_dip(p, hj, numChr, j, underFlowProtect);
+    hj[j] = saf_like_dip(p, hj, numChr, j);
 }
 
-void banded_saf_algo_dip (double* hj, int& lower, int& upper, double* p, const int i, const int numChr, const int underFlowProtect, const double tol)
+void banded_saf_algo_dip (double* hj, int& lower, int& upper, double* p, const int i, const int numChr, const double tol)
 {
   int mle = (p[0] > p[1] && p[0] > p[2]) ? 0 : (p[1] > p[2] ? 1 : 2); //missing: 2
   lower += mle;
@@ -421,23 +394,23 @@ void banded_saf_algo_dip (double* hj, int& lower, int& upper, double* p, const i
 
   while (true)
   {
-    if (lower == 0 || saf_like_dip(p, hj, numChr, lower, underFlowProtect) < (underFlowProtect ? log(tol) : tol))
+    if (lower == 0 || saf_like_dip(p, hj, numChr, lower) < tol)
       break;
     lower -= 1;
   }
 
   while (true)
   {
-    if (upper == numChr || saf_like_dip(p, hj, numChr, upper, underFlowProtect) < (underFlowProtect ? log(tol) : tol))
+    if (upper == numChr || saf_like_dip(p, hj, numChr, upper) < tol)
       break;
     upper += 1;
   }
 
   for (int j=upper; j>=lower; --j)
-    hj[j] = saf_like_dip (p, hj, numChr, j, underFlowProtect);
+    hj[j] = saf_like_dip (p, hj, numChr, j);
 }
 
-void saf_algo_dip (double* hj, int& lower, int& upper, double& sm, double& score_tol, double* p, const int i, const int numChr, const int underFlowProtect)
+void saf_algo_dip (double* hj, int& lower, int& upper, double& sm, double& score_tol, double* p, const int i, const int numChr)
 {
   int lower_old = lower,
       upper_old = upper;
@@ -446,41 +419,35 @@ void saf_algo_dip (double* hj, int& lower, int& upper, double& sm, double& score
     score_tol = 0.; //this will force all future updates for this site to pass over all bins
 
   if (score_tol > 0.)
-    banded_saf_algo_dip(hj, lower, upper, p, i, numChr, underFlowProtect, score_tol);
+    banded_saf_algo_dip(hj, lower, upper, p, i, numChr, score_tol);
   else
-    vanilla_saf_algo_dip(hj, lower, upper, p, i, numChr, underFlowProtect, score_tol);
+    vanilla_saf_algo_dip(hj, lower, upper, p, i, numChr, score_tol);
 
   // normalize
   double den = 0.;
   for (int j=lower; j<=upper; ++j)
-    den = underFlowProtect ? logSumExp(den, hj[j]) : den += hj[j];
+    if (hj[j] > den) 
+      den = hj[j];
   for (int j=lower; j<=upper; ++j)
-    hj[j] = underFlowProtect ? hj[j] - den : hj[j] / den;
+    hj[j] /= den;
 
   // clean up edges
   for (int j=lower_old; j<lower; ++j) 
-    hj[j] = underFlowProtect ? NEG_INF : 0.;
+    hj[j] = 0.;
   for (int j=upper_old; j>upper; --j) 
-    hj[j] = underFlowProtect ? NEG_INF : 0.;
+    hj[j] = 0.;
 
   // track normalizing constant
-  if (underFlowProtect)
-    sm += den;
-  else
-    sm += log(den);
+  sm += log(den);
 }
 
-void saf_sparsify_and_normalize (double* hj, int& lower, int& upper, const int underFlowProtect, const double tol)
+void saf_sparsify_and_normalize (double* hj, int& lower, int& upper, const double tol)
 {
-  // put in logspace and rescale
+  // rescale in logspace
   double mx = NEG_INF;
   for (int j=lower; j<=upper; ++j)
-  {
-    if (!underFlowProtect)
-      hj[j] = log(hj[j]);
     if (hj[j] > mx)
       mx = hj[j];
-  }
   for (int j=lower; j<=upper; ++j)
     hj[j] -= mx;
 
@@ -497,6 +464,13 @@ void saf_sparsify_and_normalize (double* hj, int& lower, int& upper, const int u
       upper = j;
     if (big_enough && j < lower)
       lower = j;
+  }
+
+  if (lower == upper0 || upper == lower0)
+  { // unlikely, but could happen if there's underflow
+    lower = lower0;
+    upper = upper0;
+    fprintf(stderr, "\t->banding failed\n");
   }
 }
 
@@ -726,10 +700,10 @@ void abcSaf::algoJointPost(double **post,
       p[0] = liks[i*3];
       p[1] = liks[i*3+1];
       p[2] = liks[i*3+2];
-      saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1), false);
+      saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1));
     }
 
-    saf_sparsify_and_normalize (hj, lower, upper, false, scoreTol);
+    saf_sparsify_and_normalize (hj, lower, upper, scoreTol);
 
     if(std::isnan(hj[lower]))
       r->oklist[s] = 2;
@@ -762,7 +736,6 @@ void abcSaf::algoJointPost(double **post,
 void abcSaf::algoJointHap(double **liks,
                           char *anc,int nsites,
                           int numInds,
-                          int underFlowProtect, 
                           int *keepSites,
                           realRes *r,
                           int noTrans) 
@@ -788,7 +761,7 @@ void abcSaf::algoJointHap(double **liks,
     }
 
     for(int j=0; j<numChr+1; j++)
-      sumMinors[j] = underFlowProtect ? NEG_INF : 0.;
+      sumMinors[j] = NEG_INF;
 
     int lower_all = numChr,
         upper_all = 0;
@@ -814,7 +787,7 @@ void abcSaf::algoJointHap(double **liks,
       double p[2];
       double score_tol = scoreTol;
       double hj[numChr+1];
-      for(int j=0; j<numChr+1; j++) hj[j] = underFlowProtect ? NEG_INF : 0.;
+      for(int j=0; j<numChr+1; j++) hj[j] = 0.;
       int lower = 0,
           upper = 1;
 
@@ -827,10 +800,8 @@ void abcSaf::algoJointHap(double **liks,
         double mx = p[1] > p[0] ? p[1] : p[0];
         tmx += mx;
 	  
-        p[0] = mx < MINLIKE ? 0. : p[0] - mx;
-        p[1] = mx < MINLIKE ? 0. : p[1] - mx;
-        p[0] = underFlowProtect ? p[0] : exp(p[0]);
-        p[1] = underFlowProtect ? p[1] : exp(p[1]);
+        p[0] = mx < MINLIKE ? 0. : exp(p[0] - mx);
+        p[1] = mx < MINLIKE ? 0. : exp(p[1] - mx);
 
         //check for underflow error, this should only occur once in a blue moon
         if(std::isnan(p[0])||std::isnan(p[1]))
@@ -842,13 +813,11 @@ void abcSaf::algoJointHap(double **liks,
           hj[1] = p[1];
         }
         else
-          saf_algo_hap(hj, lower, upper, tmx, score_tol, p, i, i+1, underFlowProtect);
+          saf_algo_hap(hj, lower, upper, tmx, score_tol, p, i, i+1);
       }
       
       for(int j=lower; j<=upper; j++)
-        sumMinors[j] = underFlowProtect ? 
-          logSumExp(sumMinors[j], hj[j]+tmx) : 
-          sumMinors[j] + exp(log(hj[j])+tmx);
+        sumMinors[j] = logSumExp(sumMinors[j], log(hj[j])+tmx);
 
       if (lower < lower_all)
         lower_all = lower;
@@ -856,7 +825,7 @@ void abcSaf::algoJointHap(double **liks,
         upper_all = upper;
     }
 
-    saf_sparsify_and_normalize (sumMinors, lower_all, upper_all, underFlowProtect, scoreTol);
+    saf_sparsify_and_normalize (sumMinors, lower_all, upper_all, scoreTol);
 
     if(std::isnan(sumMinors[lower_all]))
       r->oklist[it] = 2;
@@ -889,7 +858,6 @@ void abcSaf::algoJoint(double **liks,
                        char *anc, 
                        int nsites, 
                        int numInds,
-                       int underFlowProtect, 
                        int *keepSites,
                        realRes *r,
                        int noTrans) 
@@ -905,7 +873,8 @@ void abcSaf::algoJoint(double **liks,
 
   double sumMinors[numChr+1]; //the sum of the 3 different minors
 
-  for(int it=0; it<nsites; it++) {//loop over sites
+  for(int it=0; it<nsites; it++) 
+  { //loop over sites
 
     int major_offset = anc[it];
     if(major_offset==4 || keepSites[it]==0)
@@ -913,31 +882,33 @@ void abcSaf::algoJoint(double **liks,
       keepSites[it] = 0;
       continue;
     }
-    {//check that fixing the ancestral produces meaningfull results (anc is not major or minor)
+
+    { //check that fixing the ancestral produces meaningful results (anc is not major or minor)
       //AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
-      double glsum[4]={0,0,0,0};
-      for(int ss=0;ss<numInds;ss++){
-	glsum[0] += liks[it][10*ss];
-	glsum[1] += liks[it][10*ss+4];
-	glsum[2] += liks[it][10*ss+7];
-	glsum[3] += liks[it][10*ss+9];
+      double glsum[4] = {0,0,0,0};
+      for(int ss=0; ss<numInds; ss++){
+        glsum[0] += liks[it][10*ss];
+        glsum[1] += liks[it][10*ss+4];
+        glsum[2] += liks[it][10*ss+7];
+        glsum[3] += liks[it][10*ss+9];
       }
-      int howmanysmaller =0;
-      for(int i=0;i<4;i++){
-	//fprintf(stderr,"anc: %d gl[%d]: %f\n",anc[it],i,glsum[i]);
-	  if(glsum[i]<=glsum[anc[it]])
-	    howmanysmaller++;
+      int howmanysmaller = 0;
+      for(int i=0; i<4; i++){
+        //fprintf(stderr,"anc: %d gl[%d]: %f\n",anc[it],i,glsum[i]);
+        if(glsum[i]<=glsum[anc[it]])
+          howmanysmaller++;
       }
       if(howmanysmaller==2)
-	continue;
+        continue;
       //fprintf(stderr,"How many smaller: %d\n",howmanysmaller);
     }
 
     for(int j=0; j<numChr+1; j++)
-      sumMinors[j] = underFlowProtect ? NEG_INF : 0.;
+      sumMinors[j] = NEG_INF;
 
     int lower_all = numChr,
         upper_all = 0;
+
     
     //loop through the 3 different minors
     for(int minor_offset=0; minor_offset<4; minor_offset++) 
@@ -953,7 +924,7 @@ void abcSaf::algoJoint(double **liks,
           continue;
       }
 
-      double tmx = 0.;
+      double tmx = 0.; //denominator in logspace
       int Aa_offset = angsd::majorminor[minor_offset][major_offset];
       int AA_offset = angsd::majorminor[minor_offset][minor_offset];
       int aa_offset = angsd::majorminor[major_offset][major_offset];
@@ -961,7 +932,7 @@ void abcSaf::algoJoint(double **liks,
       double p[3];
       double score_tol = scoreTol;
       double hj[numChr+1];
-      for(int j=0; j<numChr+1; j++) hj[j] = underFlowProtect ? NEG_INF : 0.;
+      for(int j=0; j<numChr+1; j++) hj[j] = 0.;
       int lower = 0,
           upper = 2;
 
@@ -978,12 +949,9 @@ void abcSaf::algoJoint(double **liks,
         else mx = p[0];
         tmx += mx;
 	  
-        p[0] = mx < MINLIKE ? 0. : p[0] - mx;
-        p[1] = mx < MINLIKE ? 0. : p[1] - mx;
-        p[2] = mx < MINLIKE ? 0. : p[2] - mx;
-        p[0] = underFlowProtect ? p[0] : exp(p[0]);
-        p[1] = underFlowProtect ? p[1] : exp(p[1]);
-        p[2] = underFlowProtect ? p[2] : exp(p[2]);
+        p[0] = mx < MINLIKE ? 1. : exp(p[0] - mx);
+        p[1] = mx < MINLIKE ? 1. : exp(p[1] - mx);
+        p[2] = mx < MINLIKE ? 1. : exp(p[2] - mx);
 
         //check for underflow error, this should only occur once in a blue moon
         if(std::isnan(p[0])||std::isnan(p[1])||std::isnan(p[2]))
@@ -996,13 +964,11 @@ void abcSaf::algoJoint(double **liks,
           hj[2] = p[2];
         }
         else
-          saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1), underFlowProtect);
+          saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1));
       }
 
       for(int j=lower; j<=upper; j++)
-        sumMinors[j] = underFlowProtect ? 
-          logSumExp(sumMinors[j], hj[j]+tmx) : 
-          sumMinors[j] + exp(log(hj[j])+tmx);
+        sumMinors[j] = logSumExp(sumMinors[j], log(hj[j])+tmx);
 
       if (lower < lower_all)
         lower_all = lower;
@@ -1010,14 +976,13 @@ void abcSaf::algoJoint(double **liks,
         upper_all = upper;
     }
 
-    saf_sparsify_and_normalize (sumMinors, lower_all, upper_all, underFlowProtect, scoreTol);
+    saf_sparsify_and_normalize (sumMinors, lower_all, upper_all, scoreTol);
 
     if(std::isnan(sumMinors[lower_all]))
       r->oklist[it] = 2;
     else
     {
       r->oklist[it] = 1;
-      //      fprintf(stderr,"upper_all: %d lover_all:%d upper_ll-lower_all+1:%d\n",upper_all,lower_all,upper_all-lower_all+1);
       r->pLikes[counter] = new float[upper_all-lower_all+1];
       r->pBound[counter] = new int[2];
 
@@ -1087,7 +1052,7 @@ void abcSaf::algoJointMajorMinor(double **liks,
     double p[3];
     double score_tol = scoreTol;
     double hj[numChr+1];
-    for(int j=0; j<numChr+1; j++) hj[j] = underFlowProtect ? NEG_INF : 0.;
+    for(int j=0; j<numChr+1; j++) hj[j] = 0.;
     int lower = 0,
         upper = 2;
 
@@ -1104,12 +1069,9 @@ void abcSaf::algoJointMajorMinor(double **liks,
       else mx = p[0];
       tmx += mx;
 
-      p[0] = mx < MINLIKE ? 0. : p[0] - mx;
-      p[1] = mx < MINLIKE ? 0. : p[1] - mx;
-      p[2] = mx < MINLIKE ? 0. : p[2] - mx;
-      p[0] = underFlowProtect ? p[0] : exp(p[0]);
-      p[1] = underFlowProtect ? p[1] : exp(p[1]);
-      p[2] = underFlowProtect ? p[2] : exp(p[2]);
+      p[0] = mx < MINLIKE ? 0. : exp(p[0] - mx);
+      p[1] = mx < MINLIKE ? 0. : exp(p[1] - mx);
+      p[2] = mx < MINLIKE ? 0. : exp(p[2] - mx);
 
       //check for underflow error, this should only occur once in a blue moon
       if(std::isnan(p[0])||std::isnan(p[1])||std::isnan(p[2]))
@@ -1122,13 +1084,13 @@ void abcSaf::algoJointMajorMinor(double **liks,
         hj[2] = p[2];
       }
       else
-        saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1), underFlowProtect);
+        saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1));
     }
 
     for(int j=lower; j<=upper; j++)
-      hj[j] = underFlowProtect ? hj[j]+tmx : exp(log(hj[j])+tmx);
+      hj[j] = log(hj[j]) + tmx;
 
-    saf_sparsify_and_normalize (hj, lower, upper, underFlowProtect, scoreTol);
+    saf_sparsify_and_normalize (hj, lower, upper, scoreTol);
 
     if(std::isnan(hj[lower]))
       r->oklist[it] = 2;
@@ -1203,7 +1165,7 @@ void abcSaf::algoJointMajorMinorHap(double **liks,
     double p[2];
     double score_tol = scoreTol;
     double hj[numChr+1];
-    for(int j=0; j<numChr+1; j++) hj[j] = underFlowProtect ? NEG_INF : 0.;
+    for(int j=0; j<numChr+1; j++) hj[j] = 0.;
     int lower = 0,
         upper = 1;
 
@@ -1216,10 +1178,8 @@ void abcSaf::algoJointMajorMinorHap(double **liks,
       double mx = p[1] > p[0] ? p[1] : p[0];
       tmx += mx;
 
-      p[0] = mx < MINLIKE ? 0. : p[0] - mx;
-      p[1] = mx < MINLIKE ? 0. : p[1] - mx;
-      p[0] = underFlowProtect ? p[0] : exp(p[0]);
-      p[1] = underFlowProtect ? p[1] : exp(p[1]);
+      p[0] = mx < MINLIKE ? 0. : exp(p[0] - mx);
+      p[1] = mx < MINLIKE ? 0. : exp(p[1] - mx);
 
       //check for underflow error, this should only occur once in a blue moon
       if(std::isnan(p[0])||std::isnan(p[1]))
@@ -1231,13 +1191,13 @@ void abcSaf::algoJointMajorMinorHap(double **liks,
         hj[1] = p[1];
       }
       else
-        saf_algo_hap(hj, lower, upper, tmx, score_tol, p, i, i+1, underFlowProtect);
+        saf_algo_hap(hj, lower, upper, tmx, score_tol, p, i, i+1);
     }
 
     for(int j=lower; j<=upper; j++)
-      hj[j] = underFlowProtect ? hj[j]+tmx : exp(log(hj[j])+tmx);
+      hj[j] = log(hj[j]) + tmx;
 
-    saf_sparsify_and_normalize (hj, lower, upper, underFlowProtect, scoreTol);
+    saf_sparsify_and_normalize (hj, lower, upper, scoreTol);
 
     if(std::isnan(hj[lower]))
       r->oklist[it] = 2;
@@ -1291,16 +1251,18 @@ void abcSaf::run(funkyPars  *p){
     r->pBound=new int*[p->numSites];
     
     if(doSaf==1&&isHap==0)
-      algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans);
+      algoJoint(p->likes,p->anc,p->numSites,p->nInd,p->keepSites,r,noTrans);
     else if(doSaf==1&&isHap==1)
-      algoJointHap(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans);
+      algoJointHap(p->likes,p->anc,p->numSites,p->nInd,p->keepSites,r,noTrans);
     else if(doSaf==2){
       freqStruct *freq = (freqStruct *) p->extras[6];
       filipe::algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans,doSaf,p->major,p->minor,freq->freq,filipeIndF,newDim);
     }else if(doSaf==4){
       algoJointPost(p->post,p->numSites,p->nInd,p->keepSites,r);
-    }else if(doSaf==5){
+    }else if(doSaf==5&&isHap==0){
       algoJointMajorMinor(p->likes,p->numSites,p->nInd,p->keepSites,r,p->major,p->minor);
+    }else if(doSaf==5&&isHap==1){
+      algoJointMajorMinorHap(p->likes,p->numSites,p->nInd,p->keepSites,r,p->major,p->minor);
     }
 
     p->extras[index] = r;
