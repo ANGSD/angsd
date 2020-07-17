@@ -135,7 +135,7 @@ persaf * persaf_init(char *fname, int verbose)
 	fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
 	exit(0);
       }
-      fprintf(stderr,"d.sumband: %d\n",d.sumBand);
+      //      fprintf(stderr,"d.sumband: %d\n",d.sumBand);
       ret->sumBand += d.sumBand;
     }
     

@@ -1090,7 +1090,6 @@ int main(int argc,char **argv)
     print<float>(--argc,++argv);
   else if(!strcasecmp(*argv,"cat"))
   {
-    fprintf(stderr,"not implemented yet for safv4, exiting\n");
     saf_cat(--argc,++argv);
   }
   else if(!strcasecmp(*argv,"fst"))

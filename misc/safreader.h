@@ -14,7 +14,7 @@ typedef struct{
   myMap mm;
   BGZF *pos;
   BGZF *saf;
-  int version;
+  int version;//safv3 = 2, safv4=3; abit stupid the v doesn follow safv
   keep<char> *toKeep;
   int at;
   int *ppos;
