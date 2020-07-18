@@ -101,7 +101,8 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     if(rghash){
       uint8_t *rg = bam_aux_get(b, "RG");
       int keep = (rg && khash_str2int_get(rghash, (const char*)(rg+1), NULL)==0);
-      //      fprintf(stderr,"rg:%s keep:%d\n",rg,keep);
+      if(0&&keep)
+	fprintf(stderr,"rg:%s keep:%d\n",rg,keep);
       if (keep==0) goto bam_iter_reread;
 
     }
