@@ -461,7 +461,7 @@ funkyPars *vcfReader::fetch(int chunkSize) {
     //skip nonsnips
     if(isindel(hs->hdr,rec)){
       if(onlyprint>0){
-	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",rec->pos+1);
+	fprintf(stderr,"\t Skipping due to non snp pos:%lld (this message will be silenced after 10 sites)\n",rec->pos+1);
 	onlyprint--;
       }
       continue;

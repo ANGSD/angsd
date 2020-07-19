@@ -404,7 +404,7 @@ funkyPars *bgenReader::fetch(int chunksize){
     if(isindel(bgen)){
       prevChr=curChr;
       if(onlyPrint>0){
-	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",r->posi+1);
+	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",r->posi[0]+1);//<-should it be pos[?]?
 	onlyPrint--;
       }      
       continue;
