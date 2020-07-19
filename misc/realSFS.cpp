@@ -1110,7 +1110,6 @@ int main(int argc,char **argv)
   }
   else if(!strcasecmp(*argv,"check"))
   {
-    fprintf(stderr,"not implemented yet for safv4, exiting\n");
     saf_check(--argc,++argv);
   }
   else if(!strcasecmp(*argv,"print_header"))
