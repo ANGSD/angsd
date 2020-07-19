@@ -313,7 +313,7 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   kstring_t buf;
   buf.s=NULL;
   buf.l=buf.m=0;
-  fp=aio::openFileHts(outfiles,".bcf");
+  fp=aio::openFileHtsBcf(outfiles,".bcf");
   
   rec    = bcf_init1();
   if(arguments->inputtype==INPUT_BAM){
