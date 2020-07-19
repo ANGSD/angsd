@@ -33,8 +33,11 @@ int redo_baq =0;
 int cigstat =0;
 void *rghash=NULL;
 char *rghash_name=NULL;
+char *libname = NULL;
 int setqscore = -1;
 
+std::map<char*,int,ltstr> LBS;
+ 
 int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,const aMap *revMap) {
   aMap::const_iterator it;
   if(strrchr(extra,':')==NULL){//only chromosomename
@@ -165,6 +168,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
   fprintf(argFile,"\t--ignore-RG\t%d\t(dev only)\n",MPLP_IGNORE_RG);
   fprintf(argFile,"\t+RG\t\t%s\tReadgroups to include in analysis(can be filename)\n",rghash_name);
+  fprintf(argFile,"\t+LB\t\t%s\tLibraries to include in analysis(can be filename)\n",libname);
   
   fprintf(argFile,"\n");
   fprintf(argFile,"Examples for region specification:\n");
@@ -199,6 +203,7 @@ void setArgsBam(argStruct *arguments){
   arguments->ref=angsd::getArg("-ref",arguments->ref,arguments);
   arguments->anc=angsd::getArg("-anc",arguments->anc,arguments);
   rghash_name= angsd::getArg("+RG",rghash_name,arguments);
+  libname= angsd::getArg("+LB",libname,arguments);
   if(rghash_name&&!angsd::fexists(rghash_name))
     rghash = add_read_group_single(rghash_name);
   if(rghash_name&&angsd::fexists(rghash_name))
@@ -245,8 +250,20 @@ void setArgsBam(argStruct *arguments){
     exit(0);
   }
   free(tmp);
-  
-  
+
+  if(libname&&!angsd::fexists(libname))
+    LBS[strdup(libname)]=0;
+  else if(libname&&angsd::fexists(libname)){
+    std::vector<char *> tmptmp=angsd::getFilenames(libname,0);
+    for(int i=0;i<tmptmp.size();i++){
+      std::map<char *,int,ltstr>::iterator it=LBS.find(tmptmp[i]);
+      if(it!=LBS.end())
+	fprintf(stderr,"\t-> Potential problem LB: %s already exists?\n",it->first);
+      LBS[strdup(tmptmp[i])] =0;
+    }
+  }
+  if(LBS.size()>0)
+    fprintf(stderr,"\t-> Will include: %lu libraries\n",LBS.size());
   std::vector<char *> regionsRaw;
   if(regfiles)
     regionsRaw =  angsd::getFilenames(regfiles,0);

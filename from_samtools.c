@@ -50,8 +50,8 @@ void* add_read_groups_file(char *fn)
       if(ret==-1)
 	fprintf(stderr,"\t-> [READGROUP info] Problems adding readgroup: %s\n",d);
       else{
-	//int tmp;
-	//	assert(khash_str2int_get(retval,d,&tmp)==0);
+	int tmp;
+	assert(khash_str2int_get(retval,d,&tmp)==0);
 	fprintf(stderr,"\t-> [READGROUP info] Added readgroup %s\n",d);
       }
     }
