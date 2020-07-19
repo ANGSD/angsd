@@ -261,6 +261,8 @@ void setArgsBam(argStruct *arguments){
 	fprintf(stderr,"\t-> Potential problem LB: %s already exists?\n",it->first);
       LBS[strdup(tmptmp[i])] =0;
     }
+    for(int i=0;i<tmptmp.size();i++)
+      free(tmptmp[i]);
   }
   if(LBS.size()>0)
     fprintf(stderr,"\t-> Will include: %lu libraries\n",LBS.size());

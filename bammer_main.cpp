@@ -25,9 +25,9 @@ std::map<char*,std::vector<char *>,ltstr > get_lb_rg(bam_hdr_t *h){
   std::map<char*,std::vector<char *>,ltstr > ret;
   int nrg = sam_hdr_count_lines(h, "RG");
   //  fprintf(stderr,"nrg: %d\n",nrg);
+  kstring_t lib = { 0, 0, NULL };
   for(int i=0;i<nrg;i++){
     const char *rgid = sam_hdr_line_name(h,"RG",i);
-    kstring_t lib = { 0, 0, NULL };
     if (sam_hdr_find_tag_id(h, "RG", "ID", rgid, "LB", &lib)  < 0){
       fprintf(stderr,"Header problem\n");
       continue;
@@ -41,6 +41,7 @@ std::map<char*,std::vector<char *>,ltstr > get_lb_rg(bam_hdr_t *h){
       it->second.push_back(strdup(rgid));
 
   }
+  free(lib.s);
   return ret;
 }
 
@@ -203,6 +204,12 @@ bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname,bam_sample
 	  }
 	}
       }
+    }
+    for(std::map<char*,std::vector<char *> ,ltstr>::iterator it2 = lb_rg.begin();it2!=lb_rg.end();it2++){
+      std::vector <char *> rgs_to_add = it2->second;
+      for(int i=0;i<rgs_to_add.size();i++)
+	free(rgs_to_add[i]);
+      free(it2->first);
     }
   }
   
