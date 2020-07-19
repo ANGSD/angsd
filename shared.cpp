@@ -119,8 +119,17 @@ void destroy_shared(){
   if(cigstat)
     cigstat_close();
   extern void *rghash;
+  extern char *rghash_name;
   if(rghash)
     khash_str2int_destroy_free(rghash);
+  if(rghash_name!=NULL)
+    free(rghash_name);
+  extern char *libname;
+  if(libname!=NULL)
+    free(libname);
+  extern std::map<char*,int,ltstr> LBS;
+  for(std::map<char*,int,ltstr> ::iterator it =LBS.begin();it!=LBS.end();it++)
+    free(it->first);
 }
 void tnode_destroy(tNode*);
 void cleanUptNodeArray(tNode **row,int nSamples){
