@@ -902,7 +902,6 @@ int saf2theta(int argc,char**argv){
       double workarray[nChr+1];
       for(int i=0;i<nChr+1;i++)//gls->mat is float lets pluginto double
 	workarray[i] = log(0);
-      
       int k = gls[0]->mat[s][0];
       for(int i=0;i<gls[0]->mat[s][1];i++)
 	workarray[k++] = gls[0]->mat[s][2+i];
@@ -1103,7 +1102,6 @@ int main(int argc,char **argv)
   }
   else if(!strcasecmp(*argv,"dadi"))
   {
-    fprintf(stderr,"not implemented yet for safv4, exiting\n");
     main_dadi<float>(--argc,++argv);
   }
   else if(!strcasecmp(*argv,"saf2theta"))
