@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <cassert>
 #include <htslib/hts.h>
+#include <htslib/khash_str2int.h>
 #include "mUpPile.h"
 #include "abcGetFasta.h"
 #include "analysisFunction.h"
@@ -85,6 +86,8 @@ void tnode_destroy1(tNode *n){
   free(n->mapQ);
   free(n->seq);
   free(n->qs);
+  if(n->rgs!=NULL)
+    free(n->rgs);
 }
 
 //this will only be called from a threadsafe context
@@ -264,7 +267,11 @@ void tnode_realloc(tNode *d,int newsize){
   d->posi = (suint*)realloc(d->posi,d->m*sizeof(suint));
   d->isop = (suint*)realloc(d->isop,d->m*sizeof(suint));
   d->mapQ = (unsigned char*)realloc(d->mapQ,d->m*sizeof(unsigned char));
- 
+  extern void *rghash;
+  if(rghash!=NULL)
+    d->rgs = (unsigned char*)realloc(d->rgs,d->m*sizeof(unsigned char));
+  else
+    d->rgs =NULL;
 }
 
 
@@ -301,6 +308,10 @@ tNode *initNodeT(int l){
     kroundup32(d->m);
     d->seq=(char *)malloc(d->m);
     d->qs=(unsigned char *)malloc(d->m);
+    extern void *rghash;
+    if(rghash!=NULL){
+      d->rgs=(unsigned char *)malloc(d->m);
+    }
     d->posi=(suint *)malloc(sizeof(suint)*d->m);
     d->isop=(suint *)malloc(sizeof(suint)*d->m);
     d->mapQ=(unsigned char *)malloc(d->m);
@@ -635,6 +646,14 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
   for( r=0;r<sgl->readIDstop;r++) {
 
     bam1_t *rd = sgl->reads[r];
+    extern void* rghash;
+    int thisrg=-1;
+    if(rghash!=NULL){
+      uint8_t *rg = bam_aux_get(rd, "RG");
+      if(rg)
+	assert(khash_str2int_get(rghash, (const char*)(rg+1), &thisrg)==0);
+    }
+    
     if(rd->core.tid!=refID){
       fprintf(stderr,"ReferenceID:(r:%d) for read:%s is not: %d but is:%d\n",r,bam_get_qname(rd),refID,rd->core.tid);
       exit(0);
@@ -660,7 +679,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
     }
 
     int nCig = rd->core.n_cigar;
-
+    
     uint32_t *cigs = bam_get_cigar(rd);
     int seq_pos =0; //position within sequence
     int wpos = rd->core.pos-offs;//this value is the current position assocatied with the positions at seq_pos
@@ -698,6 +717,8 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	    tmpNode->insert[tmpNode->l2]->posi[ii] = seq_pos + 1;
 	    tmpNode->insert[tmpNode->l2]->isop[ii] =rd->core.l_qseq- seq_pos - 1;
 	    tmpNode->insert[tmpNode->l2]->qs[ii] = quals[seq_pos];
+	    if(thisrg!=-1)
+	      tmpNode->insert[tmpNode->l2]->rgs[ii] = thisrg;
 	    if(trim5&& (!bam_is_rev(rd))&&tmpNode->insert[tmpNode->l2]->posi[ii]<trim5)
 	      tmpNode->insert[tmpNode->l2]->seq[ii] ='N';
 	    if(trim3&& (bam_is_rev(rd))&&tmpNode->insert[tmpNode->l2]->isop[ii]<trim3)
@@ -743,12 +764,18 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	    tmpNode->posi =(suint *) realloc(tmpNode->posi,sizeof(suint)*tmpNode->m);
 	    tmpNode->isop =(suint *) realloc(tmpNode->isop,sizeof(suint)*tmpNode->m);
 	    tmpNode->mapQ = (unsigned char *) realloc(tmpNode->mapQ,tmpNode->m);
+	    if(thisrg!=-1)
+	      tmpNode->rgs = (unsigned char *) realloc(tmpNode->rgs,tmpNode->m);
 	  }
 	  
 
 	  char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
 	  tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower(c) : toupper(c);
 	  tmpNode->qs[tmpNode->l] =  quals[seq_pos];
+	  if(thisrg!=-1){
+	    //	    fprintf(stderr,"%p %p\n",tmpNode,tmpNode->rgs);
+	    tmpNode->rgs[tmpNode->l] =  thisrg;
+	  }
 	  // fprintf(stderr,"tmpNode->l:%d tmpNode->m:%d seq_pos:%d\n",tmpNode->l,tmpNode->m,seq_pos);
 	  tmpNode->posi[tmpNode->l] = seq_pos;
 	  tmpNode->isop[tmpNode->l] =rd->core.l_qseq- seq_pos-1;
@@ -1321,6 +1348,8 @@ void destroy_tnode_pool(){
 	free(tn->posi);
 	free(tn->isop);
 	free(tn->mapQ);
+	if(tn->rgs)
+	  free(tn->rgs);
 	tn=NULL;
       }
     }

@@ -13,7 +13,8 @@ typedef struct  tNode_t{//order is important. First 8 bytes will be modified by 
   suint *isop;//16
   unsigned char *mapQ;//8
   tNode_t **insert;//8 an insertion 8bytes;
-  int deletion;//4 //counter 
+  int deletion;//4 //counter
+  unsigned char *rgs;//<- added 19july 2020 for keeping track of readgroups
 }tNode;
 
 typedef struct{

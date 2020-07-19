@@ -548,7 +548,7 @@ suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites,int mmin,int mmax
       for(int n=0;n<chk->nSamples;n++){
 	//loop over persample reads
 	for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
-	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c\n",s,n,chk->nd[s][n].l,l,chk->nd[s][n].seq[l]);
+	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c rg:%d\n",s,n,chk->nd[s][n]->l,l,chk->nd[s][n]->seq[l],chk->nd[s][n]->rgs[l]);
 	  int allele = refToInt[chk->nd[s][n]->seq[l]];
 	
 	  if(allele==4){
