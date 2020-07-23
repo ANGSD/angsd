@@ -303,7 +303,7 @@ int bins (int argc, char **argv)
   do 
   {
     if (pars->remapping)
-      fprintf(stdout, "%d\t%d\t%d", foldremapper[inc], foldfactor[inc], foldkeep[inc]);
+      fprintf(stdout, "%lu\t%d\t%d", foldremapper[inc], foldfactor[inc], foldkeep[inc]);
     for(int i=0; i<pars->saf.size(); ++i)
       if (foldkeep[inc])
         fprintf(stdout, "\t%d", bin[i]);
