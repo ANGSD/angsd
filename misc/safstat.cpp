@@ -89,13 +89,14 @@ void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,
 
   double snyd1[gl1->y];
   double snyd2[gl2->y];
-  for(int i=0;i<gl1->y;i++)
-    snyd1[i] = 0;
-  for(int i=0;i<gl2->y;i++)
-    snyd2[i] = 0;
   
   double tre[3]={0,0,0};//a/b,sum(a),sum(0)
   for(int s=0;s<gl1->x;s++){
+    for(int i=0;i<gl1->y;i++)
+      snyd1[i] = 0;
+    for(int i=0;i<gl2->y;i++)
+      snyd2[i] = 0;
+ 
     int inc =0 ;
     double tmp[(gl1->y+1)*(gl2->y+1)];
     for(int jj=0;jj<(gl1->y+1)*(gl2->y+1);jj++)
