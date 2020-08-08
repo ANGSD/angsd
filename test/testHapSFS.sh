@@ -6,7 +6,7 @@ then
     WDIR=$1
 fi
 
-TDIR=haploid_SFS
+TDIR=haploid_sfs
 
 LOG=${0}.log
 echo "Cleaning old output dir ${TDIR}/" &>${LOG}
