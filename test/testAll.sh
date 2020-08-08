@@ -58,6 +58,14 @@ if [ ! $? -eq 0 ] ;then
     RVAL=1
 fi
 
+echo "Testing neutrality test statistics (haploid)"
+time ./testHapSFS.sh $WDIR
+if [ ! $? -eq 0 ] ;then
+    echo "Problem with neutrality test statistics exit code: $?"
+    cat ./testHapSFS.sh.log
+    RVAL=1
+fi
+
 echo "Testing fst using msms"
 time ./testFst.sh $WDIR
 if [ ! $? -eq 0 ] ;then

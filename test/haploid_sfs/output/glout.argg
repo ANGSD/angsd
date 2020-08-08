@@ -1,0 +1,2 @@
+-in haploid_SFS/input/msout -out haploid_SFS/output//glout -err 0.005000 -depth 8.000000 -Nsites 0 -singleOut 1 -regLen 0 -printSNP 1 -onlyPoly 0 -pileup 0 -simpleRand 0 -depthFile (null) -seed -1 -nind 0 -psmc 0 -do_seq_glf 1 -simHap 1
+-in haploid_SFS/input/msout -out haploid_SFS/output//glout -err 0.005 -depth 8 -singleOut 1 -simpleRand 0 -simhap 1 (null) 

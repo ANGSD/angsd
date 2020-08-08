@@ -35,8 +35,8 @@ ${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 22 14 22 >${ODIR}/pop3.glf.gz 2>>${LOG
 echo 1 250000000 >${ODIR}/fai.fai
 echo "Calculating perpop saf" >>${LOG} 2>&1
 ${WDIR}/angsd -glf ${ODIR}/pop1.glf.gz -nind 6 -doSaf 1 -out ${ODIR}/pop1 -fai ${ODIR}/fai.fai -issim 1  2>>${LOG}
-${WDIR}/angsd -glf ${ODIR}/pop2.glf.gz -nind 7 -doSaf 1 -out ${ODIR}/pop2 -fai ${ODIR}/fai.fai -issim 1  2>>${LOG}
-${WDIR}/angsd -glf ${ODIR}/pop3.glf.gz -nind 9 -doSaf 1 -out ${ODIR}/pop3 -fai ${ODIR}/fai.fai -issim 1  2>>${LOG}
+${WDIR}/angsd -glf ${ODIR}/pop2.glf.gz -nind 7 -doSaf 1 -out ${ODIR}/pop2 -fai ${ODIR}/fai.fai -issim 1 2>>${LOG}
+${WDIR}/angsd -glf ${ODIR}/pop3.glf.gz -nind 9 -doSaf 1 -out ${ODIR}/pop3 -fai ${ODIR}/fai.fai -issim 1 2>>${LOG}
 
 echo "Calculating perpop sfs based on the perpop saf" >>${LOG} 2>&1
 ${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx -seed -1 >${ODIR}/pop1.saf.idx.ml 2>>${LOG}

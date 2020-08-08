@@ -1,0 +1,151 @@
+	-> angsd version: 0.933-95-gb72c40f-dirty (htslib: 1.10.2-109-gdcd4b73) build(Aug  7 2020 14:49:07)
+	-> ..//angsd -isSim 1 -ishap 1 -glf haploid_SFS/output//glout.glf.gz -out haploid_SFS/output//norm -doSaf 1 -nInd 40 -fai hg19.fa.fai 
+	-> Sat Aug  8 21:07:27 2020
+----------------
+multiReader.cpp:
+	-nLines	50	(Number of lines to read)
+	-beagle	haploid_SFS/output//glout.glf.gz	(Beagle Filename (can be .gz))
+	-bgen	haploid_SFS/output//glout.glf.gz	(Bgen Filename)
+	-vcf-GL	haploid_SFS/output//glout.glf.gz	(vcf Filename (can be bcf compressed or uncompressed))
+	-vcf-PL	haploid_SFS/output//glout.glf.gz	(vcf Filename (can be bcf compressed or uncompressed))
+	-vcf-GP	haploid_SFS/output//glout.glf.gz	(vcf Filename (can be bcf compressed or uncompressed))(*not used)
+	-glf	haploid_SFS/output//glout.glf.gz	(glf Filename (can be .gz))
+	-pileup	haploid_SFS/output//glout.glf.gz	(pileup Filename (can be .gz))
+	-intName 1	(Assume First column is chr_position)
+	-isSim	1	(Simulated data assumes ancestral is A)
+	-nInd	40		(Number of individuals)
+	-minQ	13	(minimum base quality; only used in pileupreader)
+	-fai	hg19.fa.fai	(fai file)
+	-minQ	13	(minimum base quality; only used in pileupreader)
+----------------
+multiReader.cpp:
+---------------
+parseArgs_bambi.cpp: bam reader:
+	-bam/-b		haploid_SFS/output//glout.glf.gz	(list of BAM/CRAM files)
+	-i		haploid_SFS/output//glout.glf.gz	(Single BAM/CRAM file)
+	-r		(null)	Supply a single region in commandline (see examples below)
+	-rf		(null)	Supply multiple regions in a file (see examples below)
+	-remove_bads	1	Discard 'bad' reads, (flag & 512) 
+	-uniqueOnly	0	Discards reads that doesn't map uniquely
+	-show		0	Mimic 'samtools mpileup' also supply -ref fasta for printing reference column
+	-minMapQ	0	Discard reads with mapping quality below
+	-minQ		13	Discard bases with base quality below
+	-trim		0	Number of based to discard at both ends of the reads
+	-trim		0	Number of based to discard at 5' ends of the reads
+	-trim		0	Number of based to discard at 3' ends of the reads
+	-only_proper_pairs 1	Only use reads where the mate could be mapped
+	-C		0	adjust mapQ for excessive mismatches (as SAMtools), supply -ref
+	-baq		0	adjust qscores around indels (1=normal baq 2= extended(as SAMtools)), supply -ref
+	-redo-baq		0 (recompute baq, instead of using BQ tag)
+	-setQscore	-1	Set qscore to this value, relevant for missing qscores
+	-checkBamHeaders 1	Exit if difference in BAM headers
+	-doCheck	1	Keep going even if datafile is not suffixed with .bam/.cram
+	-downSample	0.000	Downsample to the fraction of original data
+	-nReads		50	Number of reads to pop from each BAM/CRAMs
+	-minChunkSize	250	Minimum size of chunk sent to analyses
+	--ignore-RG	1	(dev only)
+	+RG		(null)	Readgroups to include in analysis(can be filename)
+	+LB		(null)	Libraries to include in analysis(can be filename)
+
+Examples for region specification:
+		chr:		Use entire chromosome: chr
+		chr:start-	Use region from start to end of chr
+		chr:-stop	Use region from beginning of chromosome: chr to stop
+		chr:start-stop	Use region from start to stop from chromosome: chr
+		chr:site	Use single site on chromosome: chr
+--------------------
+[shared.cpp:init()]
+	-nThreads	1	Number of threads to use
+	-nQueueSize	-1	Maximum number of queud elements
+	-howOften	100	How often should the program show progress
+--------------
+abcFilter.cpp:
+	-sites		(null)	(File containing sites to keep (chr pos))
+	-sites		(null)	(File containing sites to keep (chr regStart regStop))
+	-sites		(null)	(File containing sites to keep (chr pos major minor))
+	-sites		(null)	(File containing sites to keep (chr pos major minor af ac an))
+	-minInd		0	Only use site if atleast minInd of samples has data
+	-setMinDepthInd	1	Only use site if atleast minInd of samples has this minimum depth 
+	-capDepth	-1	Only use the first capDepth bases
+	-strict	1	 (experimental)
+	1) You can force major/minor by -doMajorMinor 3
+	And make sure file contains 4 columns (chr tab pos tab major tab minor)
+---------------
+abcCounts.cpp:
+	-doCounts	0	(Count the number A,C,G,T. All sites, All samples)
+	-minQfile	(null)	 file with individual quality score thresholds)
+	-setMaxDepth	-1	(If total depth is larger then site is removed from analysis.
+				 -1 indicates no filtering)
+	-setMinDepth	-1	(If total depth is smaller then site is removed from analysis.
+				 -1 indicates no filtering)
+	-setMaxDepthInd	-1	(If depth persample is larger then individual is removed from analysis (from site).
+				 -1 indicates no filtering)
+	-setMinDepthInd	-1	(If depth persample is smaller then individual is removed from analysis (from site).
+				 -1 indicates no filtering)
+	-minInd		0	(Discard site if effective sample size below value.
+				 0 indicates no filtering)
+	-setMaxDiffObs	0	(Discard sites where we observe to many different alleles.
+				 0 indicates no filtering)
+Filedumping:
+	-doDepth	0	(dump distribution of seqdepth)	.depthSample,.depthGlobal
+	  -maxDepth	100	(bin together high depths)
+	-doQsDist	0	(dump distribution of qscores)	.qs
+	-minQ	13	(minimumQ)
+	-dumpCounts	0
+	  1: total seqdepth for site	.pos.gz
+	  2: seqdepth persample		.pos.gz,.counts.gz
+	  3: A,C,G,T sum over samples	.pos.gz,.counts.gz
+	  4: A,C,G,T sum every sample	.pos.gz,.counts.gz
+	-iCounts	0 (Internal format for dumping binary single chrs,1=simple,2=advanced)
+	-qfile	(null)	(Only for -iCounts 2)
+	-ffile	(null)	(Only for -iCounts 2)
+---------------------
+abcGL.cpp:
+	-GL=0: 
+	1: SAMtools
+	2: GATK
+	3: SOAPsnp
+	4: SYK
+	5: phys
+	6: Super simple sample an allele type GL. (1.0,0.5,0.0)
+	7: outgroup gls
+	-trim		0		(zero means no trimming)
+	-tmpdir		angsd_tmpdir/	(used by SOAPsnp)
+	-errors		(null)		(used by SYK)
+	-minInd		0		(0 indicates no filtering)
+
+Filedumping:
+	-doGlf	0
+	1: binary glf (10 log likes)	.glf.gz
+	2: beagle likelihood file	.beagle.gz
+	3: binary 3 times likelihood	.glf.gz
+	4: text version (10 log likes)	.glf.gz
+	5: binary saf files (usefull for realSFS)	.glf.gz
+
+--------------
+abcSaf.cpp:
+	-doSaf		1
+	1: perform multisample GL estimation
+	2: use an inbreeding version
+	3: calculate genotype probabilities (use -doPost 3 instead)
+	4: Assume genotype posteriors as input (still beta) 
+	-underFlowProtect	0
+	-anc			(null) (ancestral fasta)
+	-noTrans		0 (remove transitions)
+	-pest			(null) (prior SFS)
+	-isHap			1 (is haploid beta!)
+	-doPost			0 (doPost 3,used for accesing saf based variables)
+NB:
+	  If -pest is supplied in addition to -doSaf then the output will then be posterior probability of the sample allelefrequency for each site
+------------------------
+abcHetPlas.cpp:
+	-doHetPlas=0 (Perform hetplasmid analysis)
+	-maxIter=100	(Max number of iterations)
+	-minLRT=-1.000000
+		->"haploid_SFS/output//norm.arg"
+		->"haploid_SFS/output//norm.saf.gz"
+		->"haploid_SFS/output//norm.saf.pos.gz"
+		->"haploid_SFS/output//norm.saf.idx"
+
+	[ALL done] cpu-time used =  3.79 sec
+	[ALL done] walltime used =  4.00 sec
