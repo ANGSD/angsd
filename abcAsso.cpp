@@ -222,7 +222,13 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     ymat.y = dT.y0;
     isBinary = dT.isBinary;
 
-    if(dT.x1>0){;
+    if(dT.x1>0){
+
+      //just to make it read the covariate file
+      char test[30];
+      strcpy(test, "dada");      
+      covfile=test;
+      
       covmat.matrix=dT.matrix1;
       covmat.x = dT.x1;
       covmat.y = dT.y1;
@@ -256,11 +262,11 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     for(int i=0 ; i < ymat.x;i++) {
       keepList[i]=1;
       for(int yi=0;yi<ymat.y;yi++) {
-	if(ymat.matrix[i][yi]==-999)
+	if(isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
       }
       for(int ci=0;ci<covmat.y;ci++) {
-	if(covmat.matrix[i][ci]==-999)
+	if(isMinus999(covmat.matrix[i][ci]))
 	  keepList[i]=0;
       }
     }
@@ -496,7 +502,7 @@ void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe,
       if(isBinary){
 	isBinaryQuan = 0;
 
-	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1 and phe.matrix[i][j]!=-999){
+	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1 and !isMinus999(phe.matrix[i][j])){
 	  fprintf(stderr,"Phenotypes are not binary (0 or 1) for logistic model!\n");
 	  exit(1);
 	}
@@ -551,7 +557,18 @@ void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe,
 }
 
 
-			 
+// stupid little functions to see if int/double value "is" -999 (for missing data)
+int abcAsso::isMinus999(double x){
+  int per = (x/1.0 > -999.1 & x/1.0 < -998.9);    
+  return(per); 
+}
+
+int abcAsso::isMinus999(int x){
+  int per = (x/1.0 > -999.1 & x/1.0 < -998.9);    
+  return(per); 
+}
+
+
 void abcAsso::frequencyAsso(funkyPars  *pars,assoStruct *assoc){
 
   if(doPrint)
@@ -684,11 +701,11 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
 	if(covfile!=NULL)
 	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	    if(isMinus999(covmat.matrix[i][ci]))
 	      keepList[i]=0;
 	  }
 
@@ -946,17 +963,17 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
   int highHE=0;
   int highHO=0;
 
-  double post[keepInd*3];
-  
+  double* post = new double[keepInd*3];    
+  double* y = new double[3*keepInd];
+      
   //////////////////////////// check if site can be run first - checking data for full model
-
-  double y[keepInd];
+  
   int count=0;
       
   design->x=keepInd;
   design->y=covmat.y+2;
 
-  double covMatrix[(covmat.y+2)*keepInd];
+  double* covMatrix = new double[(covmat.y+2)*keepInd];  
   
   // WLS (weighted) model with genotypes
   for(int i=0;i<p->nInd;i++){
@@ -1024,15 +1041,23 @@ if((post[count*3+0]+post[count*3+1])>0.90)
   if(highHO >= minHigh)
     nGeno++;
   
-  if(nGeno<2)
+  if(nGeno<2){
+    delete [] y;
+    delete [] post;
+    delete [] covMatrix;    
     return(-999);//set_snan(lrt);
+  }
 
   //basically the same, just renamed for normScoreEnv and binomScoreEnv functions
   int numInds = keepInd;
   //freq*numInds*2 is the expected number of minor alleles
-  if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount)
+  if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount){
+    delete [] y;
+    delete [] post;
+    delete [] covMatrix;     
     return(-999);//set_snan(lrt);      set_snan(lrt);
-  
+  }
+    
   if(count!=keepInd){
     fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
     fflush(stderr);
@@ -1040,11 +1065,11 @@ if((post[count*3+0]+post[count*3+1])>0.90)
   }
 
   ///////////////////////////////////////////////////////
-  
-  double covMatrixNull[(covmat.y+1)*keepInd];
-  double yfit[keepInd];
-    
-  double yNull[keepInd];
+
+  double* covMatrixNull = new double[(covmat.y+1)*keepInd];
+  double* yfit = new double[keepInd];
+  double* yNull = new double[keepInd];
+
   count = 0;
     
   designNull->x=keepInd;
@@ -1106,6 +1131,14 @@ if((post[count*3+0]+post[count*3+1])>0.90)
  
   double llh = logLike(start,y,design,post,isBinary,isCount,0);
 
+  delete [] covMatrix;
+  delete [] yfit;
+  delete [] yNull;
+  delete [] covMatrixNull;
+
+  delete [] y;
+  delete [] post;
+  
   // likelihood ratio - chi square distributed according to Wilk's theorem
   double LRT = -2*(llh-llhNull);
 
@@ -1158,18 +1191,23 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
     for(int i=0 ; i<pars->nInd ;i++){
       keepListAll[i]=1;
     }
-
+    
     for(int yi=0;yi<ymat.y;yi++) { //loop over phenotypes
       int *keepList = new int[pars->nInd];
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi])){
+	  //emil
+	  //fprintf(stderr,"I am here, phe? %f \n",isMinus999(ymat.matrix[i][yi]));
+	
 	  keepList[i]=0;
+	}
 	if(covfile!=NULL)
-	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	  for(int ci=0;ci<covmat.y;ci++) {	    
+	    if(isMinus999(covmat.matrix[i][ci])){
 	      keepList[i]=0;
+	    }
 	  }
 	if(keepList[i]==1)
 	  keepInd[yi][s]++;
@@ -2181,11 +2219,11 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
 	if(covfile!=NULL)
 	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	    if(isMinus999(covmat.matrix[i][ci]))
 	      keepList[i]=0;
 	  }
 
@@ -2481,11 +2519,11 @@ void abcAsso::emAssoWald(funkyPars  *pars,assoStruct *assoc){
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
 	if(covfile!=NULL)
 	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	    if(isMinus999(covmat.matrix[i][ci]))
 	      keepList[i]=0;
 	  }
 
@@ -2599,11 +2637,11 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
 	if(covfile!=NULL)
 	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	    if(isMinus999(covmat.matrix[i][ci]))
 	      keepList[i]=0;
 	  }
 	if(keepList[i]==1)
@@ -2973,12 +3011,13 @@ int abcAsso::getFitPois(double *res,double *Y,double *covMatrix,int nInd,int nEn
 double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc){
   if(doPrint)
     fprintf(stderr,"Staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
-  
-  double covMatrix[(covmat.y+1)*keepInd];
-  double y[keepInd];
-  double post[keepInd*3];
-  double start[keepInd];
-  
+
+
+  double* covMatrix = new double[(covmat.y+1)*keepInd];
+  double* y = new double[keepInd];
+  double* post = new double[keepInd*3];    
+  double* start = new double[keepInd];
+    
   int count=0;
   for(int i=0;i<pars->nInd;i++){
     if(keepList[i]){
@@ -3061,14 +3100,35 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
     for(int i=0;i<keepInd;i++)
        yfit[i]=0;
     if(isBinary){
-      if(getFitBin(yfit,y,covMatrix,keepInd,nEnv,start))
+      if(getFitBin(yfit,y,covMatrix,keepInd,nEnv,start)){
+	delete[] yfit;
+	delete[] covMatrix;
+	delete[] y;
+	delete[] post;
+	delete[] start;  
+	
 	return -999;
+      }
     } else if(isCount){
-      if(getFitPois(yfit,y,covMatrix,keepInd,nEnv,start))
-	return -999;      
-    } else
-      if(getFit(yfit,y,covMatrix,keepInd,nEnv,start))
+      if(getFitPois(yfit,y,covMatrix,keepInd,nEnv,start)){
+	 delete[] yfit;
+	 delete[] covMatrix;
+	 delete[] y;
+	 delete[] post;
+	 delete[] start;  
+
 	return -999;
+      }
+    } else
+      if(getFit(yfit,y,covMatrix,keepInd,nEnv,start)){
+	 delete[] yfit;
+	 delete[] covMatrix;
+	 delete[] y;
+	 delete[] post;
+	 delete[] start;  
+
+	return -999;
+      }
   }
   
   //for(int i=0;i<keepInd;i++)
@@ -3098,6 +3158,11 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
     stat = normScoreEnv(post,keepInd,y,yfit,covMatrix,nEnv,freq,assoc,s);
 
   delete[] yfit;
+  delete[] covMatrix;
+  delete[] y;
+  delete[] post;
+  delete[] start;  
+    
   return stat;
 
 }

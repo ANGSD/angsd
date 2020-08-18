@@ -284,6 +284,9 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
   
   std::list<double*> covRows;
   std::list<double*> pheRows;
+
+  //NA string used in .sample file has to give -999 value for this
+  const char * test = "NA";
   
   //create matrix for covar and pheno
   
@@ -307,17 +310,32 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
 	//covar
       } else if(sampleMap[column] == 'D' || sampleMap[column] == 'C'){
 	column++;
-	covRow.push_back(atof(tok));
+	if(strcmp(tok,test)==0){
+	  covRow.push_back(-999);
+	} else{	  
+	  covRow.push_back(atof(tok));
+	}
+	
 	//pheno
       } else if(sampleMap[column] == 'B'){
 	//ok to have binary phenotype as double??
 	column++;
-	pheRow.push_back(atof(tok));
+	if(strcmp(tok,test)==0){
+	  pheRow.push_back(-999);
+	} else{	  
+	  pheRow.push_back(atof(tok));
+	}
+	
 	isBinary = 1;
 	hasPheno = 1;
       } else if(sampleMap[column] == 'P'){
 	column++;
-	pheRow.push_back(atof(tok));
+	if(strcmp(tok,test)==0){
+	  pheRow.push_back(-999);
+	} else{	  
+	  pheRow.push_back(atof(tok));
+	}
+
 	assert(isBinary==0);
 	hasPheno = 1;
       } else{
