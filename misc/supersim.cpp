@@ -351,6 +351,8 @@ int main(int argc, char *argv[]) { // read input parameters
   static int genotype[2], genotype1[2], genotype2[2]; // array /matrix of genotypes for all pops
   double pfreq=0.0, pfreq1=0.0, pfreq2=0.0, pvar= 0.015, meandepth = 5, errate = 0.0075, F=0.0, F1=0.0, F2=0.0, minfreq=0.0001;
   double basefreq[4] = {0.25, 0.25, 0.25, 0.25}; // background frequencies
+  int seed = -1; //<- this will get typcasted to unsigned in srand function
+  
   // as pointers
 /*  int *freqspec = NULL; // whole sample
   int *freqspec1 = NULL; // 1st pop
@@ -420,6 +422,7 @@ int main(int argc, char *argv[]) { // read input parameters
     else if(strcmp(argv[argPos],"-mfreq")==0)  minfreq  = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-outfiles")==0) outfiles  = (argv[argPos+1]);
     else if(strcmp(argv[argPos],"-nsites")==0)  nsites  = atoi(argv[argPos+1]);
+    else if(strcmp(argv[argPos],"-seed")==0)  seed  = atoi(argv[argPos+1]);
 //    else if(strcmp(argv[argPos],"-FST")==0)  FST = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-model")==0)  model  = atoi(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-simpleRand")==0) simpleRand  = atoi(argv[argPos+1]);
@@ -441,11 +444,19 @@ int main(int argc, char *argv[]) { // read input parameters
   } // end while all inputs
   
   // check if there is the output file
-   if(outfiles == NULL) {
+  if(outfiles == NULL) {
     fprintf(stderr,"\nMust supply -outfiles. Terminate\n");
     return 0;
   }
 
+  if(seed!=-1){
+    fprintf(stderr,"\t-> Setting seed: %d\n",seed);
+    srand(seed);
+    SetSeed(seed);
+  }
+   
+
+   
   // to adjust the exponential function according to the lowest allele frequency detectable
   myConst = -log(minfreq);
   
