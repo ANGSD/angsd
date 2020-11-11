@@ -5,9 +5,9 @@ LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
 
 # Adjust $(HTSSRC) to point to your top-level htslib directory
 ifdef HTSSRC
-$(info HTSSRC defined)
-CPPFLAGS += -I$(realpath $(HTSSRC))
-LIBS := $(realpath $(HTSSRC))/libhts.a $(LIBS)
+$(info HTSSRC defined: $(HTSSRC))
+CPPFLAGS += -I"$(realpath $(HTSSRC))"
+LIBS := "$(realpath $(HTSSRC))/libhts.a" $(LIBS)
 else
 $(info HTSSRC not defined, assuming systemwide installation)
 LIBS += -lhts
@@ -62,7 +62,7 @@ version.h:
 .PHONY: all clean install install-all install-misc misc test
 
 misc: analysisFunction.o bfgs.o prep_sites.o
-	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC))
+	$(MAKE) -C misc HTSSRC="$(realpath $(HTSSRC))"
 
 -include $(OBJ:.o=.d)
 
@@ -92,9 +92,9 @@ force:
 install: all
 	$(INSTALL_DIR) $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) $(PROGRAMS) $(DESTDIR)$(bindir)
-	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC)) install
+	$(MAKE) -C misc HTSSRC="$(realpath $(HTSSRC))" install
 
 install-misc: misc
-	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC)) install-misc
+	$(MAKE) -C misc HTSSRC="$(realpath $(HTSSRC))" install-misc
 
 install-all: install install-misc

@@ -1,12 +1,13 @@
+#assumed HTSSRC is a absolute path
 CC  ?= gcc
 CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
 
 ifdef HTSSRC
-$(info HTSSRC defined)
-CPPFLAGS += -I$(realpath $(HTSSRC))
-LIBS := $(realpath $(HTSSRC))/libhts.a $(LIBS)
+$(info misc-HTSSRC defined $(HTSSRC))
+CPPFLAGS += -I"$(HTSSRC)"
+LIBS := "$(HTSSRC)/libhts.a" $(LIBS)
 else
 $(info HTSSRC not defined, assuming systemwide installation)
 LIBS += -lhts
