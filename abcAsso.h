@@ -43,7 +43,7 @@ public:
   double assoThres; 
   double hybridThres;
   int doPriming; 
-  
+  int Pvalue; 
   
   void run(funkyPars  *pars);
   void print(funkyPars *pars);  

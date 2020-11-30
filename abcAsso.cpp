@@ -53,6 +53,7 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t-emThres\t%f\tThreshold for convergence of EM algorithm in doAsso 4 and 5\n",emThres);
   fprintf(argFile,"\t-emIter\t%d\tNumber of max iterations for EM algorithm in doAsso 4 and 5\n\n",emIter);
   fprintf(argFile,"\t-doPriming\t%d\tPrime EM algorithm with dosage derived coefficients (0: no, 1: yes - default) \n\n",doPriming);
+  fprintf(argFile,"\t-Pvalue\t%d\tPrints P-values instead of likelihood ratio (0: no - defailt, 1: yes) \n\n",Pvalue);
   
   fprintf(argFile,"  Hybrid Test Options:\n");
   fprintf(argFile,"\t-hybridThres\t\t%f\t(p-value value threshold for when to perform latent genotype model)\n",hybridThres);
@@ -91,7 +92,8 @@ void abcAsso::getOptions(argStruct *arguments){
   emThres=angsd::getArg("-emThres",emThres,arguments);
   emIter=angsd::getArg("-emIter",emIter,arguments);
   doPriming=angsd::getArg("-doPriming",doPriming,arguments);
-
+  Pvalue=angsd::getArg("-Pvalue",Pvalue,arguments);
+  
   yfile1=angsd::getArg("-yBin",yfile1,arguments);  
   if(yfile1!=NULL)
     isBinary=1;
@@ -175,6 +177,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   emThres=1e-04;  
   hybridThres=0.05;
   doPriming=1;
+  Pvalue=0;
   //from command line
   
   if(arguments->argc==2){
@@ -331,16 +334,36 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
 
   // hybrid model score model first, then if significant use EM asso  
   if(doAsso==5){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\tSE\temIter\n");
+    if(Pvalue==1){
+       ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tPscore\thigh_WT/HE/HO\tPem\tbeta\tSE\temIter\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\tSE\temIter\n");
+    }
     //EM asso or dosage model
   } else if(doAsso==4 or doAsso==7){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\temIter\n");
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tP\tbeta\tSE\thigh_WT/HE/HO\temIter\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\temIter\n");
+    }
   } else if(doAsso==6){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\n");    
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tP\tbeta\tSE\thigh_WT/HE/HO\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\n");
+    }
   } else if(doAsso==2)
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tP\thigh_WT/HE/HO\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
+    }
   else
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\n");
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tP\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\n");
+    }    
   for(int yi=0;yi<ymat.y;yi++)
     aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);
   bufstr.l=0;
@@ -3569,6 +3592,9 @@ void abcAsso::printDoAsso(funkyPars *pars){
   freqStruct *freq = (freqStruct *) pars->extras[6];
   assoStruct *assoc= (assoStruct *) pars->extras[index];
   
+  //chisq distribution with df=1
+  Chisqdist *chisq1 = new Chisqdist(1);
+  
   for(int yi=0;yi<ymat.y;yi++){
     bufstr.l=0;
     for(int s=0;s<pars->numSites;s++){
@@ -3577,21 +3603,43 @@ void abcAsso::printDoAsso(funkyPars *pars){
      }
  
       if(doAsso==5){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%f\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s],assoc->SEs[s],assoc->emIter[s]);
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%f\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]),assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],angsd::to_pval(chisq1,assoc->statOther[yi][s]),assoc->betas[s],assoc->SEs[s],assoc->emIter[s]);
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%f\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s],assoc->SEs[s],assoc->emIter[s]);
+	}
       } else if(doAsso==4 or doAsso==7){	
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);	 
-       } else if(doAsso==6){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
-       } else if(doAsso==2){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]),assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);
+	}
+      } else if(doAsso==6){
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]),assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	}
+      } else if(doAsso==2){
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]),assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);	  
+	}
       } else{
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s]);
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],angsd::to_pval(chisq1,assoc->stat[yi][s]));
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s]);	  
+	}
       }
     }
     aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);bufstr.l=0;
-
+    
   }
 
-
+  delete chisq1;
+  
+  
 }
 
