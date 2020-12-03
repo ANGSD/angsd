@@ -335,7 +335,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   // hybrid model score model first, then if significant use EM asso  
   if(doAsso==5){
     if(Pvalue==1){
-       ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tPscore\thigh_WT/HE/HO\tPem\tbeta\tSE\temIter\n");
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tPscore\thigh_WT/HE/HO\tPem\tbeta\tSE\temIter\n");
     } else{
       ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\tSE\temIter\n");
     }
