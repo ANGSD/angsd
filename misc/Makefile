@@ -3,6 +3,7 @@ CC  ?= gcc
 CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
+CRYPTOLIB = -lcrypto
 
 ifdef HTSSRC
 $(info misc-HTSSRC defined $(HTSSRC))
@@ -91,22 +92,22 @@ header.o: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp 
 
 smartCount:	smartCount.c  
-	$(CC) $(FLAGS) smartCount.c -lz -o smartCount -std=gnu99 -lpthread $(LIBS)
+	$(CC) $(FLAGS) smartCount.c -lz -o smartCount -std=gnu99 -lpthread $(LIBS) $(CRYPTOLIB)
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp -o thetaStat -lpthread $(LIBS) -lz
+	$(CXX) $(FLAGS) thetaStat.cpp -o thetaStat -lpthread $(LIBS) $(CRYPTOLIB) -lz
 
 msToGlf: msToGlf.c
-	$(CC) $(FLAGS) msToGlf.c -O3 -o msToGlf -std=gnu99 $(LIBS) -lz -lm -lbz2 -llzma -lpthread
+	$(CC) $(FLAGS) msToGlf.c -O3 -o msToGlf -std=gnu99 $(LIBS) $(CRYPTOLIB) -lz -lm -lbz2 -llzma -lpthread
 
 msHOT2glf: msHOT2glf.c
-	$(CC) $(FLAGS) msHOT2glf.c -O3 -o msHOT2glf -std=gnu99 $(LIBS)  -lz -lm -lbz2 -llzma -lpthread
+	$(CC) $(FLAGS) msHOT2glf.c -O3 -o msHOT2glf -std=gnu99 $(LIBS) $(CRYPTOLIB) -lz -lm -lbz2 -llzma -lpthread
 
 multisafreader.hpp: Matrix.hpp realSFS_shared.o 
 
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp realSFS_optim.o realSFS_shared.o realSFS_dadi.o
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../aio.o ../analysisFunction.o ../chisquare.o realSFS_dadi.o $(LIBS) -lz -lpthread
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../aio.o ../analysisFunction.o ../chisquare.o realSFS_dadi.o $(LIBS) $(CRYPTOLIB) -lz -lpthread
 
 hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
 	$(CXX) $(FLAGS) -c hmm_psmc.cpp
@@ -118,7 +119,7 @@ main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h fpsmc.o
 	$(CXX) $(FLAGS) -c main_psmc.cpp
 
 ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o
-	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o fpsmc.o main_psmc.o hmm_psmc.o ../bfgs.o $(LIBS) -lz
+	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o fpsmc.o main_psmc.o hmm_psmc.o ../bfgs.o $(LIBS) $(CRYPTOLIB) -lz
 
 clean:
 	rm -f *.o $(PROGRAMS) $(PROGRAMS_MISC) *~
