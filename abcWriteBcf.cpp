@@ -39,7 +39,6 @@ void abcWriteBcf::run(funkyPars *pars){
 
 //last is from abc.h
 void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr){
- 
   if(args->ref){
     buf.l = 0;
     ksprintf(&buf, "##reference=file://%s\n", args->ref);
@@ -133,7 +132,6 @@ void abcWriteBcf::print(funkyPars *pars){
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
       continue;
-
     rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
     rec->pos = pars->posi[s];//<- maybe one index?
     //    bcf_update_id(hdr, rec, "rs6054257");
@@ -146,19 +144,18 @@ void abcWriteBcf::print(funkyPars *pars){
     // .. INFO
     
     tmpi = pars->keepSites[s];
-    bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1);
+    assert(bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1)==0);
 
     if(pars->counts){
       int depth = 0;
       for(int i=0; i<4*pars->nInd; i++)
 	depth += pars->counts[s][i];
       tmpi = depth;
-      bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
-
+      assert(bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1)==0);
     }
     if(freq){
       float tmpf = freq->freq_EM[s];
-      bcf_update_info_float(hdr, rec, "AF", &tmpf, 1);
+      assert(bcf_update_info_float(hdr, rec, "AF", &tmpf, 1)==0);
     }
     
     // .. FORMAT
@@ -325,6 +322,9 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
     bcf_hdr_append(hdr,"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
     bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
     bcf_hdr_append(hdr,"##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">");
+    bcf_hdr_append(hdr,"##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">");
+    if(doMaf)
+      bcf_hdr_append(hdr,"##INFO=<ID=AF,Number=A,Type=Float,Description=\"Minor Allele Frequency\">");
     ksprintf(&buf, "##angsdVersion=%s",args->version);
     bcf_hdr_append(hdr, buf.s);
     buf.l = 0;
