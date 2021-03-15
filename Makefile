@@ -50,7 +50,7 @@ all: $(PROGRAMS) misc
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
 
-PACKAGE_VERSION  = 0.933
+PACKAGE_VERSION  = 0.935
 
 ifneq "$(wildcard .git)" ""
 PACKAGE_VERSION := $(shell git describe --always --dirty)
