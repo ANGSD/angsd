@@ -32,7 +32,6 @@ void abcSaf::printArg(FILE *argFile){
   fprintf(argFile,"\t -pest\t\t%s\t(prior SFS)\n",pest);
   fprintf(argFile,"\t -isHap\t\t%d\t(samples are haploid; works with -doSaf 1 or 5)\n",isHap);
   fprintf(argFile,"\t -scoreTol\t%.1e\t(tolerance for score-limited algorithm)\n",scoreTol);
-  fprintf(argFile,"\t\t\tadsf\n",scoreTol);
   fprintf(argFile,"\t -doPost\t%d\t(doPost 3, used for accessing SAF based variables)\n",doPost);
   fprintf(argFile,"\nNB: If -pest is supplied in addition to -doSaf then the output will be posterior probabilities of the sample allele frequency for each site\n");
   fprintf(argFile,"NB: Increasing -scoreTol will trade accuracy for reduced computation time and storage\n");
@@ -441,7 +440,7 @@ void saf_algo_dip (double* hj, int& lower, int& upper, double& sm, double& score
   sm += log(den);
 }
 
-void saf_sparsify_and_normalize (double* hj, int& lower, int& upper, const double tol)
+int saf_sparsify_and_normalize (double* hj, int& lower, int& upper, const double tol)
 {
   // rescale in logspace
   double mx = NEG_INF;
@@ -470,8 +469,10 @@ void saf_sparsify_and_normalize (double* hj, int& lower, int& upper, const doubl
   { // unlikely, but could happen if there's underflow
     lower = lower0;
     upper = upper0;
-    fprintf(stderr, "\t->banding failed\n");
+    // fprintf(stderr, "\t-> Banding failed\n");
+    return 1;
   }
+  return 0;
 }
 
 // --- different options for -doSaf --- //
@@ -703,7 +704,8 @@ void abcSaf::algoJointPost(double **post,
       saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1));
     }
 
-    saf_sparsify_and_normalize (hj, lower, upper, scoreTol);
+    if(saf_sparsify_and_normalize (hj, lower, upper, scoreTol))
+      r->oklist[s] = 3;
 
     if(std::isnan(hj[lower]))
       r->oklist[s] = 2;
@@ -825,8 +827,8 @@ void abcSaf::algoJointHap(double **liks,
         upper_all = upper;
     }
 
-    saf_sparsify_and_normalize (sumMinors, lower_all, upper_all, scoreTol);
-
+    if(saf_sparsify_and_normalize (sumMinors, lower_all, upper_all, scoreTol))
+      r->oklist[it] = 3;
     if(std::isnan(sumMinors[lower_all]))
       r->oklist[it] = 2;
     else
@@ -976,8 +978,8 @@ void abcSaf::algoJoint(double **liks,
         upper_all = upper;
     }
 
-    saf_sparsify_and_normalize (sumMinors, lower_all, upper_all, scoreTol);
-
+    if(saf_sparsify_and_normalize (sumMinors, lower_all, upper_all, scoreTol))
+      r->oklist[it] = 3;
     if(std::isnan(sumMinors[lower_all]))
       r->oklist[it] = 2;
     else
@@ -1090,7 +1092,8 @@ void abcSaf::algoJointMajorMinor(double **liks,
     for(int j=lower; j<=upper; j++)
       hj[j] = log(hj[j]) + tmx;
 
-    saf_sparsify_and_normalize (hj, lower, upper, scoreTol);
+    if(saf_sparsify_and_normalize (hj, lower, upper, scoreTol))
+      r->oklist[it] = 3;
 
     if(std::isnan(hj[lower]))
       r->oklist[it] = 2;
@@ -1197,7 +1200,8 @@ void abcSaf::algoJointMajorMinorHap(double **liks,
     for(int j=lower; j<=upper; j++)
       hj[j] = log(hj[j]) + tmx;
 
-    saf_sparsify_and_normalize (hj, lower, upper, scoreTol);
+    if(saf_sparsify_and_normalize (hj, lower, upper, scoreTol))
+      r->oklist[it] = 3;
 
     if(std::isnan(hj[lower]))
       r->oklist[it] = 2;
@@ -1310,6 +1314,8 @@ int printFull(funkyPars *p,
   realRes *r = (realRes *) p->extras[index];
   int counter = 0;
   for(int s=0; s<p->numSites; s++){
+    if(r->oklist[s]==3)
+      fprintf(stderr,"\t-> Problem with banding algorithm at site chr: \'%s\' position: %d\n",abc::header->target_name[p->refId],p->posi[s]+1);
     if(r->oklist[s]==1 && p->keepSites[s]){
       aio::bgzf_write(outfileSFS, r->pBound[counter], sizeof(int)*2);
       aio::bgzf_write(outfileSFS, r->pLikes[counter], sizeof(float)*r->pBound[counter][1]);
