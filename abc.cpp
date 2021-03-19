@@ -82,7 +82,7 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcScounts(outfiles,arguments,inputtype); //
   tskStuff[nit++] = new abcWriteBcf(outfiles,arguments,inputtype); // 30
   tskStuff[nit++] = new abcRAD(outfiles,arguments,inputtype); // 31
-
+  //remember to update changeChr in shared.cpp if order gets changed
   nItem = nit;
   return tskStuff;
 }
