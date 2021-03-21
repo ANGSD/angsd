@@ -62,25 +62,31 @@ void abcMcall::run(funkyPars *pars){
       for(int j=0;j<10;j++)
 	if (min > -10*log10(exp(pars->likes[s][i*10+j])))
 	  min = -10*log10(exp(pars->likes[s][i*10+j]));
-      for(int j=0;j<10;j++)
-	pars->likes[s][i*10+j]  = (int)(-10*log10(exp(pars->likes[s][j])) - min + .499);
+      for(int j=0;j<10;j++){
+	pars->likes[s][i*10+j]  = (int)(-10*log10(exp(pars->likes[s][i*10+j])) - min + .499);
+	//	fprintf(stderr,"PL[%d][%d]: %f\n",i,j,pars->likes[s][i*10+j]);
+      }
       //now pars->likes is in phred PL scale and integerized
       for(int j=0;j<10;j++)
 	pars->likes[s][i*10+j] = log(pow(10,-pars->likes[s][10*i+j]/10));
       //now pars->likes is in logscale but we have had loss of praecision
     }
 #endif
+    fprintf(stderr,"pars->nInd: %d\n",pars->nInd);
     for(int i=0;i<pars->nInd;i++){
       double tsum = 0.0;
       for(int j=0;j<10;j++)
 	tsum += exp(pars->likes[s][i*10+j]);
-	
-      for(int j=0;j<10;j++)
+      fprintf(stderr,"tsum: %f\n",tsum);
+      for(int j=0;j<10;j++){
+	fprintf(stderr,"PRE[%d][%d]: %f\n",i,j,exp(pars->likes[s][i*10+j]));
 	liks[i*10+j] = exp(pars->likes[s][i*10+j])/tsum;
+      }
+      for(int j=0;j<10;j++)
+	fprintf(stderr,"lk[%d][%d]: %f\n",i,j,liks[10*i+j]);
+    
     }
-    for(int j=0;j<10;j++)
-      fprintf(stderr,"lk: %f\n",log(liks[j]));
-
+     exit(0);
     // Watterson factor, here aM_1 = aM_2 = 1
     double aM = 1;
     for (int i=2; i<pars->nInd*2; i++) aM += 1./i;
@@ -93,7 +99,6 @@ void abcMcall::run(funkyPars *pars){
     theta = log(theta);
     fprintf(stderr,"theta: %f\n",theta);
     exit(0);
-    
   }
 }
 
