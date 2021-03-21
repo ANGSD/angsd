@@ -14,18 +14,18 @@ void abcMcall::run(funkyPars *pars){
   if(!domcall)
     return;
   double QS_glob[5]={0,0,0,0,0};
-  double QS_ind[4][10];
-  for(int i=0;i<4;i++)
-    for(int j=0;j<10;j++)
-      QS_ind[i][j] = 0.0;
+  double QS_ind[4][pars->nInd];
+  
   chunkyT *chk = pars->chk;
   for(int s=0;s<chk->nSites;s++){
-
+    fprintf(stderr,"REF: %d\n",pars->ref[s]);
     for(int i=0;i<chk->nSamples;i++) {
       tNode *nd = chk->nd[s][i];
       if(nd==NULL)
 	continue;
-      
+
+      for(int j=0;j<4;j++)
+	QS_ind[j][i] = 0;
       for(int j=0;j<nd->l;j++){
 	int allele = refToInt[nd->seq[j]];
 	int qs = nd->qs[j];
@@ -35,18 +35,19 @@ void abcMcall::run(funkyPars *pars){
 	}
 	QS_ind[allele][i] += qs;
       }
-      for(int i=0;0&&i<4;i++)
-	fprintf(stderr,"%d) %f\n",i,QS_ind[i][0]);
+      for(int j=0;0&&j<4;j++)
+	fprintf(stderr,"QS[%d][%d] %f\n",i,j,QS_ind[j][i]);
     }
     for(int i=0;i<chk->nSamples;i++){
       double partsum = 0;
       for(int j=0;j<4;j++)
 	partsum += QS_ind[j][i];
       for(int j=0;j<4;j++)
-	QS_glob[j] = QS_ind[j][i]/partsum;
+	QS_glob[j] += QS_ind[j][i]/partsum;
     }
-    for(int i=0;0&&i<5;i++)
+    for(int i=0;1&&i<5;i++)
       fprintf(stderr,"%d) %f\n",i,QS_glob[i]);
+
     double liks[10*pars->nInd];//<- this will be the work array
 
 
@@ -57,6 +58,7 @@ void abcMcall::run(funkyPars *pars){
       -10*log10(p) = q;
     */
 #if 1
+    //this macro will discard precision to emulate PL, it can be removed whenever things work
     for(int i=0;i<pars->nInd;i++){
       float min = FLT_MAX;
       for(int j=0;j<10;j++)
@@ -71,6 +73,18 @@ void abcMcall::run(funkyPars *pars){
 	pars->likes[s][i*10+j] = log(pow(10,-pars->likes[s][10*i+j]/10));
       //now pars->likes is in logscale but we have had loss of praecision
     }
+#endif
+
+#if 1
+    //this macro will remove the gls associated with unobserved bases.
+    int obs[4]={-1,-1,-1,-1};
+    obs[pars->ref[s]] = 1;
+    for(int i=0;i<4;i++)
+      if(QS_glob[i]>0)
+	obs[i] = 1;
+    for(int i=0;i<4;i++)
+      fprintf(stderr,"obs[%d]: %d\n",i,obs[i]);
+    exit(0);
 #endif
     fprintf(stderr,"pars->nInd: %d\n",pars->nInd);
     for(int i=0;i<pars->nInd;i++){
