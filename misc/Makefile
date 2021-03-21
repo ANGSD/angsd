@@ -3,7 +3,7 @@ CC  ?= gcc
 CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
-CRYPTOLIB = -lcrypto
+CRYPTOLIB =""
 
 ifdef HTSSRC
 $(info misc-HTSSRC defined $(HTSSRC))

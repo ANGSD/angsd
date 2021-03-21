@@ -33,9 +33,10 @@ void abcSmartCounts::getOptions(argStruct *arguments){
 }
 
 void abcSmartCounts::changeChr(int newRefId){
+  fprintf(stderr,"cur:%d new:%d smartcounts: %d\n",curChr,newRefId,doSmartCounts);
   if(doSmartCounts==0)
     return;
-  //  fprintf(stderr,"cur:%d new:%d\n",curChr,newRefId);
+  fprintf(stderr,"cur:%d new:%d\n",curChr,newRefId);
   if(curChr!=-1){
     int64_t retVal =bgzf_tell(fbin); 
     int clen = strlen(header->target_name[curChr]);
@@ -140,6 +141,7 @@ void abcSmartCounts::print(funkyPars *pars){
 
 
 void abcSmartCounts::run(funkyPars *pars){
+  fprintf(stderr,"ASDFASDFASDFASD: %d\n",doSmartCounts);
   if(doSmartCounts==0)
     return;
   

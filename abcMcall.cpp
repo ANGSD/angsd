@@ -13,7 +13,7 @@ void abcMcall::run(funkyPars *pars){
   int trim=0;
   if(!domcall)
     return;
-  double QS_glob[5]={0,0,0,0,0};
+  float QS_glob[5]={0,0,0,0,0};
   double QS_ind[4][pars->nInd];
   
   chunkyT *chk = pars->chk;
@@ -75,7 +75,54 @@ void abcMcall::run(funkyPars *pars){
     }
 #endif
 
-#if 1
+    // sort qsum in ascending order (insertion sort), copied from bam2bcf.c bcftools 21march 2021
+    float *ptr[5], *tmp;
+    for (int i=0; i<5; i++)
+      ptr[i] = &QS_glob[i];
+    for (int i=1; i<4; i++)
+      for (int j=i; j>0 && *ptr[j] < *ptr[j-1]; j--)
+	tmp = ptr[j], ptr[j] = ptr[j-1], ptr[j-1] = tmp;
+
+
+ // Set the reference allele and alternative allele(s)
+    int calla[5];
+    float callqsum[5];
+    int callunseen;
+    int calln_alleles;
+    for (int i=0; i<5; i++)
+      calla[i] = -1;
+    for (int i=0; i<5; i++)
+      callqsum[i] = 0;
+    callunseen = -1;
+    calla[0] = pars->ref[s];
+    int i,j;
+    for (i=3, j=1; i>=0; i--)   // i: alleles sorted by QS; j, a[j]: output allele ordering
+    {
+        int ipos = ptr[i] - QS_glob;   // position in sorted qsum array
+        if ( ipos==pars->ref[s] )
+            callqsum[0] = QS_glob[ipos];    // REF's qsum
+        else
+        {
+            if ( !QS_glob[ipos] ) break;       // qsum is 0, this and consequent alleles are not seen in the pileup
+            callqsum[j] = QS_glob[ipos];
+            calla[j++]  = ipos;
+        }
+    }
+    if (pars->ref[s] >= 0)
+    {
+        // for SNPs, find the "unseen" base
+        if (((pars->ref[s] < 4 && j < 4) || (pars->ref[s] == 4 && j < 5)) && i >= 0)
+            callunseen = j, calla[j++] = ptr[i] - QS_glob;
+        calln_alleles = j;
+    }
+    else
+    {
+      fprintf(stderr,"NEVER HERE\n");exit(0);
+        calln_alleles = j;
+        if (calln_alleles == 1) exit(0);//return -1; // no reliable supporting read. stop doing anything
+    }
+    
+#if 0
     //this macro will remove the gls associated with unobserved bases.
     int obs[4]={-1,-1,-1,-1};
     obs[pars->ref[s]] = 1;

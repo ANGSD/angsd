@@ -342,10 +342,10 @@ void call_bam(chunkyT *chk,double **lk,int trim){
 	errmod_cal(mod,numItems,5,bases,likes);
 	int ord[] = {0,1,2,3,6,7,8,12,13,18};
 	for(int gg=0;gg<10;gg++){
-	  //fprintf(stderr,"%f\n",likes[ord[gg]]);
+	  // fprintf(stderr,"%f\n",likes[ord[gg]]);
 	  lk[s][i*10+gg] = -log(10.0) *likes[ord[gg]]/10.0;
 	}
-
+	//	exit(0);
       }
     }
     //    break;
