@@ -17,7 +17,7 @@ void abcMcall::run(funkyPars *pars){
   double QS_ind[4][pars->nInd];
   
   chunkyT *chk = pars->chk;
-  for(int s=0;s<chk->nSites;s++){
+  for(int s=0;s<chk->nSites;s++) {
     fprintf(stderr,"REF: %d\n",pars->ref[s]);
     for(int i=0;i<chk->nSamples;i++) {
       tNode *nd = chk->nd[s][i];
@@ -66,11 +66,14 @@ void abcMcall::run(funkyPars *pars){
 	  min = -10*log10(exp(pars->likes[s][i*10+j]));
       for(int j=0;j<10;j++){
 	pars->likes[s][i*10+j]  = (int)(-10*log10(exp(pars->likes[s][i*10+j])) - min + .499);
-	//	fprintf(stderr,"PL[%d][%d]: %f\n",i,j,pars->likes[s][i*10+j]);
+	//fprintf(stderr,"PL[%d][%d]: %f\n",i,j,pars->likes[s][i*10+j]);
       }
       //now pars->likes is in phred PL scale and integerized
-      for(int j=0;j<10;j++)
-	pars->likes[s][i*10+j] = log(pow(10,-pars->likes[s][10*i+j]/10));
+      for(int j=0;j<10;j++){
+	//	fprintf(stderr,"PRINTER %f\n",pars->likes[s][i*10+j]);
+	pars->likes[s][i*10+j] = log(pow(10,-pars->likes[s][10*i+j]/10.0));
+
+      }
       //now pars->likes is in logscale but we have had loss of praecision
     }
 #endif
@@ -87,7 +90,7 @@ void abcMcall::run(funkyPars *pars){
  // Set the reference allele and alternative allele(s)
     int calla[5];
     float callqsum[5];
-    int callunseen;
+     int callunseen;
     int calln_alleles;
     for (int i=0; i<5; i++)
       calla[i] = -1;
@@ -121,32 +124,44 @@ void abcMcall::run(funkyPars *pars){
         calln_alleles = j;
         if (calln_alleles == 1) exit(0);//return -1; // no reliable supporting read. stop doing anything
     }
+    for(int i=0;i<5;i++)
+      fprintf(stderr,"%d: = %d %f unseen: %d nallele: %d\n",i,calla[i],callqsum[i],callunseen,calln_alleles);
+   
+
+    double newlik[10*pars->nInd];
+    for(int i=0;i<pars->nInd;i++)
+      for(int j=0;j<10;j++)
+	newlik[i*10+j] = 0;
+  
+    for(int i=0;i<pars->nInd;i++)
+      for(int ii=0;ii<4;ii++)
+	for(int iii=ii;iii<4;iii++){
+	  int b1=calla[ii];
+	  int b2=calla[iii];
+	  // fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
+	  if(b1!=-1&&b2!=-1)
+	    newlik[i*10+angsd::majorminor[b1][b2] ] = exp(pars->likes[s][i*10+angsd::majorminor[b1][b2]]);
+	}
+    for(int i=0;0&&i<10*pars->nInd;i++)
+      fprintf(stderr,"newlik[%d]: %f\n",i,newlik[i]);
+    //exit(0);
     
-#if 0
-    //this macro will remove the gls associated with unobserved bases.
-    int obs[4]={-1,-1,-1,-1};
-    obs[pars->ref[s]] = 1;
-    for(int i=0;i<4;i++)
-      if(QS_glob[i]>0)
-	obs[i] = 1;
-    for(int i=0;i<4;i++)
-      fprintf(stderr,"obs[%d]: %d\n",i,obs[i]);
-    exit(0);
-#endif
-    fprintf(stderr,"pars->nInd: %d\n",pars->nInd);
+
+    //   fprintf(stderr,"pars->nInd: %d\n",pars->nInd);
     for(int i=0;i<pars->nInd;i++){
       double tsum = 0.0;
       for(int j=0;j<10;j++)
-	tsum += exp(pars->likes[s][i*10+j]);
-      fprintf(stderr,"tsum: %f\n",tsum);
+	tsum += newlik[i*10+j];
+      //    fprintf(stderr,"tsum: %f\n",tsum);
       for(int j=0;j<10;j++){
-	fprintf(stderr,"PRE[%d][%d]: %f\n",i,j,exp(pars->likes[s][i*10+j]));
-	liks[i*10+j] = exp(pars->likes[s][i*10+j])/tsum;
+	//	fprintf(stderr,"PRE[%d][%d]: %f\n",i,j,newlik[i*10+j]);
+	liks[i*10+j] = newlik[i*10+j]/tsum;
       }
       for(int j=0;j<10;j++)
 	fprintf(stderr,"lk[%d][%d]: %f\n",i,j,liks[10*i+j]);
-    
+     
     }
+    exit(0);
      exit(0);
     // Watterson factor, here aM_1 = aM_2 = 1
     double aM = 1;
