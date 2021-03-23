@@ -42,14 +42,18 @@ void abcMcall::run(funkyPars *pars){
       double partsum = 0;
       for(int j=0;j<4;j++)
 	partsum += QS_ind[j][i];
-      for(int j=0;j<4;j++)
+      for(int j=0;j<4;j++){
 	QS_glob[j] += QS_ind[j][i]/partsum;
+	//	fprintf(stderr,"qs_glob[%d]: %f partsum: %f\n",j,QS_glob[j],partsum);
+      }
     }
-    for(int i=0;1&&i<5;i++)
+  
+    for(int i=0;1&&i<5;i++){
+      // QS_glob[i] = QS_glob[i]/(QS_glob[0]+QS_glob[1]+QS_glob[2]+QS_glob[3]+QS_glob[4]);
       fprintf(stderr,"%d) %f\n",i,QS_glob[i]);
-
+    }
     double liks[10*pars->nInd];//<- this will be the work array
-
+    //exit(0);
 
     //switch to PL just to compare numbers
     /*
@@ -157,12 +161,12 @@ void abcMcall::run(funkyPars *pars){
 	//	fprintf(stderr,"PRE[%d][%d]: %f\n",i,j,newlik[i*10+j]);
 	liks[i*10+j] = newlik[i*10+j]/tsum;
       }
-      for(int j=0;j<10;j++)
+      for(int j=0;0&&j<10;j++)
 	fprintf(stderr,"lk[%d][%d]: %f\n",i,j,liks[10*i+j]);
      
     }
-    exit(0);
-     exit(0);
+
+    
     // Watterson factor, here aM_1 = aM_2 = 1
     double aM = 1;
     for (int i=2; i<pars->nInd*2; i++) aM += 1./i;
@@ -174,6 +178,37 @@ void abcMcall::run(funkyPars *pars){
       }
     theta = log(theta);
     fprintf(stderr,"theta: %f\n",theta);
+
+    //monomophic
+    for(int b=0;b<4;b++){
+      double llh =0;
+      for(int i=0;i<pars->nInd;i++)
+	llh += log(liks[10*i+angsd::majorminor[b][b]]);
+      fprintf(stderr,"CALLING MOHO llh[%d]: llh: %f\n",b,llh);
+    }
+    //diallelic
+    for(int a=0;a<4;a++){
+      for(int b=a+1;b<4;b++){
+	int b1=calla[a];
+	int b2=calla[b];
+
+	double tot_lik = 0;
+	//	fprintf(stderr,"CALL %d %d QS_glob: %f %f %f %f\n",b1,b2,QS_glob[0],QS_glob[1],QS_glob[2],QS_glob[3]);
+	double fa  = QS_glob[b1]/(QS_glob[b1] + QS_glob[b2]);
+	double fb  = QS_glob[b2]/(QS_glob[b1] + QS_glob[b2]);
+	double fa2 = fa*fa;
+	double fb2 = fb*fb;
+	double fab = 2*fa*fb;
+	double val = 0;
+	//	fprintf(stderr,"fa: %f fb: %f fa2: %f fb2: %f fab: %f\n",fa,fb,fa2,fb2,fab);
+	for(int i=0;i<pars->nInd;i++){
+	  val= fa2*liks[i*10+angsd::majorminor[b1][b1]] + fab*liks[i*10+angsd::majorminor[b1][b2]] + fb2*liks[i*10+angsd::majorminor[b2][b2]];
+	  //  fprintf(stderr,"val: %f\n",val);
+	  tot_lik += log(val);
+	}
+	fprintf(stderr,"b1: %d b2: %d tot_lik: %f\n",b1,b2,tot_lik);
+      }
+    }
     exit(0);
   }
 }
