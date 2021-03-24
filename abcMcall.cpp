@@ -47,10 +47,11 @@ void abcMcall::run(funkyPars *pars){
 	//	fprintf(stderr,"qs_glob[%d]: %f partsum: %f\n",j,QS_glob[j],partsum);
       }
     }
-  
+
+    double partsum = QS_glob[0]+QS_glob[1]+QS_glob[2]+QS_glob[3]+QS_glob[4];
     for(int i=0;1&&i<5;i++){
-      // QS_glob[i] = QS_glob[i]/(QS_glob[0]+QS_glob[1]+QS_glob[2]+QS_glob[3]+QS_glob[4]);
-      fprintf(stderr,"%d) %f\n",i,QS_glob[i]);
+      QS_glob[i] = QS_glob[i]/partsum;
+      fprintf(stderr,"qsum global %d) %f\n",i,QS_glob[i]);
     }
     double liks[10*pars->nInd];//<- this will be the work array
     //exit(0);
@@ -132,39 +133,32 @@ void abcMcall::run(funkyPars *pars){
       fprintf(stderr,"%d: = %d %f unseen: %d nallele: %d\n",i,calla[i],callqsum[i],callunseen,calln_alleles);
    
 
+    //this block of code will plug in the relevant gls and rescale to normal
     double newlik[10*pars->nInd];
     for(int i=0;i<pars->nInd;i++)
       for(int j=0;j<10;j++)
 	newlik[i*10+j] = 0;
-  
-    for(int i=0;i<pars->nInd;i++)
+      for(int i=0;i<pars->nInd;i++)
       for(int ii=0;ii<4;ii++)
 	for(int iii=ii;iii<4;iii++){
-	  int b1=calla[ii];
+ 	  int b1=calla[ii];
 	  int b2=calla[iii];
+	  if(b1==-1||b2==-1)
+	    continue;
 	  // fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
 	  if(b1!=-1&&b2!=-1)
 	    newlik[i*10+angsd::majorminor[b1][b2] ] = exp(pars->likes[s][i*10+angsd::majorminor[b1][b2]]);
 	}
-    for(int i=0;0&&i<10*pars->nInd;i++)
-      fprintf(stderr,"newlik[%d]: %f\n",i,newlik[i]);
-    //exit(0);
-    
+      for(int i=0;i<pars->nInd;i++){
+	double tsum = 0.0;
+	for(int j=0;j<10;j++)
+	  tsum += newlik[i*10+j];
+	for(int j=0;j<10;j++)
+	  liks[i*10+j] = newlik[i*10+j]/tsum;
 
-    //   fprintf(stderr,"pars->nInd: %d\n",pars->nInd);
-    for(int i=0;i<pars->nInd;i++){
-      double tsum = 0.0;
-      for(int j=0;j<10;j++)
-	tsum += newlik[i*10+j];
-      //    fprintf(stderr,"tsum: %f\n",tsum);
-      for(int j=0;j<10;j++){
-	//	fprintf(stderr,"PRE[%d][%d]: %f\n",i,j,newlik[i*10+j]);
-	liks[i*10+j] = newlik[i*10+j]/tsum;
+	for(int j=0;0&&j<10;j++)
+	  fprintf(stderr,"lk[%d][%d]: %f\n",i,j,liks[10*i+j]);
       }
-      for(int j=0;0&&j<10;j++)
-	fprintf(stderr,"lk[%d][%d]: %f\n",i,j,liks[10*i+j]);
-     
-    }
 
     
     // Watterson factor, here aM_1 = aM_2 = 1
@@ -187,13 +181,17 @@ void abcMcall::run(funkyPars *pars){
       fprintf(stderr,"CALLING MOHO llh[%d]: llh: %f\n",b,llh);
     }
     //diallelic
+    fprintf(stderr,"calling diallelic\n");
     for(int a=0;a<4;a++){
       for(int b=a+1;b<4;b++){
 	int b1=calla[a];
 	int b2=calla[b];
-
+	if(b1==-1||b2==-1)
+	  continue;
+	if(QS_glob[b1]==0||QS_glob[b2]==0)
+	  continue;
 	double tot_lik = 0;
-	//	fprintf(stderr,"CALL %d %d QS_glob: %f %f %f %f\n",b1,b2,QS_glob[0],QS_glob[1],QS_glob[2],QS_glob[3]);
+	fprintf(stderr,"CALL %d %d QS_glob: %e %e %e %e\n",b1,b2,QS_glob[0],QS_glob[1],QS_glob[2],QS_glob[3]);
 	double fa  = QS_glob[b1]/(QS_glob[b1] + QS_glob[b2]);
 	double fb  = QS_glob[b2]/(QS_glob[b1] + QS_glob[b2]);
 	double fa2 = fa*fa;
@@ -206,7 +204,40 @@ void abcMcall::run(funkyPars *pars){
 	  //  fprintf(stderr,"val: %f\n",val);
 	  tot_lik += log(val);
 	}
-	fprintf(stderr,"b1: %d b2: %d tot_lik: %f\n",b1,b2,tot_lik);
+	fprintf(stderr,"DIALLELIC b1: %d b2: %d tot_lik: %f\n",b1,b2,tot_lik);
+      }
+    }
+  
+    //triallelic
+    fprintf(stderr,"calling triallelic\n");
+    for(int a=0;a<4;a++){
+      for(int b=a+1;b<4;b++){
+	for(int c=b+1;c<4;c++){
+	  int b1=calla[a];
+	  int b2=calla[b];
+	  int b3=calla[c];
+	if(b1==-1||b2==-1||b3==-1)
+	  continue;
+	if(QS_glob[b1]==0||QS_glob[b2]==0||QS_glob[b3]==0)
+	  continue;
+	double tot_lik = 0;
+	fprintf(stderr,"CALL %d %d %d QS_glob: %e %e %e %e\n",b1,b2,b3,QS_glob[0],QS_glob[1],QS_glob[2],QS_glob[3]);
+	double fa  = QS_glob[b1]/(QS_glob[b1] + QS_glob[b2]+QS_glob[b3]);
+	double fb  = QS_glob[b2]/(QS_glob[b1] + QS_glob[b2]+QS_glob[b3]);
+	double fc  = QS_glob[b3]/(QS_glob[b1] + QS_glob[b2]+QS_glob[b3]);
+	double fa2 = fa*fa;
+	double fb2 = fb*fb;
+	double fc2 = fc*fc;
+	double fab = 2*fa*fb,fac=2*fa*fc,fbc=2*fb*fc;
+	double val = 0;
+	//	fprintf(stderr,"fa: %f fb: %f fa2: %f fb2: %f fab: %f\n",fa,fb,fa2,fb2,fab);
+	for(int i=0;i<pars->nInd;i++){
+	  val= fa2*liks[i*10+angsd::majorminor[b1][b1]] + fab*liks[i*10+angsd::majorminor[b1][b2]]+ fac*liks[i*10+angsd::majorminor[b1][b3]]+ fbc*liks[i*10+angsd::majorminor[b3][b3]] + fb2*liks[i*10+angsd::majorminor[b2][b2]]+ fc2*liks[i*10+angsd::majorminor[b3][b3]];
+	  //  fprintf(stderr,"val: %f\n",val);
+	  tot_lik += log(val);
+	}
+	fprintf(stderr,"trIALLELIC b1: %d b2: %d  b3:%dtot_lik: %f\n",b1,b2,b3,tot_lik);
+	}
       }
     }
     exit(0);
