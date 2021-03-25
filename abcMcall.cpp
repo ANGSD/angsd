@@ -174,14 +174,20 @@ void abcMcall::run(funkyPars *pars){
     fprintf(stderr,"theta: %f\n",theta);
 
     //monomophic
+    double monollh[4]={HUGE_VAL,HUGE_VAL,HUGE_VAL,HUGE_VAL};
     for(int b=0;b<4;b++){
       double llh =0;
       for(int i=0;i<pars->nInd;i++)
 	llh += log(liks[10*i+angsd::majorminor[b][b]]);
-      fprintf(stderr,"CALLING MOHO llh[%d]: llh: %f\n",b,llh);
+      //      fprintf(stderr,"CALLING MOHO llh[%d]: llh: %f\n",b,llh);
+      monollh[b] = llh;
     }
     //diallelic
-    fprintf(stderr,"calling diallelic\n");
+    double dillh[4][4];
+    for(int i=0;i<4;i++)
+      for(int ii=0;ii<4;ii++)
+	dillh[i][ii] = HUGE_VAL;
+    //    fprintf(stderr,"calling diallelic\n");
     for(int a=0;a<4;a++){
       for(int b=a+1;b<4;b++){
 	int b1=calla[a];
@@ -191,7 +197,7 @@ void abcMcall::run(funkyPars *pars){
 	if(QS_glob[b1]==0||QS_glob[b2]==0)
 	  continue;
 	double tot_lik = 0;
-	fprintf(stderr,"CALL %d %d QS_glob: %e %e %e %e\n",b1,b2,QS_glob[0],QS_glob[1],QS_glob[2],QS_glob[3]);
+	//	fprintf(stderr,"CALL %d %d QS_glob: %e %e %e %e\n",b1,b2,QS_glob[0],QS_glob[1],QS_glob[2],QS_glob[3]);
 	double fa  = QS_glob[b1]/(QS_glob[b1] + QS_glob[b2]);
 	double fb  = QS_glob[b2]/(QS_glob[b1] + QS_glob[b2]);
 	double fa2 = fa*fa;
@@ -204,12 +210,19 @@ void abcMcall::run(funkyPars *pars){
 	  //  fprintf(stderr,"val: %f\n",val);
 	  tot_lik += log(val);
 	}
-	fprintf(stderr,"DIALLELIC b1: %d b2: %d tot_lik: %f\n",b1,b2,tot_lik);
+	//	fprintf(stderr,"DIALLELIC b1: %d b2: %d tot_lik: %f\n",b1,b2,tot_lik);
+	dillh[b1][b2] = tot_lik;
       }
     }
   
     //triallelic
-    fprintf(stderr,"calling triallelic\n");
+    
+    double trillh[4][4][4];
+    for(int i=0;i<4;i++)
+      for(int ii=0;ii<4;ii++)
+	for(int iii=0;iii<4;iii++)
+	trillh[i][ii][iii] = HUGE_VAL;
+    //    fprintf(stderr,"calling triallelic\n");
     for(int a=0;a<4;a++){
       for(int b=a+1;b<4;b++){
 	for(int c=b+1;c<4;c++){
@@ -230,16 +243,53 @@ void abcMcall::run(funkyPars *pars){
 	double fc2 = fc*fc;
 	double fab = 2*fa*fb,fac=2*fa*fc,fbc=2*fb*fc;
 	double val = 0;
-	//	fprintf(stderr,"fa: %f fb: %f fa2: %f fb2: %f fab: %f\n",fa,fb,fa2,fb2,fab);
+	fprintf(stderr,"fa: %f fb: %f fa2: %f fb2: %f fab: %f fc %f fc2 %f fbc %f\n",fa,fb,fa2,fb2,fab,fc,fc2,fbc);
 	for(int i=0;i<pars->nInd;i++){
-	  val= fa2*liks[i*10+angsd::majorminor[b1][b1]] + fab*liks[i*10+angsd::majorminor[b1][b2]]+ fac*liks[i*10+angsd::majorminor[b1][b3]]+ fbc*liks[i*10+angsd::majorminor[b3][b3]] + fb2*liks[i*10+angsd::majorminor[b2][b2]]+ fc2*liks[i*10+angsd::majorminor[b3][b3]];
+	  val= fa2*liks[i*10+angsd::majorminor[b1][b1]] + fab*liks[i*10+angsd::majorminor[b1][b2]]+ fac*liks[i*10+angsd::majorminor[b1][b3]]+ fbc*liks[i*10+angsd::majorminor[b2][b3]] + fb2*liks[i*10+angsd::majorminor[b2][b2]]+ fc2*liks[i*10+angsd::majorminor[b3][b3]];
 	  //  fprintf(stderr,"val: %f\n",val);
 	  tot_lik += log(val);
 	}
-	fprintf(stderr,"trIALLELIC b1: %d b2: %d  b3:%dtot_lik: %f\n",b1,b2,b3,tot_lik);
+	//	fprintf(stderr,"trIALLELIC b1: %d b2: %d  b3:%dtot_lik: %f\n",b1,b2,b3,tot_lik);
+	trillh[b1][b2][b3] = tot_lik;
 	}
       }
     }
+    for(int i=0;i<4;i++)
+      if(monollh[i]!=HUGE_VAL&&i!=pars->ref[s])
+	monollh[i] += theta;
+    
+    for(int i=0;i<4;i++)
+      for(int ii=0;ii<4;ii++){
+	if(dillh[i][ii]!=HUGE_VAL&&i!=pars->ref[s])
+	  dillh[i][ii] += theta;
+	if(dillh[i][ii]!=HUGE_VAL&&ii!=pars->ref[s])
+	  dillh[i][ii] += theta;
+      }
+    for(int i=0;i<4;i++)
+      for(int ii=0;ii<4;ii++)
+	for(int iii=0;iii<4;iii++){
+	  if(trillh[i][ii][iii]!=HUGE_VAL)
+	    fprintf(stderr,"tri[%d][%d][%d] llh: %f\n",i,ii,iii,trillh[i][ii][iii]);
+	  if(trillh[i][ii][iii]!=HUGE_VAL&&i!=pars->ref[s])
+	    trillh[i][ii][iii] += theta;
+	  if(trillh[i][ii][iii]!=HUGE_VAL&&ii!=pars->ref[s])
+	    trillh[i][ii][iii] += theta;
+	  if(trillh[i][ii][iii]!=HUGE_VAL&&iii!=pars->ref[s])
+	    trillh[i][ii][iii] += theta;
+	}
+    
+    for(int i=0;i<4;i++)
+      if(monollh[i]!=HUGE_VAL)
+	fprintf(stderr,"mono[%d] llh: %f\n",i,monollh[i]);
+    for(int i=0;i<4;i++)
+      for(int ii=0;ii<4;ii++)
+	if(dillh[i][ii]!=HUGE_VAL)
+	  fprintf(stderr,"di[%d][%d] llh: %f\n",i,ii,dillh[i][ii]);
+     for(int i=0;i<4;i++)
+      for(int ii=0;ii<4;ii++)
+	for(int iii=0;iii<4;iii++)
+	  if(trillh[i][ii][iii]!=HUGE_VAL)
+	    fprintf(stderr,"tri[%d][%d][%d] llh: %f\n",i,ii,iii,trillh[i][ii][iii]);
     exit(0);
   }
 }
