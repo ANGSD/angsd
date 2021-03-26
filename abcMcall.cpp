@@ -24,12 +24,26 @@ void abcMcall::run(funkyPars *pars){
   int trim=0;
   if(!domcall)
     return;
-  float QS_glob[5]={0,0,0,0,0};
+
+  // Watterson factor, here aM_1 = aM_2 = 1
+  double aM = 1;
+  for (int i=2; i<pars->nInd*2; i++) aM += 1./i;
+  theta *= aM;
+  if ( theta >= 1 )
+    {
+      fprintf(stderr,"The prior is too big (theta*aM=%.2f), going with 0.99\n", theta);
+      theta = 0.99;
+    }
+  theta = log(theta);
+  //fprintf(stderr,"theta: %f\n",theta);
+  
+  
   double QS_ind[4][pars->nInd];
   
   chunkyT *chk = pars->chk;
   for(int s=0;s<chk->nSites;s++) {
-    fprintf(stderr,"REF: %d\n",pars->ref[s]);
+    float QS_glob[5]={0,0,0,0,0};
+    // fprintf(stderr,"\t-> s:%d REF: %d\n",s,pars->ref[s]);
     for(int i=0;i<chk->nSamples;i++) {
       tNode *nd = chk->nd[s][i];
       if(nd==NULL)
@@ -42,7 +56,6 @@ void abcMcall::run(funkyPars *pars){
 	int qs = nd->qs[j];
 	if(qs>nd->mapQ[j])
 	  qs = nd->mapQ[j];
-	//	fprintf(stderr,"qs[%d]: %d\n",allele,qs);
 	//filter qscore, mapQ,trimming, and always skip n/N
 	if(nd->posi[j]<trim||nd->isop[j]<trim||allele==4){
 	  continue;
@@ -54,9 +67,11 @@ void abcMcall::run(funkyPars *pars){
     }
     for(int i=0;i<chk->nSamples;i++){
       double partsum = 0;
-      for(int j=0;j<4;j++)
-	partsum += QS_ind[j][i];
       for(int j=0;j<4;j++){
+	partsum += QS_ind[j][i];
+	//	fprintf(stderr,"partsum: %f QS_ind[%d][%d]: %f\n",partsum,j,i,QS_ind[j][i]);
+      }
+      for(int j=0;(partsum>0)&&j<4;j++){
 	QS_glob[j] += QS_ind[j][i]/partsum;
 	//	fprintf(stderr,"qs_glob[%d]: %f partsum: %f\n",j,QS_glob[j],partsum);
       }
@@ -65,17 +80,10 @@ void abcMcall::run(funkyPars *pars){
     double partsum = QS_glob[0]+QS_glob[1]+QS_glob[2]+QS_glob[3]+QS_glob[4];
     for(int i=0;1&&i<5;i++){
       QS_glob[i] = QS_glob[i]/partsum;
-      fprintf(stderr,"qsum global %d) %f\n",i,QS_glob[i]);
+      //    fprintf(stderr,"qsum global %d) %f\n",i,QS_glob[i]);
     }
-    double liks[10*pars->nInd];//<- this will be the work array
-    //exit(0);
-
-    //switch to PL just to compare numbers
-    /*
-      p = 10^(-q/10)
-      log10(p) = -q/10
-      -10*log10(p) = q;
-    */
+    //   exit(0);
+  
 #if 1
     //this macro will discard precision to emulate PL, it can be removed whenever things work
     for(int i=0;i<pars->nInd;i++){
@@ -85,14 +93,11 @@ void abcMcall::run(funkyPars *pars){
 	  min = -10*log10(exp(pars->likes[s][i*10+j]));
       for(int j=0;j<10;j++){
 	pars->likes[s][i*10+j]  = (int)(-10*log10(exp(pars->likes[s][i*10+j])) - min + .499);
-	//fprintf(stderr,"PL[%d][%d]: %f\n",i,j,pars->likes[s][i*10+j]);
       }
       //now pars->likes is in phred PL scale and integerized
-      for(int j=0;j<10;j++){
-	//	fprintf(stderr,"PRINTER %f\n",pars->likes[s][i*10+j]);
+      for(int j=0;j<10;j++)
 	pars->likes[s][i*10+j] = log(pow(10,-pars->likes[s][10*i+j]/10.0));
 
-      }
       //now pars->likes is in logscale but we have had loss of praecision
     }
 #endif
@@ -109,7 +114,7 @@ void abcMcall::run(funkyPars *pars){
  // Set the reference allele and alternative allele(s)
     int calla[5];
     float callqsum[5];
-     int callunseen;
+    int callunseen;
     int calln_alleles;
     for (int i=0; i<5; i++)
       calla[i] = -1;
@@ -146,12 +151,12 @@ void abcMcall::run(funkyPars *pars){
     for(int i=0;0&&i<5;i++)
       fprintf(stderr,"%d: = %d %f unseen: %d nallele: %d\n",i,calla[i],callqsum[i],callunseen,calln_alleles);
    
-
+    double liks[10*pars->nInd];//<- this will be the work array
     //this block of code will plug in the relevant gls and rescale to normal
-    double newlik[10*pars->nInd];
+    //double newlik[10*pars->nInd];
     for(int i=0;i<pars->nInd;i++)
       for(int j=0;j<10;j++)
-	newlik[i*10+j] = 0;
+	liks[i*10+j] = 0;
       for(int i=0;i<pars->nInd;i++)
       for(int ii=0;ii<4;ii++)
 	for(int iii=ii;iii<4;iii++){
@@ -161,32 +166,21 @@ void abcMcall::run(funkyPars *pars){
 	    continue;
 	  // fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
 	  if(b1!=-1&&b2!=-1)
-	    newlik[i*10+angsd::majorminor[b1][b2] ] = exp(pars->likes[s][i*10+angsd::majorminor[b1][b2]]);
+	    liks[i*10+angsd::majorminor[b1][b2] ] = exp(pars->likes[s][i*10+angsd::majorminor[b1][b2]]);
 	}
       for(int i=0;i<pars->nInd;i++){
 	double tsum = 0.0;
 	for(int j=0;j<10;j++)
-	  tsum += newlik[i*10+j];
+	  tsum += liks[i*10+j];
 	for(int j=0;j<10;j++)
-	  liks[i*10+j] = newlik[i*10+j]/tsum;
+	  liks[i*10+j] = liks[i*10+j]/tsum;
 
 	for(int j=0;0&&j<10;j++)
 	  fprintf(stderr,"lk[%d][%d]: %f\n",i,j,liks[10*i+j]);
       }
 
     
-    // Watterson factor, here aM_1 = aM_2 = 1
-    double aM = 1;
-    for (int i=2; i<pars->nInd*2; i++) aM += 1./i;
-    theta *= aM;
-    if ( theta >= 1 )
-      {
-	fprintf(stderr,"The prior is too big (theta*aM=%.2f), going with 0.99\n", theta);
-	theta = 0.99;
-      }
-    theta = log(theta);
-    fprintf(stderr,"theta: %f\n",theta);
-
+  
     //monomophic
     double monollh[4]={HUGE_VAL,HUGE_VAL,HUGE_VAL,HUGE_VAL};
     for(int b1=0;b1<4;b1++){
@@ -323,20 +317,19 @@ void abcMcall::run(funkyPars *pars){
     double totlik1=log(0);//this value DOES NOT CONTAIN llh of the ref (to avoid underlow)
     int isvar = 0;
     for(std::map<double,char*>::reverse_iterator it=llh_als.rbegin();it!=llh_als.rend();it++){
-      fprintf(stderr,"%s %f\n",it->second,it->first);
+      //fprintf(stderr,"%s %f\n",it->second,it->first);
       if(it->second[1]!='N')
 	isvar++;
       if(it->second[0]==pars->ref[s]+'0'&&it->second[1]=='N'){
-	fprintf(stderr,"skipping: %f\n",it->first);
+	//	fprintf(stderr,"skipping: %f\n",it->first);
 	continue;
       }
       totlik1 = logsumexp2(totlik1,it->first);
       //fprintf(stderr,"totlik1: %f\n",totlik1);
     }
      
-    double best_llh = llh_als.rbegin()->first;
     double ref_llh =  monollh[pars->ref[s]];
-    fprintf(stderr,"ref_llh: %f bestllh: %f totlik1: %f isvar: %d TMP:%f\n",ref_llh,best_llh,totlik1,isvar,logsumexp2(best_llh,ref_llh));
+    // fprintf(stderr,"ref_llh: %f totlik1: %f isvar: %d \n",ref_llh,totlik1,isvar);
 
     //this is abit strange we shouldnt put the ref_llh in the denominator the ratio
     double Q1 =  -4.343*(ref_llh - logsumexp2(totlik1,ref_llh));
@@ -356,7 +349,7 @@ void abcMcall::run(funkyPars *pars){
 	  if(trillh[i][ii][iii]!=HUGE_VAL)
 	    fprintf(stderr,"tri[%d][%d][%d] llh: %f\n",i,ii,iii,trillh[i][ii][iii]);
 #endif 
-    exit(0);
+     //  exit(0);
   }
 }
 
