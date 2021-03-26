@@ -3,6 +3,17 @@
 #include "shared.h"
 #include "abcMcall.h"
 #include <cfloat>
+
+/** log(exp(a)+exp(b)) */
+static inline double logsumexp2(double a, double b)
+{
+    if ( a>b )
+        return log(1 + exp(b-a)) + a;
+    else
+        return log(1 + exp(a-b)) + b;
+}
+
+
 void abcMcall::printArg(FILE *fp){
   fprintf(fp,"\t-> doMcall=%d\n",domcall);
   
@@ -29,6 +40,9 @@ void abcMcall::run(funkyPars *pars){
       for(int j=0;j<nd->l;j++){
 	int allele = refToInt[nd->seq[j]];
 	int qs = nd->qs[j];
+	if(qs>nd->mapQ[j])
+	  qs = nd->mapQ[j];
+	//	fprintf(stderr,"qs[%d]: %d\n",allele,qs);
 	//filter qscore, mapQ,trimming, and always skip n/N
 	if(nd->posi[j]<trim||nd->isop[j]<trim||allele==4){
 	  continue;
@@ -129,7 +143,7 @@ void abcMcall::run(funkyPars *pars){
         calln_alleles = j;
         if (calln_alleles == 1) exit(0);//return -1; // no reliable supporting read. stop doing anything
     }
-    for(int i=0;i<5;i++)
+    for(int i=0;0&&i<5;i++)
       fprintf(stderr,"%d: = %d %f unseen: %d nallele: %d\n",i,calla[i],callqsum[i],callunseen,calln_alleles);
    
 
@@ -175,7 +189,10 @@ void abcMcall::run(funkyPars *pars){
 
     //monomophic
     double monollh[4]={HUGE_VAL,HUGE_VAL,HUGE_VAL,HUGE_VAL};
-    for(int b=0;b<4;b++){
+    for(int b1=0;b1<4;b1++){
+      int b = calla[b1];
+      if(b==-1)
+	continue;
       double llh =0;
       for(int i=0;i<pars->nInd;i++)
 	llh += log(liks[10*i+angsd::majorminor[b][b]]);
@@ -207,11 +224,12 @@ void abcMcall::run(funkyPars *pars){
 	//	fprintf(stderr,"fa: %f fb: %f fa2: %f fb2: %f fab: %f\n",fa,fb,fa2,fb2,fab);
 	for(int i=0;i<pars->nInd;i++){
 	  val= fa2*liks[i*10+angsd::majorminor[b1][b1]] + fab*liks[i*10+angsd::majorminor[b1][b2]] + fb2*liks[i*10+angsd::majorminor[b2][b2]];
-	  //  fprintf(stderr,"val: %f\n",val);
+	  //	  fprintf(stderr,"ABC val: %f\n",val);
 	  tot_lik += log(val);
 	}
-	//	fprintf(stderr,"DIALLELIC b1: %d b2: %d tot_lik: %f\n",b1,b2,tot_lik);
+
 	dillh[b1][b2] = tot_lik;
+	//	fprintf(stderr,"DIALLELIC b1: %d b2: %d tot_lik: %f\n",b1,b2,tot_lik);
       }
     }
   
@@ -234,7 +252,7 @@ void abcMcall::run(funkyPars *pars){
 	if(QS_glob[b1]==0||QS_glob[b2]==0||QS_glob[b3]==0)
 	  continue;
 	double tot_lik = 0;
-	fprintf(stderr,"CALL %d %d %d QS_glob: %e %e %e %e\n",b1,b2,b3,QS_glob[0],QS_glob[1],QS_glob[2],QS_glob[3]);
+	//	fprintf(stderr,"CALL %d %d %d QS_glob: %e %e %e %e\n",b1,b2,b3,QS_glob[0],QS_glob[1],QS_glob[2],QS_glob[3]);
 	double fa  = QS_glob[b1]/(QS_glob[b1] + QS_glob[b2]+QS_glob[b3]);
 	double fb  = QS_glob[b2]/(QS_glob[b1] + QS_glob[b2]+QS_glob[b3]);
 	double fc  = QS_glob[b3]/(QS_glob[b1] + QS_glob[b2]+QS_glob[b3]);
@@ -243,7 +261,7 @@ void abcMcall::run(funkyPars *pars){
 	double fc2 = fc*fc;
 	double fab = 2*fa*fb,fac=2*fa*fc,fbc=2*fb*fc;
 	double val = 0;
-	fprintf(stderr,"fa: %f fb: %f fa2: %f fb2: %f fab: %f fc %f fc2 %f fbc %f\n",fa,fb,fa2,fb2,fab,fc,fc2,fbc);
+	//	fprintf(stderr,"fa: %f fb: %f fa2: %f fb2: %f fab: %f fc %f fc2 %f fbc %f\n",fa,fb,fa2,fb2,fab,fc,fc2,fbc);
 	for(int i=0;i<pars->nInd;i++){
 	  val= fa2*liks[i*10+angsd::majorminor[b1][b1]] + fab*liks[i*10+angsd::majorminor[b1][b2]]+ fac*liks[i*10+angsd::majorminor[b1][b3]]+ fbc*liks[i*10+angsd::majorminor[b2][b3]] + fb2*liks[i*10+angsd::majorminor[b2][b2]]+ fc2*liks[i*10+angsd::majorminor[b3][b3]];
 	  //  fprintf(stderr,"val: %f\n",val);
@@ -254,30 +272,77 @@ void abcMcall::run(funkyPars *pars){
 	}
       }
     }
-    for(int i=0;i<4;i++)
-      if(monollh[i]!=HUGE_VAL&&i!=pars->ref[s])
-	monollh[i] += theta;
+    std::map<double,char*> llh_als;
     
-    for(int i=0;i<4;i++)
-      for(int ii=0;ii<4;ii++){
-	if(dillh[i][ii]!=HUGE_VAL&&i!=pars->ref[s])
-	  dillh[i][ii] += theta;
-	if(dillh[i][ii]!=HUGE_VAL&&ii!=pars->ref[s])
-	  dillh[i][ii] += theta;
+    for(int i=0;i<4;i++){
+      if(monollh[i]!=HUGE_VAL){
+	if(i!=pars->ref[s])
+	  monollh[i] += theta;
+	char *val = new char[4];
+	memset(val,'N',4);
+	val[0]=i+'0';
+	llh_als[monollh[i]] = val;
       }
+    }
+    
     for(int i=0;i<4;i++)
       for(int ii=0;ii<4;ii++)
-	for(int iii=0;iii<4;iii++){
-	  if(trillh[i][ii][iii]!=HUGE_VAL)
-	    fprintf(stderr,"tri[%d][%d][%d] llh: %f\n",i,ii,iii,trillh[i][ii][iii]);
-	  if(trillh[i][ii][iii]!=HUGE_VAL&&i!=pars->ref[s])
-	    trillh[i][ii][iii] += theta;
-	  if(trillh[i][ii][iii]!=HUGE_VAL&&ii!=pars->ref[s])
-	    trillh[i][ii][iii] += theta;
-	  if(trillh[i][ii][iii]!=HUGE_VAL&&iii!=pars->ref[s])
-	    trillh[i][ii][iii] += theta;
+	if(dillh[i][ii]!=HUGE_VAL){
+	  if(i!=pars->ref[s])
+	    dillh[i][ii] += theta;
+	  if(ii!=pars->ref[s])
+	    dillh[i][ii] += theta;
+
+	  char *val = new char[4];
+	  memset(val,'N',4);
+	  val[0]=i+'0';
+	  val[1]=ii+'0';
+	  llh_als[dillh[i][ii]] = val;
 	}
     
+    
+    for(int i=0;i<4;i++)
+      for(int ii=0;ii<4;ii++)
+	for(int iii=0;iii<4;iii++)
+	  if(dillh[i][ii]!=HUGE_VAL){
+	    if(i!=pars->ref[s])
+	      trillh[i][ii][iii] += theta;
+	    if(ii!=pars->ref[s])
+	      trillh[i][ii][iii] += theta;
+	    if(iii!=pars->ref[s])
+	      trillh[i][ii][iii] += theta;
+	      char *val = new char[4];
+	      memset(val,'N',4);
+	      val[0]=i+'0';
+	      val[1]=ii+'0';
+	      val[2]=iii+'0';
+	      if(trillh[i][ii][iii]!=HUGE_VAL)
+		llh_als[trillh[i][ii][iii]] = val;
+	  }
+
+    double totlik1=log(0);//this value DOES NOT CONTAIN llh of the ref (to avoid underlow)
+    int isvar = 0;
+    for(std::map<double,char*>::reverse_iterator it=llh_als.rbegin();it!=llh_als.rend();it++){
+      fprintf(stderr,"%s %f\n",it->second,it->first);
+      if(it->second[1]!='N')
+	isvar++;
+      if(it->second[0]==pars->ref[s]+'0'&&it->second[1]=='N'){
+	fprintf(stderr,"skipping: %f\n",it->first);
+	continue;
+      }
+      totlik1 = logsumexp2(totlik1,it->first);
+      //fprintf(stderr,"totlik1: %f\n",totlik1);
+    }
+     
+    double best_llh = llh_als.rbegin()->first;
+    double ref_llh =  monollh[pars->ref[s]];
+    fprintf(stderr,"ref_llh: %f bestllh: %f totlik1: %f isvar: %d TMP:%f\n",ref_llh,best_llh,totlik1,isvar,logsumexp2(best_llh,ref_llh));
+
+    //this is abit strange we shouldnt put the ref_llh in the denominator the ratio
+    double Q1 =  -4.343*(ref_llh - logsumexp2(totlik1,ref_llh));
+    double Q2 =  -4.343*(totlik1 - logsumexp2(totlik1,ref_llh));
+    fprintf(stderr,"Q1: %f Q2: %f\n",Q1,Q2);
+#if 0
     for(int i=0;i<4;i++)
       if(monollh[i]!=HUGE_VAL)
 	fprintf(stderr,"mono[%d] llh: %f\n",i,monollh[i]);
@@ -290,6 +355,7 @@ void abcMcall::run(funkyPars *pars){
 	for(int iii=0;iii<4;iii++)
 	  if(trillh[i][ii][iii]!=HUGE_VAL)
 	    fprintf(stderr,"tri[%d][%d][%d] llh: %f\n",i,ii,iii,trillh[i][ii][iii]);
+#endif 
     exit(0);
   }
 }
@@ -310,7 +376,7 @@ void abcMcall::print(funkyPars *fp){
 
 
 void abcMcall::getOptions(argStruct *arguments){
-  fprintf(stderr,"asdfadsfadsf\n");
+  //  fprintf(stderr,"asdfadsfadsf\n");
   //default
   domcall=0;
 

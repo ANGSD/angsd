@@ -33,7 +33,7 @@ void abcSmartCounts::getOptions(argStruct *arguments){
 }
 
 void abcSmartCounts::changeChr(int newRefId){
-  fprintf(stderr,"cur:%d new:%d smartcounts: %d\n",curChr,newRefId,doSmartCounts);
+  // fprintf(stderr,"cur:%d new:%d smartcounts: %d\n",curChr,newRefId,doSmartCounts);
   if(doSmartCounts==0)
     return;
   fprintf(stderr,"cur:%d new:%d\n",curChr,newRefId);
