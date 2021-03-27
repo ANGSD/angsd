@@ -82,6 +82,11 @@ void abcMcall::run(funkyPars *pars){
       QS_glob[i] = QS_glob[i]/partsum;
       //    fprintf(stderr,"qsum global %d) %f\n",i,QS_glob[i]);
     }
+    if(partsum==0){
+      fprintf(stderr,"Q1: nan Q2: nan\n");
+      continue;
+    }
+      
     //   exit(0);
   
 #if 1
@@ -172,6 +177,7 @@ void abcMcall::run(funkyPars *pars){
 	double tsum = 0.0;
 	for(int j=0;j<10;j++)
 	  tsum += liks[i*10+j];
+	//	fprintf(stderr,"tsum: %f\n",tsum);
 	for(int j=0;j<10;j++)
 	  liks[i*10+j] = liks[i*10+j]/tsum;
 
