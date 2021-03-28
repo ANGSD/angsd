@@ -14,7 +14,7 @@
 #include "abcMajorMinor.h"
 #include "abcWriteBcf.h"
 #include "aio.h"
-
+#include "abcMcall.h"
 
 void error(const char *format, ...)
 {
@@ -38,7 +38,7 @@ void abcWriteBcf::run(funkyPars *pars){
 }
 
 //last is from abc.h
-void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr){
+void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr,int domcall){
   if(args->ref){
     buf.l = 0;
     ksprintf(&buf, "##reference=file://%s\n", args->ref);
@@ -78,6 +78,10 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##INFO=<ID=MQ0F,Number=1,Type=Float,Description=\"Fraction of MQ0 reads (smaller is better)\">");
   bcf_hdr_append(hdr,"##INFO=<ID=I16,Number=16,Type=Float,Description=\"Auxiliary tag used for calling, see description of bcf_callret1_t in bam2bcf.h\">");
   bcf_hdr_append(hdr,"##INFO=<ID=QS,Number=R,Type=Float,Description=\"Auxiliary tag used for calling\">");
+  if(domcall){
+    bcf_hdr_append(hdr,"##INFO=<ID=QS_angsd,Number=R,Type=Float,Description=\"Sum of quality scores for A,C,G,T,N \">");
+    bcf_hdr_append(hdr,"##INFO=<ID=Quals_angsd ,Number=R,Type=Float,Description=\"Quality score for alternative and null hypothesis\">");
+  }
   bcf_hdr_append(hdr,"##INFO=<ID=AF,Number=A,Type=Float,Description=\"Minor Allele Frequency\">");
   bcf_hdr_append(hdr,"##INFO=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##INFO=<ID=AD,Number=R,Type=Integer,Description=\"Total allelic depths\">");
@@ -125,10 +129,12 @@ void abcWriteBcf::print(funkyPars *pars){
   if(doBcf==0)
     return;
  
-  lh3struct *lh3 = (lh3struct*) pars->extras[5];
-  freqStruct *freq = (freqStruct *) pars->extras[6];
-  genoCalls *geno = (genoCalls *) pars->extras[10];
-  
+  //  lh3struct *lh3 = (lh3struct*) pars->extras[5];
+  freqStruct *freq = (freqStruct *) pars->extras[7];
+  genoCalls *geno = (genoCalls *) pars->extras[11];
+  angsd_mcall *mcall = NULL;
+  if(domcall)
+    mcall = (angsd_mcall *) pars->extras[5];
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
       continue;
@@ -137,15 +143,32 @@ void abcWriteBcf::print(funkyPars *pars){
     //    bcf_update_id(hdr, rec, "rs6054257");
     char majmin[4]={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
     bcf_update_alleles_str(hdr, rec, majmin);
-    rec->qual = 29;
+
+    if(freq==NULL&&mcall==NULL)
+      rec->qual = 29;
     // .. FILTER
     int32_t tmpi = bcf_hdr_id2int(hdr, BCF_DT_ID, "PASS");
     bcf_update_filter(hdr, rec, &tmpi, 1);
     // .. INFO
-    
     tmpi = pars->keepSites[s];
     assert(bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1)==0);
+    if(mcall){
 
+      float *tmp = mcall->QS+5*s;
+      //      for(int i=0;i<5;i++)	fprintf(stderr,"qs[%d]: %f\n",i,tmp[i]);
+      assert(bcf_update_info_float(hdr, rec, "QS_angsd", tmp, 5)==0);
+      tmp = mcall->quals+2*s;
+      assert(bcf_update_info_float(hdr, rec, "Quals_angsd", tmp, 2)==0);
+      if(freq){
+	if(freq->freq_EM[s]>0.01)
+	  rec->qual = tmp[0];
+	else
+	  rec->qual = tmp[1];
+      }else
+	rec->qual = tmp[0];
+      
+    }
+    
     if(pars->counts){
       int depth = 0;
       for(int i=0; i<4*pars->nInd; i++)
@@ -272,6 +295,7 @@ void abcWriteBcf::getOptions(argStruct *arguments){
   doMaf = angsd::getArg("-doMaf",doMaf,arguments);
   doCounts = angsd::getArg("-doCounts",doCounts,arguments);
   doGeno = angsd::getArg("-doGeno",doGeno,arguments);
+  domcall = angsd::getArg("-doMcall",domcall,arguments);
 
   if(doPost==0||doMajorMinor==0||gl==0){
     fprintf(stderr,"\nPotential problem. -doBcf is a wrapper around -doMajorMinor -doPost and -gl. These values must therefore be set\n\n");
@@ -289,7 +313,7 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   doBcf =0;
   args=arguments;
   outfiles=outfiles_a;
-
+  domcall = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doBcf")){
       printArg(stdout);
@@ -315,7 +339,7 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   rec    = bcf_init1();
   if(arguments->inputtype==INPUT_BAM){
     hdr = bcf_hdr_init("w");
-    print_bcf_header(fp,hdr,args,buf,header);
+    print_bcf_header(fp,hdr,args,buf,header,domcall);
   } else if(arguments->inputtype==INPUT_VCF_GP||arguments->inputtype==INPUT_VCF_GL){
     fprintf(stderr,"\t-> Building bcf header\n");
     hdr = bcf_hdr_dup(vcfreader_hs_bcf_hdr);

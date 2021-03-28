@@ -19,12 +19,23 @@ void abcMcall::printArg(FILE *fp){
   
 }
 
-double theta = 1.1e-3;
+
 void abcMcall::run(funkyPars *pars){
-  int trim=0;
+  double theta = 1.1e-3;
   if(!domcall)
     return;
 
+  angsd_mcall *dat = new angsd_mcall;
+  dat->quals = new float[2*pars->numSites];
+  dat->QS = new float[5*pars->numSites];
+  dat->gcdat = new int*[pars->numSites];   
+  for(int s=0;s<pars->numSites;s++)
+    dat->gcdat[s]=new int[pars->nInd];
+
+  //genoCall struct to pars
+  pars->extras[index] = dat;
+  
+  int trim=0;
   // Watterson factor, here aM_1 = aM_2 = 1
   double aM = 1;
   for (int i=2; i<pars->nInd*2; i++) aM += 1./i;
@@ -42,15 +53,20 @@ void abcMcall::run(funkyPars *pars){
   
   chunkyT *chk = pars->chk;
   for(int s=0;s<chk->nSites;s++) {
-    float QS_glob[5]={0,0,0,0,0};
+    if(pars->keepSites[s]==0)
+      continue;
+    float *QS_glob = dat->QS + 5*s;
+    QS_glob[0] = QS_glob[1] = QS_glob[2] = QS_glob[3] = QS_glob[4] = 0.0;
+    
     // fprintf(stderr,"\t-> s:%d REF: %d\n",s,pars->ref[s]);
     for(int i=0;i<chk->nSamples;i++) {
+      for(int j=0;j<4;j++)
+	QS_ind[j][i] = 0;
       tNode *nd = chk->nd[s][i];
       if(nd==NULL)
 	continue;
 
-      for(int j=0;j<4;j++)
-	QS_ind[j][i] = 0;
+   
       for(int j=0;j<nd->l;j++){
 	int allele = refToInt[nd->seq[j]];
 	int qs = nd->qs[j];
@@ -63,7 +79,7 @@ void abcMcall::run(funkyPars *pars){
 	QS_ind[allele][i] += qs;
       }
       for(int j=0;0&&j<4;j++)
-	fprintf(stderr,"QS[%d][%d] %f\n",i,j,QS_ind[j][i]);
+	fprintf(stderr,"QSind[allele=%d][ind=%d] %f\n",j,i,QS_ind[j][i]);
     }
     for(int i=0;i<chk->nSamples;i++){
       double partsum = 0;
@@ -73,17 +89,19 @@ void abcMcall::run(funkyPars *pars){
       }
       for(int j=0;(partsum>0)&&j<4;j++){
 	QS_glob[j] += QS_ind[j][i]/partsum;
-	//	fprintf(stderr,"qs_glob[%d]: %f partsum: %f\n",j,QS_glob[j],partsum);
+	// fprintf(stderr,"qs_glob[%d]: %f partsum: %f\n",j,QS_glob[j],partsum);
       }
     }
 
     double partsum = QS_glob[0]+QS_glob[1]+QS_glob[2]+QS_glob[3]+QS_glob[4];
-    for(int i=0;1&&i<5;i++){
+    for(int i=0;0&&i<5;i++){
       QS_glob[i] = QS_glob[i]/partsum;
-      //    fprintf(stderr,"qsum global %d) %f\n",i,QS_glob[i]);
+      //      fprintf(stderr,"qsum global %d) %f\n",i,QS_glob[i]);
     }
     if(partsum==0){
-      fprintf(stderr,"Q1: nan Q2: nan\n");
+      dat->quals[s*2] = log(0);
+      dat->quals[s*2+1] = log(0);
+      //      fprintf(stderr,"Q1: nan Q2: nan\n");
       continue;
     }
       
@@ -153,7 +171,7 @@ void abcMcall::run(funkyPars *pars){
         calln_alleles = j;
         if (calln_alleles == 1) exit(0);//return -1; // no reliable supporting read. stop doing anything
     }
-    for(int i=0;0&&i<5;i++)
+    for(int i=0;1&&i<5;i++)
       fprintf(stderr,"%d: = %d %f unseen: %d nallele: %d\n",i,calla[i],callqsum[i],callunseen,calln_alleles);
    
     double liks[10*pars->nInd];//<- this will be the work array
@@ -181,7 +199,7 @@ void abcMcall::run(funkyPars *pars){
 	for(int j=0;j<10;j++)
 	  liks[i*10+j] = liks[i*10+j]/tsum;
 
-	for(int j=0;0&&j<10;j++)
+	for(int j=0;1&&j<10;j++)
 	  fprintf(stderr,"lk[%d][%d]: %f\n",i,j,liks[10*i+j]);
       }
 
@@ -275,16 +293,19 @@ void abcMcall::run(funkyPars *pars){
     std::map<double,char*> llh_als;
     
     for(int i=0;i<4;i++){
+      //      fprintf(stderr,"ALLALE: %d llh: %f ref: %d\n",i,monollh[i],pars->ref[s]);
       if(monollh[i]!=HUGE_VAL){
+
 	if(i!=pars->ref[s])
 	  monollh[i] += theta;
 	char *val = new char[4];
 	memset(val,'N',4);
 	val[0]=i+'0';
 	llh_als[monollh[i]] = val;
+	//fprintf(stderr,"ALLALE: %d llh: %f ref: %d\n",i,monollh[i],pars->ref[s]);
       }
     }
-    
+    //    fprintf(stderr,"SIZE: %lu\n",llh_als.size());//exit(0);
     for(int i=0;i<4;i++)
       for(int ii=0;ii<4;ii++)
 	if(dillh[i][ii]!=HUGE_VAL){
@@ -319,11 +340,15 @@ void abcMcall::run(funkyPars *pars){
 	      if(trillh[i][ii][iii]!=HUGE_VAL)
 		llh_als[trillh[i][ii][iii]] = val;
 	  }
-
+    
     double totlik1=log(0);//this value DOES NOT CONTAIN llh of the ref (to avoid underlow)
     int isvar = 0;
+    // fprintf(stderr,"llh_als.size(): %lu\n",llh_als.size());
+    char *DAS_BEST=NULL;
     for(std::map<double,char*>::reverse_iterator it=llh_als.rbegin();it!=llh_als.rend();it++){
-      //fprintf(stderr,"%s %f\n",it->second,it->first);
+      if(DAS_BEST==NULL)
+	DAS_BEST = it->second;
+      //      fprintf(stderr,"%s %f\n",it->second,it->first);
       if(it->second[1]!='N')
 	isvar++;
       if(it->second[0]==pars->ref[s]+'0'&&it->second[1]=='N'){
@@ -333,14 +358,20 @@ void abcMcall::run(funkyPars *pars){
       totlik1 = logsumexp2(totlik1,it->first);
       //fprintf(stderr,"totlik1: %f\n",totlik1);
     }
-     
+    if(DAS_BEST==NULL){
+      fprintf(stderr,"Couldnt find best alleleic configurartion");
+      exit(0);
+    }
+    //  fprintf(stderr,"DAS_BEST: %s\n",DAS_BEST);
     double ref_llh =  monollh[pars->ref[s]];
     // fprintf(stderr,"ref_llh: %f totlik1: %f isvar: %d \n",ref_llh,totlik1,isvar);
 
     //this is abit strange we shouldnt put the ref_llh in the denominator the ratio
     double Q1 =  -4.343*(ref_llh - logsumexp2(totlik1,ref_llh));
     double Q2 =  -4.343*(totlik1 - logsumexp2(totlik1,ref_llh));
-    fprintf(stderr,"Q1: %f Q2: %f\n",Q1,Q2);
+    dat->quals[2*s] = Q1;
+    dat->quals[2*s+1] = Q2;
+    //    fprintf(stderr,"Q1: %f Q2: %f\n",Q1,Q2);
 #if 0
     for(int i=0;i<4;i++)
       if(monollh[i]!=HUGE_VAL)
@@ -354,8 +385,63 @@ void abcMcall::run(funkyPars *pars){
 	for(int iii=0;iii<4;iii++)
 	  if(trillh[i][ii][iii]!=HUGE_VAL)
 	    fprintf(stderr,"tri[%d][%d][%d] llh: %f\n",i,ii,iii,trillh[i][ii][iii]);
-#endif 
-     //  exit(0);
+#endif
+
+     fprintf(stderr,"CALLING genotypes with BEST alleles: %s\n",DAS_BEST);
+     partsum = QS_glob[0]+QS_glob[1]+QS_glob[2]+QS_glob[3]+QS_glob[4];
+     for(int i=0;1&&i<5;i++){
+      QS_glob[i] = QS_glob[i]/partsum;
+      //      fprintf(stderr,"qsum global %d) %f\n",i,QS_glob[i]);
+    }
+     double gc_gls[10*pars->nInd];//this will contain a copy and pp of the gls perind
+     double gc_llh[10*pars->nInd];//this will contain the llh of the different genotypes
+     for(int i=0;i<pars->nInd;i++) {
+       for(int j=0;j<10;j++)
+	 gc_gls[i*10+j]  = 0;
+
+       //these two for loops just copies over the relevant gls and normalizes
+       double tsum = 0;
+       for(int a=0;a<4;a++){
+	 int b1 = refToInt[DAS_BEST[a]];
+	 if(b1==4)
+	   continue;
+	 for(int b=a;b<4;b++){
+	   int b2 = refToInt[DAS_BEST[b]];
+	   if(b2==4)
+	     continue;
+	   //   fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
+	   tsum += gc_gls[i*10+angsd::majorminor[b1][b2]] = liks[i*10+angsd::majorminor[b1][b2]];
+	 }
+       }
+       //       fprintf(stderr,"tsum: %f\n",tsum);
+       for(int j=0;1&&j<10;j++){
+	 gc_gls[i*10+j]  /= tsum;
+	 fprintf(stderr,"gc_gls[%d][%d]: %f\n",i,j,gc_gls[i*10+j]);
+       }
+
+       //these for loops just calculates the llh for the different diploid genotype configurations. The prior is the allele frequency estimated from the sum of qscores
+       for(int a=0;a<4;a++){
+	 int b1 = refToInt[DAS_BEST[a]];
+	 if(b1==4)
+	   continue;
+	 for(int b=a;b<4;b++){
+	   int b2 = refToInt[DAS_BEST[b]];
+
+	   if(b2==4)
+	     continue;
+	   fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
+	   int offs = angsd::majorminor[b1][b2];
+	   fprintf(stderr,"QS_glob[%d]: %f QS_glob[%d]: %f\n",b1,QS_glob[b1],b2,QS_glob[b2]);
+	   if(b1==b2)
+	     gc_llh[10*i+offs] = gc_gls[10*i+offs] * QS_glob[b1] * QS_glob[b1];
+	   else
+	     gc_llh[10*i+offs] = gc_gls[10*i+offs] * 2 * QS_glob[b1] * QS_glob[b2];
+	 }
+       }
+       for(int j=0;j<10;j++)
+	 fprintf(stderr,"gc_llh[%d]: %f\n",j,gc_llh[i*10+j]);
+     }
+     exit(0);
   }
 }
 
@@ -364,7 +450,13 @@ void abcMcall::clean(funkyPars *fp){
   if(!domcall)
     return;
 
-  
+  angsd_mcall *dat =(angsd_mcall *) fp->extras[index];
+  delete [] dat->quals;
+  delete [] dat->QS;
+  for(int s=0;s<fp->numSites;s++)
+    delete [] dat->gcdat[s];
+  delete [] dat->gcdat;
+  delete dat;
 }
 
 void abcMcall::print(funkyPars *fp){
@@ -388,7 +480,12 @@ void abcMcall::getOptions(argStruct *arguments){
   }
   if(domcall==0)
     return;
-
+  int gl = 0;
+  gl=angsd::getArg("-gl",gl,arguments);
+  if(gl==0){
+    fprintf(stderr,"\t-> Error, you must supply a genotype likelihood model for -doMcall\n");
+    exit(0);
+  }
   printArg(arguments->argumentFile);
 
 }
