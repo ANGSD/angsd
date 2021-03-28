@@ -184,7 +184,7 @@ void abcWriteBcf::print(funkyPars *pars){
     // .. FORMAT
     // assert(geno);
     //    fprintf(stderr,"bcf_hdr_nsamples(hdr): %d\n",bcf_hdr_nsamples(hdr));
-    if(geno){
+    if(geno&&mcall!=NULL){
       int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
       for(int i=0; i<pars->nInd;i++){
 	if(geno->dat[s][i]==-1){
@@ -197,6 +197,26 @@ void abcWriteBcf::print(funkyPars *pars){
 	  tmpia[2*i+0] = bcf_gt_unphased(0);
 	  tmpia[2*i+1] = bcf_gt_unphased(1);
 	}  else if(geno->dat[s][i]==2){
+	  tmpia[2*i+0] = bcf_gt_unphased(1);
+	  tmpia[2*i+1] = bcf_gt_unphased(1);
+	}
+      }
+      bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2); 
+      free(tmpia);
+    }
+    else if(mcall){
+      int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
+      for(int i=0; i<pars->nInd;i++){
+	if(mcall->gcdat[s][i]==-1){
+	  tmpia[2*i+0] = bcf_gt_missing;
+	  tmpia[2*i+1] = bcf_gt_missing;
+	}else if(mcall->gcdat[s][i]==0){
+	  tmpia[2*i+0] = bcf_gt_unphased(0);
+	  tmpia[2*i+1] = bcf_gt_unphased(0);
+	}else if(mcall->gcdat[s][i]==1){
+	  tmpia[2*i+0] = bcf_gt_unphased(0);
+	  tmpia[2*i+1] = bcf_gt_unphased(1);
+	}  else if(mcall->gcdat[s][i]==2){
 	  tmpia[2*i+0] = bcf_gt_unphased(1);
 	  tmpia[2*i+1] = bcf_gt_unphased(1);
 	}

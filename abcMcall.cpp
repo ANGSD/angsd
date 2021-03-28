@@ -19,8 +19,52 @@ void abcMcall::printArg(FILE *fp){
   
 }
 
+void offset2allele(int a,int &b,int &c){
+  assert(a>=0&&a<10);
+  if(a==0){//AA
+    b=0;
+    c=0;
+  }
+  if(a==1){//AC
+    b=0;
+    c=1;
+  }
+  if(a==2){//AG
+    b=0;
+    c=2;
+  }
+  if(a==3){//AT
+    b=0;
+    c=3;
+  }
+  if(a==4){//CC
+    b=1;
+    c=1;
+  }
+  if(a==5){//CG
+    b=1;
+    c=2;
+  }
+  if(a==6){//CT
+    b=1;
+    c=3;
+  }
+  if(a==7){//GG
+    b=2;
+    c=2;
+  }
+  if(a==8){//GT
+    b=2;
+    c=3;
+  }
+  if(a==9){//TT
+    b=3;
+    c=3;
+  }
+}
 
-void abcMcall::run(funkyPars *pars){
+
+void abcMcall::run(funkyPars *pars) {
   double theta = 1.1e-3;
   if(!domcall)
     return;
@@ -30,7 +74,7 @@ void abcMcall::run(funkyPars *pars){
   dat->QS = new float[5*pars->numSites];
   dat->gcdat = new int*[pars->numSites];   
   for(int s=0;s<pars->numSites;s++)
-    dat->gcdat[s]=new int[pars->nInd];
+    dat->gcdat[s] = new int[pars->nInd];
 
   //genoCall struct to pars
   pars->extras[index] = dat;
@@ -55,6 +99,7 @@ void abcMcall::run(funkyPars *pars){
   for(int s=0;s<chk->nSites;s++) {
     if(pars->keepSites[s]==0)
       continue;
+    //    fprintf(stderr,"SSSSSS: %d\n",s);
     float *QS_glob = dat->QS + 5*s;
     QS_glob[0] = QS_glob[1] = QS_glob[2] = QS_glob[3] = QS_glob[4] = 0.0;
     
@@ -171,7 +216,7 @@ void abcMcall::run(funkyPars *pars){
         calln_alleles = j;
         if (calln_alleles == 1) exit(0);//return -1; // no reliable supporting read. stop doing anything
     }
-    for(int i=0;1&&i<5;i++)
+    for(int i=0;0&&i<5;i++)
       fprintf(stderr,"%d: = %d %f unseen: %d nallele: %d\n",i,calla[i],callqsum[i],callunseen,calln_alleles);
    
     double liks[10*pars->nInd];//<- this will be the work array
@@ -199,7 +244,7 @@ void abcMcall::run(funkyPars *pars){
 	for(int j=0;j<10;j++)
 	  liks[i*10+j] = liks[i*10+j]/tsum;
 
-	for(int j=0;1&&j<10;j++)
+	for(int j=0;0&&j<10;j++)
 	  fprintf(stderr,"lk[%d][%d]: %f\n",i,j,liks[10*i+j]);
       }
 
@@ -386,18 +431,22 @@ void abcMcall::run(funkyPars *pars){
 	  if(trillh[i][ii][iii]!=HUGE_VAL)
 	    fprintf(stderr,"tri[%d][%d][%d] llh: %f\n",i,ii,iii,trillh[i][ii][iii]);
 #endif
-
-     fprintf(stderr,"CALLING genotypes with BEST alleles: %s\n",DAS_BEST);
+     if(DAS_BEST[2]!='N'){
+       fprintf(stderr,"Multi allelic not tested for >2alleles will skip site\n");
+       pars->keepSites[s] = 0;
+     }
+     //     continue;
+     //    fprintf(stderr,"CALLING genotypes with BEST alleles: %s\n",DAS_BEST);
      partsum = QS_glob[0]+QS_glob[1]+QS_glob[2]+QS_glob[3]+QS_glob[4];
      for(int i=0;1&&i<5;i++){
-      QS_glob[i] = QS_glob[i]/partsum;
+       QS_glob[i] = QS_glob[i]/partsum;
       //      fprintf(stderr,"qsum global %d) %f\n",i,QS_glob[i]);
-    }
+     }
      double gc_gls[10*pars->nInd];//this will contain a copy and pp of the gls perind
      double gc_llh[10*pars->nInd];//this will contain the llh of the different genotypes
      for(int i=0;i<pars->nInd;i++) {
        for(int j=0;j<10;j++)
-	 gc_gls[i*10+j]  = 0;
+	 gc_gls[i*10+j]  = gc_llh[i*10+j] = 0;
 
        //these two for loops just copies over the relevant gls and normalizes
        double tsum = 0;
@@ -409,14 +458,14 @@ void abcMcall::run(funkyPars *pars){
 	   int b2 = refToInt[DAS_BEST[b]];
 	   if(b2==4)
 	     continue;
-	   //   fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
+	   //   fprintf(stderr,"YOYO b1: %d b2: %d\n",b1,b2);
 	   tsum += gc_gls[i*10+angsd::majorminor[b1][b2]] = liks[i*10+angsd::majorminor[b1][b2]];
 	 }
        }
-       //       fprintf(stderr,"tsum: %f\n",tsum);
+       //    fprintf(stderr,"tsum: %f\n",tsum);
        for(int j=0;1&&j<10;j++){
 	 gc_gls[i*10+j]  /= tsum;
-	 fprintf(stderr,"gc_gls[%d][%d]: %f\n",i,j,gc_gls[i*10+j]);
+	 //	 fprintf(stderr,"gc_gls[%d][%d]: %f\n",i,j,gc_gls[i*10+j]);
        }
 
        //these for loops just calculates the llh for the different diploid genotype configurations. The prior is the allele frequency estimated from the sum of qscores
@@ -429,19 +478,44 @@ void abcMcall::run(funkyPars *pars){
 
 	   if(b2==4)
 	     continue;
-	   fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
+	   //	   fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
 	   int offs = angsd::majorminor[b1][b2];
-	   fprintf(stderr,"QS_glob[%d]: %f QS_glob[%d]: %f\n",b1,QS_glob[b1],b2,QS_glob[b2]);
+	   //	   fprintf(stderr,"QS_glob[%d]: %f QS_glob[%d]: %f\n",b1,QS_glob[b1],b2,QS_glob[b2]);
 	   if(b1==b2)
 	     gc_llh[10*i+offs] = gc_gls[10*i+offs] * QS_glob[b1] * QS_glob[b1];
 	   else
 	     gc_llh[10*i+offs] = gc_gls[10*i+offs] * 2 * QS_glob[b1] * QS_glob[b2];
 	 }
        }
-       for(int j=0;j<10;j++)
-	 fprintf(stderr,"gc_llh[%d]: %f\n",j,gc_llh[i*10+j]);
+       
+       for(int j=0;0&&j<10;j++)
+	 fprintf(stderr,"gc_llh[%d][%d]: %f\n",i,j,gc_llh[i*10+j]);
+       int whichmax = 0;
+       partsum = gc_llh[i*10+whichmax];
+       for(int j=1;j<10;j++){
+	 //	 fprintf(stderr,"gc_llh[%d]: %f comparing with: %f \n",j,gc_llh[i*10+j],gc_llh[i*10+whichmax]);
+	 partsum += gc_llh[i*10+j];
+	 if(gc_llh[i*10+j]>gc_llh[i*10+whichmax])
+	   whichmax = j;
+       }
+       int a1,a2;
+       offset2allele(whichmax,a1,a2);
+       fprintf(stderr,"whichmax: %d a1: %d a2: %d pp: %f das_best: %s\n",whichmax,a1,a2,gc_llh[i*10+whichmax]/partsum, DAS_BEST);
+       int b1=refToInt[DAS_BEST[0]];
+       int b2=refToInt[DAS_BEST[1]];
+       assert(a1==b1||a1==b2);
+       assert(a2==b1||a2==b2);
+       dat->gcdat[s][i] = -1;
+       if(a1==a2&&a1==b1)
+	 dat->gcdat[s][i] = 0;
+       if(a1==a2&&a1==b2)
+	 dat->gcdat[s][i] = 2;
+      
+       if(a1==b1&&a2==b2)
+	 dat->gcdat[s][i] = 1;
+       
      }
-     exit(0);
+
   }
 }
 
