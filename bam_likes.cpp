@@ -281,7 +281,7 @@ void bam_likes_destroy(){
 }
 
 
-void call_bam(chunkyT *chk,double **lk,int trim){
+void call_bam(chunkyT *chk,double **lk,int trim,int *keepSites){
   //  fprintf(stderr,"trim=%d\n",trim);
   if(chk==NULL){
     if(mod!=NULL)
@@ -290,8 +290,11 @@ void call_bam(chunkyT *chk,double **lk,int trim){
   }
   assert(mod!=NULL);
   for(int s=0;s<chk->nSites;s++){
-    //fprintf(stderr,"posi=%d\n",chk->nd[s][0].refPos);
     lk[s] = new double[10*chk->nSamples];
+    if(keepSites[s]==0)
+      continue;
+    //fprintf(stderr,"posi=%d\n",chk->nd[s][0].refPos);
+   
     for(int ii=0;ii<10*chk->nSamples;ii++)
       lk[s][ii] = -0.0;
     //fprintf(stderr,"chr=%s minbaseq=%d\n",chk->refName,minQ);
@@ -305,7 +308,7 @@ void call_bam(chunkyT *chk,double **lk,int trim){
       for(int j=0;j<nd->l;j++) {
 	//	fprintf(stderr,"posi=%d isop=%d +=%d\n",nd->posi[j],nd->isop[j],nd->posi[j]+nd->isop[j]);
 	int q=nd->qs[j];
-	//	fprintf(stderr,"q=%c\n",q+33);
+	//	fprintf(stderr,"q[%d]=%c %d\n",j,q+33,q);
 	//fprintf(stderr,"skipping q=%d mapQ=%d posi=%d isop=%d\n",q,nd.mapQ[j],nd.posi[j],nd.isop[j]);
 
 
@@ -327,6 +330,7 @@ void call_bam(chunkyT *chk,double **lk,int trim){
 	  q=nd->mapQ[j];
 	if (q > 63) q = 63;
 	if (q < 4) q = 4;
+	
 	//	fprintf(stderr,"q=%d qshift=%d\n",q,q<<5);
 	//plug in values
 	//	bca->bases[n++] = q<<5 | (int)bam1_strand(p->b)<<4 | b;
@@ -341,11 +345,14 @@ void call_bam(chunkyT *chk,double **lk,int trim){
       if(numItems!=0) {
 	errmod_cal(mod,numItems,5,bases,likes);
 	int ord[] = {0,1,2,3,6,7,8,12,13,18};
+	for(int jj=0;0&&jj<25;jj++)
+	  fprintf(stderr,"jj: %d) asdf: %f %f\n",jj,-log(10.0)*likes[jj]/10.0,likes[jj]);
 	for(int gg=0;gg<10;gg++){
-	  //fprintf(stderr,"%f\n",likes[ord[gg]]);
-	  lk[s][i*10+gg] = -log(10.0) *likes[ord[gg]]/10.0;
-	}
 
+	  lk[s][i*10+gg] = -log(10.0) *likes[ord[gg]]/10.0;
+	  //	  fprintf(stderr,"GOLDEN REITER%f\n",lk[s][i*10+gg]);
+	}
+	//	exit(0);
       }
     }
     //    break;

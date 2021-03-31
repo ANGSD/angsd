@@ -377,7 +377,7 @@ void abcGL::run(funkyPars *pars){
   if(soap.doRecal!=1 || ancestral_lik.doRecal!=1)
     likes = new double*[pars->chk->nSites];
   if(GL==1)
-    call_bam(pars->chk,likes,trim);
+    call_bam(pars->chk,likes,trim,pars->keepSites);
   else if(GL==2)
     call_gatk(pars->chk,likes,trim);
   else if(GL==3){
@@ -497,7 +497,8 @@ void abcGL::printLike(funkyPars *pars) {
     //beagle format
     bufstr.l = 0; //set tmpbuf beginning to zero
     for(int s=0;s<pars->numSites;s++) {
-      lh3struct *lh3 = (lh3struct*) pars->extras[index+1];
+      lh3struct *lh3 = (lh3struct*) pars->extras[index+2];
+      assert(lh3);
       if(pars->keepSites[s]==0||lh3->hasAlloced[s]==0)
 	continue;
       

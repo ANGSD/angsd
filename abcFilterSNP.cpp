@@ -232,7 +232,7 @@ void abcFilterSNP::run(funkyPars *pars){
       if(sb_pval!=-1 && sb3(cnts)<sb_pval)
 	pars->keepSites[s] = 0;
 
-      funkyHWE *hweStruct = (funkyHWE *) pars->extras[8];//THIS IS VERY NASTY! the ordering within general.cpp is now important
+      funkyHWE *hweStruct = (funkyHWE *) pars->extras[9];//THIS IS VERY NASTY! the ordering within general.cpp is now important
       double lrt = 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
       double pval;
       if(std::isnan(lrt))
@@ -263,7 +263,7 @@ void abcFilterSNP::run(funkyPars *pars){
       if(2*phi(Z)<edge_pval)
 	pars->keepSites[s] = 0;
 
-      genoCalls *gcw =(genoCalls *) pars->extras[10];
+      genoCalls *gcw =(genoCalls *) pars->extras[11];
       int **gc=NULL;
       if(gcw)
 	gc = gcw->dat;
