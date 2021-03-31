@@ -377,7 +377,7 @@ void abcGL::run(funkyPars *pars){
   if(soap.doRecal!=1 || ancestral_lik.doRecal!=1)
     likes = new double*[pars->chk->nSites];
   if(GL==1)
-    call_bam(pars->chk,likes,trim);
+    call_bam(pars->chk,likes,trim,pars->keepSites);
   else if(GL==2)
     call_gatk(pars->chk,likes,trim);
   else if(GL==3){
