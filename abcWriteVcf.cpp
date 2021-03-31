@@ -42,9 +42,9 @@ void abcWriteVcf::print(funkyPars *pars){
   if(doVcf==0)
     return;
 
-  lh3struct *lh3 = (lh3struct*) pars->extras[5];
-  freqStruct *freq = (freqStruct *) pars->extras[6];
-  genoCalls *geno = (genoCalls *) pars->extras[10];
+  lh3struct *lh3 = (lh3struct*) pars->extras[6];
+  freqStruct *freq = (freqStruct *) pars->extras[7];
+  genoCalls *geno = (genoCalls *) pars->extras[11];
 
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)

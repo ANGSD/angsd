@@ -1011,7 +1011,7 @@ void abcSaf::run(funkyPars  *p){
     else if(doSaf==1&&isHap==1)
       algoJointHap(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans);
     else if(doSaf==2){
-      freqStruct *freq = (freqStruct *) p->extras[6];
+      freqStruct *freq = (freqStruct *) p->extras[7];
       filipe::algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans,doSaf,p->major,p->minor,freq->freq,filipeIndF,newDim);
     }else if(doSaf==4){
       algoJointPost(p->post,p->numSites,p->nInd,p->keepSites,r);

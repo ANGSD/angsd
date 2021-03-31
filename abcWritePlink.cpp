@@ -48,7 +48,7 @@ unsigned char recode(int i){
 void abcWritePlink::print(funkyPars *pars){
   if(doPlink==0)
     return;
-  genoCalls *geno =(genoCalls *) pars->extras[10];
+  genoCalls *geno =(genoCalls *) pars->extras[11];
   char *chr = header->target_name[pars->refId];
   if(doPlink==2){
     kstring_t kstr;

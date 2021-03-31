@@ -497,7 +497,8 @@ void abcGL::printLike(funkyPars *pars) {
     //beagle format
     bufstr.l = 0; //set tmpbuf beginning to zero
     for(int s=0;s<pars->numSites;s++) {
-      lh3struct *lh3 = (lh3struct*) pars->extras[index+1];
+      lh3struct *lh3 = (lh3struct*) pars->extras[index+2];
+      assert(lh3);
       if(pars->keepSites[s]==0||lh3->hasAlloced[s]==0)
 	continue;
       
