@@ -1,7 +1,9 @@
+#include <cassert>
 #include "abc.h"
 #include "analysisFunction.h"
 #include "shared.h"
 #include "abcMcall.h"
+
 #include <cfloat>
 
 /** log(exp(a)+exp(b)) */
