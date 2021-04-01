@@ -2,12 +2,13 @@ CC  ?= gcc
 CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
+CRYPTOLIB = -lcrypto
 
 # Adjust $(HTSSRC) to point to your top-level htslib directory
 ifdef HTSSRC
-$(info HTSSRC defined)
-CPPFLAGS += -I$(realpath $(HTSSRC))
-LIBS := $(realpath $(HTSSRC))/libhts.a $(LIBS)
+$(info HTSSRC defined: $(HTSSRC))
+CPPFLAGS += -I"$(realpath $(HTSSRC))"
+LIBS := "$(realpath $(HTSSRC))/libhts.a" $(LIBS)
 else
 $(info HTSSRC not defined, assuming systemwide installation)
 LIBS += -lhts
@@ -49,7 +50,7 @@ all: $(PROGRAMS) misc
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
 
-PACKAGE_VERSION  = 0.933
+PACKAGE_VERSION  = 0.935
 
 ifneq "$(wildcard .git)" ""
 PACKAGE_VERSION := $(shell git describe --always --dirty)
@@ -62,7 +63,7 @@ version.h:
 .PHONY: all clean install install-all install-misc misc test
 
 misc: analysisFunction.o bfgs.o prep_sites.o
-	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC))
+	$(MAKE) -C misc HTSSRC="$(realpath $(HTSSRC))"
 
 -include $(OBJ:.o=.d)
 
@@ -75,7 +76,7 @@ misc: analysisFunction.o bfgs.o prep_sites.o
 	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
 angsd: version.h $(OBJ)
-	$(CXX) $(FLAGS) -o angsd *.o $(LIBS)
+	$(CXX) $(FLAGS) -o angsd *.o $(LIBS) $(CRYPTOLIB)
 
 testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
@@ -92,9 +93,9 @@ force:
 install: all
 	$(INSTALL_DIR) $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) $(PROGRAMS) $(DESTDIR)$(bindir)
-	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC)) install
+	$(MAKE) -C misc HTSSRC="$(realpath $(HTSSRC))" install
 
 install-misc: misc
-	$(MAKE) -C misc HTSSRC=$(realpath $(HTSSRC)) install-misc
+	$(MAKE) -C misc HTSSRC="$(realpath $(HTSSRC))" install-misc
 
 install-all: install install-misc
