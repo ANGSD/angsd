@@ -91,7 +91,7 @@ header *bgenReader::parseheader(FILE *fp){
     unsigned LSI;
     assert(fread(&LSI,sizeof(unsigned),1,fp)==1);
     unsigned N2;
-    fread(&N2,sizeof(unsigned),1,fp);
+    assert(fread(&N2,sizeof(unsigned),1,fp)==1);
     assert(hd->N==N2);
     hd->sampleids= new char*[hd->N];
     for(uint i=0;i<hd->N;i++){
@@ -135,7 +135,7 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
   assert(fread(bgen->Lrsid,sizeof(char),Lrsid_l,fp)==Lrsid_l);
 
   unsigned short Lchr_l;
-  fread(&Lchr_l,sizeof(unsigned short),1,fp);
+  assert(fread(&Lchr_l,sizeof(unsigned short),1,fp)==1);
   bgen->Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
   fread(bgen->Lchr,sizeof(char),Lchr_l,fp);
 
