@@ -457,11 +457,11 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
       if(opCode==BAM_CINS||opCode==BAM_CDEL){//handle insertions and deletions
 	if(i==0){ //skip indels if beginning of a read, print mapQ
 	  tmpNode = &nds[wpos];
-	  aio::kputc('^', &tmpNode->seq);
+	  kputc('^', &tmpNode->seq);
 	  if(rd->core.qual!=255)
-	    aio::kputc(rd->core.qual+33, &tmpNode->seq);
+	    kputc(rd->core.qual+33, &tmpNode->seq);
 	  else
-	    aio::kputc('~', &tmpNode->seq);
+	    kputc('~', &tmpNode->seq);
 	  hasPrintedMaq =1;
 	  if(opCode==BAM_CINS){
 	    seq_pos += opLen;
@@ -475,16 +475,16 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	if(i!=0){
 	  wpos--; //insertion/deletion is bound to the last position of the read
 	  tmpNode = &nds[wpos];
-	  aio::kputc(opCode&BAM_CINS?'+':'-',&tmpNode->seq);
-	  aio::kputw(opLen,&tmpNode->seq);
+	  kputc(opCode&BAM_CINS?'+':'-',&tmpNode->seq);
+	  kputw(opLen,&tmpNode->seq);
 	  hasInfo++;
 	}
 	if(opCode==BAM_CINS){
 	  for(int ii=0;ii<opLen;ii++){
 	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
-	    aio::kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
-	    aio::kputw(seq_pos+1,&tmpNode->pos);
-	    aio::kputc(',',&tmpNode->pos);
+	    kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	    kputw(seq_pos+1,&tmpNode->pos);
+	    kputc(',',&tmpNode->pos);
 	    seq_pos++;
 	  }
 	  wpos++;
@@ -492,10 +492,10 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  if(i!=0){
 	    if(gf->ref==NULL)
 	      for(int ii=0;ii<opLen;ii++)
-		aio::kputc(bam_is_rev(rd)? tolower('N') : toupper('N'),&tmpNode->seq);
+		kputc(bam_is_rev(rd)? tolower('N') : toupper('N'),&tmpNode->seq);
 	    else
 	      for(int ii=0;ii<opLen;ii++)
-		aio::kputc(bam_is_rev(rd)? tolower(gf->ref->seqs[offs+wpos+ii+1]) : toupper(gf->ref->seqs[offs+wpos+ii+1]),&tmpNode->seq);
+		kputc(bam_is_rev(rd)? tolower(gf->ref->seqs[offs+wpos+ii+1]) : toupper(gf->ref->seqs[offs+wpos+ii+1]),&tmpNode->seq);
 	    wpos++;//write '*' from the next position and opLen more
 	  }
 	  for(int fix=wpos;wpos<fix+opLen;wpos++){
@@ -503,9 +503,9 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	    tmpNode = &nds[wpos];
 	    tmpNode->refPos=wpos+offs;
 	    tmpNode->depth ++;
-	    aio::kputc('*',&tmpNode->seq);
-	    aio::kputw(seq_pos+1, &tmpNode->pos);
-	    aio::kputc(quals[seq_pos]+33, &tmpNode->qs);
+	    kputc('*',&tmpNode->seq);
+	    kputw(seq_pos+1, &tmpNode->pos);
+	    kputc(quals[seq_pos]+33, &tmpNode->qs);
 	  }
 	}
 
@@ -515,11 +515,11 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  //then we are at beginning of read and need to write mapQ
 	  tmpNode = &nds[wpos];
 	  tmpNode->refPos=wpos+offs;
-	  aio::kputc('^', &tmpNode->seq);
+	  kputc('^', &tmpNode->seq);
 	  if(rd->core.qual!=255)
-	    aio::kputc(rd->core.qual+33, &tmpNode->seq);
+	    kputc(rd->core.qual+33, &tmpNode->seq);
 	  else
-	    aio::kputc('~', &tmpNode->seq);
+	    kputc('~', &tmpNode->seq);
 	  seq_pos += opLen;
 	  //	  wpos -= opLen;
 	}else//we are at the end of read, then break CIGAR loop
@@ -531,25 +531,25 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  tmpNode->refPos=wpos+offs;
 	  tmpNode->depth++;
 	  if(seq_pos==0 &&hasPrintedMaq==0){
-	    aio::kputc('^', &tmpNode->seq);
+	    kputc('^', &tmpNode->seq);
 	    if(rd->core.qual!=255)
-	      aio::kputc(rd->core.qual+33, &tmpNode->seq);
+	      kputc(rd->core.qual+33, &tmpNode->seq);
 	    else
-	      aio::kputc('~', &tmpNode->seq);
+	      kputc('~', &tmpNode->seq);
 	  }
 	  char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
 
 	  if(gf->ref==NULL ||gf->ref->chrLen<wpos+offs)//prints the oberved allele
-	    aio::kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	    kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
 	  else{
 	    if(refToInt[c]==refToInt[gf->ref->seqs[wpos+offs]])
-	      aio::kputc(bam_is_rev(rd)? ',' : '.', &tmpNode->seq);
+	      kputc(bam_is_rev(rd)? ',' : '.', &tmpNode->seq);
 	    else
-	      aio::kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
+	      kputc(bam_is_rev(rd)? tolower(c) : toupper(c), &tmpNode->seq);
 	  }
-	  aio::kputc(quals[seq_pos]+33, &tmpNode->qs);
-	  aio::kputw(seq_pos+1, &tmpNode->pos);
-	  aio::kputc(',',&tmpNode->pos);
+	  kputc(quals[seq_pos]+33, &tmpNode->qs);
+	  kputw(seq_pos+1, &tmpNode->pos);
+	  kputc(',',&tmpNode->pos);
 	  tmpNode->len++;
 	  seq_pos++;
 	}
@@ -558,9 +558,9 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  tmpNode = &nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	  tmpNode->depth ++;
-	  bam_is_rev(rd)?aio::kputc('<',&tmpNode->seq):aio::kputc('>',&tmpNode->seq);
-	  aio::kputw(seq_pos+1, &tmpNode->pos);
-	  aio::kputc(quals[seq_pos]+33, &tmpNode->qs);
+	  bam_is_rev(rd)?kputc('<',&tmpNode->seq):kputc('>',&tmpNode->seq);
+	  kputw(seq_pos+1, &tmpNode->pos);
+	  kputc(quals[seq_pos]+33, &tmpNode->qs);
 	}
       }else if(opCode==BAM_CPAD||opCode==BAM_CHARD_CLIP) {
 	//dont care
@@ -570,7 +570,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
     }
     //after end of read/parsing CIGAR always put the endline char
     //  fprintf(stderr,"printing endpileup for pos=%d\n",rd->pos);
-    aio::kputc('$', &tmpNode->seq);
+    kputc('$', &tmpNode->seq);
   }
 
   //plug the reads back up //FIXME maybe do list type instead

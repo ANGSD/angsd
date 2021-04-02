@@ -69,7 +69,7 @@ void abcWritePlink::print(funkyPars *pars){
 	else if(geno->dat[s][i]==-1)
 	  ksprintf(&kstr,"\t0 0");
       }
-      aio::kputc('\n',&kstr);
+      kputc('\n',&kstr);
     }
     fwrite(kstr.s,1,kstr.l,fp2);
     free(kstr.s);

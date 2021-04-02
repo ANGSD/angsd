@@ -115,15 +115,3 @@ int aio::tgets(gzFile gz,char**buf,int *l){
   rlen += tmp;
   return rlen;
 }
-
-
-//kputw-kputc-kputs breaks in newer versions of htslib
-int aio::kputw(int c,kstring_t *s){
-  return ksprintf(s,"%d",c);
-}
-int aio::kputc(char c,kstring_t *s){
-  return ksprintf(s,"%c",c);
-}
-int aio::kputs(char *c,kstring_t *s){
-  return ksprintf(s,"%s",c);
-}

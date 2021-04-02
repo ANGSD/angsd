@@ -67,7 +67,7 @@ void printCounts(char *chr,int *posi,suint **counts,int nSites,size_t nInd,kstri
 	  tsum[i%4] +=counts[s][i];
 	ksprintf(&bbin,"%zu\t%zu\t%zu\t%zu",tsum[0],tsum[1],tsum[2],tsum[3]);
       }
-      aio::kputc('\n',&bbin);	
+      kputc('\n',&bbin);	
     }
   }
 

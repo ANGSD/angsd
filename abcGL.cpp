@@ -274,16 +274,16 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
     }else{
       gzoutfile = aio::openFileBG(outfiles,beaglepostfix);
       
-      aio::kputs("marker\tallele1\tallele2",&bufstr);
+      kputs("marker\tallele1\tallele2",&bufstr);
       for(int i=0;i<arguments->nInd;i++){
-	aio::kputs("\tInd",&bufstr);
-	aio::kputw(i,&bufstr);
-	aio::kputs("\tInd",&bufstr);
-	aio::kputw(i,&bufstr);
-	aio::kputs("\tInd",&bufstr);
-	aio::kputw(i,&bufstr);
+	kputs("\tInd",&bufstr);
+	kputw(i,&bufstr);
+	kputs("\tInd",&bufstr);
+	kputw(i,&bufstr);
+	kputs("\tInd",&bufstr);
+	kputw(i,&bufstr);
       }
-      aio::kputc('\n',&bufstr);
+      kputc('\n',&bufstr);
       aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
     }
  
@@ -502,13 +502,13 @@ void abcGL::printLike(funkyPars *pars) {
       if(pars->keepSites[s]==0||lh3->hasAlloced[s]==0)
 	continue;
       
-      aio::kputs(header->target_name[pars->refId],&bufstr);
-      aio::kputc('_',&bufstr);
-      aio::kputw(pars->posi[s]+1,&bufstr);
-      aio::kputc('\t',&bufstr);
-      aio::kputw(pars->major[s],&bufstr);
-      aio::kputc('\t',&bufstr);
-      aio::kputw(pars->minor[s],&bufstr);
+      kputs(header->target_name[pars->refId],&bufstr);
+      kputc('_',&bufstr);
+      kputw(pars->posi[s]+1,&bufstr);
+      kputc('\t',&bufstr);
+      kputw(pars->major[s],&bufstr);
+      kputc('\t',&bufstr);
+      kputw(pars->minor[s],&bufstr);
 
       int major = pars->major[s];
       int minor = pars->minor[s];
@@ -530,7 +530,7 @@ void abcGL::printLike(funkyPars *pars) {
       }
 
       if(bufstr.l!=0)
-	aio::kputc('\n',&bufstr);
+	kputc('\n',&bufstr);
 
     }
     aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
@@ -561,13 +561,13 @@ void abcGL::printLike(funkyPars *pars) {
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s]==0)
 	continue;
-      aio::kputs(header->target_name[pars->refId],&bufstr);
-      aio::kputc('\t',&bufstr);
-      aio::kputw(pars->posi[s]+1,&bufstr);
+      kputs(header->target_name[pars->refId],&bufstr);
+      kputc('\t',&bufstr);
+      kputw(pars->posi[s]+1,&bufstr);
       for(int i=0;i<10*pars->nInd;i++)      
 	ksprintf(&bufstr, "\t%f",pars->likes[s][i]);
 
-      aio::kputc('\n',&bufstr);
+      kputc('\n',&bufstr);
     }
     aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
   }else if(doGlf==5){

@@ -51,8 +51,8 @@ void abcWriteVcf::print(funkyPars *pars){
       continue;
     //chr pos id
     ksprintf(kstr,"%s\t%d\t.\t",header->target_name[pars->refId],pars->posi[s]+1);
-    aio::kputc(intToRef[pars->major[s]],kstr);aio::kputc('\t',kstr);
-    aio::kputc(intToRef[pars->minor[s]],kstr);aio::kputc('\t',kstr);
+    kputc(intToRef[pars->major[s]],kstr);kputc('\t',kstr);
+    kputc(intToRef[pars->minor[s]],kstr);kputc('\t',kstr);
     ksprintf(kstr,".\tPASS\tNS=%d", pars->keepSites[s]);
     // Total per site depth
     if(doCounts != 0){
@@ -69,7 +69,7 @@ void abcWriteVcf::print(funkyPars *pars){
     if(doMaf != 0)
       ksprintf(kstr,";AF=%f", freq->freq_EM[s]);
     // GP and GL
-    aio::kputc('\t',kstr);
+    kputc('\t',kstr);
     if(doGeno != 0)
       ksprintf(kstr,"GT:");
     if(doCounts != 0)
@@ -77,7 +77,7 @@ void abcWriteVcf::print(funkyPars *pars){
     ksprintf(kstr,"GP:GL");
     // Per-indiv data
     for(int i=0; i<pars->nInd;i++){
-      aio::kputc('\t',kstr);
+      kputc('\t',kstr);
       if(doGeno != 0){
 	int g = geno->dat[s][i];
 	int gg[2] = {'0','1'};
