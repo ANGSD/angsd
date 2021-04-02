@@ -212,7 +212,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     aio::bgzf_write(outfileSAF,buf,8);
     aio::bgzf_write(outfileSAFPOS,buf,8);
     fwrite(buf,1,8,outfileSAFIDX);
-    bgzf_flush(outfileSAF);bgzf_flush(outfileSAFPOS);
+    assert(bgzf_flush(outfileSAF)==0);assert(bgzf_flush(outfileSAFPOS)==0);
     offs[0] = bgzf_tell(outfileSAFPOS);
     offs[1] = bgzf_tell(outfileSAF);
     size_t tt = newDim-1;
@@ -1495,7 +1495,7 @@ void abcSaf::writeAll(){
   }//else
    // fprintf(stderr,"enpty chr\n");
   //reset
-  bgzf_flush(outfileSAF);bgzf_flush(outfileSAFPOS);
+  assert(bgzf_flush(outfileSAF)==0);assert(bgzf_flush(outfileSAFPOS)==0);
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
   nnnSites=0;

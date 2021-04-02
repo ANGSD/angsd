@@ -1,14 +1,3 @@
-/*
-  remember to cleanup the threaded cleaning.
-  it is not faster to thread the cleaning.
-  
-
-  idea for improvement.
-  1. make blockwise threading of the indexed iteration? tsk I have no idea what this means
-
-  
- */
-
 #include <cstdio>
 #include <vector>
 #include <cstring>

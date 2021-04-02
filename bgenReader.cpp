@@ -51,21 +51,21 @@ header *bgenReader::parseheader(FILE *fp){
 
   header *hd = new header;
   //header block
-  fread(&hd->LH,sizeof(unsigned),1,fp);
-  fread(&hd->M,sizeof(unsigned),1,fp);
-  fread(&hd->N,sizeof(unsigned),1,fp);
+  assert(fread(&hd->LH,sizeof(unsigned),1,fp)==1);
+  assert(fread(&hd->M,sizeof(unsigned),1,fp)==1);
+  assert(fread(&hd->N,sizeof(unsigned),1,fp)==1);
   //in order to have space for terminating char
   char magic[5]={'\0','\0','\0','\0','\0'};
-  fread(magic,sizeof(char),4,fp);
+  assert(fread(magic,sizeof(char),4,fp)==4);
   //assert compare magic value
   assert(strcmp(magic,"bgen") or strcmp(magic,"0000"));
 
   unsigned int fda_l = hd->LH-20;
   //always use calloc
   char *fda =(char*) calloc(fda_l,1);//free data area
-  fread(fda,sizeof(char),fda_l,fp);
+  assert(fread(fda,sizeof(char),fda_l,fp)==fda_l);
   unsigned flags;
-  fread(&flags,sizeof(unsigned),1,fp);
+  assert(fread(&flags,sizeof(unsigned),1,fp)==1);
   //for getting the first 2 bits - and with 3, for getting 2 first bits (max value of first 2 bits)
   hd->compressed = flags & 3;
   assert(hd->compressed>=0&&hd->compressed<3);
@@ -89,7 +89,7 @@ header *bgenReader::parseheader(FILE *fp){
   hd->si = flags>>31;
   if(hd->si==1){
     unsigned LSI;
-    fread(&LSI,sizeof(unsigned),1,fp);
+    assert(fread(&LSI,sizeof(unsigned),1,fp)==1);
     unsigned N2;
     fread(&N2,sizeof(unsigned),1,fp);
     assert(hd->N==N2);
@@ -97,9 +97,9 @@ header *bgenReader::parseheader(FILE *fp){
     for(uint i=0;i<hd->N;i++){
       //short is 2 bytes
       unsigned short LSI_l;
-      fread(&LSI_l,sizeof(unsigned short),1,fp);
+      assert(fread(&LSI_l,sizeof(unsigned short),1,fp)==1);
       hd->sampleids[i] =(char*) calloc(LSI_l+1,sizeof(char));
-      fread(hd->sampleids[i],sizeof(char),LSI_l,fp);
+      assert(fread(hd->sampleids[i],sizeof(char),LSI_l,fp)==LSI_l);
     }
   }
 
@@ -125,41 +125,41 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
   unsigned short Lid_l;
   char *Lid;
   //read in how many variant ID is
-  fread(&Lid_l,sizeof(unsigned short),1,fp);
+  assert(fread(&Lid_l,sizeof(unsigned short),1,fp)==1);
   bgen->Lid =(char*) calloc(Lid_l+1,sizeof(char));
-  fread(bgen->Lid,sizeof(char),Lid_l,fp);
+  assert(fread(bgen->Lid,sizeof(char),Lid_l,fp)==Lid_l);
   
   unsigned short Lrsid_l;
-  fread(&Lrsid_l,sizeof(unsigned short),1,fp);
+  assert(fread(&Lrsid_l,sizeof(unsigned short),1,fp)==1);
   bgen->Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
-  fread(bgen->Lrsid,sizeof(char),Lrsid_l,fp);
+  assert(fread(bgen->Lrsid,sizeof(char),Lrsid_l,fp)==Lrsid_l);
 
   unsigned short Lchr_l;
   fread(&Lchr_l,sizeof(unsigned short),1,fp);
   bgen->Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
   fread(bgen->Lchr,sizeof(char),Lchr_l,fp);
 
-  fread(&bgen->vpos,sizeof(unsigned),1,fp);    
-  fread(&bgen->nal,sizeof(unsigned short),1,fp);
+  assert(fread(&bgen->vpos,sizeof(unsigned),1,fp)==1);
+  assert(fread(&bgen->nal,sizeof(unsigned short),1,fp)==1);
   char *la1;
   char *la2;
-  fread(&bgen->la_l1,sizeof(unsigned),1,fp);
+  assert(fread(&bgen->la_l1,sizeof(unsigned),1,fp)==1);
 
   bgen->la1 =(char*) calloc(bgen->la_l1+1,sizeof(char));
-  fread(bgen->la1,sizeof(char),bgen->la_l1,fp);
-  fread(&bgen->la_l2,sizeof(unsigned),1,fp);
+  assert(fread(bgen->la1,sizeof(char),bgen->la_l1,fp)==bgen->la_l1);
+  assert(fread(&bgen->la_l2,sizeof(unsigned),1,fp)==1);
   
   bgen->la2 =(char*) calloc(bgen->la_l2+1,sizeof(char));
-  fread(bgen->la2,sizeof(char),bgen->la_l2,fp);
+  assert(fread(bgen->la2,sizeof(char),bgen->la_l2,fp)==bgen->la_l2);
         
   //done reading variant information;
   // uncompressed size of genotype probs
   unsigned C;
-  fread(&C,sizeof(unsigned),1,fp);
+  assert(fread(&C,sizeof(unsigned),1,fp)==1);
   // compressed size of genotype probs
   unsigned D;
   if(hd->compressed !=0)
-    fread(&D,sizeof(unsigned),1,fp);
+    assert(fread(&D,sizeof(unsigned),1,fp)==1);
   else
     D=C;
 
@@ -185,10 +185,10 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
   unsigned char *upds=(unsigned char*) calloc(C-4,sizeof(unsigned char));
   
   if(hd->compressed==0){
-    fread(pds,sizeof(unsigned char),C,fp);
+    assert(fread(pds,sizeof(unsigned char),C,fp)==C);
   } else if(hd->compressed==1){
     //added this as otherwise, does not read from current position in file
-    fread(upds,sizeof(unsigned char),C-4,fp);  
+    assert(fread(upds,sizeof(unsigned char),C-4,fp)==C-4);
     //zlib https://gist.github.com/arq5x/5315739
     z_stream infstream;
     infstream.zalloc = Z_NULL;
