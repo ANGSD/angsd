@@ -170,7 +170,7 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
   zstdOK = 1;  
 #endif
   
-  if(!zstdOK & hd->compressed==2){
+  if(!zstdOK && hd->compressed==2){
     fprintf(stderr,"file has ZSTD compression, however it has not been compiled with the ZSTD library!\n");
     exit(0);    
   }
