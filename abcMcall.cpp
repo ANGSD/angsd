@@ -78,7 +78,7 @@ void abcMcall::run(funkyPars *pars) {
   dat->als = new char[4*pars->numSites];
   memset(dat->als,4,4*pars->numSites);
   for(int s=0;s<pars->numSites;s++)
-    dat->gcdat[s] = new int[pars->nInd];
+    dat->gcdat[s] = new int[2*pars->nInd];
 
   //genoCall struct to pars
   pars->extras[index] = dat;
@@ -422,16 +422,13 @@ void abcMcall::run(funkyPars *pars) {
 		llh_als[trillh[i][ii][iii]] = val;
 	  }
     
-    double totlik1=log(0);//this value DOES NOT CONTAIN llh of the ref (to avoid underlow)
-    int isvar = 0;
+    double totlik1=log(0);//this value DOES NOT CONTAIN llh of the ref (to avoid underflow)
     // fprintf(stderr,"llh_als.size(): %lu\n",llh_als.size());
     char *DAS_BEST=NULL;
     for(std::map<double,char*>::reverse_iterator it=llh_als.rbegin();it!=llh_als.rend();it++){
       if(DAS_BEST==NULL)
 	DAS_BEST = it->second;
       //   fprintf(stderr,"%s %f\n",it->second,it->first);
-      if(it->second[1]!='N')
-	isvar++;
       if(it->second[0]==pars->ref[s]+'0'&&it->second[1]=='N'){
 	//	fprintf(stderr,"skipping: %f\n",it->first);
 	continue;
@@ -443,9 +440,8 @@ void abcMcall::run(funkyPars *pars) {
       fprintf(stderr,"Couldnt find best alleleic configurartion");
       exit(0);
     }
-    //    fprintf(stderr,"DAS_BEST: %s\n",DAS_BEST);
+ 
     double ref_llh =  monollh[pars->ref[s]];
-    // fprintf(stderr,"ref_llh: %f totlik1: %f isvar: %d \n",ref_llh,totlik1,isvar);
 
     //this is abit strange we shouldnt put the ref_llh in the denominator the ratio
     double Q1 =  -4.343*(ref_llh - logsumexp2(totlik1,ref_llh));
@@ -474,29 +470,39 @@ void abcMcall::run(funkyPars *pars) {
      
      
      //     fprintf(stderr,"CALLING genotypes with BEST alleles: %s\n",DAS_BEST);
-     for(int i=0;i<5;i++)
+     for(int i=0;i<4;i++)
        DAS_BEST[i] = refToInt[DAS_BEST[i]];
-#if 0
-     int contains_ref = 0;
+#if 1
+     int refpos = -1;
      int lastmissing=-1;
-     for(int i=0;i<5;i++){
+     for(int i=0;i<4;i++){
        DAS_BEST[i] = refToInt[DAS_BEST[i]];
        if(DAS_BEST[i]==pars->ref[s])
-	 contains_ref =1;
+	 refpos = i;
        if(DAS_BEST[i]==4){
 	 lastmissing = i;
 	 break;
        }
      }
-     if(contains_ref==0){
+     if(refpos==-1){
        fprintf(stderr,"\t-> Big problem reference not among alelleset: last missing is: %d\n",lastmissing);
        for(int i=lastmissing;i>=1;i--){
 	 //	 fprintf(stderr,"i: %d\n",i);
 	 DAS_BEST[i] = DAS_BEST[i-1];
        }
        DAS_BEST[0] = pars->ref[s];
+     }else if(refpos>0){
+       fprintf(stderr,"\t-> Big problem reference not the most frequently occuring allele last missing is: %d refpos: %d\n",lastmissing,refpos);
+       int tmptmp = DAS_BEST[0];
+       DAS_BEST[0] = DAS_BEST[refpos];
+       DAS_BEST[refpos] = tmptmp;
      }
 #endif
+     for(int jj=0;jj<4;jj++){
+       dat->als[s*4+jj] = refToInt[DAS_BEST[jj]];
+       //       fprintf(stderr,"YOYO dat->als[%d]: %d\n",jj,dat->als[s*4+jj]);
+       //fprintf(stderr,"ASDFASDF\n");
+     }
      //continue;
      partsum = QS_glob[0]+QS_glob[1]+QS_glob[2]+QS_glob[3]+QS_glob[4];
      float FREQ[5];
@@ -511,7 +517,7 @@ void abcMcall::run(funkyPars *pars) {
        //   fprintf(stderr,"hit[%d]: %d\n",i,hithit[i]);
        if(hithit[i]==0){
 	 //	 fprintf(stderr,"\t-> Skipping hit[%d]: %d\n",i,hithit[i]);
-	 dat->gcdat[s][i] = -1;
+	 dat->gcdat[s][2*i] =dat->gcdat[s][2*i+1]= -1;
 	 continue;
        }
 
@@ -539,8 +545,13 @@ void abcMcall::run(funkyPars *pars) {
 	 gc_gls[i*10+j]  /= tsum;
 	 fprintf(stderr,"gc_gls[%d][%d]: %f\n",i,j,gc_gls[i*10+j]);
        }
-
-       //these for loops just calculates the llh for the different diploid genotype configurations. The prior is the allele frequency estimated from the sum of qscores
+       /*
+	 these for loops just calculates the llh for the different diploid genotype configurations.
+	 The prior is the allele frequency estimated from the sum of qscores
+	 this should be updated to take into account deviations from hwe
+       */
+       char called[2] = {0,0};
+       double maxgcllh = -1;
        for(int a=0;a<4;a++){
 	 int b1 = refToInt[DAS_BEST[a]];
 	 if(b1==4)
@@ -552,18 +563,28 @@ void abcMcall::run(funkyPars *pars) {
 	     continue;
 	   //  fprintf(stderr,"b1: %d b2: %d\n",b1,b2);
 	   int offs = angsd::majorminor[b1][b2];
+
 	   
 	   if(b1==b2)
 	     gc_llh[10*i+offs] = gc_gls[10*i+offs] * FREQ[b1] * FREQ[b1];
 	   else
 	     gc_llh[10*i+offs] = gc_gls[10*i+offs] * 2 * FREQ[b1] * FREQ[b2];
+
+	   double tmpgcllh = gc_llh[10*i+offs];
+	   if(tmpgcllh>maxgcllh){
+	     maxgcllh = tmpgcllh;
+	     called[0] = b1;
+	     called[1] = b2;
+	   }
 	   //  fprintf(stderr,"QS_glob[%d]: %f QS_glob[%d]: %f offs: %d llh: %f gc_gls: %f\n",b1,FREQ[b1],b2,FREQ[b2],offs,gc_llh[10*i+offs],gc_gls[10*i+offs]);
-	   
 	 }
        }
-       
-       for(int j=0;0&&j<10;j++)
+       dat->gcdat[s][2*i] = called[0];
+       dat->gcdat[s][2*i+1] = called[1];
+#if 0 
+       for(int j=0;1&&j<10;j++)
 	 fprintf(stderr,"gc_llh[%d][%d]: %f\n",i,j,gc_llh[i*10+j]);
+      
        int whichmax = 0;
        partsum = gc_llh[i*10+whichmax];
        for(int j=1;1&&j<10;j++){
@@ -598,6 +619,7 @@ void abcMcall::run(funkyPars *pars) {
 	 
        //   fprintf(stderr,"whichmax: %d a1: %d a2: %d pp: %f das_best: %s gcdat: %d\n",whichmax,a1,a2,gc_llh[i*10+whichmax]/partsum, DAS_BEST,dat->gcdat[s][i]);
        }
+#endif
      }
 
   }
