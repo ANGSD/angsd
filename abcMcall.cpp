@@ -463,7 +463,7 @@ void abcMcall::run(funkyPars *pars) {
 	  if(trillh[i][ii][iii]!=HUGE_VAL)
 	    fprintf(stderr,"tri[%d][%d][%d] llh: %f\n",i,ii,iii,trillh[i][ii][iii]);
 #endif
-     if(DAS_BEST[2]!='N'){
+     if(DAS_BEST[2]!='N'&&0){
        fprintf(stderr,"Multi allelic not tested for >2alleles will skip site\n");
        pars->keepSites[s] = 0;
      }
