@@ -260,7 +260,7 @@ void abcWriteBcf::print(funkyPars *pars){
       free(tmpfa);
       free(tmpi);
     }
-    if(pars->post[s]){
+    if(pars->post&&pars->post[s]){
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
 
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++){
