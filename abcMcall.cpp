@@ -74,7 +74,9 @@ void abcMcall::run(funkyPars *pars) {
   angsd_mcall *dat = new angsd_mcall;
   dat->quals = new float[2*pars->numSites];
   dat->QS = new float[5*pars->numSites];
-  dat->gcdat = new int*[pars->numSites];   
+  dat->gcdat = new int*[pars->numSites];
+  dat->als = new char[4*pars->numSites];
+  memset(dat->als,4,4*pars->numSites);
   for(int s=0;s<pars->numSites;s++)
     dat->gcdat[s] = new int[pars->nInd];
 
@@ -612,6 +614,7 @@ void abcMcall::clean(funkyPars *fp){
   for(int s=0;s<fp->numSites;s++)
     delete [] dat->gcdat[s];
   delete [] dat->gcdat;
+  delete [] dat->als;
   delete dat;
 }
 
@@ -640,6 +643,12 @@ void abcMcall::getOptions(argStruct *arguments){
   gl=angsd::getArg("-gl",gl,arguments);
   if(gl==0){
     fprintf(stderr,"\t-> Error, you must supply a genotype likelihood model for -doMcall\n");
+    exit(0);
+  }
+  char *ref = NULL;
+  ref=angsd::getArg("-ref",ref,arguments);
+  if(ref==NULL){
+    fprintf(stderr,"\t-> Error, mcall requires reference (-ref)\n");
     exit(0);
   }
   printArg(arguments->argumentFile);

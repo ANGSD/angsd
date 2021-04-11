@@ -8,6 +8,7 @@ typedef struct{
      1 Aa
      2 aa
   */
+  char *als;
 }angsd_mcall;
 
 
