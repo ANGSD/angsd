@@ -76,6 +76,7 @@ void abcMcall::run(funkyPars *pars) {
   dat->QS = new float[5*pars->numSites];
   dat->gcdat = new int*[pars->numSites];
   dat->als = new char[4*pars->numSites];
+  dat->isvar = new char[pars->numSites];
   memset(dat->als,4,4*pars->numSites);
   for(int s=0;s<pars->numSites;s++)
     dat->gcdat[s] = new int[2*pars->nInd];
@@ -253,6 +254,7 @@ void abcMcall::run(funkyPars *pars) {
       }
       if(hasdata==1)
 	hithit[i] = 1;
+      //      fprintf(stderr,"hithit[%d]\t%d\n",i,hithit[i]);
     }
     	 
    
@@ -513,6 +515,7 @@ void abcMcall::run(funkyPars *pars) {
      double gc_gls[10*pars->nInd];//this will contain a copy and pp of the gls perind
      double gc_llh[10*pars->nInd];//this will contain the llh of the different genotypes
    
+     double allele_count[4] = {0,0,0,0};
      for(int i=0;i<pars->nInd;i++) {
        //   fprintf(stderr,"hit[%d]: %d\n",i,hithit[i]);
        if(hithit[i]==0){
@@ -520,7 +523,7 @@ void abcMcall::run(funkyPars *pars) {
 	 dat->gcdat[s][2*i] =dat->gcdat[s][2*i+1]= -1;
 	 continue;
        }
-
+       //       fprintf(stderr,"calling genotype: %d\n",i);
 
        for(int j=0;j<10;j++){
 	 gc_gls[i*10+j]  = gc_llh[i*10+j] = 0;
@@ -573,14 +576,17 @@ void abcMcall::run(funkyPars *pars) {
 	   double tmpgcllh = gc_llh[10*i+offs];
 	   if(tmpgcllh>maxgcllh){
 	     maxgcllh = tmpgcllh;
-	     called[0] = b1;
-	     called[1] = b2;
+	     called[0] = a;
+	     called[1] = b;
+	     allele_count[called[0]]++;
+	     allele_count[called[1]]++;
 	   }
-	   //  fprintf(stderr,"QS_glob[%d]: %f QS_glob[%d]: %f offs: %d llh: %f gc_gls: %f\n",b1,FREQ[b1],b2,FREQ[b2],offs,gc_llh[10*i+offs],gc_gls[10*i+offs]);
+	   //	   fprintf(stderr,"QS_glob[%d]: %f QS_glob[%d]: %f offs: %d llh: %f gc_gls: %f\n",b1,FREQ[b1],b2,FREQ[b2],offs,gc_llh[10*i+offs],gc_gls[10*i+offs]);
 	 }
        }
        dat->gcdat[s][2*i] = called[0];
        dat->gcdat[s][2*i+1] = called[1];
+       //       fprintf(stderr,"cc: %d %d gcdat: %d %d\n",called[0],called[1],dat->gcdat[s][2*i],dat->gcdat[s][2*i+1]);
 #if 0 
        for(int j=0;1&&j<10;j++)
 	 fprintf(stderr,"gc_llh[%d][%d]: %f\n",i,j,gc_llh[i*10+j]);
@@ -620,8 +626,17 @@ void abcMcall::run(funkyPars *pars) {
        //   fprintf(stderr,"whichmax: %d a1: %d a2: %d pp: %f das_best: %s gcdat: %d\n",whichmax,a1,a2,gc_llh[i*10+whichmax]/partsum, DAS_BEST,dat->gcdat[s][i]);
        }
 #endif
+       
      }
-
+     int nals =0;
+     for(int i=0;i<4;i++)
+       if(allele_count[i]>0)
+	 nals++;
+     //fprintf(stderr,"nals: %d\n",nals);
+     dat->isvar[s] = 0;
+     if(nals>1)
+       dat->isvar[s] = 1;
+       
   }
 }
 
@@ -637,6 +652,7 @@ void abcMcall::clean(funkyPars *fp){
     delete [] dat->gcdat[s];
   delete [] dat->gcdat;
   delete [] dat->als;
+  delete [] dat->isvar;
   delete dat;
 }
 

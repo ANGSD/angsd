@@ -2,6 +2,7 @@ typedef struct{
   float *quals;//phred of hyp(alt) hyp(nul) (2xnumsites)
   float *QS;//sum of phreds for each allele 5*numsites
   int **gcdat;
+  char *isvar;
   /* contains -1,0,1,2.
      -1 no call
      0 AA
