@@ -14,6 +14,7 @@
 void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"---------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doCounts\t%d\t(Count the number A,C,G,T. All sites, All samples)\n",doCounts);
+  fprintf(argFile,"\t-doEBD\t%d\t(Calculate effective basedepth, this will be output in bcffile, beta)\n",doebd);
   fprintf(argFile,"\t-minQfile\t%s\t file with individual quality score thresholds)\n",minQfile);
   fprintf(argFile,"\t-setMaxDepth\t%d\t(If total depth is larger then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMaxDepth);
   fprintf(argFile,"\t-setMinDepth\t%d\t(If total depth is smaller then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMinDepth);
@@ -80,6 +81,7 @@ void abcCounts::getOptions(argStruct *arguments){
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   if(doCounts==0)
     return;
+  doebd = angsd::getArg("-doebd",doebd,arguments);
   //from command line
   minQfile=angsd::getArg("-minQfile",minQfile,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
@@ -148,6 +150,7 @@ void abcCounts::getOptions(argStruct *arguments){
 //constructor
 abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   minQ = MINQ;
+  doebd = 0;
   globCount = NULL;
   const char *delim = "\t\n ";
   ffileFname=qfileFname=NULL;
@@ -530,7 +533,13 @@ void abcCounts::clean(funkyPars *pars){
       delete [] pars->counts[i];
     delete [] pars->counts;
   }
-
+  if(pars->extras[index]){
+    counts *cnts = (counts *) pars->extras[2];
+    for(int i=0;i<pars->numSites;i++)
+      delete [] cnts->ebd[i];
+    delete [] cnts->ebd;
+    delete cnts;
+  }
 }
 
 
@@ -628,6 +637,44 @@ void abcCounts::run(funkyPars *pars){
     return;
   assert(pars->chk!=NULL&&pars->counts==NULL);
   pars->counts = countNucs(pars->chk,pars->keepSites,setMinDepthInd,setMaxDepthInd);
+  counts *cnts = new counts;
+  pars->extras[index] = cnts;
+  cnts->ebd = new float*[pars->numSites];
+  for(int s=0;s<pars->numSites;s++){
+     if(pars->keepSites[s]==0)
+       continue;
+     cnts->ebd[s] = new float[4*pars->nInd];
+     float *EBD = cnts->ebd[s];
+     float qsum[5] = {0,0,0,0,0};//not used
+     for(int i=0;i<pars->nInd;i++){
+       //       fprintf(stderr,"i:%d nd:%p\n",i,pars->chk->nd[s][i]);
+       tNode *nd = pars->chk->nd[s][i];
+       EBD[i*4]=EBD[i*4+1]=EBD[i*4+2]=EBD[i*4+3]=0.0;
+       float tmpsum = 0;
+       for(int j=0;(nd&&j<nd->l);j++){
+
+	 if(nd->qs[j]<minQ)
+	   continue;
+	 int b =refToInt[nd->seq[j]];
+	 int q = nd->qs[j];
+	 //block below are adjustments similar to bcftools mpileup parsing
+	 if (q > nd->mapQ[j]) q = nd->mapQ[j];
+	 if (q > 63) q = 63;
+	 if (q < 4) q = 4;       // MQ=0 reads count as BQ=4
+	 //	 fprintf(stderr,"b:%d qs:%d mapq:%d\n",b,nd->mapQ[j]);
+	 EBD[4*i+b] += q;
+	 //fprintf(stderr,"ebd: %f\n",EBD[4*i+refToInt[nd->seq[j]]]);
+	 tmpsum += q;
+       }
+       // fprintf(stderr,"tmpsum: %f\n",tmpsum);
+       for(int j=0;j<4;j++){
+	 if(tmpsum>0){
+	   qsum[j] += EBD[4*i+j]/tmpsum;
+	   //  fprintf(stderr,"qsum[%d]:%f EBD[%d]:%f\n",j,qsum[j],EBD[4*i+j]);
+	 }
+       }
+     }
+  }
   // fprintf(stderr,"%d\n",pars->keepSites[0]);
   for(int s=0;s<pars->numSites;s++){// Why is this loop needed? is it to remove sites with no data above minQ filters?
     size_t ss=0;

@@ -1,5 +1,5 @@
 /*
-  This is a class that dumps BCF output
+  This is a class that dumps BCF output. Its mainly a wrapper around other classes here in angsd. Maybe this should be streamlined abit
 */
 
 #include <assert.h>
@@ -15,6 +15,7 @@
 #include "abcWriteBcf.h"
 #include "aio.h"
 #include "abcMcall.h"
+#include "abcCounts.h"
 
 void error(const char *format, ...)
 {
@@ -99,6 +100,7 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=EBD,Number=4,Type=Float,Description=\"The effective basedepth\">");
   //fprintf(stderr,"samples from sm:%d\n",args->sm->n);
   buf.l =0;
   assert(args);
@@ -135,7 +137,7 @@ void abcWriteBcf::print(funkyPars *pars){
   angsd_mcall *mcall = NULL;
   if(domcall)
     mcall = (angsd_mcall *) pars->extras[5];
-  for(int s=0;s<pars->numSites;s++){
+  for(int s=0;s<pars->numSites;s++) {
     if(pars->keepSites[s]==0)
       continue;
     rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
@@ -267,6 +269,11 @@ void abcWriteBcf::print(funkyPars *pars){
       bcf_update_format_int32(hdr, rec, "PL", tmpi,3*bcf_hdr_nsamples(hdr) );
       free(tmpfa);
       free(tmpi);
+    }
+    if(pars->extras[2]){
+      counts *cnts = (counts*) pars->extras[2];
+      float *ebd = cnts->ebd[s];
+      bcf_update_format_float(hdr, rec, "EBD",ebd ,4*bcf_hdr_nsamples(hdr) );
     }
     if(pars->post&&pars->post[s]){
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
