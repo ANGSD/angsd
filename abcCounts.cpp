@@ -535,10 +535,14 @@ void abcCounts::clean(funkyPars *pars){
   }
   if(pars->extras[index]){
     counts *cnts = (counts *) pars->extras[2];
-    for(int i=0;i<pars->numSites;i++)
-      delete [] cnts->ebd[i];
-    delete [] cnts->ebd;
-    delete cnts;
+    if(cnts!=NULL){
+      for(int i=0;i<pars->numSites;i++)
+	if(cnts->ebd[i])
+	  delete [] cnts->ebd[i];
+      if(cnts->ebd)
+	delete [] cnts->ebd;
+      delete cnts;
+    }
   }
 }
 
@@ -641,6 +645,7 @@ void abcCounts::run(funkyPars *pars){
   pars->extras[index] = cnts;
   cnts->ebd = new float*[pars->numSites];
   for(int s=0;s<pars->numSites;s++){
+    cnts->ebd[s] = NULL;
      if(pars->keepSites[s]==0)
        continue;
      cnts->ebd[s] = new float[4*pars->nInd];

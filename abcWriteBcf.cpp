@@ -143,23 +143,27 @@ void abcWriteBcf::print(funkyPars *pars){
     rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
     rec->pos = pars->posi[s];//<- maybe one index?
     //    bcf_update_id(hdr, rec, "rs6054257");
-    //    char majmin[4]={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
-    char alleles[16];
-    int goa =0;
-    alleles[goa++] = intToRef[mcall->als[4*s]];
-    for(int i=1;i<4;i++)
-      if(mcall->als[4*s+i]==4)
-	break;
-      else{
-	alleles[goa++] = ',';
-	alleles[goa++] = intToRef[mcall->als[4*s+i]];
-      }
-    alleles[goa] = '\0';
-    //    fprintf(stderr,"ALS: %s\n",alleles);
-    //exit(0);
-    //    ={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
-    bcf_update_alleles_str(hdr, rec, alleles);
-
+    if(domcall!=NULL){
+      // 
+      char alleles[16];
+      int goa =0;
+      alleles[goa++] = intToRef[mcall->als[4*s]];
+      for(int i=1;i<4;i++)
+	if(mcall->als[4*s+i]==4)
+	  break;
+	else{
+	  alleles[goa++] = ',';
+	  alleles[goa++] = intToRef[mcall->als[4*s+i]];
+	}
+      alleles[goa] = '\0';
+      //    fprintf(stderr,"ALS: %s\n",alleles);
+      //exit(0);
+      //    ={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
+      bcf_update_alleles_str(hdr, rec, alleles);
+    }else{
+      char majmin[4]={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
+      bcf_update_alleles_str(hdr, rec, majmin);
+    }
     if(freq==NULL&&mcall==NULL)
       rec->qual = 29;
     // .. FILTER
