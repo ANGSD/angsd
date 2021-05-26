@@ -472,7 +472,7 @@ funkyPars *vcfReader::fetch(int chunkSize) {
     //initialize
     if(curChr==-1)
       curChr=rec->rid;
-
+    
     //if we are changing chromosomes
     if(rec->rid!=curChr){
       acpy=bcf_dup(rec);

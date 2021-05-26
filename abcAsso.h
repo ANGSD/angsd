@@ -43,7 +43,7 @@ public:
   double assoThres; 
   double hybridThres;
   int doPriming; 
-  int Pvalue; 
+  int Pvalue;
   
   void run(funkyPars  *pars);
   void print(funkyPars *pars);  
@@ -59,6 +59,8 @@ public:
   char *yfile2;
   char *yfile3;
   char *sampleFile;
+  char* whichCov;
+  char* whichPhe;
 
   angsd::doubleTrouble<double> dT;
   angsd::Matrix<double> ymat;

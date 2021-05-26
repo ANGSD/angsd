@@ -190,7 +190,7 @@ void angsd::printMatrix(Matrix<double> mat,FILE *file){
 }
 
 
-angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
+angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens, char* whichPhe, char* whichCov){
 
   if(!angsd::fexists(name)){
     fprintf(stderr,"\t-> Problems opening file: %s\n",name);
@@ -208,6 +208,38 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
   int hasMissing = 0;
   int hasID_2 = 0;
   int hasPheno = 0;
+
+  //have to implement method for comparing char* in std::map
+  struct cmp_str{
+    bool operator()(char const *a, char const *b) const{
+      return std::strcmp(a, b) < 0;
+    }
+  };
+  
+  // for reading in specified phenotypes and covariates
+  std::map <char*,int, cmp_str> pheMap;
+  std::map <char*,int, cmp_str> covMap;
+
+  std::map <int,int> pheMap2;
+  std::map <int,int> covMap2;
+
+  const char* delims2 = ",";
+  
+  if(whichPhe!=NULL){
+    char* id = strtok(whichPhe,delims2);
+    while(id!=NULL){
+      pheMap[strdup(id)] = 1;
+      id = strtok(NULL,delims2);      
+    }
+  }
+
+  if(whichCov!=NULL){
+    char* id = strtok(whichCov,delims2);
+    while(id!=NULL){
+      covMap[strdup(id)] = 1;
+      id = strtok(NULL,delims2);
+    }
+  }
   
   //read first line to know how many cols
   pFile.getline(buffer,lens);
@@ -233,9 +265,35 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
       }
       hasMissing = 1;
     }
+
+    //reads in which columns to read into design matrix - if specifed,
+    //otherwise it will just read all of the columns    
+    if(pheMap.count(tmp)>0 && whichPhe!=NULL){
+      pheMap2[ncols] = 1;
+    } else if(whichPhe==NULL){
+      pheMap2[ncols] = 1;
+    }
+    
+    if(covMap.count(tmp)>0 && whichCov!=NULL){
+      covMap2[ncols] = 1;
+    } else if(whichCov==NULL){
+      covMap2[ncols] = 1;
+    }
     
     ncols++;
     tmp = strtok(NULL,delims);       
+  }
+  
+  std::map<char*, int>::iterator it;
+  
+  for ( it = pheMap.begin(); it != pheMap.end(); it++ ){
+    //free strdup for keys 
+    free(it->first);
+  }
+
+  for ( it = covMap.begin(); it != covMap.end(); it++ ){
+    //free strdup for keys 
+    free(it->first);
   }
   
   //read second line to know types of each
@@ -288,8 +346,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
   //NA string used in .sample file has to give -999 value for this
   const char * test = "NA";
   
-  //create matrix for covar and pheno
-  
+  //create matrix for covar and pheno  
   while(!pFile.eof()){
     pFile.getline(buffer,lens);
     if(strlen(buffer)==0)
@@ -301,6 +358,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
     std::list<double> pheRow;
 
     column = 0;
+    
     while(tok!=NULL){
 
       if(sampleMap[column] == '0'){
@@ -308,36 +366,39 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
 	tok = strtok(NULL,delims);            
 	continue;
 	//covar
-      } else if(sampleMap[column] == 'D' || sampleMap[column] == 'C'){
-	column++;
-	if(strcmp(tok,test)==0){
-	  covRow.push_back(-999);
-	} else{	  
-	  covRow.push_back(atof(tok));
+      } else if(sampleMap[column] == 'D' || sampleMap[column] == 'C'){		
+	if(covMap2.count(column)>0){
+	  if(strcmp(tok,test)==0){
+	    covRow.push_back(-999);
+	  } else{	    
+	    covRow.push_back(atof(tok));
+	  }
 	}
-	
+	column++;
 	//pheno
       } else if(sampleMap[column] == 'B'){
 	//ok to have binary phenotype as double??
-	column++;
-	if(strcmp(tok,test)==0){
-	  pheRow.push_back(-999);
-	} else{	  
-	  pheRow.push_back(atof(tok));
+	if(pheMap2.count(column)>0){
+	  if(strcmp(tok,test)==0){
+	    pheRow.push_back(-999);
+	  } else{	  
+	    pheRow.push_back(atof(tok));
+	  }
+	  isBinary = 1;
+	  hasPheno = 1;
 	}
-	
-	isBinary = 1;
-	hasPheno = 1;
-      } else if(sampleMap[column] == 'P'){
-	column++;
-	if(strcmp(tok,test)==0){
-	  pheRow.push_back(-999);
-	} else{	  
-	  pheRow.push_back(atof(tok));
+	column++;	
+      } else if(sampleMap[column] == 'P'){;
+	if(pheMap2.count(column)>0){
+	  if(strcmp(tok,test)==0){
+	    pheRow.push_back(-999);
+	  } else{	  
+	    pheRow.push_back(atof(tok));
+	  }	  
+	  assert(isBinary==0);
+	  hasPheno = 1;
 	}
-
-	assert(isBinary==0);
-	hasPheno = 1;
+	column++;
       } else{
 	fprintf(stderr,"error .sample file has unreconigsed column type (D, C, B, 0 and P are allowed): %c \n",sampleMap[column]);
 	exit(0);
@@ -372,10 +433,9 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens){
     fprintf(stderr,"##############################################\n");    
   }
 
-  //  fprintf(stderr,"%s nrows:%lu\n",__FUNCTION__,rows.size());
   double **covData = new double*[covRows.size()];
   double **pheData = new double*[pheRows.size()];
-
+  
   int i = 0;
   for(std::list<double*>::iterator it=covRows.begin();it!=covRows.end();it++)
     covData[i++]  = *it;
