@@ -317,16 +317,10 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
     }
   }else
     doMaf=abs(doMaf);
-<<<<<<< HEAD
 
   //print header  
-  aio::kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
-=======
-  //print header
-  
-
   kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
->>>>>>> fde14e00f034a3934e7af47724cbfdc730309db6
+
   if(refName!=NULL||arguments->inputtype==INPUT_PILEUP)
     kputs("ref\t",&bufstr);
   if(ancName)
