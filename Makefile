@@ -2,6 +2,7 @@ CC  ?= gcc
 CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
+CRYPTOLIB = -lcrypto
 
 # Adjust $(HTSSRC) to point to your top-level htslib directory
 ifdef HTSSRC
@@ -49,7 +50,7 @@ all: $(PROGRAMS) misc
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
 
-PACKAGE_VERSION  = 0.933
+PACKAGE_VERSION  = 0.935
 
 ifneq "$(wildcard .git)" ""
 PACKAGE_VERSION := $(shell git describe --always --dirty)
@@ -75,7 +76,7 @@ misc: analysisFunction.o bfgs.o prep_sites.o
 	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
 angsd: version.h $(OBJ)
-	$(CXX) $(FLAGS) -o angsd *.o $(LIBS)
+	$(CXX) $(FLAGS) -o angsd *.o $(LIBS) $(CRYPTOLIB)
 
 testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt

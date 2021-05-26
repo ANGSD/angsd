@@ -1,5 +1,5 @@
 /*
-  This is a class that dumps BCF output
+  This is a class that dumps BCF output. Its mainly a wrapper around other classes here in angsd. Maybe this should be streamlined abit
 */
 
 #include <assert.h>
@@ -14,7 +14,8 @@
 #include "abcMajorMinor.h"
 #include "abcWriteBcf.h"
 #include "aio.h"
-
+#include "abcMcall.h"
+#include "abcCounts.h"
 
 void error(const char *format, ...)
 {
@@ -38,8 +39,7 @@ void abcWriteBcf::run(funkyPars *pars){
 }
 
 //last is from abc.h
-void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr){
- 
+void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,const bam_hdr_t *bhdr,int domcall){
   if(args->ref){
     buf.l = 0;
     ksprintf(&buf, "##reference=file://%s\n", args->ref);
@@ -79,6 +79,10 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##INFO=<ID=MQ0F,Number=1,Type=Float,Description=\"Fraction of MQ0 reads (smaller is better)\">");
   bcf_hdr_append(hdr,"##INFO=<ID=I16,Number=16,Type=Float,Description=\"Auxiliary tag used for calling, see description of bcf_callret1_t in bam2bcf.h\">");
   bcf_hdr_append(hdr,"##INFO=<ID=QS,Number=R,Type=Float,Description=\"Auxiliary tag used for calling\">");
+  if(domcall){
+    bcf_hdr_append(hdr,"##INFO=<ID=QS_angsd,Number=R,Type=Float,Description=\"Sum of quality scores for A,C,G,T,N \">");
+    bcf_hdr_append(hdr,"##INFO=<ID=Quals_angsd ,Number=R,Type=Float,Description=\"Quality score for alternative and null hypothesis\">");
+  }
   bcf_hdr_append(hdr,"##INFO=<ID=AF,Number=A,Type=Float,Description=\"Minor Allele Frequency\">");
   bcf_hdr_append(hdr,"##INFO=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##INFO=<ID=AD,Number=R,Type=Integer,Description=\"Total allelic depths\">");
@@ -96,6 +100,7 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">");
+  bcf_hdr_append(hdr,"##FORMAT=<ID=EBD,Number=4,Type=Float,Description=\"The effective basedepth\">");
   //fprintf(stderr,"samples from sm:%d\n",args->sm->n);
   buf.l =0;
   assert(args);
@@ -126,45 +131,77 @@ void abcWriteBcf::print(funkyPars *pars){
   if(doBcf==0)
     return;
  
-  lh3struct *lh3 = (lh3struct*) pars->extras[5];
-  freqStruct *freq = (freqStruct *) pars->extras[6];
-  genoCalls *geno = (genoCalls *) pars->extras[10];
-  
-  for(int s=0;s<pars->numSites;s++){
+  //  lh3struct *lh3 = (lh3struct*) pars->extras[5];
+  freqStruct *freq = (freqStruct *) pars->extras[7];
+  genoCalls *geno = (genoCalls *) pars->extras[11];
+  angsd_mcall *mcall = NULL;
+  if(domcall)
+    mcall = (angsd_mcall *) pars->extras[5];
+  for(int s=0;s<pars->numSites;s++) {
     if(pars->keepSites[s]==0)
       continue;
-
     rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
     rec->pos = pars->posi[s];//<- maybe one index?
     //    bcf_update_id(hdr, rec, "rs6054257");
-    char majmin[4]={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
-    bcf_update_alleles_str(hdr, rec, majmin);
-    rec->qual = 29;
+    if(domcall!=NULL){
+      // 
+      char alleles[16];
+      int goa =0;
+      alleles[goa++] = intToRef[mcall->als[4*s]];
+      for(int i=1;i<4;i++)
+	if(mcall->als[4*s+i]==4)
+	  break;
+	else{
+	  alleles[goa++] = ',';
+	  alleles[goa++] = intToRef[mcall->als[4*s+i]];
+	}
+      alleles[goa] = '\0';
+      //    fprintf(stderr,"ALS: %s\n",alleles);
+      //exit(0);
+      //    ={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
+      bcf_update_alleles_str(hdr, rec, alleles);
+    }else{
+      char majmin[4]={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
+      bcf_update_alleles_str(hdr, rec, majmin);
+    }
+    if(freq==NULL&&mcall==NULL)
+      rec->qual = 29;
     // .. FILTER
     int32_t tmpi = bcf_hdr_id2int(hdr, BCF_DT_ID, "PASS");
     bcf_update_filter(hdr, rec, &tmpi, 1);
     // .. INFO
-    
     tmpi = pars->keepSites[s];
-    bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1);
+    assert(bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1)==0);
+    if(mcall){
 
+      float *tmp = mcall->QS+5*s;
+      //      for(int i=0;i<5;i++)	fprintf(stderr,"qs[%d]: %f\n",i,tmp[i]);
+      assert(bcf_update_info_float(hdr, rec, "QS_angsd", tmp, 5)==0);
+      tmp = mcall->quals+2*s;
+      assert(bcf_update_info_float(hdr, rec, "Quals_angsd", tmp, 2)==0);
+      if(mcall->isvar[s]>0)
+	rec->qual = tmp[0];
+      else
+	rec->qual = tmp[1];
+      
+    }
+    
     if(pars->counts){
       int depth = 0;
       for(int i=0; i<4*pars->nInd; i++)
 	depth += pars->counts[s][i];
       tmpi = depth;
-      bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1);
-
+      assert(bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1)==0);
     }
     if(freq){
       float tmpf = freq->freq_EM[s];
-      bcf_update_info_float(hdr, rec, "AF", &tmpf, 1);
+      assert(bcf_update_info_float(hdr, rec, "AF", &tmpf, 1)==0);
     }
     
     // .. FORMAT
     // assert(geno);
     //    fprintf(stderr,"bcf_hdr_nsamples(hdr): %d\n",bcf_hdr_nsamples(hdr));
-    if(geno){
+    if(geno&&mcall==NULL){
       int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
       for(int i=0; i<pars->nInd;i++){
 	if(geno->dat[s][i]==-1){
@@ -179,6 +216,23 @@ void abcWriteBcf::print(funkyPars *pars){
 	}  else if(geno->dat[s][i]==2){
 	  tmpia[2*i+0] = bcf_gt_unphased(1);
 	  tmpia[2*i+1] = bcf_gt_unphased(1);
+	}
+      }
+      bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2); 
+      free(tmpia);
+    }
+    else if(mcall!=NULL){
+      int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
+      for(int i=0; i<pars->nInd;i++){
+	if(mcall->gcdat[s][2*i]==-1)
+	  assert(mcall->gcdat[s][2*i]==mcall->gcdat[s][2*i+1]);
+
+	if(mcall->gcdat[s][2*i]==-1){
+	  tmpia[2*i+0] = bcf_gt_missing;
+	  tmpia[2*i+1] = bcf_gt_missing;
+	}else {
+	  tmpia[2*i+0] = bcf_gt_unphased(mcall->gcdat[s][2*i+0]);
+	  tmpia[2*i+1] = bcf_gt_unphased(mcall->gcdat[s][2*i+1]);
 	}
       }
       bcf_update_genotypes(hdr, rec, tmpia, bcf_hdr_nsamples(hdr)*2); 
@@ -220,7 +274,12 @@ void abcWriteBcf::print(funkyPars *pars){
       free(tmpfa);
       free(tmpi);
     }
-    if(pars->post[s]){
+    if(pars->extras[2]){
+      counts *cnts = (counts*) pars->extras[2];
+      float *ebd = cnts->ebd[s];
+      bcf_update_format_float(hdr, rec, "EBD",ebd ,4*bcf_hdr_nsamples(hdr) );
+    }
+    if(pars->post&&pars->post[s]){
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
 
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++){
@@ -275,6 +334,7 @@ void abcWriteBcf::getOptions(argStruct *arguments){
   doMaf = angsd::getArg("-doMaf",doMaf,arguments);
   doCounts = angsd::getArg("-doCounts",doCounts,arguments);
   doGeno = angsd::getArg("-doGeno",doGeno,arguments);
+  domcall = angsd::getArg("-doMcall",domcall,arguments);
 
   if(doPost==0||doMajorMinor==0||gl==0){
     fprintf(stderr,"\nPotential problem. -doBcf is a wrapper around -doMajorMinor -doPost and -gl. These values must therefore be set\n\n");
@@ -292,7 +352,7 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   doBcf =0;
   args=arguments;
   outfiles=outfiles_a;
-
+  domcall = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doBcf")){
       printArg(stdout);
@@ -318,13 +378,16 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   rec    = bcf_init1();
   if(arguments->inputtype==INPUT_BAM){
     hdr = bcf_hdr_init("w");
-    print_bcf_header(fp,hdr,args,buf,header);
+    print_bcf_header(fp,hdr,args,buf,header,domcall);
   } else if(arguments->inputtype==INPUT_VCF_GP||arguments->inputtype==INPUT_VCF_GL){
     fprintf(stderr,"\t-> Building bcf header\n");
     hdr = bcf_hdr_dup(vcfreader_hs_bcf_hdr);
     bcf_hdr_append(hdr,"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
     bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
     bcf_hdr_append(hdr,"##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">");
+    bcf_hdr_append(hdr,"##INFO=<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">");
+    if(doMaf)
+      bcf_hdr_append(hdr,"##INFO=<ID=AF,Number=A,Type=Float,Description=\"Minor Allele Frequency\">");
     ksprintf(&buf, "##angsdVersion=%s",args->version);
     bcf_hdr_append(hdr, buf.s);
     buf.l = 0;

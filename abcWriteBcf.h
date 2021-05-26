@@ -16,6 +16,7 @@ private:
   int doMaf;
   int doCounts;
   int doGeno;
+  int domcall;
   argStruct *args;
   const char *outfiles;
 public:

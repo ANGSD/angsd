@@ -1,14 +1,3 @@
-/*
-  remember to cleanup the threaded cleaning.
-  it is not faster to thread the cleaning.
-  
-
-  idea for improvement.
-  1. make blockwise threading of the indexed iteration? tsk I have no idea what this means
-
-  
- */
-
 #include <cstdio>
 #include <vector>
 #include <cstring>
@@ -291,10 +280,10 @@ void changeChr(int refId){
   //  fprintf(stderr,"[%s.%s():%d] refid:%d\n",__FILE__,__FUNCTION__,__LINE__,refId);
   ((abcFilter *)allMethods[0])->readSites(refId);
   ((abcGL *)allMethods[4])->changeChr(refId);//used when changing chr;
-  ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
-  ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
-  ((abcSaf *)allMethods[11])->changeChr(refId);//used when changing chr;
-  ((abcPSMC *)allMethods[27])->changeChr(refId);//used when changing chr;
+  ((abcWriteFasta *)allMethods[20])->changeChr(refId);//used when changing chr;
+  ((abcSmartCounts *)allMethods[21])->changeChr(refId);//used when changing chr;
+  ((abcSaf *)allMethods[12])->changeChr(refId);//used when changing chr;
+  ((abcPSMC *)allMethods[28])->changeChr(refId);//used when changing chr;
 
   void flush_queue();
   flush_queue();

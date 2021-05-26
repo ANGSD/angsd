@@ -747,7 +747,7 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
       stat[yi][s]=doAssociation(pars,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc);
       
       //cleanup
@@ -1244,7 +1244,7 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
 
       stat[yi][s]=dosageAssoc(pars,&design,&designNull,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);
       
@@ -2267,7 +2267,7 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
   
       stat[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);
             
@@ -2568,7 +2568,7 @@ void abcAsso::emAssoWald(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
   
       tmp=doEMassoWald(pars,&design,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);            
       //if not enough, WT, HE or HO or ind to run test
@@ -2683,7 +2683,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
       stat[yi][s]=doAssociation(pars,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc);
 
       // cutoff has been changed to p-value
@@ -3597,7 +3597,7 @@ void abcAsso::printDoAsso(funkyPars *pars){
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
   
-  freqStruct *freq = (freqStruct *) pars->extras[6];
+  freqStruct *freq = (freqStruct *) pars->extras[7];
   assoStruct *assoc= (assoStruct *) pars->extras[index];
   
   //chisq distribution with df=1

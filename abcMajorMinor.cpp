@@ -385,6 +385,7 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
      }
      //     fprintf(stderr,"maj:%d min:%d \n",pars->major[s],pars->minor[s]);
    }
+   return 0;
 }
 
 void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *minor,int *keepSites,int doMajorMinor,char *ref,char *anc) {

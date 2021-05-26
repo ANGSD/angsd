@@ -264,7 +264,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     if(n<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
-      fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching GP tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
+      fprintf(stderr, "BAD SITE %s:%" PRId64 " return code:%d" "while fetching GP tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
       return 0;
     }{
       // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
@@ -292,7 +292,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     if(n<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
-      fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
+      fprintf(stderr, "BAD SITE %s:%" PRId64 ". return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
       delete [] dupergl;
       return 0;
     }else{
@@ -319,7 +319,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     if(n<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
-      fprintf(stderr, "BAD SITE %s:%lld. return code:%d while fetching GL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
+      fprintf(stderr, "BAD SITE %s:%d. return code:%d while fetching GL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec),(int) rec->pos, n,rec->rid);
       return 0;
     }{
       // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
@@ -461,7 +461,7 @@ funkyPars *vcfReader::fetch(int chunkSize) {
     //skip nonsnips
     if(isindel(hs->hdr,rec)){
       if(onlyprint>0){
-	fprintf(stderr,"\t Skipping due to non snp pos:%lld (this message will be silenced after 10 sites)\n",rec->pos+1);
+	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",(int)rec->pos+1);
 	onlyprint--;
       }
       continue;

@@ -48,7 +48,7 @@ unsigned char recode(int i){
 void abcWritePlink::print(funkyPars *pars){
   if(doPlink==0)
     return;
-  genoCalls *geno =(genoCalls *) pars->extras[10];
+  genoCalls *geno =(genoCalls *) pars->extras[11];
   char *chr = header->target_name[pars->refId];
   if(doPlink==2){
     kstring_t kstr;
@@ -69,7 +69,7 @@ void abcWritePlink::print(funkyPars *pars){
 	else if(geno->dat[s][i]==-1)
 	  ksprintf(&kstr,"\t0 0");
       }
-      aio::kputc('\n',&kstr);
+      kputc('\n',&kstr);
     }
     fwrite(kstr.s,1,kstr.l,fp2);
     free(kstr.s);

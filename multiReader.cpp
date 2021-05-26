@@ -195,7 +195,7 @@ multiReader::multiReader(argStruct *args_arg){
     }
   }
  
-  if(!(INPUT_VCF_GL||INPUT_VCF_GP)){
+  if(!(INPUT_VCF_GL|INPUT_VCF_GP)){
     if(args->hd==NULL){
       fprintf(stderr,"For non-bams you should include -fai arguments\n");
       exit(0);

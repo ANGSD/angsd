@@ -117,7 +117,7 @@ void abcHWE_F::print(funkyPars *pars){
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0) 
       continue;
-    freqStruct *freq = (freqStruct *) pars->extras[6];
+    freqStruct *freq = (freqStruct *) pars->extras[7];
     float lrt= 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
     //DRAGON lrt is sometimes nan
     float pval;
@@ -147,7 +147,7 @@ void abcHWE_F::run(funkyPars *pars){
   double *F = new double[pars->numSites];
   double *like0 = new double[pars->numSites];
   double *likeF = new double[pars->numSites];
-  freqStruct *freqS = (freqStruct *) pars->extras[6];
+  freqStruct *freqS = (freqStruct *) pars->extras[7];
 
   double **loglike3;
   loglike3=angsd::get3likesRescale(pars);

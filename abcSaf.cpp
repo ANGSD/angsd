@@ -212,7 +212,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     aio::bgzf_write(outfileSAF,buf,8);
     aio::bgzf_write(outfileSAFPOS,buf,8);
     fwrite(buf,1,8,outfileSAFIDX);
-    bgzf_flush(outfileSAF);bgzf_flush(outfileSAFPOS);
+    assert(bgzf_flush(outfileSAF)==0);assert(bgzf_flush(outfileSAFPOS)==0);
     offs[0] = bgzf_tell(outfileSAFPOS);
     offs[1] = bgzf_tell(outfileSAF);
     size_t tt = newDim-1;
@@ -1011,7 +1011,7 @@ void abcSaf::run(funkyPars  *p){
     else if(doSaf==1&&isHap==1)
       algoJointHap(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans);
     else if(doSaf==2){
-      freqStruct *freq = (freqStruct *) p->extras[6];
+      freqStruct *freq = (freqStruct *) p->extras[7];
       filipe::algoJoint(p->likes,p->anc,p->numSites,p->nInd,underFlowProtect,p->keepSites,r,noTrans,doSaf,p->major,p->minor,freq->freq,filipeIndF,newDim);
     }else if(doSaf==4){
       algoJointPost(p->post,p->numSites,p->nInd,p->keepSites,r);
@@ -1495,7 +1495,7 @@ void abcSaf::writeAll(){
   }//else
    // fprintf(stderr,"enpty chr\n");
   //reset
-  bgzf_flush(outfileSAF);bgzf_flush(outfileSAFPOS);
+  assert(bgzf_flush(outfileSAF)==0);assert(bgzf_flush(outfileSAFPOS)==0);
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
   nnnSites=0;

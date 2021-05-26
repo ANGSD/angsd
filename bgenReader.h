@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstring>
+#include <cassert>
 
 #include "argStruct.h"
 #include "analysisFunction.h"
@@ -64,7 +65,7 @@ public:
 
     unsigned offset;
     //unsigned is 4 bytes
-    fread(&offset,sizeof(unsigned),1,fp);
+    assert(fread(&offset,sizeof(unsigned),1,fp)==1);
     
     //read header function
     hd = parseheader(fp);
