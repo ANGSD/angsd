@@ -189,6 +189,13 @@ void angsd::printMatrix(Matrix<double> mat,FILE *file){
   }    
 }
 
+//have to implement method for comparing char* in std::map
+struct cmp_strEmil{
+  bool operator()(char const *a, char const *b) const{
+    return std::strcmp(a, b) < 0;
+  }
+};
+
 
 angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens, char* whichPhe, char* whichCov){
 
@@ -208,17 +215,10 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens, char* w
   int hasMissing = 0;
   int hasID_2 = 0;
   int hasPheno = 0;
-
-  //have to implement method for comparing char* in std::map
-  struct cmp_str{
-    bool operator()(char const *a, char const *b) const{
-      return std::strcmp(a, b) < 0;
-    }
-  };
   
   // for reading in specified phenotypes and covariates
-  std::map <char*,int, cmp_str> pheMap;
-  std::map <char*,int, cmp_str> covMap;
+  std::map <char*,int, cmp_strEmil> pheMap;
+  std::map <char*,int, cmp_strEmil> covMap;
 
   std::map <int,int> pheMap2;
   std::map <int,int> covMap2;
