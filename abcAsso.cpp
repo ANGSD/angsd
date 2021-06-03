@@ -40,7 +40,9 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t-yQuant\t\t%s\t(File containing phenotypes)\n",yfile3);
   fprintf(argFile,"\t-cov\t\t%s\t(File containing additional covariates)\n",covfile);
   fprintf(argFile,"\t-sampleFile\t\t%s\t(.sample File containing phenotypes and covariates)\n",sampleFile);
-
+  fprintf(argFile,"\t-whichPhe\t%s\tSelect which phenotypes to analyse, write phenos comma seperated ('phe1,phe2,...'), only works with a .sample file\n",whichPhe);
+  fprintf(argFile,"\t-whichCov\t%s\tSelect which covariates to include, write covs comma seperated ('cov1,cov2,...'), only works with a .sample file\n",whichCov);  
+  
   fprintf(argFile,"\t-model\t%d\n",model);
   fprintf(argFile,"\t1: Additive/Log-Additive (Default)\n");
   fprintf(argFile,"\t2: Dominant\n");
