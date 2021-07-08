@@ -26,7 +26,6 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"Filedumping:\n");
   fprintf(argFile,"\t-doDepth\t%d\t(dump distribution of seqdepth)\t%s,%s\n",doDepth,postfix4,postfix5);
   fprintf(argFile,"\t  -maxDepth\t%d\t(bin together high depths)\n",maxDepth);
-  
   fprintf(argFile,"\t-doQsDist\t%d\t(dump distribution of qscores)\t%s\n",doQsDist,postfix3);
   fprintf(argFile,"\t-minQ\t%d\t(minimumQ)\n",minQ);
   fprintf(argFile,"\t-dumpCounts\t%d\n",dumpCounts);
@@ -34,6 +33,7 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"\t  2: seqdepth persample\t\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  3: A,C,G,T sum over samples\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  4: A,C,G,T sum every sample\t%s,%s\n",postfix1,postfix2);
+  fprintf(argFile,"\t  5: mean read length\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t-iCounts\t%d (Internal format for dumping binary single chrs,1=simple,2=advanced)\n",iCounts);
   fprintf(argFile,"\t-qfile\t%s\t(Only for -iCounts 2)\n",qfileFname);
   fprintf(argFile,"\t-ffile\t%s\t(Only for -iCounts 2)\n",ffileFname);
@@ -269,7 +269,11 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
 
   if(dumpCounts){
     oFileCountsPos = aio::openFileBG(outfiles,postfix1);
-    bufstr.l=0;ksprintf(&bufstr,"chr\tpos\ttotDepth\n");
+    bufstr.l=0;
+    if(dumpCounts!=5)
+      ksprintf(&bufstr,"chr\tpos\ttotDepth\n");
+    else
+      ksprintf(&bufstr,"chr\tpos\tmeanReadLength\n");
     aio::bgzf_write(oFileCountsPos,bufstr.s,bufstr.l);bufstr.l=0;
     if(dumpCounts>1)
       oFileCountsBin = aio::openFileBG(outfiles,postfix2);
@@ -431,8 +435,38 @@ void countQs(const chunkyT *chk,size_t *ret,int *keepSites,int minQ){
 void abcCounts::print(funkyPars *pars){
   if(pars->numSites==0)
     return;
-  if(dumpCounts)
+  if(dumpCounts && dumpCounts!=5)
     printCounts(header->target_name[pars->refId],pars->posi,pars->counts,pars->numSites,pars->nInd,bpos,bbin,dumpCounts,pars->keepSites);
+
+  if(dumpCounts==5){
+    const chunkyT *chk = pars->chk;
+  
+    for(int s=0;s<chk->nSites;s++){
+      if(pars->keepSites[s]==0)
+	continue;
+      double readlensSum = 0;
+      double nreads = 0;//is integer
+      //loop over samples
+      for(int n=0;n<chk->nSamples;n++){
+	//loop over persample reads
+	for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
+	  int allele = refToInt[pars->chk->nd[s][0]->seq[l]];
+	  if(allele==4)//skip of 'n'/'N'
+	    continue;
+	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c rg:%d\n",s,n,chk->nd[s][n]->l,l,chk->nd[s][n]->seq[l],chk->nd[s][n]->rgs[l]);
+
+	  readlensSum += chk->nd[s][n]->posi[l]+ chk->nd[s][n]->isop[l]+1;
+	  //	  fprintf(stderr,"%d %u %u sum:%f\n",pars->posi[s]+1,chk->nd[s][n]->posi[l], chk->nd[s][n]->isop[l],readlensSum);
+	  nreads++;
+	}
+      }
+      ksprintf(&bpos, "%s\t%d\t%.2f\n",header->target_name[pars->refId],pars->posi[s]+1,readlensSum/nreads);
+      //      fprintf(stderr,"nraads: %f readlenssum: %f\n",nreads,readlensSum);
+    }
+
+
+  }
+  
   if(bbin.l>0)
     aio::bgzf_write(oFileCountsBin,bbin.s,bbin.l);bbin.l=0;
   if(bpos.l>0)
