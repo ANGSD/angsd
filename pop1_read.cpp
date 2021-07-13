@@ -96,7 +96,14 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     r = sam_itr_next(fp, itr, b);
   
   if(r!=-1) {
-
+    if(b->core.n_cigar==1){
+      //pathologial case with only one insertion. I dont see how this can happen, but we have observed this is some data.
+      uint32_t *cigs = bam_get_cigar(b);
+      int opCode = cigs[0]&BAM_CIGAR_MASK; //what to do
+      if(opCode==BAM_CINS)
+	goto bam_iter_reread;
+    }
+    
     //extract reads from that has correct RG
     if(rghash){
       uint8_t *rg = bam_aux_get(b, "RG");
