@@ -50,39 +50,39 @@ if [ ! $? -eq 0  ]   ;then
 fi
 fi
 
-echo "Testing neutrality test statistics"
-time ./testTaj.sh $WDIR
-if [ ! $? -eq 0 ] ;then
-    echo "Problem with neutrality test statistics exit code: $?"
-    cat ./testTaj.sh.log
-    RVAL=1
-fi
+#echo "Testing neutrality test statistics"
+#time ./testTaj.sh $WDIR
+#if [ ! $? -eq 0 ] ;then
+#    echo "Problem with neutrality test statistics exit code: $?"
+#    cat ./testTaj.sh.log
+#    RVAL=1
+#fi
 
-echo "Testing fst using msms"
-time ./testFst.sh $WDIR
-if [ ! $? -eq 0 ] ;then
-    echo "Problem with Fst test statistics exit code: $?"
-    cat ./testFst.sh.log
-    RVAL=1
-fi
+#echo "Testing fst using msms"
+#time ./testFst.sh $WDIR
+#if [ ! $? -eq 0 ] ;then
+#    echo "Problem with Fst test statistics exit code: $?"
+#    cat ./testFst.sh.log
+#    RVAL=1
+#fi
 
-echo "Testing fst_folded using msms"
-time ./testFst_folded.sh $WDIR
-if [ ! $? -eq 0 ] ;then
-    echo "Problem with Fst_folded test statistics exit code: $?"
-    cat ./testFst_folded.sh.log
-    RVAL=1
-fi
+#echo "Testing fst_folded using msms"
+#time ./testFst_folded.sh $WDIR
+#if [ ! $? -eq 0 ] ;then
+#    echo "Problem with Fst_folded test statistics exit code: $?"
+#    cat ./testFst_folded.sh.log
+#    RVAL=1
+#fi
 
 
 
-echo "Testing SFS"
-time ./testSFS.sh $WDIR
-if [ ! $? -eq 0  ]   ;then
-    echo "Problem with SFS exit code: $?"
-    cat ./testSFS.sh.log
-    RVAL=1
-fi
+#echo "Testing SFS"
+#time ./testSFS.sh $WDIR
+#if [ ! $? -eq 0  ]   ;then
+#    echo "Problem with SFS exit code: $?"
+#    cat ./testSFS.sh.log
+#    RVAL=1
+#fi
 
 if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing basic mpileup"
