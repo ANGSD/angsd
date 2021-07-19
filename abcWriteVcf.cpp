@@ -42,17 +42,17 @@ void abcWriteVcf::print(funkyPars *pars){
   if(doVcf==0)
     return;
 
-  lh3struct *lh3 = (lh3struct*) pars->extras[5];
-  freqStruct *freq = (freqStruct *) pars->extras[6];
-  genoCalls *geno = (genoCalls *) pars->extras[10];
+  lh3struct *lh3 = (lh3struct*) pars->extras[6];
+  freqStruct *freq = (freqStruct *) pars->extras[7];
+  genoCalls *geno = (genoCalls *) pars->extras[11];
 
   for(int s=0;s<pars->numSites;s++){
     if(pars->keepSites[s]==0)
       continue;
     //chr pos id
     ksprintf(kstr,"%s\t%d\t.\t",header->target_name[pars->refId],pars->posi[s]+1);
-    aio::kputc(intToRef[pars->major[s]],kstr);aio::kputc('\t',kstr);
-    aio::kputc(intToRef[pars->minor[s]],kstr);aio::kputc('\t',kstr);
+    kputc(intToRef[pars->major[s]],kstr);kputc('\t',kstr);
+    kputc(intToRef[pars->minor[s]],kstr);kputc('\t',kstr);
     ksprintf(kstr,".\tPASS\tNS=%d", pars->keepSites[s]);
     // Total per site depth
     if(doCounts != 0){
@@ -69,7 +69,7 @@ void abcWriteVcf::print(funkyPars *pars){
     if(doMaf != 0)
       ksprintf(kstr,";AF=%f", freq->freq_EM[s]);
     // GP and GL
-    aio::kputc('\t',kstr);
+    kputc('\t',kstr);
     if(doGeno != 0)
       ksprintf(kstr,"GT:");
     if(doCounts != 0)
@@ -77,7 +77,7 @@ void abcWriteVcf::print(funkyPars *pars){
     ksprintf(kstr,"GP:GL");
     // Per-indiv data
     for(int i=0; i<pars->nInd;i++){
-      aio::kputc('\t',kstr);
+      kputc('\t',kstr);
       if(doGeno != 0){
 	int g = geno->dat[s][i];
 	int gg[2] = {'0','1'};

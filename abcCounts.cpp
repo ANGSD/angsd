@@ -14,6 +14,7 @@
 void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"---------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doCounts\t%d\t(Count the number A,C,G,T. All sites, All samples)\n",doCounts);
+  fprintf(argFile,"\t-doEBD\t%d\t(Calculate effective basedepth, this will be output in bcffile, beta)\n",doebd);
   fprintf(argFile,"\t-minQfile\t%s\t file with individual quality score thresholds)\n",minQfile);
   fprintf(argFile,"\t-setMaxDepth\t%d\t(If total depth is larger then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMaxDepth);
   fprintf(argFile,"\t-setMinDepth\t%d\t(If total depth is smaller then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMinDepth);
@@ -25,7 +26,6 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"Filedumping:\n");
   fprintf(argFile,"\t-doDepth\t%d\t(dump distribution of seqdepth)\t%s,%s\n",doDepth,postfix4,postfix5);
   fprintf(argFile,"\t  -maxDepth\t%d\t(bin together high depths)\n",maxDepth);
-  
   fprintf(argFile,"\t-doQsDist\t%d\t(dump distribution of qscores)\t%s\n",doQsDist,postfix3);
   fprintf(argFile,"\t-minQ\t%d\t(minimumQ)\n",minQ);
   fprintf(argFile,"\t-dumpCounts\t%d\n",dumpCounts);
@@ -33,6 +33,7 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"\t  2: seqdepth persample\t\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  3: A,C,G,T sum over samples\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  4: A,C,G,T sum every sample\t%s,%s\n",postfix1,postfix2);
+  fprintf(argFile,"\t  5: mean read length\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t-iCounts\t%d (Internal format for dumping binary single chrs,1=simple,2=advanced)\n",iCounts);
   fprintf(argFile,"\t-qfile\t%s\t(Only for -iCounts 2)\n",qfileFname);
   fprintf(argFile,"\t-ffile\t%s\t(Only for -iCounts 2)\n",ffileFname);
@@ -67,7 +68,7 @@ void printCounts(char *chr,int *posi,suint **counts,int nSites,size_t nInd,kstri
 	  tsum[i%4] +=counts[s][i];
 	ksprintf(&bbin,"%zu\t%zu\t%zu\t%zu",tsum[0],tsum[1],tsum[2],tsum[3]);
       }
-      aio::kputc('\n',&bbin);	
+      kputc('\n',&bbin);	
     }
   }
 
@@ -80,6 +81,7 @@ void abcCounts::getOptions(argStruct *arguments){
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   if(doCounts==0)
     return;
+  doebd = angsd::getArg("-doebd",doebd,arguments);
   //from command line
   minQfile=angsd::getArg("-minQfile",minQfile,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
@@ -148,6 +150,7 @@ void abcCounts::getOptions(argStruct *arguments){
 //constructor
 abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   minQ = MINQ;
+  doebd = 0;
   globCount = NULL;
   const char *delim = "\t\n ";
   ffileFname=qfileFname=NULL;
@@ -266,7 +269,11 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
 
   if(dumpCounts){
     oFileCountsPos = aio::openFileBG(outfiles,postfix1);
-    bufstr.l=0;ksprintf(&bufstr,"chr\tpos\ttotDepth\n");
+    bufstr.l=0;
+    if(dumpCounts!=5)
+      ksprintf(&bufstr,"chr\tpos\ttotDepth\n");
+    else
+      ksprintf(&bufstr,"chr\tpos\tmeanReadLength\n");
     aio::bgzf_write(oFileCountsPos,bufstr.s,bufstr.l);bufstr.l=0;
     if(dumpCounts>1)
       oFileCountsBin = aio::openFileBG(outfiles,postfix2);
@@ -428,8 +435,38 @@ void countQs(const chunkyT *chk,size_t *ret,int *keepSites,int minQ){
 void abcCounts::print(funkyPars *pars){
   if(pars->numSites==0)
     return;
-  if(dumpCounts)
+  if(dumpCounts && dumpCounts!=5)
     printCounts(header->target_name[pars->refId],pars->posi,pars->counts,pars->numSites,pars->nInd,bpos,bbin,dumpCounts,pars->keepSites);
+
+  if(dumpCounts==5){
+    const chunkyT *chk = pars->chk;
+  
+    for(int s=0;s<chk->nSites;s++){
+      if(pars->keepSites[s]==0)
+	continue;
+      double readlensSum = 0;
+      double nreads = 0;//is integer
+      //loop over samples
+      for(int n=0;n<chk->nSamples;n++){
+	//loop over persample reads
+	for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
+	  int allele = refToInt[pars->chk->nd[s][0]->seq[l]];
+	  if(allele==4)//skip of 'n'/'N'
+	    continue;
+	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c rg:%d\n",s,n,chk->nd[s][n]->l,l,chk->nd[s][n]->seq[l],chk->nd[s][n]->rgs[l]);
+
+	  readlensSum += chk->nd[s][n]->posi[l]+ chk->nd[s][n]->isop[l]+1;
+	  //	  fprintf(stderr,"%d %u %u sum:%f\n",pars->posi[s]+1,chk->nd[s][n]->posi[l], chk->nd[s][n]->isop[l],readlensSum);
+	  nreads++;
+	}
+      }
+      ksprintf(&bpos, "%s\t%d\t%.2f\n",header->target_name[pars->refId],pars->posi[s]+1,readlensSum/nreads);
+      //      fprintf(stderr,"nraads: %f readlenssum: %f\n",nreads,readlensSum);
+    }
+
+
+  }
+  
   if(bbin.l>0)
     aio::bgzf_write(oFileCountsBin,bbin.s,bbin.l);bbin.l=0;
   if(bpos.l>0)
@@ -530,7 +567,17 @@ void abcCounts::clean(funkyPars *pars){
       delete [] pars->counts[i];
     delete [] pars->counts;
   }
-
+  if(pars->extras[index]){
+    counts *cnts = (counts *) pars->extras[2];
+    if(cnts!=NULL){
+      for(int i=0;i<pars->numSites;i++)
+	if(cnts->ebd[i])
+	  delete [] cnts->ebd[i];
+      if(cnts->ebd)
+	delete [] cnts->ebd;
+      delete cnts;
+    }
+  }
 }
 
 
@@ -548,7 +595,7 @@ suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites,int mmin,int mmax
       for(int n=0;n<chk->nSamples;n++){
 	//loop over persample reads
 	for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
-	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c\n",s,n,chk->nd[s][n].l,l,chk->nd[s][n].seq[l]);
+	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c rg:%d\n",s,n,chk->nd[s][n]->l,l,chk->nd[s][n]->seq[l],chk->nd[s][n]->rgs[l]);
 	  int allele = refToInt[chk->nd[s][n]->seq[l]];
 	
 	  if(allele==4){
@@ -628,7 +675,48 @@ void abcCounts::run(funkyPars *pars){
     return;
   assert(pars->chk!=NULL&&pars->counts==NULL);
   pars->counts = countNucs(pars->chk,pars->keepSites,setMinDepthInd,setMaxDepthInd);
-  // fprintf(stderr,"%d\n",pars->keepSites[0]);
+  if(doebd){
+    counts *cnts = new counts;
+    pars->extras[index] = cnts;
+    cnts->ebd = new float*[pars->numSites];
+    for(int s=0;s<pars->numSites;s++){
+      cnts->ebd[s] = NULL;
+      if(pars->keepSites[s]==0)
+	continue;
+      cnts->ebd[s] = new float[4*pars->nInd];
+      float *EBD = cnts->ebd[s];
+      float qsum[5] = {0,0,0,0,0};//not used
+      for(int i=0;i<pars->nInd;i++){
+	//       fprintf(stderr,"i:%d nd:%p\n",i,pars->chk->nd[s][i]);
+	tNode *nd = pars->chk->nd[s][i];
+	EBD[i*4]=EBD[i*4+1]=EBD[i*4+2]=EBD[i*4+3]=0.0;
+	float tmpsum = 0;
+	for(int j=0;(nd&&j<nd->l);j++){
+	  
+	  if(nd->qs[j]<minQ)
+	    continue;
+	  int b =refToInt[nd->seq[j]];
+	  int q = nd->qs[j];
+	  //block below are adjustments similar to bcftools mpileup parsing
+	  if (q > nd->mapQ[j]) q = nd->mapQ[j];
+	  if (q > 63) q = 63;
+	  if (q < 4) q = 4;       // MQ=0 reads count as BQ=4
+	  //	 fprintf(stderr,"b:%d qs:%d mapq:%d\n",b,nd->mapQ[j]);
+	  EBD[4*i+b] += q;
+	  //fprintf(stderr,"ebd: %f\n",EBD[4*i+refToInt[nd->seq[j]]]);
+	  tmpsum += q;
+	}
+	// fprintf(stderr,"tmpsum: %f\n",tmpsum);
+	for(int j=0;j<4;j++){
+	  if(tmpsum>0){
+	    qsum[j] += EBD[4*i+j]/tmpsum;
+	    //  fprintf(stderr,"qsum[%d]:%f EBD[%d]:%f\n",j,qsum[j],EBD[4*i+j]);
+	  }
+	}
+      }
+    }
+  }
+    // fprintf(stderr,"%d\n",pars->keepSites[0]);
   for(int s=0;s<pars->numSites;s++){// Why is this loop needed? is it to remove sites with no data above minQ filters?
     size_t ss=0;
     for(int i=0;i<4*pars->nInd;i++)

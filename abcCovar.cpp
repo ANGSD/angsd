@@ -137,7 +137,7 @@ void abcCovar::run(funkyPars *pars){
   for(int s=0;s<pars->numSites;s++)
     Egeno[s] = new double[pars->nInd];
   
-  freqStruct *freq = (freqStruct *) pars->extras[6];
+  freqStruct *freq = (freqStruct *) pars->extras[7];
   //maybe change to posterior based on frequency
   for(int s=0;s<pars->numSites;s++){
     keepSNP[s]=0;

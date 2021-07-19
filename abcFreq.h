@@ -35,7 +35,13 @@ private:
 
   int doMaf;
   double rmTriallelic;
- 
+
+
+  //emil
+  char *doAsso;
+  int ifDoAsso;
+  int forceMaf;
+  
   int doPost;
   int doSNP;
   int doMajorMinor;

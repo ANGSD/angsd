@@ -33,8 +33,11 @@ int redo_baq =0;
 int cigstat =0;
 void *rghash=NULL;
 char *rghash_name=NULL;
+char *libname = NULL;
+int setqscore = -1;
 
-
+std::map<char*,int,ltstr> LBS;
+ 
 int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,const aMap *revMap) {
   aMap::const_iterator it;
   if(strrchr(extra,':')==NULL){//only chromosomename
@@ -155,15 +158,17 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-C\t\t%d\tadjust mapQ for excessive mismatches (as SAMtools), supply -ref\n",adjustMapQ);
   fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (1=normal baq 2= extended(as SAMtools)), supply -ref\n",baq);
   fprintf(argFile,"\t-redo-baq\t\t%d (recompute baq, instead of using BQ tag)\n",redo_baq);
+  fprintf(argFile,"\t-setQscore\t%d\tSet qscore to this value, relevant for missing qscores\n",setqscore);
   //  fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   // fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders %d\tExit if difference in BAM headers\n",checkBamHeaders);
   fprintf(argFile,"\t-doCheck\t%d\tKeep going even if datafile is not suffixed with .bam/.cram\n",doCheck);
-  fprintf(argFile,"\t-downSample\t%f\tDownsample to the fraction of original data\n",downSample);
+  fprintf(argFile,"\t-downSample\t%.3f\tDownsample to the fraction of original data\n",downSample);
   fprintf(argFile,"\t-nReads\t\t%d\tNumber of reads to pop from each BAM/CRAMs\n",ret->nReads);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
   fprintf(argFile,"\t--ignore-RG\t%d\t(dev only)\n",MPLP_IGNORE_RG);
-  fprintf(argFile,"\t+RG\t%s\tReadgroups to include in analysis(can be filename)\n",rghash_name);
+  fprintf(argFile,"\t+RG\t\t%s\tReadgroups to include in analysis(can be filename)\n",rghash_name);
+  fprintf(argFile,"\t+LB\t\t%s\tLibraries to include in analysis(can be filename)\n",libname);
   
   fprintf(argFile,"\n");
   fprintf(argFile,"Examples for region specification:\n");
@@ -194,9 +199,11 @@ void setArgsBam(argStruct *arguments){
   trim = angsd::getArg("-trim",trim,arguments);
   trim5 = angsd::getArg("-trim5",trim5,arguments);
   trim3 = angsd::getArg("-trim3",trim3,arguments);
+  setqscore = angsd::getArg("-setqscore",setqscore,arguments);
   arguments->ref=angsd::getArg("-ref",arguments->ref,arguments);
   arguments->anc=angsd::getArg("-anc",arguments->anc,arguments);
   rghash_name= angsd::getArg("+RG",rghash_name,arguments);
+  libname= angsd::getArg("+LB",libname,arguments);
   if(rghash_name&&!angsd::fexists(rghash_name))
     rghash = add_read_group_single(rghash_name);
   if(rghash_name&&angsd::fexists(rghash_name))
@@ -243,8 +250,22 @@ void setArgsBam(argStruct *arguments){
     exit(0);
   }
   free(tmp);
-  
-  
+
+  if(libname&&!angsd::fexists(libname))
+    LBS[strdup(libname)]=0;
+  else if(libname&&angsd::fexists(libname)){
+    std::vector<char *> tmptmp=angsd::getFilenames(libname,0);
+    for(int i=0;i<tmptmp.size();i++){
+      std::map<char *,int,ltstr>::iterator it=LBS.find(tmptmp[i]);
+      if(it!=LBS.end())
+	fprintf(stderr,"\t-> Potential problem LB: %s already exists?\n",it->first);
+      LBS[strdup(tmptmp[i])] =0;
+    }
+    for(int i=0;i<tmptmp.size();i++)
+      free(tmptmp[i]);
+  }
+  if(LBS.size()>0)
+    fprintf(stderr,"\t-> Will include: %lu libraries\n",LBS.size());
   std::vector<char *> regionsRaw;
   if(regfiles)
     regionsRaw =  angsd::getFilenames(regfiles,0);

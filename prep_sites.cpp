@@ -372,7 +372,9 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   char **parsed = new char*[7];
   
   //read a line
+  int atline =0;
   while(SIG_COND && aio::tgets(gz,&buf,&l)) {
+    atline++;
     if(buf[0]=='#'||buf[0]=='\n')//skip if empty or starts with #
       continue;
     int nRead=0;
@@ -446,7 +448,10 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     char *position_in_sites_file = parsed[1];
     assert(atol(position_in_sites_file)>=0);
     size_t posS=atol(parsed[1]);
-    assert(posS>0);
+    if(posS<=0){
+      fprintf(stderr,"\t-> Problem surrounding line: %d\n",atline);
+      assert(posS>0);
+    }
     posS--;
     posS += posi_off;
 

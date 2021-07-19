@@ -341,7 +341,7 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
 	 if (q > nd->mapQ[j]) q = nd->mapQ[j];
 	 if (q > 63) q = 63;
 	 if (q < 4) q = 4;       // MQ=0 reads count as BQ=4
-	 fprintf(stderr,"b:%d qs:%d mapq:%d\n",b,nd->mapQ[j]);
+	 //	 fprintf(stderr,"b:%d qs:%d mapq:%d\n",b,nd->mapQ[j]);
 	 EBD[4*i+b] += q;
 	 //fprintf(stderr,"ebd: %f\n",EBD[4*i+refToInt[nd->seq[j]]]);
 	 tmpsum += q;
@@ -350,7 +350,7 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
        for(int j=0;j<4;j++){
 	 if(tmpsum>0){
 	   qsum[j] += EBD[4*i+j]/tmpsum;
-	   fprintf(stderr,"qsum[%d]:%f EBD[%d]:%f\n",j,qsum[j],EBD[4*i+j]);
+	   //  fprintf(stderr,"qsum[%d]:%f EBD[%d]:%f\n",j,qsum[j],EBD[4*i+j]);
 	 }
        }
      }
@@ -363,8 +363,7 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
        for (j=i; j>0 && *ptr[j] < *ptr[j-1]; j--)
 	 tmp = ptr[j], ptr[j] = ptr[j-1], ptr[j-1] = tmp;
      for(int i=0;i<4;i++)
-       fprintf(stderr,"%d) %f index:%d\n",i,*ptr[i],ptr[i]-qsum);
-     
+       fprintf(stderr,"%d) %f %f\n",i,*ptr[i],*ptr[i]-qsum[i]);
      if(doMajorMinor==6){
        int first = ptr[3]-qsum;
        int second = ptr[2]-qsum;
@@ -386,6 +385,7 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
      }
      //     fprintf(stderr,"maj:%d min:%d \n",pars->major[s],pars->minor[s]);
    }
+   return 0;
 }
 
 void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *minor,int *keepSites,int doMajorMinor,char *ref,char *anc) {

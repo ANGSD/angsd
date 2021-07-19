@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <htslib/hts.h>
 #include <htslib/khash.h>
+#include <htslib/khash_str2int.h>
 #include "mUpPile.h"
 #include "parseArgs_bambi.h"
 #include "abc.h"
@@ -19,7 +20,30 @@
 extern int SIG_COND;
 #define bam_nt16_rev_table seq_nt16_str
 
+//map from libid to vector of associated readgroups
+std::map<char*,std::vector<char *>,ltstr > get_lb_rg(bam_hdr_t *h){
+  std::map<char*,std::vector<char *>,ltstr > ret;
+  int nrg = sam_hdr_count_lines(h, "RG");
+  //  fprintf(stderr,"nrg: %d\n",nrg);
+  kstring_t lib = { 0, 0, NULL };
+  for(int i=0;i<nrg;i++){
+    const char *rgid = sam_hdr_line_name(h,"RG",i);
+    if (sam_hdr_find_tag_id(h, "RG", "ID", rgid, "LB", &lib)  < 0){
+      fprintf(stderr,"Header problem\n");
+      continue;
+    }
+    //fprintf(stderr,"rgid: %s lib.s:%s\n",rgid,lib.s);
+    std::map<char*,std::vector<char *>,ltstr >::iterator it=ret.find(lib.s);
+    if(it==ret.end()){
+      std::vector<char *> vec;vec.push_back(strdup(rgid));
+      ret[strdup(lib.s)] = vec;
+    }else
+      it->second.push_back(strdup(rgid));
 
+  }
+  free(lib.s);
+  return ret;
+}
 
 htsFile *openBAM(const char *fname,int doCheck){
 
@@ -145,6 +169,49 @@ bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname,bam_sample
     fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
     exit(0);
   }
+  //OK this is really bad coding style.
+  //But i am here pullin in the char *libname. This contains either filename for libs to include or the name of the lib to include
+  extern std::map<char *,int,ltstr> LBS;//<- contains the libs to include.
+  extern void *rghash;//this is the readgroups that should have the libraries from LBS
+  //  fprintf(stderr,"LBS.size():%lu rghash:%p\n",LBS.size(),rghash);
+  if(LBS.size()>0){
+    if(!rghash)
+      rghash = khash_str2int_init();//initialize if its not defined
+    //first build a lib1->{rd1,rd2},lib2->{rd3,rd4} map;
+    std::map<char*,std::vector<char *> ,ltstr> lb_rg = get_lb_rg(ret.hdr);
+    fprintf(stderr,"\t-> Number of different libs in BAM/CRAM file: %lu\n",lb_rg.size());
+
+    //loop over the librarie we want to have included
+    for(std::map<char *,int,ltstr>::iterator it=LBS.begin();it!=LBS.end();it++){
+      //then seek in the lib->rd map
+      std::map<char*,std::vector<char *> ,ltstr>::iterator it2 = lb_rg.find(it->first);
+      if(it2!=lb_rg.end()){
+	//	fprintf(stderr,"lib: %s has %lu readgroups\n",it2->first,it2->second.size());
+	//all the read groups in the vector below should be added
+	std::vector <char *> rgs_to_add = it2->second;
+	for(int i=0;i<rgs_to_add.size();i++){
+	  int ret = khash_str2int_inc(rghash,strdup(rgs_to_add[i]));
+	  if(ret==-1)
+	    fprintf(stderr,"\t-> [READGROUP info] Problems adding readgroup: %s for lib: %s\n",rgs_to_add[i],it2->first);
+	  else{
+	    int tmp;
+	    assert(khash_str2int_get(rghash,rgs_to_add[i],&tmp)==0);
+	    fprintf(stderr,"\t-> [READGROUP info] Added readgroup %s for lib: %s (check: %s) -> %d\n",rgs_to_add[i],it2->first,it->first,tmp);
+	    if(tmp>254){
+	      fprintf(stderr,"\t-> Readgroup representation is only valid for fewer than 255 different readgroups\n");
+	      exit(0);
+	    }
+	  }
+	}
+      }
+    }
+    for(std::map<char*,std::vector<char *> ,ltstr>::iterator it2 = lb_rg.begin();it2!=lb_rg.end();it2++){
+      std::vector <char *> rgs_to_add = it2->second;
+      for(int i=0;i<rgs_to_add.size();i++)
+	free(rgs_to_add[i]);
+      free(it2->first);
+    }
+  }
   
   return ret;
 }
@@ -204,6 +271,7 @@ bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,
   for(int i=0;i<vec.size();i++)
     bamSortedIds[i] = val_keys[i].key;
   delete [] val_keys;
+  
 
   return ret;
 }

@@ -40,7 +40,9 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t-yQuant\t\t%s\t(File containing phenotypes)\n",yfile3);
   fprintf(argFile,"\t-cov\t\t%s\t(File containing additional covariates)\n",covfile);
   fprintf(argFile,"\t-sampleFile\t\t%s\t(.sample File containing phenotypes and covariates)\n",sampleFile);
-
+  fprintf(argFile,"\t-whichPhe\t%s\tSelect which phenotypes to analyse, write phenos comma seperated ('phe1,phe2,...'), only works with a .sample file\n",whichPhe);
+  fprintf(argFile,"\t-whichCov\t%s\tSelect which covariates to include, write covs comma seperated ('cov1,cov2,...'), only works with a .sample file\n",whichCov);  
+  
   fprintf(argFile,"\t-model\t%d\n",model);
   fprintf(argFile,"\t1: Additive/Log-Additive (Default)\n");
   fprintf(argFile,"\t2: Dominant\n");
@@ -53,6 +55,7 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t-emThres\t%f\tThreshold for convergence of EM algorithm in doAsso 4 and 5\n",emThres);
   fprintf(argFile,"\t-emIter\t%d\tNumber of max iterations for EM algorithm in doAsso 4 and 5\n\n",emIter);
   fprintf(argFile,"\t-doPriming\t%d\tPrime EM algorithm with dosage derived coefficients (0: no, 1: yes - default) \n\n",doPriming);
+  fprintf(argFile,"\t-Pvalue\t%d\tPrints a P-value instead of a likelihood ratio (0: no - default, 1: yes) \n\n",Pvalue);
   
   fprintf(argFile,"  Hybrid Test Options:\n");
   fprintf(argFile,"\t-hybridThres\t\t%f\t(p-value value threshold for when to perform latent genotype model)\n",hybridThres);
@@ -91,7 +94,8 @@ void abcAsso::getOptions(argStruct *arguments){
   emThres=angsd::getArg("-emThres",emThres,arguments);
   emIter=angsd::getArg("-emIter",emIter,arguments);
   doPriming=angsd::getArg("-doPriming",doPriming,arguments);
-
+  Pvalue=angsd::getArg("-Pvalue",Pvalue,arguments);
+  
   yfile1=angsd::getArg("-yBin",yfile1,arguments);  
   if(yfile1!=NULL)
     isBinary=1;
@@ -104,7 +108,13 @@ void abcAsso::getOptions(argStruct *arguments){
   if(yfile3!=NULL)
     isQuant=1;    
 
-  sampleFile=angsd::getArg("-sampleFile",sampleFile,arguments);  
+  sampleFile=angsd::getArg("-sampleFile",sampleFile,arguments);
+
+  //where it can read in specific phenotypes and covariates
+  if(sampleFile!=NULL){
+    whichPhe=angsd::getArg("-whichPhe",whichPhe,arguments);
+    whichCov=angsd::getArg("-whichCov",whichCov,arguments);
+  }
   
   if(doAsso==7){
     fprintf(stderr,"Warning: Wald test is not properly tested and might give inflated test statistics!\n");
@@ -131,11 +141,11 @@ void abcAsso::getOptions(argStruct *arguments){
     fprintf(stderr,"Error: you must provide a phenotype file (-yBin or -yQuant) to perform association \n");
     exit(0);
   }
-  if(doAsso && (arguments->inputtype==INPUT_BEAGLE&&doAsso==1 || arguments->inputtype==INPUT_BGEN&&doAsso==1 || arguments->inputtype==INPUT_VCF_GP&doAsso==1)){
+  if(doAsso && ((arguments->inputtype==INPUT_BEAGLE && doAsso==1) || (arguments->inputtype==INPUT_BGEN && doAsso==1) || (arguments->inputtype==INPUT_VCF_GP && doAsso==1))){
     fprintf(stderr,"Error: Only doAsso=2 can be performed on posterior input\n");
     exit(0);
   }
-  if(doAsso && arguments->inputtype!=INPUT_VCF_GP && arguments->inputtype!=INPUT_BEAGLE && arguments->inputtype!=INPUT_BGEN &&(doAsso==2|doAsso==4|doAsso==5|doAsso==6)&&doPost==0){
+  if(doAsso && arguments->inputtype!=INPUT_VCF_GP && arguments->inputtype!=INPUT_BEAGLE && arguments->inputtype!=INPUT_BGEN && (doAsso==2||doAsso==4||doAsso==5||doAsso==6) && doPost==0){
     fprintf(stderr,"Error: For doAsso=2 you must estimate the posterior probabilites for the genotypes (-doPost 1) \n");
     exit(0);
   }
@@ -175,6 +185,9 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   emThres=1e-04;  
   hybridThres=0.05;
   doPriming=1;
+  Pvalue=0;
+  whichPhe=NULL;
+  whichCov=NULL;
   //from command line
   
   if(arguments->argc==2){
@@ -215,14 +228,20 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     }
         
   } else{
-    dT = angsd::getSample(sampleFile,100000);
+    dT = angsd::getSample(sampleFile,100000,whichPhe,whichCov);
 
     ymat.matrix=dT.matrix0;
     ymat.x = dT.x0;
     ymat.y = dT.y0;
     isBinary = dT.isBinary;
 
-    if(dT.x1>0){;
+    if(dT.x1>0){
+
+      //just to make it read the covariate file
+      char test[30];
+      strcpy(test, "dada");      
+      covfile=test;
+      
       covmat.matrix=dT.matrix1;
       covmat.x = dT.x1;
       covmat.y = dT.y1;
@@ -256,11 +275,11 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
     for(int i=0 ; i < ymat.x;i++) {
       keepList[i]=1;
       for(int yi=0;yi<ymat.y;yi++) {
-	if(ymat.matrix[i][yi]==-999)
+	if(isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
       }
       for(int ci=0;ci<covmat.y;ci++) {
-	if(covmat.matrix[i][ci]==-999)
+	if(isMinus999(covmat.matrix[i][ci]))
 	  keepList[i]=0;
       }
     }
@@ -325,16 +344,36 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
 
   // hybrid model score model first, then if significant use EM asso  
   if(doAsso==5){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\tSE\temIter\n");
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\tPscore\thigh_WT/HE/HO\tLRTem\tPem\tbeta\tSE\temIter\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRTscore\thigh_WT/HE/HO\tLRTem\tbeta\tSE\temIter\n");
+    }
     //EM asso or dosage model
   } else if(doAsso==4 or doAsso==7){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\temIter\n");
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tP\tbeta\tSE\thigh_WT/HE/HO\temIter\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\temIter\n");
+    }
   } else if(doAsso==6){
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\n");    
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tP\tbeta\tSE\thigh_WT/HE/HO\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tbeta\tSE\thigh_WT/HE/HO\n");
+    }
   } else if(doAsso==2)
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\tP\thigh_WT/HE/HO\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tN\tLRT\thigh_WT/HE/HO\n");
+    }
   else
-    ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\n");
+    if(Pvalue==1){
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\tP\n");
+    } else{
+      ksprintf(&bufstr,"Chromosome\tPosition\tMajor\tMinor\tFrequency\tLRT\n");
+    }    
   for(int yi=0;yi<ymat.y;yi++)
     aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);
   bufstr.l=0;
@@ -496,7 +535,7 @@ void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe,
       if(isBinary){
 	isBinaryQuan = 0;
 
-	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1 and phe.matrix[i][j]!=-999){
+	if(phe.matrix[i][j]!=0 and phe.matrix[i][j]!=1 and !isMinus999(phe.matrix[i][j])){
 	  fprintf(stderr,"Phenotypes are not binary (0 or 1) for logistic model!\n");
 	  exit(1);
 	}
@@ -551,7 +590,18 @@ void abcAsso::check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe,
 }
 
 
-			 
+// stupid little functions to see if int/double value "is" -999 (for missing data)
+int abcAsso::isMinus999(double x){
+  int per = (x/1.0 > -999.1 & x/1.0 < -998.9);    
+  return(per); 
+}
+
+int abcAsso::isMinus999(int x){
+  int per = (x/1.0 > -999.1 & x/1.0 < -998.9);    
+  return(per); 
+}
+
+
 void abcAsso::frequencyAsso(funkyPars  *pars,assoStruct *assoc){
 
   if(doPrint)
@@ -684,11 +734,11 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
 	if(covfile!=NULL)
 	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	    if(isMinus999(covmat.matrix[i][ci]))
 	      keepList[i]=0;
 	  }
 
@@ -699,7 +749,7 @@ void abcAsso::scoreAsso(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
       stat[yi][s]=doAssociation(pars,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc);
       
       //cleanup
@@ -946,17 +996,17 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
   int highHE=0;
   int highHO=0;
 
-  double post[keepInd*3];
-  
+  double* post = new double[keepInd*3];    
+  double* y = new double[3*keepInd];
+      
   //////////////////////////// check if site can be run first - checking data for full model
-
-  double y[keepInd];
+  
   int count=0;
       
   design->x=keepInd;
   design->y=covmat.y+2;
 
-  double covMatrix[(covmat.y+2)*keepInd];
+  double* covMatrix = new double[(covmat.y+2)*keepInd];  
   
   // WLS (weighted) model with genotypes
   for(int i=0;i<p->nInd;i++){
@@ -981,7 +1031,7 @@ double abcAsso::dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Ma
 
        //if rec model, WT+HE->WT, HO->HE
       if(model==3){
-if((post[count*3+0]+post[count*3+1])>0.90)
+	if((post[count*3+0]+post[count*3+1])>0.90)
 	  highWT++;
 	if(post[count*3+2]>0.90)
 	  highHE++;
@@ -1024,15 +1074,23 @@ if((post[count*3+0]+post[count*3+1])>0.90)
   if(highHO >= minHigh)
     nGeno++;
   
-  if(nGeno<2)
+  if(nGeno<2){
+    delete [] y;
+    delete [] post;
+    delete [] covMatrix;    
     return(-999);//set_snan(lrt);
+  }
 
   //basically the same, just renamed for normScoreEnv and binomScoreEnv functions
   int numInds = keepInd;
   //freq*numInds*2 is the expected number of minor alleles
-  if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount)
+  if(freq*numInds*2 < minCount || (1-freq)*numInds*2 < minCount){
+    delete [] y;
+    delete [] post;
+    delete [] covMatrix;     
     return(-999);//set_snan(lrt);      set_snan(lrt);
-  
+  }
+    
   if(count!=keepInd){
     fprintf(stderr,"[%s] wrong number of non missing\n",__FUNCTION__);
     fflush(stderr);
@@ -1040,11 +1098,11 @@ if((post[count*3+0]+post[count*3+1])>0.90)
   }
 
   ///////////////////////////////////////////////////////
-  
-  double covMatrixNull[(covmat.y+1)*keepInd];
-  double yfit[keepInd];
-    
-  double yNull[keepInd];
+
+  double* covMatrixNull = new double[(covmat.y+1)*keepInd];
+  double* yfit = new double[keepInd];
+  double* yNull = new double[keepInd];
+
   count = 0;
     
   designNull->x=keepInd;
@@ -1106,6 +1164,14 @@ if((post[count*3+0]+post[count*3+1])>0.90)
  
   double llh = logLike(start,y,design,post,isBinary,isCount,0);
 
+  delete [] covMatrix;
+  delete [] yfit;
+  delete [] yNull;
+  delete [] covMatrixNull;
+
+  delete [] y;
+  delete [] post;
+  
   // likelihood ratio - chi square distributed according to Wilk's theorem
   double LRT = -2*(llh-llhNull);
 
@@ -1158,18 +1224,20 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
     for(int i=0 ; i<pars->nInd ;i++){
       keepListAll[i]=1;
     }
-
+    
     for(int yi=0;yi<ymat.y;yi++) { //loop over phenotypes
       int *keepList = new int[pars->nInd];
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi])){
 	  keepList[i]=0;
+	}
 	if(covfile!=NULL)
-	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	  for(int ci=0;ci<covmat.y;ci++) {	    
+	    if(isMinus999(covmat.matrix[i][ci])){
 	      keepList[i]=0;
+	    }
 	  }
 	if(keepList[i]==1)
 	  keepInd[yi][s]++;
@@ -1178,7 +1246,7 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
 
       stat[yi][s]=dosageAssoc(pars,&design,&designNull,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);
       
@@ -2072,17 +2140,15 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   for(int i=0;i<emIter;i++){
     nIter++;
     llh1 = logupdateEM(start,design,postAll,y,keepInd,post,isBinary,isCount,fullModel,i);
-            
+
     if(fabs(llh1-llh0)<emThres and llh1 > 0){	 
       // Converged
       assoc->emIter[s] = nIter;
-      
       break;
     } else if((llh0<llh1) & (not doPriming | not (i==0))){
       // Fit caused increase in likelihood, will roll back to previous step
       memcpy(start,pars0,sizeof(double)*(design->y+1));
       assoc->emIter[s] = nIter;
-      
       break;
       // if we problems with the weights then break
     } else if(llh1<-4){
@@ -2092,7 +2158,6 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
       llh0=NAN;
       llhNull=NAN;
       assoc->emIter[s] = nIter;
-      
       break;
     }
 
@@ -2119,7 +2184,14 @@ double abcAsso::doEMasso(funkyPars *p,angsd::Matrix<double> *design,angsd::Matri
   delete [] post;
     
   // likelihood ratio - chi square distributed according to Wilk's theorem
-  double LRT = -2*(llh1-llhNull);
+  // if there was a problem with the weights (llh1 = -9) then we return a LRT of -999 (missing)
+  double LRT = 0;
+  if(llh1<-4){
+    LRT = -999;
+  } else{
+    LRT = -2*(llh1-llhNull);
+  }
+  
   return(LRT);
   
 }
@@ -2181,11 +2253,11 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
 	if(covfile!=NULL)
 	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	    if(isMinus999(covmat.matrix[i][ci]))
 	      keepList[i]=0;
 	  }
 
@@ -2193,12 +2265,11 @@ void abcAsso::emAsso(funkyPars  *pars,assoStruct *assoc){
 	  keepInd[yi][s]++;
       }
 
-      
       double *y = new double[pars->nInd];
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
   
       stat[yi][s]=doEMasso(pars,&design,&designNull,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);
             
@@ -2481,11 +2552,11 @@ void abcAsso::emAssoWald(funkyPars  *pars,assoStruct *assoc){
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
 	if(covfile!=NULL)
 	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	    if(isMinus999(covmat.matrix[i][ci]))
 	      keepList[i]=0;
 	  }
 
@@ -2499,7 +2570,7 @@ void abcAsso::emAssoWald(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
   
       tmp=doEMassoWald(pars,&design,&postAll,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc,model,isBinary,isCount,start,1);            
       //if not enough, WT, HE or HO or ind to run test
@@ -2599,11 +2670,11 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
       keepInd[yi][s]=0;
       for(int i=0 ; i<pars->nInd ;i++) {
 	keepList[i]=1;
-	if(keepListAll[i]==0||ymat.matrix[i][yi]==-999)
+	if(keepListAll[i]==0||isMinus999(ymat.matrix[i][yi]))
 	  keepList[i]=0;
 	if(covfile!=NULL)
 	  for(int ci=0;ci<covmat.y;ci++) {
-	    if(covmat.matrix[i][ci]==-999)
+	    if(isMinus999(covmat.matrix[i][ci]))
 	      keepList[i]=0;
 	  }
 	if(keepList[i]==1)
@@ -2614,7 +2685,7 @@ void abcAsso::hybridAsso(funkyPars  *pars,assoStruct *assoc){
       for(int i=0 ; i<pars->nInd ;i++)
 	y[i]=ymat.matrix[i][yi]; 
  
-      freqStruct *freq = (freqStruct *) pars->extras[6];
+      freqStruct *freq = (freqStruct *) pars->extras[7];
       stat[yi][s]=doAssociation(pars,pars->post[s],y,keepInd[yi][s],keepList,freq->freq[s],s,assoc);
 
       // cutoff has been changed to p-value
@@ -2973,12 +3044,13 @@ int abcAsso::getFitPois(double *res,double *Y,double *covMatrix,int nInd,int nEn
 double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc){
   if(doPrint)
     fprintf(stderr,"Staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
-  
-  double covMatrix[(covmat.y+1)*keepInd];
-  double y[keepInd];
-  double post[keepInd*3];
-  double start[keepInd];
-  
+
+
+  double* covMatrix = new double[(covmat.y+1)*keepInd];
+  double* y = new double[keepInd];
+  double* post = new double[keepInd*3];    
+  double* start = new double[keepInd];
+    
   int count=0;
   for(int i=0;i<pars->nInd;i++){
     if(keepList[i]){
@@ -3061,14 +3133,35 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
     for(int i=0;i<keepInd;i++)
        yfit[i]=0;
     if(isBinary){
-      if(getFitBin(yfit,y,covMatrix,keepInd,nEnv,start))
+      if(getFitBin(yfit,y,covMatrix,keepInd,nEnv,start)){
+	delete[] yfit;
+	delete[] covMatrix;
+	delete[] y;
+	delete[] post;
+	delete[] start;  
+	
 	return -999;
+      }
     } else if(isCount){
-      if(getFitPois(yfit,y,covMatrix,keepInd,nEnv,start))
-	return -999;      
-    } else
-      if(getFit(yfit,y,covMatrix,keepInd,nEnv,start))
+      if(getFitPois(yfit,y,covMatrix,keepInd,nEnv,start)){
+	 delete[] yfit;
+	 delete[] covMatrix;
+	 delete[] y;
+	 delete[] post;
+	 delete[] start;  
+
 	return -999;
+      }
+    } else
+      if(getFit(yfit,y,covMatrix,keepInd,nEnv,start)){
+	 delete[] yfit;
+	 delete[] covMatrix;
+	 delete[] y;
+	 delete[] post;
+	 delete[] start;  
+
+	return -999;
+      }
   }
   
   //for(int i=0;i<keepInd;i++)
@@ -3098,6 +3191,11 @@ double abcAsso::doAssociation(funkyPars *pars,double *postOrg,double *yOrg,int k
     stat = normScoreEnv(post,keepInd,y,yfit,covMatrix,nEnv,freq,assoc,s);
 
   delete[] yfit;
+  delete[] covMatrix;
+  delete[] y;
+  delete[] post;
+  delete[] start;  
+    
   return stat;
 
 }
@@ -3501,32 +3599,69 @@ void abcAsso::printDoAsso(funkyPars *pars){
   if(doPrint)
     fprintf(stderr,"staring [%s]\t[%s]\n",__FILE__,__FUNCTION__);
   
-  freqStruct *freq = (freqStruct *) pars->extras[6];
+  freqStruct *freq = (freqStruct *) pars->extras[7];
   assoStruct *assoc= (assoStruct *) pars->extras[index];
   
+  //chisq distribution with df=1
+  Chisqdist *chisq1 = new Chisqdist(1);
+
+  //print chr, if none has been declared in header of vcf file
+  int chrPrint = atoi(header->target_name[pars->refId]);
+
+  char chr2[40];
+  
+  // if negative number as chr set equal to 0
+  if(chrPrint<0){
+    chrPrint = 0;
+    strcpy(chr2,"0");
+  } else{
+    strcpy(chr2,header->target_name[pars->refId]);
+  }
+    
   for(int yi=0;yi<ymat.y;yi++){
     bufstr.l=0;
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s]==0){//will skip sites that have been removed      
 	continue;
      }
- 
+
       if(doAsso==5){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%f\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s],assoc->SEs[s],assoc->emIter[s]);
-      } else if(doAsso==4 or doAsso==7){	
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\t%i\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);	 
-       } else if(doAsso==6){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
-       } else if(doAsso==2){
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%.4e\t%d/%d/%d\t%f\t%.4e\t%f\t%f\t%i\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]),assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->stat[yi][s],angsd::to_pval(chisq1,assoc->statOther[yi][s]),assoc->betas[s],assoc->SEs[s],assoc->emIter[s]);
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\t%f\t%f\t%f\t%i\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->statOther[yi][s],assoc->betas[s],assoc->SEs[s],assoc->emIter[s]);
+	}
+      } else if(doAsso==4 or doAsso==7){
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%.4e\t%f\t%f\t%d/%d/%d\t%i\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]),assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\t%i\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s],assoc->emIter[s]);
+	}
+      } else if(doAsso==6){
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%.4e\t%f\t%f\t%d/%d/%d\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]),assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%f\t%f\t%d/%d/%d\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->betas[s],assoc->SEs[s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	}
+      } else if(doAsso==2){
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%.4e\t%d/%d/%d\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]),assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%d\t%f\t%d/%d/%d\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->keepInd[yi][s],assoc->stat[yi][s],assoc->highWt[s],assoc->highHe[s],assoc->highHo[s]);	  
+	}
       } else{
-	ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",header->target_name[pars->refId],pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s]);
+	if(Pvalue==1){
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\t%.4e\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s],angsd::to_pval(chisq1,assoc->stat[yi][s]));
+	} else{
+	  ksprintf(&bufstr,"%s\t%d\t%c\t%c\t%f\t%f\n",chr2,pars->posi[s]+1,intToRef[pars->major[s]],intToRef[pars->minor[s]],freq->freq[s],assoc->stat[yi][s]);	  
+	}
       }
     }
     aio::bgzf_write(multiOutfile[yi],bufstr.s,bufstr.l);bufstr.l=0;
-
+    
   }
 
-
+  delete chisq1;
+    
 }
 

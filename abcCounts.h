@@ -1,6 +1,12 @@
+typedef struct{
+  float **ebd;
+}counts;
+
+
 
 class abcCounts : public abc{
 private:
+  int doebd;
   const char* postfix1; //.pos
   const char* postfix2;//.counts;
   const char* postfix3;//.qs

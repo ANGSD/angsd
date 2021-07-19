@@ -4,7 +4,6 @@
 \usepackage{framed}
 \usepackage{enumitem}
 \usepackage{longtable}
-\usepackage[draft]{fixme}
 \usepackage[pdfborder={0 0 0},hyperfootnotes=false]{hyperref}
 
 \addtolength{\textwidth}{3.4cm}
@@ -58,9 +57,24 @@ This section describes the banded representation of the sample allele frequency 
 \begin{itemize}
 \item[PREFIX.saf.gz] bgzf compressed. Full description in Table \ref{tab3}.
 \item[PREFIX.saf.pos.gz] bgzf compressed flat integer. Representing   the position. Each element is a cdatatype 'int' which is  4bytes. Similar to version 1.
-\item[PREFIX.saf.idx] uncompressed binary file containing blocks of   data described in \ref{tab1}. This is preceeded by a size\_t value
-  which indicates the number of categories in the spectrum. Similiar to version 1.
+\item[PREFIX.saf.idx] uncompressed binary file containing blocks of   data described in \ref{tab4}. 
 \end{itemize}
+
+\begin{table}[h]
+\begin{tabular}{rllll}
+  \hline
+  {\bf Col} & {\bf Field} & {\bf Type} & {\bf Brief description} \\
+  \hline
+  1 & {\sf CLEN} & size\_t &  Length of CHR (not including terminating null)\\
+  2 & {\sf CHR} & char* & Reference sequence name. Length is CLEN\\
+  3 & {\sf NSITES} & size\_t & Number of sites with coverage from reference CHR\\
+  3 & {\sf SUMBAND} & size\_t & Sum of bins from reference CHR\\
+  4 & {\sf OFF1} & long int & CHR offset into the PREFIX.saf.pos.gz \\
+  5 & {\sf OFF2} & long int & CHR offset into the PREFIX.saf.gz \\
+  \hline
+\end{tabular}\label{tab4}
+\caption{Content of entry for a single reference name in the PREFIX.saf.idx file.}
+\end{table}
 
 \begin{table}[h]
 \begin{tabular}{rllll}

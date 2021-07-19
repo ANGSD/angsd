@@ -36,13 +36,25 @@ void abcHWE::getOptions(argStruct *arguments){
   doHWE = angsd::getArg("-doHWE",doHWE,arguments);
   if(doHWE==0)
     return ;
+  int GL=0;
+  int doMajorMinor=0;
 
   minHWEpval = angsd::getArg("-minHWEpval",minHWEpval,arguments);
   maxHWEpval = angsd::getArg("-maxHWEpval",maxHWEpval,arguments);
   maxHetFreq = angsd::getArg("-maxHetFreq",maxHetFreq,arguments);//nspope;hetFilter
   minHetFreq = angsd::getArg("-minHetFreq",minHetFreq,arguments);//nspope;hetFilter
-   
-  
+  doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
+  GL=angsd::getArg("-GL",GL,arguments);
+  if(arguments->inputtype!=INPUT_VCF_GL && arguments->inputtype!=INPUT_GLF && arguments->inputtype!=INPUT_GLF3 && GL==0){
+    fprintf(stderr,"\t-> Potential problem: You are required to choose a genotype likelihood model (-GL) \n");
+    exit(0);
+  } 
+
+  if(doMajorMinor==0 && arguments->inputtype!=INPUT_VCF_GL){
+      fprintf(stderr,"\t-> Potential problem: You are required to choose a major/minor estimator (-doMajorMinor)\n");
+      exit(0);
+  } 
+
   if(arguments->inputtype==INPUT_BEAGLE||arguments->inputtype==INPUT_VCF_GP){
     fprintf(stderr,"Error: you cannot estimate HWE based on posterior probabilities \n");
     exit(0);

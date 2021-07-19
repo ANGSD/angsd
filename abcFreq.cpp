@@ -82,6 +82,7 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"\t-minMaf  \t%f\t(Remove sites with MAF below)\n",minMaf);
   fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",SNP_pval);
   fprintf(argFile,"\t-rmTriallelic\t%f\t(Remove sites with a pvalue lower)\n",rmTriallelic);
+  fprintf(argFile,"\t-forceMaf\t%f\t(Write .mafs file when running -doAsso (by default does not output .mafs file with -doAsso))\n",forceMaf);
   fprintf(argFile,"\t-skipMissing\t%d\t(Set post to 0.33 if missing (do not use freq as prior))\n",skipMissing);
   fprintf(argFile,"Extras:\n");
   fprintf(argFile,"\t-ref\t%s\t(Filename for fasta reference)\n",refName);
@@ -111,7 +112,8 @@ void abcFreq::getOptions(argStruct *arguments){
     return;
   
   rmTriallelic=angsd::getArg("-rmTriallelic",rmTriallelic,arguments);
-
+  forceMaf=angsd::getArg("-forceMaf",forceMaf,arguments);
+  
   GL=angsd::getArg("-GL",GL,arguments);
   if(inputtype!=INPUT_VCF_GL && inputtype!=INPUT_GLF && inputtype!=INPUT_GLF3 && doPost && GL==0){
     fprintf(stderr,"\t-> Potential problem: You are required to choose a genotype likelihood model (-GL) for estimating genotypes posteriors.\n");
@@ -134,8 +136,10 @@ void abcFreq::getOptions(argStruct *arguments){
   if(indFname !=NULL)
     indF = angsd::readDouble(indFname,arguments->nInd);
 
-
-
+  //gets -doAsso argument so can be disabled when running doAsso (but only for doAsso)
+  doAsso = angsd::getArg("-doAsso",doAsso,arguments);                                                                                        
+  if(doAsso !=NULL)                                                                                                                  
+    ifDoAsso = 1;
 
 
   if(doMaf==0 )//&& doPost==0?
@@ -144,9 +148,6 @@ void abcFreq::getOptions(argStruct *arguments){
   chisq1 = new Chisqdist(1);
   chisq2 = new Chisqdist(2);
   chisq3 = new Chisqdist(3);
-
-
-
   
   minMaf=angsd::getArg("-minMaf",minMaf,arguments);
   //  assert(minMaf<=1&&minMaf>=0);
@@ -171,7 +172,7 @@ void abcFreq::getOptions(argStruct *arguments){
     SNP_pval_tri = chisq2->invcdf(1-rmTriallelic);
   refName = angsd::getArg("-ref",refName,arguments);
   ancName = angsd::getArg("-anc",ancName,arguments);
-
+  
   if(abs(doMaf)&& !isPowerOfTwo((unsigned int) abs(doMaf))){
     fprintf(stderr,"\n[%s] You have selected filters for maf/lrt\n",__FILE__);
     fprintf(stderr,"If you have selected more than one MAF estimator we will choose in following order\n");
@@ -279,7 +280,10 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   doMajorMinor=0;
   refName = NULL;
   ancName = NULL;
-
+  //new flags where maf calculation can be disabled when doing doAsso
+  doAsso = NULL;
+  ifDoAsso = 0;
+  forceMaf = 0;
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doMaf")||!strcasecmp(arguments->argv[1],"-doPost")){
@@ -302,53 +306,57 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   if(doMaf>0){
     //make output files
     const char* postfix;
-    postfix=".mafs.gz";
-    outfileZ = aio::openFileBG(outfiles,postfix);
+    postfix=".mafs.gz";    
+    // does not write file if doing asso - unless forceMaf flag
+    if(!ifDoAsso || forceMaf){
+      outfileZ = aio::openFileBG(outfiles,postfix);
+    }    
     if(beagleProb){
       postfix=".beagle.gprobs.gz";
       outfileZ2 = aio::openFileBG(outfiles,postfix);
     }
   }else
     doMaf=abs(doMaf);
-  //print header
-  
-  aio::kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
+
+  //print header  
+  kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
+
   if(refName!=NULL||arguments->inputtype==INPUT_PILEUP)
-    aio::kputs("ref\t",&bufstr);
+    kputs("ref\t",&bufstr);
   if(ancName)
-    aio::kputs("anc\t",&bufstr);
+    kputs("anc\t",&bufstr);
   
   if(doMaf &1)
-    aio::kputs("knownEM\t",&bufstr);
+    kputs("knownEM\t",&bufstr);
   if(doMaf &2)
-    aio::kputs("unknownEM\t",&bufstr);    
+    kputs("unknownEM\t",&bufstr);    
   if(doMaf &4)
-    aio::kputs("PPmaf\t",&bufstr);
+    kputs("PPmaf\t",&bufstr);
   if(doMaf &8)
-    aio::kputs("phat\t",&bufstr);
+    kputs("phat\t",&bufstr);
   
   if(doSNP){
     if(doMaf &1)
-      aio::kputs("pK-EM\t",&bufstr);
+      kputs("pK-EM\t",&bufstr);
     if(doMaf &2)
-      aio::kputs("pu-EM\t",&bufstr);
+      kputs("pu-EM\t",&bufstr);
   }
-  aio::kputs("nInd\n",&bufstr);
+  kputs("nInd\n",&bufstr);
   if(outfileZ!=NULL){
     aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
     bufstr.l=0;
   }
   if(beagleProb){
-    aio::kputs("marker\tallele1\tallele2",&bufstr);
+    kputs("marker\tallele1\tallele2",&bufstr);
     for(int i=0;i<arguments->nInd;i++){
-      aio::kputs("\tInd",&bufstr);
-      aio::kputw(i,&bufstr);
-      aio::kputs("\tInd",&bufstr);
-      aio::kputw(i,&bufstr);
-      aio::kputs("\tInd",&bufstr);
-      aio::kputw(i,&bufstr);
+      kputs("\tInd",&bufstr);
+      kputw(i,&bufstr);
+      kputs("\tInd",&bufstr);
+      kputw(i,&bufstr);
+      kputs("\tInd",&bufstr);
+      kputw(i,&bufstr);
     }
-    aio::kputc('\n',&bufstr);
+    kputc('\n',&bufstr);
     aio::bgzf_write(outfileZ2,bufstr.s,bufstr.l);
     bufstr.l=0;
   }
@@ -384,16 +392,16 @@ void abcFreq::print(funkyPars *pars) {
     if(pars->keepSites[s]==0)
       continue;
     //plugin chr,pos,major,minor
-    aio::kputs(header->target_name[pars->refId],&bufstr);aio::kputc('\t',&bufstr);
-    aio::kputw(pars->posi[s]+1,&bufstr);aio::kputc('\t',&bufstr);
-    aio::kputc(intToRef[pars->major[s]],&bufstr);aio::kputc('\t',&bufstr);
-    aio::kputc(intToRef[pars->minor[s]],&bufstr);aio::kputc('\t',&bufstr);
+    kputs(header->target_name[pars->refId],&bufstr);kputc('\t',&bufstr);
+    kputw(pars->posi[s]+1,&bufstr);kputc('\t',&bufstr);
+    kputc(intToRef[pars->major[s]],&bufstr);kputc('\t',&bufstr);
+    kputc(intToRef[pars->minor[s]],&bufstr);kputc('\t',&bufstr);
 
     //plugin ref, anc if exists
     if(pars->ref!=NULL)
-      {aio::kputc(intToRef[pars->ref[s]],&bufstr);aio::kputc('\t',&bufstr);}
+      {kputc(intToRef[pars->ref[s]],&bufstr);kputc('\t',&bufstr);}
     if(pars->anc!=NULL)
-      {aio::kputc(intToRef[pars->anc[s]],&bufstr);aio::kputc('\t',&bufstr);}
+      {kputc(intToRef[pars->anc[s]],&bufstr);kputc('\t',&bufstr);}
 
     if(doMaf &1)
       ksprintf(&bufstr,"%f\t",freq->freq_EM[s]);
@@ -410,7 +418,7 @@ void abcFreq::print(funkyPars *pars) {
 	ksprintf(&bufstr,"%e\t",angsd::to_pval(chisq1,freq->lrt_EM_unknown[s]));
     }
     
-    aio::kputw(pars->keepSites[s],&bufstr);aio::kputc('\n',&bufstr);
+    kputw(pars->keepSites[s],&bufstr);kputc('\n',&bufstr);
   }
   if(outfileZ!=NULL){
     aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);  
@@ -423,13 +431,13 @@ void abcFreq::print(funkyPars *pars) {
       if(pars->keepSites[s]==0)
 	continue;
       // fprintf(stderr,"keepsites=%d\n",pars->keepSites[s]);
-      aio::kputs(header->target_name[pars->refId],&bufstr);
-      aio::kputc('_',&bufstr);
-      aio::kputw(pars->posi[s]+1,&bufstr);
-      aio::kputc('\t',&bufstr);
-      aio::kputw(pars->major[s],&bufstr);
-      aio::kputc('\t',&bufstr);
-      aio::kputw(pars->minor[s],&bufstr);
+      kputs(header->target_name[pars->refId],&bufstr);
+      kputc('_',&bufstr);
+      kputw(pars->posi[s]+1,&bufstr);
+      kputc('\t',&bufstr);
+      kputw(pars->major[s],&bufstr);
+      kputc('\t',&bufstr);
+      kputw(pars->minor[s],&bufstr);
 
       int major = pars->major[s];
       int minor = pars->minor[s];
@@ -439,7 +447,7 @@ void abcFreq::print(funkyPars *pars) {
 	ksprintf(&bufstr, "\t%f",pars->post[s][i]);
       }
       
-      aio::kputc('\n',&bufstr);
+      kputc('\n',&bufstr);
     
     }
     //valgrind on osx complains here check if prob on unix

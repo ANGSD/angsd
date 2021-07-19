@@ -43,7 +43,7 @@ public:
   double assoThres; 
   double hybridThres;
   int doPriming; 
-  
+  int Pvalue;
   
   void run(funkyPars  *pars);
   void print(funkyPars *pars);  
@@ -59,11 +59,15 @@ public:
   char *yfile2;
   char *yfile3;
   char *sampleFile;
+  char* whichCov;
+  char* whichPhe;
 
   angsd::doubleTrouble<double> dT;
   angsd::Matrix<double> ymat;
   angsd::Matrix<double> covmat;
   void check_pars(angsd::Matrix<double> &cov, angsd::Matrix<double> &phe, int isBinary);
+  int isMinus999(double x);
+  int isMinus999(int x);
   void scoreAsso(funkyPars  *pars,assoStruct *assoc);
   double standardError(double* start, angsd::Matrix<double> *design, angsd::Matrix<double> *postAll, double *y, double *post, int isBinary, int isCount, int *keepList, int nInd);
   double dosageAssoc(funkyPars *p,angsd::Matrix<double> *design,angsd::Matrix<double> *designNull,double *postOrg,double *yOrg,int keepInd,int *keepList,double freq,int s,assoStruct *assoc,int model, int isBinary, int isCount, double* start, int fullModel);

@@ -50,9 +50,13 @@ void* add_read_groups_file(char *fn)
       if(ret==-1)
 	fprintf(stderr,"\t-> [READGROUP info] Problems adding readgroup: %s\n",d);
       else{
-	//int tmp;
-	//	assert(khash_str2int_get(retval,d,&tmp)==0);
-	fprintf(stderr,"\t-> [READGROUP info] Added readgroup %s\n",d);
+	int tmp;
+	assert(khash_str2int_get(retval,d,&tmp)==0);
+	fprintf(stderr,"\t-> [READGROUP info] Added readgroup %s to id:%d\n",d,tmp);
+	if(tmp>254){
+	  fprintf(stderr,"\t-> Readgroup representation is only valid for fewer than 255 different readgroups\n");
+	  exit(0);
+	}
       }
     }
     if (ferror(fp)) ret = -1;

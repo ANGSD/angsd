@@ -71,7 +71,7 @@ namespace angsd {
   void deleteMatrix(Matrix<double> mat);
   void deleteMatrixInt(Matrix<int> mat);
   void printMatrix(Matrix<double> mat,FILE *file);
-  doubleTrouble<double> getSample(const char *name,int lens);
+  doubleTrouble<double> getSample(const char *name,int lens, char* whichPhe, char* whichCov);
   void deleteDoubleTrouble(doubleTrouble<double> dT);
   void printDoubleTrouble(doubleTrouble<double> dT,FILE *file);  
   void logrescale(double *ary,int len);
