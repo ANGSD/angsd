@@ -273,7 +273,7 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
     if(dumpCounts!=5)
       ksprintf(&bufstr,"chr\tpos\ttotDepth\n");
     else
-      ksprintf(&bufstr,"chr\tpos\tmeanReadLength\n");
+      ksprintf(&bufstr,"chr\tpos\tmeanReadLength\tdepth\n");
     aio::bgzf_write(oFileCountsPos,bufstr.s,bufstr.l);bufstr.l=0;
     if(dumpCounts>1)
       oFileCountsBin = aio::openFileBG(outfiles,postfix2);
@@ -460,7 +460,7 @@ void abcCounts::print(funkyPars *pars){
 	  nreads++;
 	}
       }
-      ksprintf(&bpos, "%s\t%d\t%.2f\n",header->target_name[pars->refId],pars->posi[s]+1,readlensSum/nreads);
+      ksprintf(&bpos, "%s\t%d\t%.2f\t%d\n",header->target_name[pars->refId],pars->posi[s]+1,readlensSum/nreads,(int)nreads);
       //      fprintf(stderr,"nraads: %f readlenssum: %f\n",nreads,readlensSum);
     }
 
