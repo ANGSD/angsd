@@ -24,6 +24,7 @@ cd angsd;make
 Notes
 ====
 * I've switched over to using htslib for parsing single reads (to allow for CRAM reading, while avoid having to write my own CRAM parser). I'm still using my own readpools. Users should therefore also download and install htslib.
+* If you are on a mac computer and the compilation process complains about a missnig crybtolib library then do 'make CRYPTOLIB=""'
 
 Program has a paper
 =====
