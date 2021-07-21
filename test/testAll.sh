@@ -51,12 +51,12 @@ fi
 fi
 
 #echo "Testing neutrality test statistics"
-#time ./testTaj.sh $WDIR
-#if [ ! $? -eq 0 ] ;then
-#    echo "Problem with neutrality test statistics exit code: $?"
-#    cat ./testTaj.sh.log
-#    RVAL=1
-#fi
+time ./testTaj.sh $WDIR
+if [ ! $? -eq 0 ] ;then
+    echo "Problem with neutrality test statistics exit code: $?"
+    cat ./testTaj.sh.log
+    RVAL=1
+fi
 
 #echo "Testing fst using msms"
 #time ./testFst.sh $WDIR
