@@ -1097,7 +1097,6 @@ int main(int argc,char **argv)
   }
   else if(!strcasecmp(*argv,"fst"))
   {
-    fprintf(stderr,"not implemented yet for safv4, exiting\n");
     fst(--argc,++argv);
   }
   else if(!strcasecmp(*argv,"dadi"))
