@@ -324,6 +324,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
 
   int iter =0;
   double expected[dim];
+  int lastInsta = -1;
   for(int i=0;i<dim;i++)
     expected[i] = p[i]; 
 
@@ -383,8 +384,14 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
         pnew[j]=1-ttol;
       }
     }
-    if(printOutOfBounds)
-      fprintf(stderr,"\t-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step\n");
+
+    if(printOutOfBounds){
+      if(lastInsta==-1)
+	lastInsta = iter;
+      if(lastInsta!=iter-2)
+	fprintf(stderr,"\t-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step\n");
+      lastInsta = iter;
+    }
 #endif
 
     int extra =0;
