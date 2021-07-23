@@ -1057,7 +1057,7 @@ int main(int argc,char **argv)
     fprintf(stderr, "\t-maxiter 100\t\t(maximum number of EM iterations)\n");
     fprintf(stderr, "\t-bootstrap 0\t\t(number of bootstrap replicates)\n");
     fprintf(stderr, "\t-resample_chr 0\t\t(0 = bootstrap sites; 1 = bootstrap chromosomes/contigs)\n");
-    fprintf(stderr, "\t-emaccel 1\t\t(0 = regular EM; 1 = accelerated EM)\n");
+    fprintf(stderr, "\t-emaccl 1\t\t(0 = regular EM; 1 = accelerated EM)\n");
     fprintf(stderr, "\t-fold 0\t\t\t(0 = unfolded SFS; 1 = folded SFS)\n");
     fprintf(stderr, "\t-nsites 0\t\t(number of sites to use in calculation; 0 = all sites)\n");
     fprintf(stderr, "\t-seed -1\t\t(random seed for start values; -1 = machine noise)\n");

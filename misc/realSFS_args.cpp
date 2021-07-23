@@ -62,6 +62,8 @@ args * getArgs(int argc,char **argv){
       p->banded = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-maxiter"))
       p->maxIter = atoi(*(++argv));
+    else  if(!strcasecmp(*argv,"-niter"))
+      p->maxIter = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-oldout"))
       p->oldout = atoi(*(++argv));
     else  if(!strcasecmp(*argv,"-nsites"))
