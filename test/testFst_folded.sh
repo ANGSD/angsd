@@ -36,9 +36,9 @@ ${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 45 14 28 >${ODIR}/pop2.glf.gz 2>>${LOG
 ${WDIR}/misc/splitgl ${ODIR}/glout.glf.gz 45 29 45 >${ODIR}/pop3.glf.gz 2>>${LOG}
 echo 1 250000000 >${ODIR}/fai.fai
 echo "Calculating perpop saf" >>${LOG} 2>&1
-${WDIR}/angsd -glf ${ODIR}/pop1.glf.gz -nind 13 -doSaf 1 -out ${ODIR}/pop1 -fai ${ODIR}/fai.fai -issim 1  2>>${LOG}
-${WDIR}/angsd -glf ${ODIR}/pop2.glf.gz -nind 15 -doSaf 1 -out ${ODIR}/pop2 -fai ${ODIR}/fai.fai -issim 1  2>>${LOG}
-${WDIR}/angsd -glf ${ODIR}/pop3.glf.gz -nind 17 -doSaf 1 -out ${ODIR}/pop3 -fai ${ODIR}/fai.fai -issim 1  2>>${LOG}
+${WDIR}/angsd -glf ${ODIR}/pop1.glf.gz -nind 13 -doSaf 1 -out ${ODIR}/pop1 -fai ${ODIR}/fai.fai -issim 1 -scoretol 1e-16  2>>${LOG}
+${WDIR}/angsd -glf ${ODIR}/pop2.glf.gz -nind 15 -doSaf 1 -out ${ODIR}/pop2 -fai ${ODIR}/fai.fai -issim 1 -scoretol 1e-16  2>>${LOG}
+${WDIR}/angsd -glf ${ODIR}/pop3.glf.gz -nind 17 -doSaf 1 -out ${ODIR}/pop3 -fai ${ODIR}/fai.fai -issim 1 -scoretol 1e-16   2>>${LOG}
 
 echo "Calculating perpop sfs based on the perpop saf" >>${LOG} 2>&1
 ${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx -seed -1 >${ODIR}/pop1.saf.idx.ml 2>>${LOG}
@@ -58,6 +58,12 @@ ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.fst.idx >${ODIR}/pop1.pop2.fst.
 ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop3.fst.idx >${ODIR}/pop1.pop3.fst.idx.res 2>>${LOG}
 ${WDIR}/misc/realSFS fst stats ${ODIR}/pop2.pop3.fst.idx >${ODIR}/pop2.pop3.fst.idx.res 2>>${LOG}
 ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.pop3.fst.idx >${ODIR}/pop1.pop2.pop3.fst.idx.res 2>>${LOG}
+
+echo "Calculating parwise 1d sfs (folded)" >>${LOG} 2>&1
+${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx -seed -1 -fold 1 >${ODIR}/pop1.saf.idx.ml.fold 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/pop2.saf.idx -seed -1 -fold 1 >${ODIR}/pop2.saf.idx.ml.fold 2>>${LOG}
+${WDIR}/misc/realSFS ${ODIR}/pop3.saf.idx -seed -1 -fold 1 >${ODIR}/pop3.saf.idx.ml.fold 2>>${LOG}
+
 
 
 echo "Calculating parwise 2d sfs (folded)" >>${LOG} 2>&1
