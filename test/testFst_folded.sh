@@ -87,4 +87,5 @@ ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.pop3.fold.fst.idx >${ODIR}/pop1
 
 ##when generated the results:
 #md5sum fst_folded/output/*|grep -v -P "arg$" >fst_folded/md5/fst.md5sum
-${MD5}  -c fst_folded/md5/fst2.md5sum >>${LOG} 2>&1 || exit 1
+#ls fst_folded/output/*|grep -v arg |xargs -n1 md5sum >fst_folded/md5/fst3.md5sum
+${MD5}  -c fst_folded/md5/fst3.md5sum >>${LOG} 2>&1 || exit 1
