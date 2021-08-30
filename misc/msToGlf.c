@@ -436,9 +436,10 @@ void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double er
    
     for(int i=0;i<regLen;i++) {
       //  fprintf(stderr,"i:%d s:%d posit:%d",i,s,positInt[s]);
+      if(pileup)
+	ksprintf(&kpl,"%d\t%d\tN\t",count,i);
       if(s<segsites && positInt[s]-1==i) {
-	if(pileup)
-	  ksprintf(&kpl,"%d\t%d\tN\t",count,i);
+
 	//loop over samples
 	for(int n=0;n<nsam/2;n++) {
 	  int genotypes[2] = {0,0};
