@@ -1,0 +1,32 @@
+name: build-tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-18.04 ]
+        compiler: [ clang, gcc ]
+  
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Checkout submodules
+      run: git submodule update --init --recursive
+
+    - name: Install dependencies    
+      run: |
+        sudo apt-get install -y libbz2-dev liblzma-dev libcurl4-openssl-dev
+        git clone --depth=5 git://github.com/ANGSD/smallBam.git
+
+    - name: Run CMake
+      run: |
+        make
+        make test BAMDIR=./smallBam/
