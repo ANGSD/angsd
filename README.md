@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/ANGSD/angsd.svg?branch=master)](https://travis-ci.com/ANGSD/angsd)
+[![Build Status](https://img.shields.io/github/workflow/status/angsd/angsd/build-tests)](https://github.com/ANGSD/angsd)
 angsd:
 =====
 Program for analysing NGS data. 
