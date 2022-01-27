@@ -39,12 +39,12 @@ double angsd::addProtectN(double a[],int len){
   //function does: log(sum(exp(a))) while protecting for underflow
   double maxVal = a[0];
 
-  for(int i=1;i<10;i++)
+  for(int i=1;i<len;i++)
     if(maxVal<a[i])
       maxVal=a[i];
 
   double sumVal = 0;
-  for(int i=1;i<10;i++)
+  for(int i=1;i<len;i++)
     sumVal += exp(a[i]-maxVal);
 
   return log(sumVal) + maxVal;
