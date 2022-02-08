@@ -56,5 +56,5 @@ echo "You should eyeball the above and see if they are comparable column (1-5,9)
 ##when generated the results:
 ##md5sum tajima/output/*pestPG tajima/output/*.ml tajima/output/*.saf tajima/output/*.gz  >tajima/md5/pestPG.md5sum
 #${MD5}  -c tajima/md5/pestPG.md5sum >>${LOG} 2>&1 || exit 1
-${MD5}  -c tajima/md5/pestPG3.md5sum >>${LOG} 2>&1 || exit 2
+${MD5}  -c tajima/md5/pestPG4.md5sum >>${LOG} 2>&1 || exit 1
  

@@ -14,6 +14,7 @@ int fexists(const char* str);
 
 typedef struct{
   size_t nSites;
+  size_t sumBand;
   int64_t pos;
   int64_t saf;
 }datum;

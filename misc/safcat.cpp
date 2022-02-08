@@ -121,8 +121,10 @@ int saf_cat(int argc,char **argv){
     bgzf_mt(outfileSAFPOS,nThreads,256);
   }
   FILE *outfileSAFIDX = openFile(outnames,SAFIDX);
-
+  int safversion = saf[0]->version;
   char buf[8]="safv3";
+  if(safversion==3)
+    buf[4]='4';
   my_bgzf_write(outfileSAF,buf,8);
   my_bgzf_write(outfileSAFPOS,buf,8);
   fwrite(buf,1,8,outfileSAFIDX);
@@ -139,6 +141,10 @@ int saf_cat(int argc,char **argv){
       fprintf(stderr,"\t-> Different number of samples in the different saf files, will exit\n");
       break;
     }
+    if(i>1 &&safversion!=saf[i]->version){
+      fprintf(stderr,"\t-> Different safversion in the different saf files, will exit\n");
+      break;
+    }
     for(myMap::iterator it=saf[i]->mm.begin();it!=saf[i]->mm.end();++it){
       int *ppos = new int[it->second.nSites];
       my_bgzf_seek(saf[i]->pos,it->second.pos,SEEK_SET);
@@ -147,8 +153,16 @@ int saf_cat(int argc,char **argv){
       my_bgzf_write(outfileSAFPOS,ppos,sizeof(int)*it->second.nSites);
       float flt[saf[0]->nChr+1];
       for(uint s=0;s<it->second.nSites;s++){
-	my_bgzf_read(saf[i]->saf,flt,sizeof(float)*(saf[0]->nChr+1));
-	my_bgzf_write(outfileSAF,flt,sizeof(float)*(saf[0]->nChr+1));
+	if(safversion==2){
+	  my_bgzf_read(saf[i]->saf,flt,sizeof(float)*(saf[0]->nChr+1));
+	  my_bgzf_write(outfileSAF,flt,sizeof(float)*(saf[0]->nChr+1));
+	}else if(safversion==3){
+	  int band[2];
+	  my_bgzf_read(saf[i]->saf, band, 2*sizeof(int));
+	  my_bgzf_read(saf[i]->saf, flt, band[1]*sizeof(float));
+	  my_bgzf_write(outfileSAF,band,2*sizeof(int));
+	  my_bgzf_write(outfileSAF,flt,band[1]*sizeof(float));
+	}
       }
       delete [] ppos;
 
@@ -156,8 +170,9 @@ int saf_cat(int argc,char **argv){
       fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);
       fwrite(it->first,1,clen,outfileSAFIDX);
       fwrite(&it->second.nSites,sizeof(size_t),1,outfileSAFIDX);
+      if(safversion==3)
+	fwrite(&it->second.sumBand,sizeof(size_t),1,outfileSAFIDX);
       fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
-
       assert(0==bgzf_flush(outfileSAFPOS));assert(0==bgzf_flush(outfileSAF));
       offs[0] = bgzf_tell(outfileSAFPOS);
       offs[1] = bgzf_tell(outfileSAF);
@@ -167,7 +182,8 @@ int saf_cat(int argc,char **argv){
 
   for(int i=0;i<saf.size();i++)
     persaf_destroy(saf[i]);
-  
+  for(int i=0;i<saffiles.size();i++)
+    free(saffiles[i]);
   fclose(outfileSAFIDX);
   bgzf_close(outfileSAF);
   bgzf_close(outfileSAFPOS);

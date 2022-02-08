@@ -86,17 +86,36 @@ void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat,int whichFst){
 
 void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres,int *remap,int *rescal){
   assert(prior!=NULL);
+
+  double snyd1[gl1->y];
+  double snyd2[gl2->y];
+  
   double tre[3]={0,0,0};//a/b,sum(a),sum(0)
   for(int s=0;s<gl1->x;s++){
+    for(int i=0;i<gl1->y;i++)
+      snyd1[i] = 0;
+    for(int i=0;i<gl2->y;i++)
+      snyd2[i] = 0;
+ 
     int inc =0 ;
     double tmp[(gl1->y+1)*(gl2->y+1)];
     for(int jj=0;jj<(gl1->y+1)*(gl2->y+1);jj++)
       tmp[jj] = 0;
-    for(int i=0;i<gl1->y;i++)
+
+  
+    int k=gl1->mat[s][0];
+    for(int i=0;i<gl1->mat[s][1];i++)
+      snyd1[k++] = gl1->mat[s][2+i];
+    k=gl2->mat[s][0];
+    for(int i=0;i<gl2->mat[s][1];i++)
+      snyd2[k++] = gl2->mat[s][2+i];
+    
+    for(int i=0;i<gl1->y;i++){
       for(int j=0;j<gl2->y;j++){
-	tmp[remap[inc]] += prior[remap[inc]]* gl1->mat[s][i] *gl2->mat[s][j]*rescal[inc];
+	tmp[remap[inc]] += prior[remap[inc]]* snyd1[i] *snyd2[j]*rescal[inc];
 	inc++;
       }
+    }
     //    exit(0);
     double as=0;
     double bs=0;

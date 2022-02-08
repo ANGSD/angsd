@@ -2,6 +2,7 @@
 #include "../prep_sites.h"
 #include "safreader.h"
 #include <vector>
+
 typedef struct {
   int verbose;
   char *chooseChr;
@@ -27,8 +28,10 @@ typedef struct {
   filt *fl;
   int whichFst;
   int fold;
+  int remapping;
   char *ref;
   char *anc;
+  int banded;
 }args;
 args * getArgs(int argc,char **argv);
 void destroy_args(args *p);

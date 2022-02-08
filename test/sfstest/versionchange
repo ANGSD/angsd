@@ -1,0 +1,57 @@
+april5 2021
+
+We updated the banded algorithm and have updated the checksums. Below is some documentation for how little the results has changed.
+
+banded_branch)
+	-> angsd version: 0.933-113-gb216e2a (htslib: 1.10.2-6-g9369f1c) build(Apr  5 2021 09:10:19)
+
+master_branch)
+	-> angsd version: 0.935-27-g9ac3023 (htslib: 1.10.2-6-g9369f1c) build(Apr  5 2021 09:09:12)
+
+##first we compare with -m 0 option (this is the regular EM)
+
+$ cat master/test/sfstest/output/em.log 
+30488.691781 5562.640231 2682.120875 1810.222041 1295.622535 1029.510509 936.787151 796.468600 644.052313 628.859533 506.533924 499.255424 455.847737 414.122771 340.237065 375.739934 318.003204 348.061242 311.681600 270.720204 284.821324 
+$ cat nspope/test/sfstest/output/em.log 
+30488.691780 5562.640232 2682.120876 1810.222041 1295.622536 1029.510509 936.787151 796.468600 644.052313 628.859533 506.533924 499.255424 455.847737 414.122771 340.237065 375.739934 318.003204 348.061242 311.681600 270.720204 284.821324 
+[fvr124@compute12-snm-willerslev isin_multisfs_tests]$
+
+> scan('master/test/sfstest/output/em.log')-scan('nspope/test/sfstest/output/em.log')
+Read 21 items
+Read 21 items
+ [1]  1.000000e-06 -9.999994e-07 -9.999999e-07  0.000000e+00 -1.000000e-06
+ [6]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+[11]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+[16]  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00
+[21]  0.000000e+00
+>
+> range(abs(scan('master/test/sfstest/output/em.log')-scan('nspope/test/sfstest/output/em.log')))
+Read 21 items
+Read 21 items
+[1] 0e+00 1e-06
+>
+
+#now we compare with -m 1 (this is the accelerated EM)
+
+cat output/sfs.est 
+30488.691779 5562.640233 2682.120875 1810.222044 1295.622528 1029.510533 936.787095 796.468704 644.052161 628.859716 506.533728 499.255597 455.847623 414.122827 340.237045 375.739940 318.003202 348.061242 311.681600 270.720204 284.821324
+
+
+> range(abs(scan('master/test/sfstest/output/em.log')-scan('nspope/test/sfstest/output/sfs.est')))
+Read 21 items
+Read 21 items
+[1] 0.000000 0.000196
+>
+
+
+> pdf("nspope/test/sfstest/version_plots/plot1.pdf")
+> barplot(rbind(scan('master/test/sfstest/output/em.log'),scan('nspope/test/sfstest/output/sfs.est')),be=T)
+Read 21 items
+Read 21 items
+> dev.off()
+
+> master<-read.table("master/test/sfstest/output/sfstestGC.geno.gz")
+> pope<-read.table("nspope/test/sfstest/output/sfstestGC.geno.gz")
+> range(master-pope)
+[1] -1e-06  1e-06
+> 

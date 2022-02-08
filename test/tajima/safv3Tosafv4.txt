@@ -1,0 +1,40 @@
+HTSSRC not defined, assuming systemwide installation
+echo "Only subset of analyses is being tested"
+Only subset of analyses is being tested
+cd test;./testAll.sh ../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam
+--------------------
+Using PRG: '../angsd' and BAMDIR: '/science/willerslev/scratch/thorfinn/angsd_merge/smallBam'
+--------------------
+Testing -sites
+../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam
+
+real	0m20.864s
+user	0m17.445s
+sys	0m2.626s
+Testing vcfreading
+../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam/small2.bcf
+
+real	0m1.930s
+user	0m1.119s
+sys	0m0.050s
+
+real	0m26.556s
+user	1m47.064s
+sys	0m0.875s
+Testing basic mpileup
+../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam
+
+real	0m2.045s
+user	0m1.967s
+sys	0m0.140s
+Testing association
+
+real	0m0.570s
+user	0m0.182s
+sys	0m0.237s
+Testing haplocall
+../angsd
+
+real	0m2.416s
+user	0m2.305s
+sys	0m0.041s

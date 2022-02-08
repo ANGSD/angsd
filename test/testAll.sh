@@ -50,19 +50,11 @@ if [ ! $? -eq 0  ]   ;then
 fi
 fi
 
-echo "Testing neutrality test statistics"
+#echo "Testing neutrality test statistics"
 time ./testTaj.sh $WDIR
 if [ ! $? -eq 0 ] ;then
     echo "Problem with neutrality test statistics exit code: $?"
     cat ./testTaj.sh.log
-    RVAL=1
-fi
-
-echo "Testing neutrality test statistics (haploid)"
-time ./testHapSFS.sh $WDIR
-if [ ! $? -eq 0 ] ;then
-    echo "Problem with neutrality test statistics exit code: $?"
-    cat ./testHapSFS.sh.log
     RVAL=1
 fi
 

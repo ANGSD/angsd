@@ -33,7 +33,7 @@
 #include <cstdlib>
 #include <math.h>
 #include <cstring>
-#include <zlib.h>
+#include <htslib/bgzf.h>
 #include <sys/stat.h>
 #define PI 3.141592654 // for Poisson distribution
 
@@ -95,15 +95,18 @@ int fexists(const char* str){///@param str Filename given as a string.
 }
 
 // functions to get gz files
-gzFile getGz(const char*fname,const char* mode){
+BGZF * getGz(const char*fname,const char* mode,int nThreads){
   if(0&&fexists(fname)){
     fprintf(stderr,"\t->File exists: %s exiting...\n",fname);
     exit(0);
   }
-  gzFile fp;
-  if(NULL==(fp=gzopen(fname,mode))){
+  BGZF *fp=NULL;
+  if(NULL==(fp=bgzf_open(fname,mode))){
     fprintf(stderr,"\t-> Error opening gzFile handle for file:%s exiting\n",fname);
     exit(0);
+  }
+  if(nThreads>1){
+    bgzf_mt(fp,nThreads,256);
   }
   return fp;
 }
@@ -249,7 +252,7 @@ char int_to_base(int b) {
 }
 
 // compute and print results into files
-int print_ind_site(double errate, double meandepth, int genotype[2], gzFile resultfile, gzFile glffile) {
+int print_ind_site(double errate, double meandepth, int genotype[2], BGZF *resultfile, BGZF * glffile) {
 
   int i, b, numreads;
   double like[10];
@@ -268,8 +271,8 @@ int print_ind_site(double errate, double meandepth, int genotype[2], gzFile resu
 
   // write into files
   if(dumpBinary) { // if binary 
-    gzwrite(resultfile, res, numreads);
-    gzwrite(glffile, like, sizeof(double)*10); // print likelihoods values
+    bgzf_write(resultfile, res, numreads);
+    bgzf_write(glffile, like, sizeof(double)*10); // print likelihoods values
   } else { // text
     fprintf(stderr,"textout not implemented\n"); // not yet...
     exit(0);
@@ -325,11 +328,13 @@ void info() {
   fprintf(stderr,"\t\t-errate\tThe sequencing error rate [0.0075]\n");
   fprintf(stderr,"\t\t-depth\tMean sequencing depth [5]\n");
   fprintf(stderr,"\t\t-pvar\tProbability that a site is variable in the population [0.015]\n");
+  fprintf(stderr,"\t\t-div\tProbability that an invariable site is not the ancestral allele default 0\n");
   fprintf(stderr,"\t\t-mfreq\tMinimum population frequency [0.0001]\n");
   fprintf(stderr,"\t\t-F\tinbreeding coefficient for each population [0]\n");
   fprintf(stderr,"\t\t-model\t0=fixed errate 1=variable errate [1]\n");
   fprintf(stderr,"\t\t-simpleRand\tboolean [1]\n");
   fprintf(stderr,"\t\t-base_freq\tBackground allele frequencies for A,C,G,T [0.25 0.25 0.25 0.25]\n");
+  fprintf(stderr,"\t\t-@\tNumber of threads allocated to each outputfile default 4\n");
 }
 
 ///		///
@@ -351,8 +356,11 @@ int main(int argc, char *argv[]) { // read input parameters
   static int genotype[2], genotype1[2], genotype2[2]; // array /matrix of genotypes for all pops
   double pfreq=0.0, pfreq1=0.0, pfreq2=0.0, pvar= 0.015, meandepth = 5, errate = 0.0075, F=0.0, F1=0.0, F2=0.0, minfreq=0.0001;
   double basefreq[4] = {0.25, 0.25, 0.25, 0.25}; // background frequencies
+
+  int nthreads = 4;
+  float divergence= 0;
   int seed = -1; //<- this will get typcasted to unsigned in srand function
-  
+
   // as pointers
 /*  int *freqspec = NULL; // whole sample
   int *freqspec1 = NULL; // 1st pop
@@ -366,7 +374,7 @@ int main(int argc, char *argv[]) { // read input parameters
   // glffile: genotype likelihoods per site
   // freqfile: whole SFS
   // argfile: input parameters
-  gzFile glffile, resultfile, glffile1, glffile2, resultfile1, resultfile2;
+  BGZF *glffile, *resultfile, *glffile1, *glffile2, *resultfile1, *resultfile2;
   FILE  *freqfile, *argfile, *genofile, *freqfile1, *freqfile2, *genofile1, *genofile2, *freqfile12;
   char *fGlf=NULL,*fFreq=NULL,*fSeq=NULL,*fArg=NULL,*fGeno=NULL;
   char *fGlf1=NULL,*fFreq1=NULL,*fSeq1=NULL,*fGeno1=NULL;
@@ -419,6 +427,8 @@ int main(int argc, char *argv[]) { // read input parameters
     else if(strcmp(argv[argPos],"-errate")==0)   errate  = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-depth")==0) meandepth  = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-pvar")==0)  pvar  = atof(argv[argPos+1]);
+    else if(strcmp(argv[argPos],"-div")==0)  divergence  = atof(argv[argPos+1]);
+    else if(strcmp(argv[argPos],"-@")==0)  nthreads  = atoi(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-mfreq")==0)  minfreq  = atof(argv[argPos+1]);
     else if(strcmp(argv[argPos],"-outfiles")==0) outfiles  = (argv[argPos+1]);
     else if(strcmp(argv[argPos],"-nsites")==0)  nsites  = atoi(argv[argPos+1]);
@@ -461,7 +471,7 @@ int main(int argc, char *argv[]) { // read input parameters
   myConst = -log(minfreq);
   
   // print input arguments
-  fprintf(stderr,"\t->Using args: -npop %d -nind %d -nind1 %d -nind2 %d -errate %f -depth %f -pvar %f -mfreq %f -nsites %d -F %f -F1 %f -F2 %f -model %d -simpleRand %d -base_freq %f %f %f %f\n", npop, nind, nind1, nind2, errate, meandepth, pvar, minfreq, nsites, F, F1, F2, model, simpleRand, basefreq[0], basefreq[1], basefreq[2], basefreq[3]); 
+  fprintf(stderr,"\t->Using args: -npop %d -nind %d -nind1 %d -nind2 %d -errate %f -depth %f -pvar %f -mfreq %f -nsites %d -F %f -F1 %f -F2 %f -model %d -simpleRand %d -base_freq %f %f %f %f -@ %d -div %f\n", npop, nind, nind1, nind2, errate, meandepth, pvar, minfreq, nsites, F, F1, F2, model, simpleRand, basefreq[0], basefreq[1], basefreq[2], basefreq[3],nthreads,divergence); 
   
   /// output files
   //   and  get gz and file
@@ -477,8 +487,8 @@ int main(int argc, char *argv[]) { // read input parameters
 
   argfile=getFile(fArg,"w");
   // whole
-  resultfile=getGz(fSeq,"w");
-  glffile = getGz(fGlf,"w");
+  resultfile=getGz(fSeq,"w",nthreads);
+  glffile = getGz(fGlf,"w",nthreads);
   freqfile= getFile(fFreq,"w"); 
   genofile =getFile(fGeno,"w");
   
@@ -497,12 +507,12 @@ int main(int argc, char *argv[]) { // read input parameters
     fprintf(stderr,"\t->Dumping files: sequencefile: %s\tglffile1: %s\ttruefreq1: %s geno1:%s\n", fSeq1, fGlf1, fFreq1, fGeno1);
     fprintf(stderr,"\t->Dumping files: sequencefile: %s\tglffile2: %s\ttruefreq2: %s geno2:%s\n", fSeq2, fGlf2, fFreq2, fGeno2);
 
-    resultfile1=getGz(fSeq1, "w");
-    glffile1 = getGz(fGlf1, "w");
+    resultfile1=getGz(fSeq1, "w",nthreads);
+    glffile1 = getGz(fGlf1, "w",nthreads);
     freqfile1= getFile(fFreq1, "w"); 
     genofile1 =getFile(fGeno1, "w");
-    resultfile2=getGz(fSeq2, "w");
-    glffile2 = getGz(fGlf2, "w");
+    resultfile2=getGz(fSeq2, "w",nthreads);
+    glffile2 = getGz(fGlf2, "w",nthreads);
     freqfile2= getFile(fFreq2, "w"); 
     genofile2 =getFile(fGeno2, "w");
 
@@ -513,7 +523,7 @@ int main(int argc, char *argv[]) { // read input parameters
   }
 
   // write args file
-  fprintf(argfile,"\t->Using args: -npop %d -nind %d -nind1 %d -nind2 %d -errate %f -depth %f -pvar %f -mfreq %f -nsites %d -F %f -F1 %f -F2 %f -model %d -simpleRand %d -base_freq %f %f %f %f\n", npop, nind, nind1, nind2, errate, meandepth, pvar, minfreq, nsites, F, F1, F2, model, simpleRand, basefreq[0], basefreq[1], basefreq[2], basefreq[3]); 
+  fprintf(argfile,"\t->Using args: -npop %d -nind %d -nind1 %d -nind2 %d -errate %f -depth %f -pvar %f -mfreq %f -nsites %d -F %f -F1 %f -F2 %f -model %d -simpleRand %d -base_freq %f %f %f %f -@ %d -div %f\n", npop, nind, nind1, nind2, errate, meandepth, pvar, minfreq, nsites, F, F1, F2, model, simpleRand, basefreq[0], basefreq[1], basefreq[2], basefreq[3],nthreads,divergence); 
 
   /// COMPUTE
   
@@ -551,8 +561,10 @@ int main(int argc, char *argv[]) { // read input parameters
 
       var=0; // not variable (boolean)
       // assign alleles to genotype
-      genotype[0]=genotype[1]=0; // all ancestral A
-
+      if(uniform()>divergence)
+	genotype[0]=genotype[1]=0; // all ancestral A
+      else
+	genotype[0]=genotype[1]=3; // all ancestral A
       /*debug code*/
       basecheck[genotype[0]] = 2*nind; // all individuals are monorphic for ancestral A, basechecks are arrays of 4 elements counting the nr of alleles 0,1,2,3
       if (npop==2) {
@@ -621,7 +633,7 @@ int main(int argc, char *argv[]) { // read input parameters
       if (j<nind-1) {
 	if(dumpBinary) {
 	  char sep[1]={'\t'};
-	  gzwrite(resultfile,sep,1);
+	  bgzf_write(resultfile,sep,1);
 	} else {
 	  fprintf(stderr,"non binary output disabled\n");
 	  exit(0);
@@ -690,8 +702,8 @@ int main(int argc, char *argv[]) { // read input parameters
       if (j<nind1-1) {
 	if(dumpBinary) {
 	  char sep[1]={'\t'};
-	  gzwrite(resultfile1, sep, 1);
-	  gzwrite(resultfile, sep, 1); // write also into whole genotype file
+	  bgzf_write(resultfile1, sep, 1);
+	  bgzf_write(resultfile, sep, 1); // write also into whole genotype file
 	} else {
 	  fprintf(stderr,"non binary output disabled\n");
 	  exit(0);
@@ -734,8 +746,8 @@ int main(int argc, char *argv[]) { // read input parameters
       if (j<nind2-1) {
 	if(dumpBinary) {
 	  char sep[1]={'\t'};
-	  gzwrite(resultfile2, sep, 1);
-	  gzwrite(resultfile, sep, 1);
+	  bgzf_write(resultfile2, sep, 1);
+	  bgzf_write(resultfile, sep, 1);
 	} else {
 	  fprintf(stderr,"non binary output disabled\n");
 	  exit(0);
@@ -811,7 +823,7 @@ int main(int argc, char *argv[]) { // read input parameters
     /// write reads and GLF
     if (dumpBinary) {
       char sep[1] = {'\n'};
-      gzwrite(resultfile, sep, 1);
+      bgzf_write(resultfile, sep, 1);
     } else {
       fprintf(stderr, "non binary output disabled\n");
       exit(0);
@@ -820,7 +832,7 @@ int main(int argc, char *argv[]) { // read input parameters
       // 1st
       if (dumpBinary) {
       char sep[1] = {'\n'};
-      gzwrite(resultfile1, sep, 1);
+      bgzf_write(resultfile1, sep, 1);
     } else {
       fprintf(stderr, "non binary output disabled\n");
       exit(0);
@@ -829,7 +841,7 @@ int main(int argc, char *argv[]) { // read input parameters
       // 2nd
       if (dumpBinary) {
       char sep[1] = {'\n'};
-      gzwrite(resultfile2, sep, 1);
+      bgzf_write(resultfile2, sep, 1);
     } else {
       fprintf(stderr, "non binary output disabled\n");
       exit(0);
@@ -894,8 +906,8 @@ int main(int argc, char *argv[]) { // read input parameters
   free(fSeq);
   free(fArg);
 
-  gzclose(resultfile);//fclose flushed automaticly
-  gzclose(glffile);
+  bgzf_close(resultfile);//fclose flushed automaticly
+  bgzf_close(glffile);
   fclose(argfile);
   fclose(freqfile);
   fclose(genofile);
@@ -914,12 +926,12 @@ int main(int argc, char *argv[]) { // read input parameters
    
     free(fFreq12);
     
-    gzclose(resultfile1);//fclose flushed automaticly
-    gzclose(glffile1);
+    bgzf_close(resultfile1);//fclose flushed automaticly
+    bgzf_close(glffile1);
     fclose(freqfile1);
     fclose(genofile1);
-    gzclose(resultfile2);//fclose flushed automaticly
-    gzclose(glffile2);
+    bgzf_close(resultfile2);//fclose flushed automaticly
+    bgzf_close(glffile2);
     fclose(freqfile2);
     fclose(genofile2);
 
