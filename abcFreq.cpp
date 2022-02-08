@@ -82,7 +82,7 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"\t-minMaf  \t%f\t(Remove sites with MAF below)\n",minMaf);
   fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",SNP_pval);
   fprintf(argFile,"\t-rmTriallelic\t%f\t(Remove sites with a pvalue lower)\n",rmTriallelic);
-  fprintf(argFile,"\t-forceMaf\t%f\t(Write .mafs file when running -doAsso (by default does not output .mafs file with -doAsso))\n",forceMaf);
+  fprintf(argFile,"\t-forceMaf\t%d\t(Write .mafs file when running -doAsso (by default does not output .mafs file with -doAsso))\n",forceMaf);
   fprintf(argFile,"\t-skipMissing\t%d\t(Set post to 0.33 if missing (do not use freq as prior))\n",skipMissing);
   fprintf(argFile,"Extras:\n");
   fprintf(argFile,"\t-ref\t%s\t(Filename for fasta reference)\n",refName);

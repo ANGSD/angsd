@@ -254,7 +254,7 @@ int printMulti(args *arg){
     for(int i=0;i<saf.size();i++){
       size_t newlen = strlen(saf[i]->fname)+100;
       char *tmp =(char*) calloc(newlen,sizeof(char));
-      tmp = strncpy(tmp,saf[i]->fname,strlen(saf[i]->fname)-4);
+      memcpy(tmp,saf[i]->fname,strlen(saf[i]->fname)-4);
       fprintf(stderr,"\t-> Generating outputfile: %s\n",tmp);
       oldfp[i] = fopen(tmp,"wb");
       free(tmp);

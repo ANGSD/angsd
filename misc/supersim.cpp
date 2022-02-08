@@ -312,7 +312,7 @@ double simfreqBN(double F, double p_anc) {
 char *append(const char* a,const char *b){
   char *c =(char *) malloc((strlen(a)+strlen(b)+1)*sizeof(char));
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   return c;
 }
 

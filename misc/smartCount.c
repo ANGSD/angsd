@@ -478,7 +478,7 @@ int treemixer(int argc,char **argv){
     }
     ++argv;
   }
-  fprintf(stderr,"reg:%s flis:%s\n",reg,flis );
+  //  fprintf(stderr,"reg:%s flis:%s\n",reg,flis );
   if(!flis){
     fprintf(stderr,"Must supply -bin/idx or bam\n");
     return 0;

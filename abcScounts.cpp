@@ -33,8 +33,8 @@ aMap readvcf(const char *fname){
     if(4!=sscanf(buf,"%s\t%d\t%c\t%c\n",chr,&pos,&al1,&al2)){
       fprintf(stderr,"\t-> problem parsing line: %d which looks like: %s\n",at,buf);
     }
-    char tmpnam[1024];
-    sprintf(tmpnam,"%s %d",chr,pos);
+    char tmpnam[2048];
+    snprintf(tmpnam,2048,"%s %d",chr,pos);
     aMap::iterator it=am.find(tmpnam);
     if(it!=am.end()){
       fprintf(stderr,"\t-> Problem with duplicate positions: %s \n",tmpnam);

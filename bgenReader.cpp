@@ -137,7 +137,7 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
   unsigned short Lchr_l;
   assert(fread(&Lchr_l,sizeof(unsigned short),1,fp)==1);
   bgen->Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
-  fread(bgen->Lchr,sizeof(char),Lchr_l,fp);
+  assert(fread(bgen->Lchr,sizeof(char),Lchr_l,fp)==Lchr_l);
 
   assert(fread(&bgen->vpos,sizeof(unsigned),1,fp)==1);
   assert(fread(&bgen->nal,sizeof(unsigned short),1,fp)==1);

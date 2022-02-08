@@ -132,8 +132,8 @@ persaf * persaf_init(char *fname,int verbose){
     }
   }
   fclose(fp);
-  char *tmp =(char*)calloc(strlen(fname)+100,1);//that should do it
-  tmp=strncpy(tmp,fname,strlen(fname)-3);
+  char *tmp =(char*)calloc(strlen(fname)+100,sizeof(char));//that should do it
+  memcpy(tmp,fname,strlen(fname)-3);
   //  fprintf(stderr,"tmp:%s\n",tmp);
   
   char *tmp2 = (char*)calloc(strlen(fname)+100,1);//that should do it

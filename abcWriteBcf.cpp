@@ -144,7 +144,7 @@ void abcWriteBcf::print(funkyPars *pars){
     rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
     rec->pos = pars->posi[s];//<- maybe one index?
     //    bcf_update_id(hdr, rec, "rs6054257");
-    if(domcall!=NULL){
+    if(domcall>0&&mcall!=NULL){
       // 
       char alleles[16];
       int goa =0;

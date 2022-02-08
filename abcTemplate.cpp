@@ -478,7 +478,8 @@ void abcTemplate::run(funkyPars *pars){
 
 	// Reference base:
 	int refB = -1;
-	if (pars->ref == 0) fprintf(outfile,"  Warning: Ref not defined! %s \n", pars->ref);
+	if (pars->ref == NULL)
+	  fprintf(outfile,"\t-> Warning: Ref not defined!  \n");
 	else refB = refToInt[pars->ref[s]];
 	
 	
