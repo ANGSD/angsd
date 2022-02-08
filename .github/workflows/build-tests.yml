@@ -2,9 +2,9 @@ name: build-tests
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, nspope_bandedDP ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, nspope_bandedDP ]
 
 jobs:
   
