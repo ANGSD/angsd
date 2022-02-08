@@ -4,15 +4,49 @@ CXX ?= g++
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
 CRYPTOLIB = -lcrypto
 
-# Adjust $(HTSSRC) to point to your top-level htslib directory
+#if htslib source is defined
 ifdef HTSSRC
+
+#if hts source is set to systemwide
+ifeq ($(HTSSRC),systemwide)
+$(info HTSSRC set to systemwide; assuming systemwide installation)
+LIBS += -lhts
+
+else
+
+#if hts source path is given
+# Adjust $(HTSSRC) to point to your top-level htslib directory
 $(info HTSSRC defined: $(HTSSRC))
 CPPFLAGS += -I"$(realpath $(HTSSRC))"
-LIBS := "$(realpath $(HTSSRC))/libhts.a" $(LIBS)
-else
-$(info HTSSRC not defined, assuming systemwide installation)
-LIBS += -lhts
+LIBHTS := $(HTSSRC)/libhts.a
+LIBS := $(LIBHTS) $(LIBS)
+
 endif
+
+#if htssrc not defined
+else
+
+$(info HTSSRC not defined; using htslib submodule)
+$(info Use `make HTSSRC=/path/to/htslib` to build angsd using a local htslib installation)
+$(info Use `make HTSSRC=systemwide` to build angsd using the systemwide htslib installation)
+
+
+HTSSRC := $(CURDIR)/htslib
+CPPFLAGS += -I$(HTSSRC)
+LIBHTS := $(HTSSRC)/libhts.a
+LIBS := $(LIBHTS) $(LIBS)
+
+all: .activate_module
+
+endif
+
+.PHONY: .activate_module 
+
+.activate_module:
+	git submodule update --init --recursive
+	$(MAKE) -C $(HTSSRC)
+
+
 
 #modied from htslib makefile
 FLAGS = -O3
@@ -50,7 +84,7 @@ all: $(PROGRAMS) misc
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
 
-PACKAGE_VERSION  = 0.935
+PACKAGE_VERSION  = 0.937
 
 ifneq "$(wildcard .git)" ""
 PACKAGE_VERSION := $(shell git describe --always --dirty)
@@ -75,8 +109,10 @@ misc: analysisFunction.o bfgs.o prep_sites.o
 	$(CXX) -c  $(CXXFLAGS) $*.cpp
 	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
+
 angsd: version.h $(OBJ)
 	$(CXX) $(FLAGS) -o angsd *.o $(LIBS) $(CRYPTOLIB)
+
 
 testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt

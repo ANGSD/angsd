@@ -28,7 +28,7 @@ BGZF *openFileBG(const char* a,const char* b){
 
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   BGZF *fp = bgzf_open(c,"wb");
   delete [] c;
   return fp;
@@ -38,7 +38,7 @@ FILE *openFile(const char* a,const char* b){
     fprintf(stderr,"[%s] %s %s",__FUNCTION__,a,b);
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   FILE *fp = fopen(c,"w");
   delete [] c;
   return fp;

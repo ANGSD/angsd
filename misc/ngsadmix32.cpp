@@ -420,7 +420,7 @@ FILE *openFile(const char* a,const char* b){
     fprintf(stderr,"[%s] %s %s",__FUNCTION__,a,b);
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   //fprintf(stderr,"\t-> Dumping file: %s\n",c);
   if(0&&fexists(c)){//ANDERS DAEMON DRAGON HATES THIS
     fprintf(stderr,"File: %s exists will exist\n",c);
@@ -438,7 +438,7 @@ gzFile openFileGz(const char* a,const char* b){
     fprintf(stderr,"[%s] %s %s",__FUNCTION__,a,b);
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   if(0&&fexists(c)){//ANDERS DAEMON DRAGON HATES THIS
     fprintf(stderr,"File: %s exists will exist\n",c);

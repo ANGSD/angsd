@@ -199,13 +199,18 @@ multiReader::multiReader(argStruct *args_arg){
     if(args->hd==NULL){
       fprintf(stderr,"For non-bams you should include -fai arguments\n");
       exit(0);
-    }
+    } 
   }
 
   if((args->inputtype==INPUT_PILEUP||args->inputtype==INPUT_GLF||args->inputtype==INPUT_GLF3||args->inputtype==INPUT_GLF10_TEXT)){
     if(nInd==0){
       fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-glf10_text files\n");
       exit(0);
+    }
+    for(int i=0;i<nInd;i++){
+      char bufbuf[256];
+      snprintf(bufbuf,256,"sim%d",i);
+      bam_smpl_add(args->sm, bufbuf, NULL);
     }
   }else
     args->nInd = args->nams.size();

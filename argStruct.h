@@ -78,3 +78,4 @@ namespace angsd {
   std::vector<char*> getFilenames(const char * name,int nInd);
 }
 
+void whatIsTheInput(int type);

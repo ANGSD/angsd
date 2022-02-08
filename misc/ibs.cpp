@@ -78,7 +78,7 @@ std::vector<char *> dumpedFiles;
 FILE *openFile(const char* a,const char* b){
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   fprintf(stderr,"\t-> Dumping file: %s\n",c);
 
   dumpedFiles.push_back(strdup(c));

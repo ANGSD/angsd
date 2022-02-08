@@ -19,7 +19,7 @@ FILE *aio::openFile(const char* a,const char* b){
     fprintf(stderr,"[%s] %s %s",__FUNCTION__,a,b);
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   dumpedFiles.push_back(strdup(c));
   FILE *fp = NULL;
@@ -36,7 +36,7 @@ BGZF *aio::openFileBG(const char* a,const char* b){
 
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   dumpedFiles.push_back(strdup(c));
   BGZF *fp = bgzf_open(c,"w6h");
   delete [] c;
@@ -47,7 +47,7 @@ htsFile *aio::openFileHts(const char* a,const char* b){
 
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   dumpedFiles.push_back(strdup(c));
   htsFile *fp = hts_open(c,"w");
   delete [] c;
@@ -58,7 +58,7 @@ htsFile *aio::openFileHtsBcf(const char* a,const char* b){
 
   char *c = new char[strlen(a)+strlen(b)+1];
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   dumpedFiles.push_back(strdup(c));
   htsFile *fp = hts_open(c,"wb");
   delete [] c;

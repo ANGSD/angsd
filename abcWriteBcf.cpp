@@ -128,6 +128,7 @@ void abcWriteBcf::clean(funkyPars *pars){
 }
 
 void abcWriteBcf::print(funkyPars *pars){
+  assert(bcf_hdr_nsamples(hdr)>0);
   if(doBcf==0)
     return;
  
@@ -143,7 +144,7 @@ void abcWriteBcf::print(funkyPars *pars){
     rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
     rec->pos = pars->posi[s];//<- maybe one index?
     //    bcf_update_id(hdr, rec, "rs6054257");
-    if(domcall!=NULL){
+    if(domcall>0&&mcall!=NULL){
       // 
       char alleles[16];
       int goa =0;
@@ -376,7 +377,9 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   fp=aio::openFileHtsBcf(outfiles,".bcf");
   
   rec    = bcf_init1();
-  if(arguments->inputtype==INPUT_BAM){
+  whatIsTheInput(arguments->inputtype);
+
+  if(arguments->inputtype==INPUT_BAM||arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_GLF10_TEXT){
     hdr = bcf_hdr_init("w");
     print_bcf_header(fp,hdr,args,buf,header,domcall);
   } else if(arguments->inputtype==INPUT_VCF_GP||arguments->inputtype==INPUT_VCF_GL){
@@ -396,9 +399,11 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
     buf.l=0;
     if ( bcf_hdr_write(fp, hdr)!=0 )
       fprintf(stderr,"Failed to write bcf %s:%d\n",__FILE__,__LINE__);
+    
+    if(buf.s)
+      free(buf.s);
   }
-  if(buf.s)
-    free(buf.s);
+  
 }
 
 

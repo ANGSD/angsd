@@ -239,6 +239,8 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 
   r->major[balcon] = refToChar[rec->d.allele[0][0]];
   r->minor[balcon] = refToChar[rec->d.allele[1][0]];
+  if(r->major[balcon]==4)//<- means N
+    return 0;
   
   // pl data for each call
 
@@ -330,8 +332,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 	  bcf_float_set_vector_end(ln_gl[i]);
 	} else{
 	  ln_gl[i] = farr[i]/M_LOG10E;
-	  if(ln_gl[i]==0.0)
-	    ln_gl[i] = -0.0;
+	  //	  if(ln_gl[i]==0.0) 	    ln_gl[i] = -0.0;
 	}
 	//	fprintf(stderr, "%f %f\n", farr[i], ln_gl[i]);
       }
@@ -340,24 +341,46 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     fprintf(stderr, "\t\t-> BIG TROUBLE. Can only take one of two tags, PL or GL\n");
     return 0;
   }
-
+  /*
+    We assume we have data and set all to -inf
+    Then we check if something is nan, if one of them are nan we set all gls to missing -0.0
+    Secondly we check that the gls we have plugged in contains information (difference between them), is not set to miggin
+   */
   if(type==0||type==1){
     if(n>=0){//case where we have data
+     // fprintf(stderr,"data\n");
       assert((n % hs->nsamples)==0 );
       int myofs=n/hs->nsamples;
       for(int ind=0;ind<hs->nsamples;ind++){
 	int rollback =0;
+	int at =0;
+	double hastaken[10];
 	for(int o=0;o<10;o++){
-	  if(myreorder[o]!=-1)
+	  if(myreorder[o]!=-1){
 	    dupergl[ind*10+o] = ln_gl[ind*myofs+myreorder[o]];
+	    hastaken[at++] = ln_gl[ind*myofs+myreorder[o]];
+	  }
 	  if(std::isnan(dupergl[ind*10+o])){
 	    rollback = 1;
 	    break;
 	  }
 	}
+
+
+
 	for(int o=0;rollback&&o<10;o++)
-	  if(myreorder[o]!=-1)
-	    dupergl[ind*10+o] = -0.0;
+	    dupergl[ind*10+o] = 0.0;
+
+	rollback =0;
+
+	for(int i=1;at>1&&i<at;i++)
+	  if(hastaken[0]!=hastaken[i])
+	    rollback =1;
+
+	if(rollback==0)
+	  for(int o=0;o<10;o++)
+	    dupergl[ind*10+o] = 0.0;
+
       }
     }
   }

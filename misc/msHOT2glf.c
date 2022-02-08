@@ -53,7 +53,7 @@ FILE *openFile(const char* a,const char* b){
   //  char *c = new char[strlen(a)+strlen(b)+1];
   char *c = malloc(strlen(a)+strlen(b)+1);
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   FILE *fp = getFILE(c,"w");
   free(c);
@@ -83,7 +83,7 @@ BGZF *openFileGz(const char* a,const char* b,const char *mode){
   //  char *c = new char[strlen(a)+strlen(b)+1];
   char *c = malloc(strlen(a)+strlen(b)+1);
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   BGZF *fp = getGz(c,mode);
   //delete [] c;
@@ -494,7 +494,7 @@ int main(int argc,char **argv){
   char *pch = strstr(line,"msHOT-lite");
   while(1){
     char *tmppch=strstr(pch+1,"msHOT-lite");
-    if(tmppch=='\0')
+    if(tmppch[0]=='\0')
       break;
     pch=tmppch;
   }

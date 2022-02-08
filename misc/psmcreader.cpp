@@ -119,7 +119,7 @@ perpsmc * perpsmc_init(char *fname){
   }
   fclose(fp);
   char *tmp =(char*)calloc(strlen(fname)+100,1);//that should do it
-  tmp=strncpy(tmp,fname,strlen(fname)-3);
+  memcpy(tmp,fname,strlen(fname)-3);
   //  fprintf(stderr,"tmp:%s\n",tmp);
   
   char *tmp2 = (char*)calloc(strlen(fname)+100,1);//that should do it

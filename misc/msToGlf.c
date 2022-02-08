@@ -436,9 +436,10 @@ void test ( int nsam, int segsites, char **list,int *positInt,BGZF* gz,double er
    
     for(int i=0;i<regLen;i++) {
       //  fprintf(stderr,"i:%d s:%d posit:%d",i,s,positInt[s]);
+      if(pileup)
+	ksprintf(&kpl,"%d\t%d\tN\t",count,i);
       if(s<segsites && positInt[s]-1==i) {
-	if(pileup)
-	  ksprintf(&kpl,"%d\t%d\tN\t",count,i);
+
 	//loop over samples
 	for(int n=0;n<nsam/2;n++) {
 	  int genotypes[2] = {0,0};
@@ -602,7 +603,7 @@ FILE *openFile(const char* a,const char* b){
   //  char *c = new char[strlen(a)+strlen(b)+1];
   char *c = malloc(strlen(a)+strlen(b)+1);
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   FILE *fp = getFILE(c,"w");
   free(c);
@@ -632,7 +633,7 @@ BGZF* openFileGz(const char* a,const char* b,const char *mode){
   //  char *c = new char[strlen(a)+strlen(b)+1];
   char *c = malloc(strlen(a)+strlen(b)+1);
   strcpy(c,a);
-  strncat(c,b,strlen(b));
+  strcat(c,b);
   //  fprintf(stderr,"\t-> Dumping file: %s\n",c);
   BGZF *fp = getGz(c,mode);
   //delete [] c;
