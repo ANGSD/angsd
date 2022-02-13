@@ -36,6 +36,7 @@
 #include "abcWriteBcf.h"
 #include "abcMcall.h"
 #include "abcTemplate2.h"
+#include "abcAMOVA.h"
 //below we set some variables that are shared between all the analysis classes
 #define MAX_CLASS 35
 
@@ -84,6 +85,7 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcWriteBcf(outfiles,arguments,inputtype); // 30
   tskStuff[nit++] = new abcRAD(outfiles,arguments,inputtype); // 31
   tskStuff[nit++] = new abcTemplate2(outfiles,arguments,inputtype); // 32
+  tskStuff[nit++] = new abcAMOVA(outfiles,arguments,inputtype); // 33
   //remember to update changeChr in shared.cpp if order gets changed
   nItem = nit;
   return tskStuff;
