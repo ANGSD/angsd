@@ -1073,6 +1073,8 @@ chunky *slow_mergeAllNodes_old(nodePool *dn,int nFiles){
 chunky *mergeAllNodes_old(nodePool *dn,int nFiles) {
   int first,last;
   get_span_all_samples(dn,nFiles,first,last);
+  assert(first!=-1);
+  assert(last!=-1);
   int rlen = last-first+1; 
 
   if(rlen>BUG_THRES) 
@@ -1101,6 +1103,7 @@ chunky *mergeAllNodes_old(nodePool *dn,int nFiles) {
     for( i=0;((i<sm.l)&&(sm.nds[i].refPos <= std::min(sm.last,last) ));i++) {
       
       int posi = sm.nds[i].refPos-offs;
+      assert(posi>=0);
       if(depth[posi]==0){
 	super[posi] = new node[nFiles];
 	for(int ii=0;ii<nFiles;ii++){
