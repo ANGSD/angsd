@@ -55,9 +55,14 @@ void print_dadi(std::vector<double *> &priors,std::vector<Matrix<T> *> &gls,int 
     for(int p=0;p<npop;p++){//populations
       int ndim = gls[p]->y;
       double tmp[ndim];
+      for(int i=0;i<ndim;i++)//gls->mat is float lets pluginto double
+	tmp[i] = 0;
       double *prior = priors[p];
-      for(int i=0;i<ndim;i++) //categories
-	tmp[i] = gls[p]->mat[s][i]*prior[i];
+      int k = gls[p]->mat[s][0];
+      for(int i=0;i<gls[p]->mat[s][1];i++) //categories
+	tmp[k++] = gls[p]->mat[s][2+i];
+      for(int i=0;i<ndim;i++)
+	tmp[i] *= prior[i];
       normalize(tmp,ndim);
       counts[p] = whichmax(tmp,ndim);
       isvar += ((counts[p]==0)||(counts[p]==(ndim-1)))?0:1;
@@ -173,4 +178,3 @@ int main_dadi(int argc, char** argv){
 }
 
 template int main_dadi<float>(int ,char**);
-

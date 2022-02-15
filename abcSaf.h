@@ -2,6 +2,7 @@
 typedef struct{
   char *oklist;//<- {0,1,2}, length=numSites, 0 don't keep 1 do keep 2 error
   float **pLikes;
+  int **pBound;
 }realRes;
 
 
@@ -20,16 +21,19 @@ class abcSaf : public abc{
   int tsktsktsk;
   int isHap;
   double *filipeIndF;
+  double scoreTol;
   int ishap;
   int newDim;
   int64_t offs[2];
   int nnnSites;
+  size_t sumBand;
   char *tmpChr;
   void algoJointPost(double **post,int nSites,int nInd,int *keepSites,realRes *r);
   void algoGeno(int refId,double **liks,char *major,char *minor,int nsites,int numInds,kstring_t *sfsfile,int underFlowProtect, int *posi,int *keepSites,double *pest);
-  void algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans);
-  void algoJointHap(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans);
+  void algoJoint(double **liks,char *anc,int nsites,int numInds, int *keepSites,realRes *r,int noTrans);
+  void algoJointHap(double **liks,char *anc,int nsites,int numInds, int *keepSites,realRes *r,int noTrans);
   void algoJointMajorMinor(double **liks,int nsites,int numInds, int *keepSites,realRes *r, char *major, char *minor);
+  void algoJointMajorMinorHap(double **liks,int nsites,int numInds, int *keepSites,realRes *r, char *major, char *minor);
 
   void writeAll();
   int mynchr;

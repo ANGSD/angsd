@@ -1,0 +1,1251 @@
+HTSSRC not defined, assuming systemwide installation
+echo "Only subset of analyses is being tested"
+Only subset of analyses is being tested
+cd test;./testAll.sh ../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam
+--------------------
+Using PRG: '../angsd' and BAMDIR: '/science/willerslev/scratch/thorfinn/angsd_merge/smallBam'
+--------------------
+Testing -sites
+../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam
+
+real	0m19.753s
+user	0m16.811s
+sys	0m2.578s
+Testing vcfreading
+../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam/small2.bcf
+
+real	0m1.179s
+user	0m1.031s
+sys	0m0.047s
+
+real	0m25.126s
+user	1m43.951s
+sys	0m0.940s
+Testing fst_folded using msms
+
+real	1m32.765s
+user	4m48.743s
+sys	0m1.231s
+Problem with Fst_folded test statistics exit code: 0
+Generating genotype likelihood based on the haplotypes
+-in fst_folded/input/msout -out fst_folded/output//glout -err 0.005000 -depth 8.000000 -Nsites 0 -singleOut 1 -regLen 0 -printSNP 1 -onlyPoly 0 -pileup 0 -simpleRand 0 -depthFile (null) -seed -1 -nind 0 -psmc 0 -do_seq_glf 1 -simHap 0
+[openFile] fst_folded/output//glout .argg
+Number of samples:90
+Number of replications:10
+[openFileGz] fst_folded/output//glout.glf.gz
+doing fst_folded/output//glout.glf.gz with w
+[openFile] fst_folded/output//glout .vPos
+[openFile] fst_folded/output//glout .pgEstH
+
+count 1count 2count 3count 4count 5count 6count 7count 8count 9count 10Splitting gl file into different populations
+fname:fst_folded/output//glout.glf.gz tot:45 first:0 last:12
+nsites:65461 processed
+fname:fst_folded/output//glout.glf.gz tot:45 first:13 last:27
+nsites:65461 processed
+fname:fst_folded/output//glout.glf.gz tot:45 first:28 last:44
+nsites:65461 processed
+Calculating perpop saf
+	-> angsd version: 0.935-82-gded8394 (htslib: 1.13-3-gd16bed5) build(Jul 19 2021 17:35:56)
+	-> ../angsd -glf fst_folded/output//pop1.glf.gz -nind 13 -doSaf 1 -out fst_folded/output//pop1 -fai fst_folded/output//fai.fai -issim 1 -scoretol 1e-16 
+	-> Inputtype is GLF
+	-> Printing at chr: 1 pos:4951 chunknumber 100 contains 50 sites
+	-> Printing at chr: 1 pos:9951 chunknumber 200 contains 50 sites
+	-> Printing at chr: 1 pos:14951 chunknumber 300 contains 50 sites
+	-> Printing at chr: 1 pos:19951 chunknumber 400 contains 50 sites
+	-> Printing at chr: 1 pos:24951 chunknumber 500 contains 50 sites
+	-> Printing at chr: 1 pos:29951 chunknumber 600 contains 50 sites
+	-> Printing at chr: 1 pos:34951 chunknumber 700 contains 50 sites
+	-> Printing at chr: 1 pos:39951 chunknumber 800 contains 50 sites
+	-> Printing at chr: 1 pos:44951 chunknumber 900 contains 50 sites
+	-> Printing at chr: 1 pos:49951 chunknumber 1000 contains 50 sites
+	-> Printing at chr: 1 pos:54951 chunknumber 1100 contains 50 sites
+	-> Printing at chr: 1 pos:59951 chunknumber 1200 contains 50 sites
+	-> Printing at chr: 1 pos:64951 chunknumber 1300 contains 50 sites
+	-> Done reading data waiting for calculations to finish
+	-> Done waiting for threads
+	-> Output filenames:
+		->"fst_folded/output//pop1.arg"
+		->"fst_folded/output//pop1.saf.gz"
+		->"fst_folded/output//pop1.saf.pos.gz"
+		->"fst_folded/output//pop1.saf.idx"
+	-> Fri Jul 23 12:39:53 2021
+	-> Arguments and parameters for all analysis are located in .arg file
+	-> Total number of sites analyzed: 65461
+	-> Number of sites retained after filtering: 65461 
+	[ALL done] cpu-time used =  1.34 sec
+	[ALL done] walltime used =  2.00 sec
+	-> angsd version: 0.935-82-gded8394 (htslib: 1.13-3-gd16bed5) build(Jul 19 2021 17:35:56)
+	-> ../angsd -glf fst_folded/output//pop2.glf.gz -nind 15 -doSaf 1 -out fst_folded/output//pop2 -fai fst_folded/output//fai.fai -issim 1 -scoretol 1e-16 
+	-> Inputtype is GLF
+	-> Printing at chr: 1 pos:4951 chunknumber 100 contains 50 sites
+	-> Printing at chr: 1 pos:9951 chunknumber 200 contains 50 sites
+	-> Printing at chr: 1 pos:14951 chunknumber 300 contains 50 sites
+	-> Printing at chr: 1 pos:19951 chunknumber 400 contains 50 sites
+	-> Printing at chr: 1 pos:24951 chunknumber 500 contains 50 sites
+	-> Printing at chr: 1 pos:29951 chunknumber 600 contains 50 sites
+	-> Printing at chr: 1 pos:34951 chunknumber 700 contains 50 sites
+	-> Printing at chr: 1 pos:39951 chunknumber 800 contains 50 sites
+	-> Printing at chr: 1 pos:44951 chunknumber 900 contains 50 sites
+	-> Printing at chr: 1 pos:49951 chunknumber 1000 contains 50 sites
+	-> Printing at chr: 1 pos:54951 chunknumber 1100 contains 50 sites
+	-> Printing at chr: 1 pos:59951 chunknumber 1200 contains 50 sites
+	-> Printing at chr: 1 pos:64951 chunknumber 1300 contains 50 sites
+	-> Done reading data waiting for calculations to finish
+	-> Done waiting for threads
+	-> Output filenames:
+		->"fst_folded/output//pop2.arg"
+		->"fst_folded/output//pop2.saf.gz"
+		->"fst_folded/output//pop2.saf.pos.gz"
+		->"fst_folded/output//pop2.saf.idx"
+	-> Fri Jul 23 12:39:54 2021
+	-> Arguments and parameters for all analysis are located in .arg file
+	-> Total number of sites analyzed: 65461
+	-> Number of sites retained after filtering: 65461 
+	[ALL done] cpu-time used =  1.55 sec
+	[ALL done] walltime used =  1.00 sec
+	-> angsd version: 0.935-82-gded8394 (htslib: 1.13-3-gd16bed5) build(Jul 19 2021 17:35:56)
+	-> ../angsd -glf fst_folded/output//pop3.glf.gz -nind 17 -doSaf 1 -out fst_folded/output//pop3 -fai fst_folded/output//fai.fai -issim 1 -scoretol 1e-16 
+	-> Inputtype is GLF
+	-> Printing at chr: 1 pos:4951 chunknumber 100 contains 50 sites
+	-> Printing at chr: 1 pos:9951 chunknumber 200 contains 50 sites
+	-> Printing at chr: 1 pos:14951 chunknumber 300 contains 50 sites
+	-> Printing at chr: 1 pos:19951 chunknumber 400 contains 50 sites
+	-> Printing at chr: 1 pos:24951 chunknumber 500 contains 50 sites
+	-> Printing at chr: 1 pos:29951 chunknumber 600 contains 50 sites
+	-> Printing at chr: 1 pos:34951 chunknumber 700 contains 50 sites
+	-> Printing at chr: 1 pos:39951 chunknumber 800 contains 50 sites
+	-> Printing at chr: 1 pos:44951 chunknumber 900 contains 50 sites
+	-> Printing at chr: 1 pos:49951 chunknumber 1000 contains 50 sites
+	-> Printing at chr: 1 pos:54951 chunknumber 1100 contains 50 sites
+	-> Printing at chr: 1 pos:59951 chunknumber 1200 contains 50 sites
+	-> Printing at chr: 1 pos:64951 chunknumber 1300 contains 50 sites
+	-> Done reading data waiting for calculations to finish
+	-> Done waiting for threads
+	-> Output filenames:
+		->"fst_folded/output//pop3.arg"
+		->"fst_folded/output//pop3.saf.gz"
+		->"fst_folded/output//pop3.saf.pos.gz"
+		->"fst_folded/output//pop3.saf.idx"
+	-> Fri Jul 23 12:39:56 2021
+	-> Arguments and parameters for all analysis are located in .arg file
+	-> Total number of sites analyzed: 65461
+	-> Number of sites retained after filtering: 65461 
+	[ALL done] cpu-time used =  1.71 sec
+	[ALL done] walltime used =  2.00 sec
+Calculating perpop sfs based on the perpop saf
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 3.628254 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop1.saf.idx):27
+	-> Dimension of parameter space: 27
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-206004.839114
+lik[2]=-144256.415814 diff=6.174842e+04 alpha:1.000000 sr2:1.230139e-01 nsites_difference[0]: 1.962789e+04
+lik[5]=-144255.850266 diff=5.655484e-01 alpha:1.268063 sr2:9.754685e-07 nsites_difference[1]: 5.796243e+01
+lik[8]=-144255.845684 diff=4.581717e-03 alpha:2.463788 sr2:7.464134e-10 nsites_difference[12]: 2.069915e+00
+lik[11]=-144255.845683 diff=8.469215e-07 alpha:1.788176 sr2:1.697698e-13 nsites_difference[11]: 3.039983e-02
+lik[14]=-144255.845683 diff=3.492460e-09 alpha:2.697205 sr2:4.105057e-16 nsites_difference[12]: 1.757557e-03
+lik[17]=-144255.845683 diff=5.820766e-11 alpha:1.251264 sr2:5.840225e-19 nsites_difference[2]: 4.856311e-05
+likelihood: -144255.845683
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 3.621365 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop2.saf.idx):31
+	-> Dimension of parameter space: 31
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-215615.739503
+lik[2]=-130942.687114 diff=8.467305e+04 alpha:1.000000 sr2:2.305621e-01 nsites_difference[0]: 3.321237e+04
+lik[5]=-130937.838315 diff=4.848800e+00 alpha:1.166113 sr2:8.250612e-06 nsites_difference[1]: 1.498703e+02
+lik[8]=-130937.714084 diff=1.242312e-01 alpha:2.762230 sr2:1.445249e-08 nsites_difference[9]: 8.945723e+00
+lik[11]=-130937.714012 diff=7.201535e-05 alpha:1.935238 sr2:1.042084e-11 nsites_difference[13]: 2.277208e-01
+lik[14]=-130937.714011 diff=4.422473e-07 alpha:3.148292 sr2:3.475284e-14 nsites_difference[15]: 1.916514e-02
+	-> New like is worse? new:-1.309377e+05 old:-1.309377e+05 diff:-1.018634e-10 will skip accelerated EM in this round
+lik[16]=-130937.714011 diff=7.275958e-11 alpha:1.477768 sr2:1.998503e-16 nsites_difference[2]: 5.935592e-04
+likelihood: -130937.714011
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 3.688461 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop3.saf.idx):35
+	-> Dimension of parameter space: 35
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-223078.096451
+lik[2]=-132217.611837 diff=9.086048e+04 alpha:1.000000 sr2:2.372312e-01 nsites_difference[0]: 3.348738e+04
+lik[5]=-132211.956174 diff=5.655663e+00 alpha:1.155267 sr2:8.307369e-06 nsites_difference[0]: 1.507977e+02
+lik[8]=-132211.684828 diff=2.713465e-01 alpha:2.977315 sr2:2.543266e-08 nsites_difference[8]: 1.151021e+01
+lik[11]=-132211.684469 diff=3.586391e-04 alpha:2.661366 sr2:2.787590e-11 nsites_difference[15]: 3.924470e-01
+lik[14]=-132211.684467 diff=1.685024e-06 alpha:2.478607 sr2:1.241973e-13 nsites_difference[15]: 3.055706e-02
+lik[17]=-132211.684467 diff=1.461012e-08 alpha:2.381092 sr2:1.104182e-15 nsites_difference[15]: 2.814490e-03
+lik[20]=-132211.684467 diff=5.820766e-10 alpha:2.391979 sr2:1.252589e-17 nsites_difference[15]: 2.957946e-04
+	-> New like is worse? new:-1.322117e+05 old:-1.322117e+05 diff:-5.820766e-10 will skip accelerated EM in this round
+lik[22]=-132211.684467 diff=3.492460e-10 alpha:2.169760 sr2:1.594367e-19 nsites_difference[17]: 1.713397e-05
+	-> New like is worse? new:-1.322117e+05 old:-1.322117e+05 diff:-2.910383e-11 will skip accelerated EM in this round
+lik[24]=-132211.684467 diff=2.910383e-11 alpha:1.000000 sr2:3.410248e-20 nsites_difference[15]: 8.405082e-06
+likelihood: -132211.684467
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+Calculating parwise 2d sfs
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 7.249619 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop1.saf.idx):27
+	-> dim(fst_folded/output//pop2.saf.idx):31
+	-> Dimension of parameter space: 837
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-421620.578617
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-252720.427580 diff=1.689002e+05 alpha:1.000000 sr2:6.318149e-02 nsites_difference[31]: 1.246918e+04
+lik[4]=-252612.424222 diff=1.080034e+02 alpha:1.351912 sr2:2.414488e-05 nsites_difference[31]: 2.667503e+02
+lik[6]=-252594.579240 diff=1.784498e+01 alpha:1.000000 sr2:2.084995e-07 nsites_difference[32]: 2.068133e+01
+lik[8]=-252587.905429 diff=6.673811e+00 alpha:3.301907 sr2:2.012820e-08 nsites_difference[32]: 2.731034e+00
+lik[10]=-252584.834164 diff=3.071265e+00 alpha:1.000000 sr2:6.961880e-09 nsites_difference[226]: 1.634674e+00
+lik[12]=-252583.247307 diff=1.586857e+00 alpha:4.000000 sr2:3.073452e-09 nsites_difference[226]: 1.153854e+00
+lik[14]=-252582.357721 diff=8.895861e-01 alpha:1.000000 sr2:1.502108e-09 nsites_difference[226]: 8.497195e-01
+lik[16]=-252581.826642 diff=5.310789e-01 alpha:4.000000 sr2:7.865648e-10 nsites_difference[292]: 6.624517e-01
+lik[18]=-252581.493034 diff=3.336079e-01 alpha:1.000000 sr2:4.341482e-10 nsites_difference[292]: 5.311201e-01
+lik[20]=-252581.274391 diff=2.186425e-01 alpha:4.000000 sr2:2.499921e-10 nsites_difference[292]: 4.339268e-01
+lik[22]=-252581.125836 diff=1.485557e-01 alpha:1.000000 sr2:1.491274e-10 nsites_difference[292]: 3.601352e-01
+lik[24]=-252581.021714 diff=1.041219e-01 alpha:4.000000 sr2:9.170616e-11 nsites_difference[292]: 3.029095e-01
+lik[26]=-252580.946730 diff=7.498344e-02 alpha:1.000000 sr2:5.793202e-11 nsites_difference[292]: 2.577283e-01
+lik[28]=-252580.891427 diff=5.530341e-02 alpha:4.000000 sr2:3.749697e-11 nsites_difference[292]: 2.215034e-01
+lik[30]=-252580.849764 diff=4.166229e-02 alpha:1.000000 sr2:2.481952e-11 nsites_difference[292]: 1.920679e-01
+lik[32]=-252580.817777 diff=3.198723e-02 alpha:4.000000 sr2:1.677535e-11 nsites_difference[292]: 1.678658e-01
+lik[34]=-252580.792794 diff=2.498302e-02 alpha:1.000000 sr2:1.156459e-11 nsites_difference[292]: 1.477569e-01
+lik[36]=-252580.772976 diff=1.981818e-02 alpha:4.000000 sr2:8.123856e-12 nsites_difference[292]: 1.308911e-01
+lik[38]=-252580.757030 diff=1.594572e-02 alpha:1.000000 sr2:5.810568e-12 nsites_difference[292]: 1.166246e-01
+lik[40]=-252580.744032 diff=1.299786e-02 alpha:4.000000 sr2:4.228461e-12 nsites_difference[292]: 1.044635e-01
+lik[42]=-252580.733310 diff=1.072235e-02 alpha:1.000000 sr2:3.128590e-12 nsites_difference[292]: 9.402348e-02
+lik[44]=-252580.724367 diff=8.943059e-03 alpha:4.000000 sr2:2.351856e-12 nsites_difference[292]: 8.500277e-02
+lik[46]=-252580.716832 diff=7.535006e-03 alpha:1.000000 sr2:1.794946e-12 nsites_difference[292]: 7.716168e-02
+lik[48]=-252580.710424 diff=6.408182e-03 alpha:4.000000 sr2:1.389759e-12 nsites_difference[292]: 7.030815e-02
+lik[50]=-252580.704927 diff=5.496893e-03 alpha:1.000000 sr2:1.090762e-12 nsites_difference[292]: 6.428695e-02
+lik[52]=-252580.700174 diff=4.752592e-03 alpha:4.000000 sr2:8.670963e-13 nsites_difference[292]: 5.897165e-02
+lik[54]=-252580.696035 diff=4.138998e-03 alpha:1.000000 sr2:6.975727e-13 nsites_difference[292]: 5.425849e-02
+lik[56]=-252580.692407 diff=3.628710e-03 alpha:4.000000 sr2:5.674598e-13 nsites_difference[292]: 5.006179e-02
+lik[58]=-252580.689206 diff=3.200824e-03 alpha:1.000000 sr2:4.663891e-13 nsites_difference[292]: 4.631029e-02
+lik[60]=-252580.686367 diff=2.839249e-03 alpha:4.000000 sr2:3.869766e-13 nsites_difference[292]: 4.294443e-02
+lik[62]=-252580.683835 diff=2.531482e-03 alpha:1.000000 sr2:3.239030e-13 nsites_difference[292]: 3.991410e-02
+lik[64]=-252580.681567 diff=2.267735e-03 alpha:4.000000 sr2:2.732932e-13 nsites_difference[292]: 3.717697e-02
+lik[66]=-252580.679527 diff=2.040270e-03 alpha:1.000000 sr2:2.322932e-13 nsites_difference[292]: 3.469706e-02
+lik[68]=-252580.677684 diff=1.842936e-03 alpha:4.000000 sr2:1.987790e-13 nsites_difference[292]: 3.244367e-02
+lik[70]=-252580.676013 diff=1.670797e-03 alpha:1.000000 sr2:1.711532e-13 nsites_difference[292]: 3.039050e-02
+lik[72]=-252580.674494 diff=1.519867e-03 alpha:4.000000 sr2:1.482028e-13 nsites_difference[292]: 2.851488e-02
+lik[74]=-252580.673107 diff=1.386901e-03 alpha:1.000000 sr2:1.289977e-13 nsites_difference[292]: 2.679724e-02
+lik[76]=-252580.671837 diff=1.269245e-03 alpha:4.000000 sr2:1.128178e-13 nsites_difference[292]: 2.522061e-02
+lik[78]=-252580.670673 diff=1.164707e-03 alpha:1.000000 sr2:9.910109e-14 nsites_difference[292]: 2.377018e-02
+lik[80]=-252580.669601 diff=1.071473e-03 alpha:4.000000 sr2:8.740487e-14 nsites_difference[292]: 2.243305e-02
+lik[82]=-252580.668613 diff=9.880226e-04 alpha:1.000000 sr2:7.737765e-14 nsites_difference[292]: 2.119789e-02
+lik[84]=-252580.667700 diff=9.130854e-04 alpha:4.000000 sr2:6.873815e-14 nsites_difference[292]: 2.005475e-02
+lik[86]=-252580.666855 diff=8.455828e-04 alpha:1.000000 sr2:6.125967e-14 nsites_difference[292]: 1.899484e-02
+lik[88]=-252580.666070 diff=7.846055e-04 alpha:4.000000 sr2:5.475813e-14 nsites_difference[292]: 1.801039e-02
+lik[90]=-252580.665341 diff=7.293712e-04 alpha:1.000000 sr2:4.908313e-14 nsites_difference[292]: 1.709452e-02
+lik[92]=-252580.664661 diff=6.792147e-04 alpha:4.000000 sr2:4.411095e-14 nsites_difference[292]: 1.624110e-02
+lik[94]=-252580.664028 diff=6.335589e-04 alpha:1.000000 sr2:3.973926e-14 nsites_difference[292]: 1.544467e-02
+lik[96]=-252580.663436 diff=5.919090e-04 alpha:4.000000 sr2:3.588289e-14 nsites_difference[292]: 1.470034e-02
+lik[98]=-252580.662882 diff=5.538303e-04 alpha:1.000000 sr2:3.247062e-14 nsites_difference[292]: 1.400374e-02
+lik[100]=-252580.662363 diff=5.189469e-04 alpha:4.000000 sr2:2.944257e-14 nsites_difference[292]: 1.335094e-02
+likelihood: -252580.662363
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 7.316715 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop1.saf.idx):27
+	-> dim(fst_folded/output//pop3.saf.idx):35
+	-> Dimension of parameter space: 945
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-429082.935565
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-253374.897885 diff=1.757080e+05 alpha:1.000000 sr2:6.370689e-02 nsites_difference[35]: 1.269664e+04
+lik[4]=-253249.172016 diff=1.257259e+02 alpha:1.357473 sr2:2.948382e-05 nsites_difference[35]: 2.840305e+02
+lik[6]=-253227.693693 diff=2.147832e+01 alpha:1.000000 sr2:2.476457e-07 nsites_difference[36]: 2.192047e+01
+lik[8]=-253219.314220 diff=8.379473e+00 alpha:3.174842 sr2:2.106783e-08 nsites_difference[36]: 2.893972e+00
+lik[10]=-253215.247998 diff=4.066222e+00 alpha:1.000000 sr2:7.127201e-09 nsites_difference[225]: 1.534785e+00
+lik[12]=-253213.016432 diff=2.231566e+00 alpha:4.000000 sr2:3.201057e-09 nsites_difference[225]: 1.030466e+00
+lik[14]=-253211.686639 diff=1.329792e+00 alpha:1.000000 sr2:1.621457e-09 nsites_difference[259]: 8.421326e-01
+lik[16]=-253210.845783 diff=8.408559e-01 alpha:4.000000 sr2:8.873979e-10 nsites_difference[259]: 6.839092e-01
+lik[18]=-253210.289450 diff=5.563336e-01 alpha:1.000000 sr2:5.129953e-10 nsites_difference[259]: 5.511882e-01
+lik[20]=-253209.907766 diff=3.816833e-01 alpha:4.000000 sr2:3.089812e-10 nsites_difference[259]: 4.427335e-01
+lik[22]=-253209.637901 diff=2.698650e-01 alpha:1.000000 sr2:1.922295e-10 nsites_difference[259]: 3.552702e-01
+lik[24]=-253209.442141 diff=1.957601e-01 alpha:4.000000 sr2:1.228389e-10 nsites_difference[259]: 2.851893e-01
+lik[26]=-253209.296946 diff=1.451950e-01 alpha:1.000000 sr2:8.032253e-11 nsites_difference[259]: 2.291911e-01
+lik[28]=-253209.187136 diff=1.098100e-01 alpha:4.000000 sr2:5.360200e-11 nsites_difference[259]: 1.844756e-01
+lik[30]=-253209.102644 diff=8.449190e-02 alpha:1.000000 sr2:3.643740e-11 nsites_difference[294]: 1.505974e-01
+lik[32]=-253209.036629 diff=6.601540e-02 alpha:4.000000 sr2:2.519621e-11 nsites_difference[294]: 1.256326e-01
+lik[34]=-253208.984338 diff=5.229091e-02 alpha:1.000000 sr2:1.770492e-11 nsites_difference[294]: 1.049135e-01
+lik[36]=-253208.942406 diff=4.193245e-02 alpha:4.000000 sr2:1.263222e-11 nsites_difference[294]: 8.768946e-02
+lik[38]=-253208.908405 diff=3.400104e-02 alpha:1.000000 sr2:9.145820e-12 nsites_difference[294]: 7.335076e-02
+lik[40]=-253208.880556 diff=2.784823e-02 alpha:4.000000 sr2:6.715870e-12 nsites_difference[512]: 6.282078e-02
+lik[42]=-253208.857538 diff=2.301825e-02 alpha:1.000000 sr2:4.999512e-12 nsites_difference[512]: 5.706503e-02
+lik[44]=-253208.838353 diff=1.918550e-02 alpha:4.000000 sr2:3.771565e-12 nsites_difference[512]: 5.202016e-02
+lik[46]=-253208.822239 diff=1.611394e-02 alpha:1.000000 sr2:2.882094e-12 nsites_difference[512]: 4.757454e-02
+lik[48]=-253208.808609 diff=1.363002e-02 alpha:4.000000 sr2:2.229991e-12 nsites_difference[512]: 4.363774e-02
+lik[50]=-253208.797004 diff=1.160452e-02 alpha:1.000000 sr2:1.746259e-12 nsites_difference[512]: 4.013583e-02
+lik[52]=-253208.787064 diff=9.940119e-03 alpha:4.000000 sr2:1.383278e-12 nsites_difference[512]: 3.700785e-02
+lik[54]=-253208.778501 diff=8.562664e-03 alpha:1.000000 sr2:1.107832e-12 nsites_difference[512]: 3.420319e-02
+lik[56]=-253208.771086 diff=7.415124e-03 alpha:4.000000 sr2:8.965085e-13 nsites_difference[512]: 3.167952e-02
+lik[58]=-253208.764633 diff=6.453204e-03 alpha:1.000000 sr2:7.326438e-13 nsites_difference[512]: 2.940119e-02
+lik[60]=-253208.758991 diff=5.642213e-03 alpha:4.000000 sr2:6.042600e-13 nsites_difference[512]: 2.733805e-02
+lik[62]=-253208.754036 diff=4.954752e-03 alpha:1.000000 sr2:5.026670e-13 nsites_difference[512]: 2.546440e-02
+lik[64]=-253208.749667 diff=4.369031e-03 alpha:4.000000 sr2:4.215008e-13 nsites_difference[512]: 2.375827e-02
+lik[66]=-253208.745800 diff=3.867585e-03 alpha:1.000000 sr2:3.560583e-13 nsites_difference[512]: 2.220075e-02
+lik[68]=-253208.742363 diff=3.436332e-03 alpha:4.000000 sr2:3.028326e-13 nsites_difference[512]: 2.077552e-02
+lik[70]=-253208.739299 diff=3.063849e-03 alpha:1.000000 sr2:2.591853e-13 nsites_difference[512]: 1.946842e-02
+lik[72]=-253208.736559 diff=2.740808e-03 alpha:4.000000 sr2:2.231140e-13 nsites_difference[463]: 1.837638e-02
+lik[74]=-253208.734099 diff=2.459557e-03 alpha:1.000000 sr2:1.930860e-13 nsites_difference[463]: 1.739648e-02
+lik[76]=-253208.731885 diff=2.213786e-03 alpha:4.000000 sr2:1.679180e-13 nsites_difference[463]: 1.649175e-02
+lik[78]=-253208.729887 diff=1.998258e-03 alpha:1.000000 sr2:1.466891e-13 nsites_difference[463]: 1.565476e-02
+lik[80]=-253208.728078 diff=1.808616e-03 alpha:4.000000 sr2:1.286765e-13 nsites_difference[463]: 1.487901e-02
+lik[82]=-253208.726437 diff=1.641218e-03 alpha:1.000000 sr2:1.133088e-13 nsites_difference[463]: 1.415872e-02
+lik[84]=-253208.724944 diff=1.492997e-03 alpha:4.000000 sr2:1.001303e-13 nsites_difference[463]: 1.348878e-02
+lik[86]=-253208.723583 diff=1.361372e-03 alpha:1.000000 sr2:8.877565e-14 nsites_difference[463]: 1.286466e-02
+lik[88]=-253208.722339 diff=1.244155e-03 alpha:4.000000 sr2:7.894914e-14 nsites_difference[463]: 1.228231e-02
+lik[90]=-253208.721199 diff=1.139486e-03 alpha:1.000000 sr2:7.041026e-14 nsites_difference[463]: 1.173812e-02
+lik[92]=-253208.720153 diff=1.045781e-03 alpha:4.000000 sr2:6.296198e-14 nsites_difference[463]: 1.122886e-02
+lik[94]=-253208.719192 diff=9.616814e-04 alpha:1.000000 sr2:5.644192e-14 nsites_difference[463]: 1.075163e-02
+lik[96]=-253208.718306 diff=8.860224e-04 alpha:4.000000 sr2:5.071548e-14 nsites_difference[463]: 1.030381e-02
+lik[98]=-253208.717488 diff=8.178006e-04 alpha:1.000000 sr2:4.567047e-14 nsites_difference[463]: 9.883073e-03
+lik[100]=-253208.716732 diff=7.561479e-04 alpha:4.000000 sr2:4.121291e-14 nsites_difference[463]: 9.487283e-03
+likelihood: -253208.716732
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 7.309826 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop2.saf.idx):31
+	-> dim(fst_folded/output//pop3.saf.idx):35
+	-> Dimension of parameter space: 1085
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-438693.835954
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-231326.375980 diff=2.073675e+05 alpha:1.000000 sr2:1.218783e-01 nsites_difference[0]: 2.246757e+04
+lik[4]=-231208.510242 diff=1.178657e+02 alpha:1.170691 sr2:9.478410e-06 nsites_difference[0]: 1.603958e+02
+lik[6]=-231180.861349 diff=2.764889e+01 alpha:1.000000 sr2:1.150194e-07 nsites_difference[36]: 1.319647e+01
+lik[8]=-231169.653111 diff=1.120824e+01 alpha:3.905057 sr2:2.445606e-08 nsites_difference[293]: 2.306112e+00
+lik[10]=-231164.099274 diff=5.553836e+00 alpha:1.000000 sr2:9.439080e-09 nsites_difference[293]: 1.707471e+00
+lik[12]=-231160.998568 diff=3.100706e+00 alpha:4.000000 sr2:4.412588e-09 nsites_difference[293]: 1.306407e+00
+lik[14]=-231159.122027 diff=1.876542e+00 alpha:1.000000 sr2:2.306742e-09 nsites_difference[293]: 1.026415e+00
+lik[16]=-231157.917943 diff=1.204083e+00 alpha:4.000000 sr2:1.303928e-09 nsites_difference[293]: 8.242662e-01
+lik[18]=-231157.110212 diff=8.077315e-01 alpha:1.000000 sr2:7.812831e-10 nsites_difference[293]: 6.741083e-01
+lik[20]=-231156.549010 diff=5.612022e-01 alpha:4.000000 sr2:4.897196e-10 nsites_difference[293]: 5.598294e-01
+lik[22]=-231156.147782 diff=4.012276e-01 alpha:1.000000 sr2:3.182114e-10 nsites_difference[293]: 4.710270e-01
+lik[24]=-231155.853974 diff=2.938077e-01 alpha:4.000000 sr2:2.129663e-10 nsites_difference[293]: 4.007728e-01
+lik[26]=-231155.634366 diff=2.196079e-01 alpha:1.000000 sr2:1.461195e-10 nsites_difference[293]: 3.443222e-01
+lik[28]=-231155.467253 diff=1.671130e-01 alpha:4.000000 sr2:1.024259e-10 nsites_difference[293]: 2.983440e-01
+lik[30]=-231155.338056 diff=1.291974e-01 alpha:1.000000 sr2:7.316028e-11 nsites_difference[293]: 2.604474e-01
+lik[32]=-231155.236747 diff=1.013091e-01 alpha:4.000000 sr2:5.313848e-11 nsites_difference[293]: 2.288816e-01
+lik[34]=-231155.156287 diff=8.046028e-02 alpha:1.000000 sr2:3.918176e-11 nsites_difference[293]: 2.023421e-01
+lik[36]=-231155.091643 diff=6.464387e-02 alpha:4.000000 sr2:2.928815e-11 nsites_difference[293]: 1.798410e-01
+lik[38]=-231155.039159 diff=5.248410e-02 alpha:1.000000 sr2:2.216726e-11 nsites_difference[293]: 1.606192e-01
+lik[40]=-231154.996138 diff=4.302087e-02 alpha:4.000000 sr2:1.697026e-11 nsites_difference[293]: 1.440862e-01
+lik[42]=-231154.960565 diff=3.557325e-02 alpha:1.000000 sr2:1.312859e-11 nsites_difference[293]: 1.297772e-01
+lik[44]=-231154.930913 diff=2.965120e-02 alpha:4.000000 sr2:1.025510e-11 nsites_difference[293]: 1.173220e-01
+lik[46]=-231154.906016 diff=2.489720e-02 alpha:1.000000 sr2:8.082187e-12 nsites_difference[293]: 1.064236e-01
+lik[48]=-231154.884969 diff=2.104718e-02 alpha:4.000000 sr2:6.422331e-12 nsites_difference[293]: 9.684103e-02
+lik[50]=-231154.867065 diff=1.790379e-02 alpha:1.000000 sr2:5.142409e-12 nsites_difference[293]: 8.837748e-02
+lik[52]=-231154.851747 diff=1.531792e-02 alpha:4.000000 sr2:4.146784e-12 nsites_difference[293]: 8.087099e-02
+lik[54]=-231154.838571 diff=1.317574e-02 alpha:1.000000 sr2:3.365971e-12 nsites_difference[293]: 7.418732e-02
+lik[56]=-231154.827182 diff=1.138954e-02 alpha:4.000000 sr2:2.748954e-12 nsites_difference[293]: 6.821456e-02
+lik[58]=-231154.817291 diff=9.891117e-03 alpha:1.000000 sr2:2.257902e-12 nsites_difference[293]: 6.285881e-02
+lik[60]=-231154.808664 diff=8.626973e-03 alpha:4.000000 sr2:1.864497e-12 nsites_difference[293]: 5.804089e-02
+lik[62]=-231154.801109 diff=7.554821e-03 alpha:1.000000 sr2:1.547359e-12 nsites_difference[293]: 5.369368e-02
+lik[64]=-231154.794468 diff=6.640986e-03 alpha:4.000000 sr2:1.290207e-12 nsites_difference[293]: 4.976002e-02
+lik[66]=-231154.788610 diff=5.858457e-03 alpha:1.000000 sr2:1.080551e-12 nsites_difference[293]: 4.619100e-02
+lik[68]=-231154.783424 diff=5.185425e-03 alpha:4.000000 sr2:9.087358e-13 nsites_difference[293]: 4.294461e-02
+lik[70]=-231154.778820 diff=4.604175e-03 alpha:1.000000 sr2:7.672450e-13 nsites_difference[293]: 3.998460e-02
+lik[72]=-231154.774720 diff=4.100231e-03 alpha:4.000000 sr2:6.501908e-13 nsites_difference[293]: 3.727957e-02
+lik[74]=-231154.771058 diff=3.661696e-03 alpha:1.000000 sr2:5.529318e-13 nsites_difference[293]: 3.480226e-02
+lik[76]=-231154.767779 diff=3.278743e-03 alpha:4.000000 sr2:4.717873e-13 nsites_difference[293]: 3.252887e-02
+lik[78]=-231154.764836 diff=2.943219e-03 alpha:1.000000 sr2:4.038228e-13 nsites_difference[293]: 3.043861e-02
+lik[80]=-231154.762188 diff=2.648320e-03 alpha:4.000000 sr2:3.466861e-13 nsites_difference[293]: 2.851320e-02
+lik[82]=-231154.759799 diff=2.388350e-03 alpha:1.000000 sr2:2.984825e-13 nsites_difference[293]: 2.673656e-02
+lik[84]=-231154.757641 diff=2.158517e-03 alpha:4.000000 sr2:2.576786e-13 nsites_difference[293]: 2.509449e-02
+lik[86]=-231154.755686 diff=1.954773e-03 alpha:1.000000 sr2:2.230276e-13 nsites_difference[293]: 2.357444e-02
+lik[88]=-231154.753912 diff=1.773687e-03 alpha:4.000000 sr2:1.935115e-13 nsites_difference[293]: 2.216525e-02
+lik[90]=-231154.752300 diff=1.612341e-03 alpha:1.000000 sr2:1.682960e-13 nsites_difference[293]: 2.085698e-02
+lik[92]=-231154.750832 diff=1.468242e-03 alpha:4.000000 sr2:1.466942e-13 nsites_difference[293]: 1.964078e-02
+lik[94]=-231154.749493 diff=1.339255e-03 alpha:1.000000 sr2:1.281385e-13 nsites_difference[293]: 1.850872e-02
+lik[96]=-231154.748269 diff=1.223545e-03 alpha:4.000000 sr2:1.121587e-13 nsites_difference[293]: 1.745372e-02
+lik[98]=-231154.747150 diff=1.119532e-03 alpha:1.000000 sr2:9.836340e-14 nsites_difference[293]: 1.646938e-02
+lik[100]=-231154.746124 diff=1.025847e-03 alpha:4.000000 sr2:8.642587e-14 nsites_difference[293]: 1.554998e-02
+likelihood: -231154.746124
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+Calculating fst index for 3 pairwise, and multi fst
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst_folded/output//pop1.pop2.saf.idx.ml chr:(null) start:-1 stop:-1 fstout:fst_folded/output//pop1.pop2 oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:26 sfs2:30 dimspace:837 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> Reading: fst_folded/output//pop1.pop2.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will now do fst temp dump using a chunk of 65461
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst_folded/output//pop1.pop2.fst.idx 
+	 realSFS fst stats2 fst_folded/output//pop1.pop2.fst.idx 
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst_folded/output//pop1.pop3.saf.idx.ml chr:(null) start:-1 stop:-1 fstout:fst_folded/output//pop1.pop3 oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:26 sfs2:34 dimspace:945 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> Reading: fst_folded/output//pop1.pop3.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will now do fst temp dump using a chunk of 65461
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst_folded/output//pop1.pop3.fst.idx 
+	 realSFS fst stats2 fst_folded/output//pop1.pop3.fst.idx 
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst_folded/output//pop2.pop3.saf.idx.ml chr:(null) start:-1 stop:-1 fstout:fst_folded/output//pop2.pop3 oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:30 sfs2:34 dimspace:1085 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> Reading: fst_folded/output//pop2.pop3.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will now do fst temp dump using a chunk of 65461
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst_folded/output//pop2.pop3.fst.idx 
+	 realSFS fst stats2 fst_folded/output//pop2.pop3.fst.idx 
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst_folded/output//pop1.pop2.saf.idx.ml chr:(null) start:-1 stop:-1 fstout:fst_folded/output//pop1.pop2.pop3 oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:26 sfs2:30 dimspace:837 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> [reynoldFst] sfs1:26 sfs2:34 dimspace:945 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> [reynoldFst] sfs1:30 sfs2:34 dimspace:1085 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> Reading: fst_folded/output//pop1.pop2.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Reading: fst_folded/output//pop1.pop3.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Reading: fst_folded/output//pop2.pop3.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> Sites to keep[1] from pop2:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Comparing positions: 2 with 0 has:65461
+	-> Will now do fst temp dump using a chunk of 65461
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst_folded/output//pop1.pop2.pop3.fst.idx 
+	 realSFS fst stats2 fst_folded/output//pop1.pop2.pop3.fst.idx 
+Calculating fst stats for 3 pairwise, and multi fst
+	-> Assuming idxname:fst_folded/output//pop1.pop2.fst.idx
+	-> Assuming .fst.gz file: fst_folded/output//pop1.pop2.fst.gz
+	-> FST.Unweight[nObs:65461]:0.083414 Fst.Weight:0.166348
+	-> Assuming idxname:fst_folded/output//pop1.pop3.fst.idx
+	-> Assuming .fst.gz file: fst_folded/output//pop1.pop3.fst.gz
+	-> FST.Unweight[nObs:65461]:0.088040 Fst.Weight:0.177016
+	-> Assuming idxname:fst_folded/output//pop2.pop3.fst.idx
+	-> Assuming .fst.gz file: fst_folded/output//pop2.pop3.fst.gz
+	-> FST.Unweight[nObs:65461]:0.048398 Fst.Weight:0.103619
+	-> Assuming idxname:fst_folded/output//pop1.pop2.pop3.fst.idx
+	-> Assuming .fst.gz file: fst_folded/output//pop1.pop2.pop3.fst.gz
+	-> FST.Unweight[nObs:65461]:0.083414 Fst.Weight:0.166348
+	-> FST.Unweight[nObs:65461]:0.088040 Fst.Weight:0.177016
+	-> FST.Unweight[nObs:65461]:0.048398 Fst.Weight:0.103619
+Calculating parwise 1d sfs (folded)
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 3.628254 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop1.saf.idx):27
+	-> Dimension of parameter space: 27
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-160630.731527
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-128609.621439 diff=3.202111e+04 alpha:1.000000 sr2:9.465115e-02 nsites_difference[0]: 1.977428e+04
+lik[4]=-128609.112989 diff=5.084505e-01 alpha:1.282776 sr2:1.032211e-06 nsites_difference[1]: 5.655871e+01
+lik[6]=-128609.088036 diff=2.495298e-02 alpha:1.000000 sr2:1.036230e-08 nsites_difference[8]: 5.061579e+00
+lik[8]=-128609.085095 diff=2.941262e-03 alpha:2.412651 sr2:9.436833e-10 nsites_difference[8]: 1.599250e+00
+lik[10]=-128609.084694 diff=4.001305e-04 alpha:1.000000 sr2:1.186002e-10 nsites_difference[12]: 6.297807e-01
+lik[12]=-128609.084636 diff=5.864880e-05 alpha:2.586239 sr2:1.627046e-11 nsites_difference[12]: 2.610041e-01
+lik[14]=-128609.084627 diff=9.063442e-06 alpha:1.000000 sr2:2.379468e-12 nsites_difference[12]: 1.080800e-01
+lik[16]=-128609.084625 diff=1.459426e-06 alpha:2.702919 sr2:3.673154e-13 nsites_difference[12]: 4.479736e-02
+lik[18]=-128609.084625 diff=2.430315e-07 alpha:1.000000 sr2:5.934444e-14 nsites_difference[12]: 1.860633e-02
+lik[20]=-128609.084625 diff=4.167669e-08 alpha:2.792312 sr2:9.948107e-15 nsites_difference[12]: 7.749001e-03
+lik[22]=-128609.084625 diff=7.377821e-09 alpha:1.000000 sr2:1.715893e-15 nsites_difference[12]: 3.236892e-03
+lik[24]=-128609.084625 diff=1.135049e-09 alpha:2.848255 sr2:3.022916e-16 nsites_difference[12]: 1.356206e-03
+lik[26]=-128609.084625 diff=4.365575e-10 alpha:1.000000 sr2:5.406767e-17 nsites_difference[12]: 5.698897e-04
+lik[28]=-128609.084625 diff=6.111804e-10 alpha:2.877694 sr2:9.772863e-18 nsites_difference[12]: 2.401250e-04
+lik[30]=-128609.084625 diff=2.473826e-10 alpha:1.000000 sr2:1.779139e-18 nsites_difference[12]: 1.014284e-04
+lik[32]=-128609.084625 diff=4.802132e-10 alpha:2.891439 sr2:3.254306e-19 nsites_difference[12]: 4.293824e-05
+lik[34]=-128609.084625 diff=3.346941e-10 alpha:1.000000 sr2:5.970970e-20 nsites_difference[12]: 1.821287e-05
+	-> Breaking EM(sq2) at iter:36, sqrt(sq2):6.862011e-11
+likelihood: -128609.084625
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 3.621365 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop2.saf.idx):31
+	-> Dimension of parameter space: 31
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-170241.631916
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-111248.221566 diff=5.899341e+04 alpha:1.000000 sr2:2.231288e-01 nsites_difference[0]: 3.461641e+04
+lik[4]=-111243.971793 diff=4.249773e+00 alpha:1.183218 sr2:9.152189e-06 nsites_difference[1]: 1.543245e+02
+lik[6]=-111243.618820 diff=3.529729e-01 alpha:1.000000 sr2:9.668857e-08 nsites_difference[13]: 1.602197e+01
+lik[8]=-111243.559657 diff=5.916312e-02 alpha:2.767764 sr2:1.428356e-08 nsites_difference[14]: 5.896401e+00
+lik[10]=-111243.548361 diff=1.129540e-02 alpha:1.000000 sr2:2.517456e-09 nsites_difference[14]: 2.894592e+00
+lik[12]=-111243.546050 diff=2.310866e-03 alpha:2.995910 sr2:4.816152e-10 nsites_difference[14]: 1.414887e+00
+lik[14]=-111243.545556 diff=4.942398e-04 alpha:1.000000 sr2:9.761330e-11 nsites_difference[14]: 6.900963e-01
+lik[16]=-111243.545447 diff=1.092008e-04 alpha:3.137552 sr2:2.069424e-11 nsites_difference[14]: 3.363746e-01
+lik[18]=-111243.545422 diff=2.475505e-05 alpha:1.000000 sr2:4.550656e-12 nsites_difference[14]: 1.640353e-01
+lik[20]=-111243.545416 diff=5.729875e-06 alpha:3.242928 sr2:1.031189e-12 nsites_difference[14]: 8.008675e-02
+lik[22]=-111243.545415 diff=1.349705e-06 alpha:1.000000 sr2:2.394483e-13 nsites_difference[14]: 3.916306e-02
+lik[24]=-111243.545415 diff=3.221066e-07 alpha:3.317655 sr2:5.669850e-14 nsites_difference[14]: 1.918587e-02
+lik[26]=-111243.545415 diff=7.779454e-08 alpha:1.000000 sr2:1.363303e-14 nsites_difference[14]: 9.417019e-03
+lik[28]=-111243.545415 diff=1.888839e-08 alpha:3.365709 sr2:3.317018e-15 nsites_difference[14]: 4.630960e-03
+lik[30]=-111243.545415 diff=4.598405e-09 alpha:1.000000 sr2:8.143271e-16 nsites_difference[14]: 2.281541e-03
+lik[32]=-111243.545415 diff=1.251465e-09 alpha:3.394109 sr2:2.012634e-16 nsites_difference[14]: 1.126013e-03
+lik[34]=-111243.545415 diff=2.619345e-10 alpha:1.000000 sr2:4.999021e-17 nsites_difference[14]: 5.566299e-04
+lik[36]=-111243.545415 diff=1.309672e-10 alpha:3.409872 sr2:1.246177e-17 nsites_difference[14]: 2.755764e-04
+lik[38]=-111243.545415 diff=1.455192e-10 alpha:1.000000 sr2:3.114673e-18 nsites_difference[14]: 1.366199e-04
+lik[40]=-111243.545415 diff=1.455192e-11 alpha:3.418187 sr2:7.799353e-19 nsites_difference[14]: 6.781513e-05
+likelihood: -111243.545415
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 3.688461 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop3.saf.idx):35
+	-> Dimension of parameter space: 35
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-177703.988864
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-112056.309589 diff=6.564768e+04 alpha:1.000000 sr2:2.354583e-01 nsites_difference[0]: 3.502868e+04
+lik[4]=-112052.110738 diff=4.198851e+00 alpha:1.164945 sr2:9.002132e-06 nsites_difference[0]: 1.524232e+02
+lik[6]=-112051.617620 diff=4.931178e-01 alpha:1.000000 sr2:1.140545e-07 nsites_difference[7]: 1.462450e+01
+lik[8]=-112051.508304 diff=1.093159e-01 alpha:3.059223 sr2:2.140028e-08 nsites_difference[16]: 7.585051e+00
+lik[10]=-112051.480727 diff=2.757739e-02 alpha:1.000000 sr2:4.829940e-09 nsites_difference[16]: 4.109445e+00
+lik[12]=-112051.473201 diff=7.525587e-03 alpha:3.521271 sr2:1.228241e-09 nsites_difference[16]: 2.230843e+00
+lik[14]=-112051.471051 diff=2.150362e-03 alpha:1.000000 sr2:3.368505e-10 nsites_difference[16]: 1.213219e+00
+lik[16]=-112051.470420 diff=6.308573e-04 alpha:3.756364 sr2:9.660097e-11 nsites_difference[16]: 6.608710e-01
+lik[18]=-112051.470232 diff=1.878847e-04 alpha:1.000000 sr2:2.841951e-11 nsites_difference[16]: 3.605393e-01
+lik[20]=-112051.470176 diff=5.644406e-05 alpha:3.842831 sr2:8.482839e-12 nsites_difference[16]: 1.969712e-01
+lik[22]=-112051.470158 diff=1.704298e-05 alpha:1.000000 sr2:2.552975e-12 nsites_difference[16]: 1.077504e-01
+lik[24]=-112051.470153 diff=5.161564e-06 alpha:3.872207 sr2:7.719829e-13 nsites_difference[16]: 5.901307e-02
+lik[26]=-112051.470152 diff=1.565742e-06 alpha:1.000000 sr2:2.340771e-13 nsites_difference[16]: 3.235452e-02
+lik[28]=-112051.470151 diff=4.757603e-07 alpha:3.882239 sr2:7.108914e-14 nsites_difference[16]: 1.775515e-02
+lik[30]=-112051.470151 diff=1.446169e-07 alpha:1.000000 sr2:2.160984e-14 nsites_difference[16]: 9.751324e-03
+lik[32]=-112051.470151 diff=4.419417e-08 alpha:3.885669 sr2:6.572549e-15 nsites_difference[16]: 5.359247e-03
+lik[34]=-112051.470151 diff=1.325679e-08 alpha:1.000000 sr2:1.999631e-15 nsites_difference[16]: 2.947140e-03
+lik[36]=-112051.470151 diff=4.103640e-09 alpha:3.886786 sr2:6.084714e-16 nsites_difference[16]: 1.621493e-03
+lik[38]=-112051.470151 diff=1.222361e-09 alpha:1.000000 sr2:1.851695e-16 nsites_difference[16]: 8.925100e-04
+lik[40]=-112051.470151 diff=4.074536e-10 alpha:3.887091 sr2:5.635303e-17 nsites_difference[16]: 4.914335e-04
+lik[42]=-112051.470151 diff=3.637979e-10 alpha:1.000000 sr2:1.715029e-17 nsites_difference[16]: 2.706732e-04
+lik[44]=-112051.470151 diff=5.820766e-11 alpha:3.887120 sr2:5.219462e-18 nsites_difference[16]: 1.491190e-04
+likelihood: -112051.470151
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+Calculating parwise 2d sfs (folded)
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 7.249619 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop1.saf.idx):27
+	-> dim(fst_folded/output//pop2.saf.idx):31
+	-> Dimension of parameter space: 837
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-376434.760893
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-237817.875840 diff=1.386169e+05 alpha:1.000000 sr2:6.431573e-02 nsites_difference[31]: 1.270350e+04
+lik[4]=-237718.514060 diff=9.936178e+01 alpha:1.356096 sr2:2.495120e-05 nsites_difference[31]: 2.700265e+02
+lik[6]=-237701.577444 diff=1.693662e+01 alpha:1.000000 sr2:2.443919e-07 nsites_difference[32]: 2.168497e+01
+lik[8]=-237695.022030 diff=6.555414e+00 alpha:3.436259 sr2:2.845096e-08 nsites_difference[207]: 3.474763e+00
+lik[10]=-237691.977281 diff=3.044749e+00 alpha:1.000000 sr2:1.004237e-08 nsites_difference[75]: 2.047831e+00
+lik[12]=-237690.421769 diff=1.555512e+00 alpha:4.000000 sr2:4.424786e-09 nsites_difference[237]: 1.341542e+00
+lik[14]=-237689.572131 diff=8.496380e-01 alpha:1.000000 sr2:2.154871e-09 nsites_difference[237]: 9.954141e-01
+lik[16]=-237689.082932 diff=4.891984e-01 alpha:4.000000 sr2:1.124270e-09 nsites_difference[237]: 7.485471e-01
+lik[18]=-237688.788544 diff=2.943883e-01 alpha:1.000000 sr2:6.184606e-10 nsites_difference[292]: 5.768747e-01
+lik[20]=-237688.604440 diff=1.841037e-01 alpha:4.000000 sr2:3.550525e-10 nsites_difference[292]: 4.593423e-01
+lik[22]=-237688.485289 diff=1.191513e-01 alpha:1.000000 sr2:2.111907e-10 nsites_difference[292]: 3.697399e-01
+lik[24]=-237688.405751 diff=7.953825e-02 alpha:4.000000 sr2:1.294544e-10 nsites_difference[292]: 3.000843e-01
+lik[26]=-237688.351145 diff=5.460625e-02 alpha:1.000000 sr2:8.143315e-11 nsites_difference[292]: 2.451050e-01
+lik[28]=-237688.312687 diff=3.845747e-02 alpha:4.000000 sr2:5.239445e-11 nsites_difference[292]: 2.011918e-01
+lik[30]=-237688.284967 diff=2.771994e-02 alpha:1.000000 sr2:3.438876e-11 nsites_difference[292]: 1.657902e-01
+lik[32]=-237688.264559 diff=2.040786e-02 alpha:4.000000 sr2:2.297635e-11 nsites_difference[292]: 1.370414e-01
+lik[34]=-237688.249240 diff=1.531918e-02 alpha:1.000000 sr2:1.560156e-11 nsites_difference[292]: 1.135599e-01
+lik[36]=-237688.237533 diff=1.170731e-02 alpha:4.000000 sr2:1.075331e-11 nsites_difference[292]: 9.429233e-02
+lik[38]=-237688.228436 diff=9.097188e-03 alpha:1.000000 sr2:7.516541e-12 nsites_difference[292]: 7.842395e-02
+lik[40]=-237688.221256 diff=7.179690e-03 alpha:4.000000 sr2:5.325225e-12 nsites_difference[268]: 6.880738e-02
+lik[42]=-237688.215507 diff=5.749428e-03 alpha:1.000000 sr2:3.822507e-12 nsites_difference[268]: 6.182210e-02
+lik[44]=-237688.210839 diff=4.667342e-03 alpha:4.000000 sr2:2.779562e-12 nsites_difference[268]: 5.581766e-02
+lik[46]=-237688.207002 diff=3.837647e-03 alpha:1.000000 sr2:2.047419e-12 nsites_difference[268]: 5.062308e-02
+lik[48]=-237688.203808 diff=3.193334e-03 alpha:4.000000 sr2:1.527770e-12 nsites_difference[268]: 4.610233e-02
+lik[50]=-237688.201121 diff=2.686867e-03 alpha:1.000000 sr2:1.154939e-12 nsites_difference[268]: 4.214624e-02
+lik[52]=-237688.198837 diff=2.284090e-03 alpha:4.000000 sr2:8.845620e-13 nsites_difference[268]: 3.866647e-02
+lik[54]=-237688.196877 diff=1.960178e-03 alpha:1.000000 sr2:6.863636e-13 nsites_difference[268]: 3.559098e-02
+lik[56]=-237688.195180 diff=1.696883e-03 alpha:4.000000 sr2:5.394882e-13 nsites_difference[268]: 3.286062e-02
+lik[58]=-237688.193700 diff=1.480672e-03 alpha:1.000000 sr2:4.294415e-13 nsites_difference[268]: 3.042648e-02
+lik[60]=-237688.192398 diff=1.301390e-03 alpha:4.000000 sr2:3.460647e-13 nsites_difference[268]: 2.824788e-02
+lik[62]=-237688.191247 diff=1.151365e-03 alpha:1.000000 sr2:2.821802e-13 nsites_difference[268]: 2.629080e-02
+lik[64]=-237688.190222 diff=1.024736e-03 alpha:4.000000 sr2:2.326755e-13 nsites_difference[268]: 2.452660e-02
+lik[66]=-237688.189305 diff=9.169926e-04 alpha:1.000000 sr2:1.938807e-13 nsites_difference[268]: 2.293105e-02
+lik[68]=-237688.188481 diff=8.246295e-04 alpha:4.000000 sr2:1.631400e-13 nsites_difference[268]: 2.148359e-02
+lik[70]=-237688.187736 diff=7.449004e-04 alpha:1.000000 sr2:1.385165e-13 nsites_difference[268]: 2.016663e-02
+lik[72]=-237688.187060 diff=6.756347e-04 alpha:4.000000 sr2:1.185854e-13 nsites_difference[268]: 1.896511e-02
+lik[74]=-237688.186445 diff=6.151053e-04 alpha:1.000000 sr2:1.022901e-13 nsites_difference[268]: 1.786605e-02
+lik[76]=-237688.185883 diff=5.619210e-04 alpha:4.000000 sr2:8.884021e-14 nsites_difference[268]: 1.685822e-02
+lik[78]=-237688.185368 diff=5.149563e-04 alpha:1.000000 sr2:7.763943e-14 nsites_difference[268]: 1.593188e-02
+lik[80]=-237688.184895 diff=4.732957e-04 alpha:4.000000 sr2:6.823366e-14 nsites_difference[268]: 1.507854e-02
+lik[82]=-237688.184459 diff=4.361804e-04 alpha:1.000000 sr2:6.027404e-14 nsites_difference[268]: 1.429079e-02
+lik[84]=-237688.184056 diff=4.029879e-04 alpha:4.000000 sr2:5.349013e-14 nsites_difference[268]: 1.356213e-02
+lik[86]=-237688.183682 diff=3.731963e-04 alpha:1.000000 sr2:4.767034e-14 nsites_difference[268]: 1.288682e-02
+lik[88]=-237688.183336 diff=3.463665e-04 alpha:4.000000 sr2:4.264766e-14 nsites_difference[268]: 1.225981e-02
+lik[90]=-237688.183014 diff=3.221300e-04 alpha:1.000000 sr2:3.828908e-14 nsites_difference[268]: 1.167663e-02
+lik[92]=-237688.182714 diff=3.001720e-04 alpha:4.000000 sr2:3.448777e-14 nsites_difference[268]: 1.113331e-02
+lik[94]=-237688.182433 diff=2.802257e-04 alpha:1.000000 sr2:3.115720e-14 nsites_difference[268]: 1.062632e-02
+lik[96]=-237688.182171 diff=2.620596e-04 alpha:4.000000 sr2:2.822676e-14 nsites_difference[268]: 1.015251e-02
+lik[98]=-237688.181926 diff=2.454746e-04 alpha:1.000000 sr2:2.563836e-14 nsites_difference[268]: 9.709064e-03
+lik[100]=-237688.181696 diff=2.303015e-04 alpha:4.000000 sr2:2.334388e-14 nsites_difference[268]: 9.293446e-03
+likelihood: -237688.181696
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 7.316715 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop1.saf.idx):27
+	-> dim(fst_folded/output//pop3.saf.idx):35
+	-> Dimension of parameter space: 945
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-383859.645607
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-238389.532237 diff=1.454701e+05 alpha:1.000000 sr2:6.511194e-02 nsites_difference[35]: 1.294149e+04
+lik[4]=-238276.590121 diff=1.129421e+02 alpha:1.360786 sr2:3.043198e-05 nsites_difference[35]: 2.880728e+02
+lik[6]=-238257.948479 diff=1.864164e+01 alpha:1.000000 sr2:2.798006e-07 nsites_difference[36]: 2.317250e+01
+lik[8]=-238251.049274 diff=6.899205e+00 alpha:3.245922 sr2:2.746138e-08 nsites_difference[505]: 3.408846e+00
+lik[10]=-238248.015388 diff=3.033886e+00 alpha:1.000000 sr2:9.117988e-09 nsites_difference[225]: 2.032577e+00
+lik[12]=-238246.541594 diff=1.473795e+00 alpha:4.000000 sr2:3.916863e-09 nsites_difference[258]: 1.426662e+00
+lik[14]=-238245.768478 diff=7.731159e-01 alpha:1.000000 sr2:1.899945e-09 nsites_difference[258]: 1.074016e+00
+lik[16]=-238245.335837 diff=4.326413e-01 alpha:4.000000 sr2:1.000271e-09 nsites_difference[258]: 8.179755e-01
+lik[18]=-238245.079835 diff=2.560016e-01 alpha:1.000000 sr2:5.586787e-10 nsites_difference[259]: 6.357651e-01
+lik[20]=-238244.920866 diff=1.589691e-01 alpha:4.000000 sr2:3.262458e-10 nsites_difference[259]: 5.092597e-01
+lik[22]=-238244.817962 diff=1.029038e-01 alpha:1.000000 sr2:1.973181e-10 nsites_difference[259]: 4.066151e-01
+lik[24]=-238244.748929 diff=6.903295e-02 alpha:4.000000 sr2:1.228312e-10 nsites_difference[259]: 3.241855e-01
+lik[26]=-238244.701173 diff=4.775612e-02 alpha:1.000000 sr2:7.835915e-11 nsites_difference[259]: 2.583720e-01
+lik[28]=-238244.667245 diff=3.392814e-02 alpha:4.000000 sr2:5.106724e-11 nsites_difference[537]: 2.067113e-01
+lik[30]=-238244.642574 diff=2.467123e-02 alpha:1.000000 sr2:3.391705e-11 nsites_difference[537]: 1.771830e-01
+lik[32]=-238244.624262 diff=1.831215e-02 alpha:4.000000 sr2:2.291266e-11 nsites_difference[537]: 1.524375e-01
+lik[34]=-238244.610418 diff=1.384347e-02 alpha:1.000000 sr2:1.571859e-11 nsites_difference[537]: 1.315791e-01
+lik[36]=-238244.599779 diff=1.063940e-02 alpha:4.000000 sr2:1.093532e-11 nsites_difference[537]: 1.139067e-01
+lik[38]=-238244.591478 diff=8.300327e-03 alpha:1.000000 sr2:7.705508e-12 nsites_difference[537]: 9.886575e-02
+lik[40]=-238244.584914 diff=6.564697e-03 alpha:4.000000 sr2:5.493523e-12 nsites_difference[537]: 8.601251e-02
+lik[42]=-238244.579656 diff=5.257549e-03 alpha:1.000000 sr2:3.958703e-12 nsites_difference[537]: 7.498903e-02
+lik[44]=-238244.575397 diff=4.259541e-03 alpha:4.000000 sr2:2.880818e-12 nsites_difference[537]: 6.550400e-02
+lik[46]=-238244.571909 diff=3.487843e-03 alpha:1.000000 sr2:2.115332e-12 nsites_difference[537]: 5.731864e-02
+lik[48]=-238244.569025 diff=2.884053e-03 alpha:4.000000 sr2:1.566058e-12 nsites_difference[537]: 5.023594e-02
+lik[50]=-238244.566618 diff=2.406395e-03 alpha:1.000000 sr2:1.168140e-12 nsites_difference[537]: 4.409241e-02
+lik[52]=-238244.564594 diff=2.024589e-03 alpha:4.000000 sr2:8.773135e-13 nsites_difference[537]: 3.875161e-02
+lik[54]=-238244.562877 diff=1.716424e-03 alpha:1.000000 sr2:6.630188e-13 nsites_difference[537]: 3.409919e-02
+lik[56]=-238244.561412 diff=1.465413e-03 alpha:4.000000 sr2:5.039277e-13 nsites_difference[536]: 3.014880e-02
+lik[58]=-238244.560153 diff=1.259194e-03 alpha:1.000000 sr2:3.850028e-13 nsites_difference[536]: 2.681577e-02
+lik[60]=-238244.559064 diff=1.088403e-03 alpha:4.000000 sr2:2.955395e-13 nsites_difference[536]: 2.386284e-02
+lik[62]=-238244.558118 diff=9.458762e-04 alpha:1.000000 sr2:2.278485e-13 nsites_difference[536]: 2.124399e-02
+lik[64]=-238244.557292 diff=8.260886e-04 alpha:4.000000 sr2:1.763590e-13 nsites_difference[536]: 1.891940e-02
+lik[66]=-238244.556568 diff=7.247404e-04 alpha:1.000000 sr2:1.370030e-13 nsites_difference[536]: 1.685440e-02
+lik[68]=-238244.555929 diff=6.384564e-04 alpha:4.000000 sr2:1.067875e-13 nsites_difference[536]: 1.501878e-02
+lik[70]=-238244.555365 diff=5.645709e-04 alpha:1.000000 sr2:8.349513e-14 nsites_difference[536]: 1.338612e-02
+lik[72]=-238244.554864 diff=5.009564e-04 alpha:4.000000 sr2:6.547245e-14 nsites_difference[536]: 1.193325e-02
+lik[74]=-238244.554418 diff=4.459123e-04 alpha:1.000000 sr2:5.147932e-14 nsites_difference[536]: 1.063982e-02
+lik[76]=-238244.554020 diff=3.980573e-04 alpha:4.000000 sr2:4.058032e-14 nsites_difference[536]: 9.487903e-03
+lik[78]=-238244.553663 diff=3.562750e-04 alpha:1.000000 sr2:3.206631e-14 nsites_difference[536]: 8.461692e-03
+lik[80]=-238244.553344 diff=3.196460e-04 alpha:4.000000 sr2:2.539718e-14 nsites_difference[536]: 7.547222e-03
+lik[82]=-238244.553056 diff=2.874173e-04 alpha:1.000000 sr2:2.015979e-14 nsites_difference[536]: 6.732138e-03
+lik[84]=-238244.552797 diff=2.589633e-04 alpha:4.000000 sr2:1.603686e-14 nsites_difference[536]: 6.005496e-03
+lik[86]=-238244.552564 diff=2.337626e-04 alpha:1.000000 sr2:1.278383e-14 nsites_difference[536]: 5.357593e-03
+lik[88]=-238244.552352 diff=2.113789e-04 alpha:4.000000 sr2:1.021159e-14 nsites_difference[536]: 4.779817e-03
+lik[90]=-238244.552161 diff=1.914442e-04 alpha:1.000000 sr2:8.173433e-15 nsites_difference[536]: 4.264517e-03
+lik[92]=-238244.551987 diff=1.736471e-04 alpha:4.000000 sr2:6.555213e-15 nsites_difference[536]: 3.804894e-03
+lik[94]=-238244.551829 diff=1.577223e-04 alpha:1.000000 sr2:5.267903e-15 nsites_difference[536]: 3.394898e-03
+lik[96]=-238244.551686 diff=1.434436e-04 alpha:4.000000 sr2:4.241884e-15 nsites_difference[536]: 3.029147e-03
+lik[98]=-238244.551555 diff=1.306146e-04 alpha:1.000000 sr2:3.422591e-15 nsites_difference[536]: 2.702848e-03
+lik[100]=-238244.551436 diff=1.190709e-04 alpha:4.000000 sr2:2.767161e-15 nsites_difference[536]: 2.411733e-03
+likelihood: -238244.551436
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 7.309826 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst_folded/output//pop2.saf.idx):31
+	-> dim(fst_folded/output//pop3.saf.idx):35
+	-> Dimension of parameter space: 1085
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will run optimization on nSites: 65461
+------------
+startlik=-393430.541427
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-212758.334462 diff=1.806722e+05 alpha:1.000000 sr2:1.310071e-01 nsites_difference[0]: 2.345660e+04
+lik[4]=-212660.516880 diff=9.781758e+01 alpha:1.174788 sr2:1.024153e-05 nsites_difference[0]: 1.676464e+02
+lik[6]=-212637.687207 diff=2.282967e+01 alpha:1.000000 sr2:1.462114e-07 nsites_difference[36]: 1.400002e+01
+lik[8]=-212628.817813 diff=8.869393e+00 alpha:3.806871 sr2:3.199081e-08 nsites_difference[575]: 5.102994e+00
+lik[10]=-212624.750662 diff=4.067151e+00 alpha:1.000000 sr2:1.180543e-08 nsites_difference[575]: 2.870038e+00
+lik[12]=-212622.670680 diff=2.079983e+00 alpha:4.000000 sr2:5.260202e-09 nsites_difference[538]: 1.761033e+00
+lik[14]=-212621.512184 diff=1.158495e+00 alpha:1.000000 sr2:2.630341e-09 nsites_difference[538]: 1.225048e+00
+lik[16]=-212620.820289 diff=6.918949e-01 alpha:4.000000 sr2:1.426731e-09 nsites_difference[293]: 8.650060e-01
+lik[18]=-212620.382854 diff=4.374355e-01 alpha:1.000000 sr2:8.219284e-10 nsites_difference[503]: 6.861582e-01
+lik[20]=-212620.093327 diff=2.895266e-01 alpha:4.000000 sr2:4.958026e-10 nsites_difference[503]: 5.510267e-01
+lik[22]=-212619.894562 diff=1.987649e-01 alpha:1.000000 sr2:3.100576e-10 nsites_difference[332]: 4.478746e-01
+lik[24]=-212619.754062 diff=1.404999e-01 alpha:4.000000 sr2:1.995979e-10 nsites_difference[332]: 3.780914e-01
+lik[26]=-212619.652376 diff=1.016861e-01 alpha:1.000000 sr2:1.315932e-10 nsites_difference[332]: 3.217125e-01
+lik[28]=-212619.577339 diff=7.503745e-02 alpha:4.000000 sr2:8.852414e-11 nsites_difference[332]: 2.755408e-01
+lik[30]=-212619.521055 diff=5.628347e-02 alpha:1.000000 sr2:6.059697e-11 nsites_difference[332]: 2.373005e-01
+lik[32]=-212619.478242 diff=4.281280e-02 alpha:4.000000 sr2:4.212175e-11 nsites_difference[332]: 2.053301e-01
+lik[34]=-212619.445273 diff=3.296948e-02 alpha:1.000000 sr2:2.968528e-11 nsites_difference[332]: 1.783884e-01
+lik[36]=-212619.419603 diff=2.567048e-02 alpha:4.000000 sr2:2.118433e-11 nsites_difference[332]: 1.555305e-01
+lik[38]=-212619.399414 diff=2.018874e-02 alpha:1.000000 sr2:1.529294e-11 nsites_difference[332]: 1.360244e-01
+lik[40]=-212619.383388 diff=1.602531e-02 alpha:4.000000 sr2:1.115863e-11 nsites_difference[332]: 1.192947e-01
+lik[42]=-212619.370557 diff=1.283119e-02 alpha:1.000000 sr2:8.223795e-12 nsites_difference[332]: 1.048834e-01
+lik[44]=-212619.360199 diff=1.035829e-02 alpha:4.000000 sr2:6.118111e-12 nsites_difference[332]: 9.242150e-02
+lik[46]=-212619.351771 diff=8.427700e-03 alpha:1.000000 sr2:4.592233e-12 nsites_difference[332]: 8.160875e-02
+lik[48]=-212619.344863 diff=6.908786e-03 alpha:4.000000 sr2:3.476155e-12 nsites_difference[332]: 7.219876e-02
+lik[50]=-212619.339157 diff=5.705066e-03 alpha:1.000000 sr2:2.652623e-12 nsites_difference[332]: 6.398764e-02
+lik[52]=-212619.334413 diff=4.744572e-03 alpha:4.000000 sr2:2.039895e-12 nsites_difference[332]: 5.680550e-02
+lik[54]=-212619.330440 diff=3.973132e-03 alpha:1.000000 sr2:1.580413e-12 nsites_difference[332]: 5.050981e-02
+lik[56]=-212619.327090 diff=3.349624e-03 alpha:4.000000 sr2:1.233266e-12 nsites_difference[332]: 4.498039e-02
+lik[58]=-212619.324248 diff=2.842606e-03 alpha:1.000000 sr2:9.691155e-13 nsites_difference[332]: 4.011531e-02
+lik[60]=-212619.321820 diff=2.427858e-03 alpha:4.000000 sr2:7.667442e-13 nsites_difference[332]: 3.582776e-02
+lik[62]=-212619.319733 diff=2.086614e-03 alpha:1.000000 sr2:6.106870e-13 nsites_difference[332]: 3.204350e-02
+lik[64]=-212619.317929 diff=1.804237e-03 alpha:4.000000 sr2:4.895851e-13 nsites_difference[332]: 2.869875e-02
+lik[66]=-212619.316360 diff=1.569254e-03 alpha:1.000000 sr2:3.950358e-13 nsites_difference[332]: 2.573861e-02
+lik[68]=-212619.314987 diff=1.372623e-03 alpha:4.000000 sr2:3.207809e-13 nsites_difference[298]: 2.407956e-02
+lik[70]=-212619.313780 diff=1.207180e-03 alpha:1.000000 sr2:2.621284e-13 nsites_difference[298]: 2.258741e-02
+lik[72]=-212619.312713 diff=1.067222e-03 alpha:4.000000 sr2:2.155394e-13 nsites_difference[298]: 2.122210e-02
+lik[74]=-212619.311764 diff=9.481927e-04 alpha:1.000000 sr2:1.783283e-13 nsites_difference[298]: 1.997002e-02
+lik[76]=-212619.310918 diff=8.464286e-04 alpha:4.000000 sr2:1.484457e-13 nsites_difference[298]: 1.881929e-02
+lik[78]=-212619.310159 diff=7.589797e-04 alpha:1.000000 sr2:1.243194e-13 nsites_difference[298]: 1.775952e-02
+lik[80]=-212619.309475 diff=6.834524e-04 alpha:4.000000 sr2:1.047367e-13 nsites_difference[298]: 1.678161e-02
+lik[82]=-212619.308858 diff=6.179009e-04 alpha:1.000000 sr2:8.875800e-14 nsites_difference[298]: 1.587754e-02
+lik[84]=-212619.308297 diff=5.607364e-04 alpha:4.000000 sr2:7.565133e-14 nsites_difference[298]: 1.504025e-02
+lik[86]=-212619.307786 diff=5.106558e-04 alpha:1.000000 sr2:6.484414e-14 nsites_difference[298]: 1.426346e-02
+lik[88]=-212619.307320 diff=4.665851e-04 alpha:4.000000 sr2:5.588651e-14 nsites_difference[298]: 1.354162e-02
+lik[90]=-212619.306892 diff=4.276371e-04 alpha:1.000000 sr2:4.842331e-14 nsites_difference[298]: 1.286980e-02
+lik[92]=-212619.306499 diff=3.930747e-04 alpha:4.000000 sr2:4.217308e-14 nsites_difference[298]: 1.224357e-02
+lik[94]=-212619.306137 diff=3.622828e-04 alpha:1.000000 sr2:3.691184e-14 nsites_difference[298]: 1.165901e-02
+lik[96]=-212619.305802 diff=3.347486e-04 alpha:4.000000 sr2:3.246058e-14 nsites_difference[298]: 1.111257e-02
+lik[98]=-212619.305492 diff=3.100375e-04 alpha:1.000000 sr2:2.867569e-14 nsites_difference[298]: 1.060110e-02
+lik[100]=-212619.305204 diff=2.877852e-04 alpha:4.000000 sr2:2.544149e-14 nsites_difference[298]: 1.012173e-02
+likelihood: -212619.305204
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+Calculating fst index for 3 pairwise, and multi fst
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst_folded/output//pop1.pop2.saf.idx.ml.fold chr:(null) start:-1 stop:-1 fstout:fst_folded/output//pop1.pop2.fold oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:26 sfs2:30 dimspace:837 
+	-> generating offset remapper lookup
+	-> Reading: fst_folded/output//pop1.pop2.saf.idx.ml.fold assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will now do fst temp dump using a chunk of 65461
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst_folded/output//pop1.pop2.fold.fst.idx 
+	 realSFS fst stats2 fst_folded/output//pop1.pop2.fold.fst.idx 
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst_folded/output//pop1.pop3.saf.idx.ml.fold chr:(null) start:-1 stop:-1 fstout:fst_folded/output//pop1.pop3.fold oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:26 sfs2:34 dimspace:945 
+	-> generating offset remapper lookup
+	-> Reading: fst_folded/output//pop1.pop3.saf.idx.ml.fold assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will now do fst temp dump using a chunk of 65461
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst_folded/output//pop1.pop3.fold.fst.idx 
+	 realSFS fst stats2 fst_folded/output//pop1.pop3.fold.fst.idx 
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst_folded/output//pop2.pop3.saf.idx.ml.fold chr:(null) start:-1 stop:-1 fstout:fst_folded/output//pop2.pop3.fold oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:30 sfs2:34 dimspace:1085 
+	-> generating offset remapper lookup
+	-> Reading: fst_folded/output//pop2.pop3.saf.idx.ml.fold assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Will now do fst temp dump using a chunk of 65461
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst_folded/output//pop2.pop3.fold.fst.idx 
+	 realSFS fst stats2 fst_folded/output//pop2.pop3.fold.fst.idx 
+[persaf::persaf_init] Version of fst_folded/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst_folded/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst_folded/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst_folded/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst_folded/output//pop1.pop2.saf.idx.ml.fold chr:(null) start:-1 stop:-1 fstout:fst_folded/output//pop1.pop2.pop3.fold oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:1 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:26 sfs2:30 dimspace:837 
+	-> generating offset remapper lookup
+	-> [reynoldFst] sfs1:26 sfs2:34 dimspace:945 
+	-> generating offset remapper lookup
+	-> [reynoldFst] sfs1:30 sfs2:34 dimspace:1085 
+	-> generating offset remapper lookup
+	-> Reading: fst_folded/output//pop1.pop2.saf.idx.ml.fold assuming counts (will normalize to probs internally)
+	-> Reading: fst_folded/output//pop1.pop3.saf.idx.ml.fold assuming counts (will normalize to probs internally)
+	-> Reading: fst_folded/output//pop2.pop3.saf.idx.ml.fold assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	65461
+	-> Sites to keep[1] from pop1:	65461
+	-> Sites to keep[1] from pop2:	65461
+	-> [readdata] lastread:65461 posi:0
+	-> Comparing positions: 1 with 0 has:65461
+	-> Comparing positions: 2 with 0 has:65461
+	-> Will now do fst temp dump using a chunk of 65461
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst_folded/output//pop1.pop2.pop3.fold.fst.idx 
+	 realSFS fst stats2 fst_folded/output//pop1.pop2.pop3.fold.fst.idx 
+Calculating fst stats for 3 pairwise, and multi fst
+	-> Assuming idxname:fst_folded/output//pop1.pop2.fold.fst.idx
+	-> Assuming .fst.gz file: fst_folded/output//pop1.pop2.fold.fst.gz
+	-> FST.Unweight[nObs:65461]:0.083401 Fst.Weight:0.166287
+	-> Assuming idxname:fst_folded/output//pop1.pop3.fold.fst.idx
+	-> Assuming .fst.gz file: fst_folded/output//pop1.pop3.fold.fst.gz
+	-> FST.Unweight[nObs:65461]:0.088035 Fst.Weight:0.176979
+	-> Assuming idxname:fst_folded/output//pop2.pop3.fold.fst.idx
+	-> Assuming .fst.gz file: fst_folded/output//pop2.pop3.fold.fst.gz
+	-> FST.Unweight[nObs:65461]:0.048386 Fst.Weight:0.103589
+	-> Assuming idxname:fst_folded/output//pop1.pop2.pop3.fold.fst.idx
+	-> Assuming .fst.gz file: fst_folded/output//pop1.pop2.pop3.fold.fst.gz
+	-> FST.Unweight[nObs:65461]:0.083401 Fst.Weight:0.166287
+	-> FST.Unweight[nObs:65461]:0.088035 Fst.Weight:0.176979
+	-> FST.Unweight[nObs:65461]:0.048386 Fst.Weight:0.103589
+fst_folded/output/fai.fai: OK
+fst_folded/output/glout.glf.gz: OK
+fst_folded/output/glout.pgEstH: OK
+fst_folded/output/glout.vPos: OK
+fst_folded/output/pop1.glf.gz: OK
+fst_folded/output/pop1.pop2.fold.fst.idx: OK
+fst_folded/output/pop1.pop2.fst.gz: FAILED
+fst_folded/output/pop1.pop2.fst.idx: OK
+fst_folded/output/pop1.pop2.fst.idx.res: OK
+fst_folded/output/pop1.pop2.pop3.fold.fst.idx: OK
+fst_folded/output/pop1.pop2.pop3.fst.gz: FAILED
+fst_folded/output/pop1.pop2.pop3.fst.idx: OK
+fst_folded/output/pop1.pop2.pop3.fst.idx.res: OK
+fst_folded/output/pop1.pop2.saf.idx.ml: OK
+fst_folded/output/pop1.pop3.fold.fst.idx: OK
+fst_folded/output/pop1.pop3.fst.gz: FAILED
+fst_folded/output/pop1.pop3.fst.idx: OK
+fst_folded/output/pop1.pop3.fst.idx.res: OK
+fst_folded/output/pop1.pop3.saf.idx.ml: OK
+fst_folded/output/pop1.saf.gz: FAILED
+fst_folded/output/pop1.saf.idx: FAILED
+fst_folded/output/pop1.saf.idx.ml: OK
+fst_folded/output/pop1.saf.pos.gz: FAILED
+fst_folded/output/pop2.glf.gz: OK
+fst_folded/output/pop2.pop3.fold.fst.idx: OK
+fst_folded/output/pop2.pop3.fst.gz: FAILED
+fst_folded/output/pop2.pop3.fst.idx: OK
+fst_folded/output/pop2.pop3.fst.idx.res: OK
+fst_folded/output/pop2.pop3.saf.idx.ml: OK
+fst_folded/output/pop2.saf.gz: FAILED
+fst_folded/output/pop2.saf.idx: FAILED
+fst_folded/output/pop2.saf.idx.ml: OK
+fst_folded/output/pop2.saf.pos.gz: FAILED
+fst_folded/output/pop3.glf.gz: OK
+fst_folded/output/pop3.saf.gz: FAILED
+fst_folded/output/pop3.saf.idx: FAILED
+fst_folded/output/pop3.saf.idx.ml: OK
+fst_folded/output/pop3.saf.pos.gz: FAILED
+fst_folded/output/pop1.pop2.saf.idx.ml.fold: FAILED
+fst_folded/output/pop1.pop3.saf.idx.ml.fold: FAILED
+fst_folded/output/pop2.pop3.saf.idx.ml.fold: FAILED
+fst_folded/output/pop1.pop2.fst.idx.res.fold: FAILED
+fst_folded/output/pop1.pop2.pop3.fold.fst.gz: FAILED
+fst_folded/output/pop1.pop2.fold.fst.gz: FAILED
+fst_folded/output/pop1.pop2.fst.idx.res.fold: FAILED
+fst_folded/output/pop1.pop2.pop3.fst.idx.res.fold: FAILED
+fst_folded/output/pop1.pop3.fold.fst.gz: FAILED
+fst_folded/output/pop1.pop3.fst.idx.res.fold: FAILED
+fst_folded/output/pop2.pop3.fst.idx.res.fold: FAILED
+fst_folded/output/pop2.pop3.fold.fst.gz: FAILED
+md5sum: WARNING: 25 computed checksums did NOT match
+Testing basic mpileup
+../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam
+
+real	0m1.918s
+user	0m1.755s
+sys	0m0.153s
+Testing association
+
+real	0m0.827s
+user	0m0.195s
+sys	0m0.236s
+Testing haplocall
+../angsd
+
+real	0m2.338s
+user	0m2.262s
+sys	0m0.042s
+make: *** [test] Error 1
+
+##unfold sfs's are ok
+[fvr124@compute12-snm-willerslev angsd.dev]$ md5sum test/fst_folded/output/*.ml|cut -f1 -d" "|md5sum
+b2698ea086e2b11e7f5925c8880e4311  -
+[fvr124@compute12-snm-willerslev angsd.dev]$ md5sum ../angsd.master/test/fst_folded/output/*.ml|cut -f1 -d" "|md5sum
+b2698ea086e2b11e7f5925c8880e4311  -
+
+[fvr124@compute12-snm-willerslev angsd.dev]$ cat ../angsd.master/test/fst_folded/output/*.res.fold
+0.083408	0.166310
+0.083408	0.166310
+0.088035	0.176972
+0.048386	0.103590
+pbs.pop1	0.133651
+pbs.pop2	0.048243
+pbs.pop3	0.061114
+0.088035	0.176972
+0.048386	0.103590
+[fvr124@compute12-snm-willerslev angsd.dev]$ cat test/fst_folded/output/*.res.fold
+0.083401	0.166287
+0.083401	0.166287
+0.088035	0.176979
+0.048386	0.103589
+pbs.pop1	0.133642
+pbs.pop2	0.048225
+pbs.pop3	0.061131
+0.088035	0.176979
+0.048386	0.103589
+
+#small difference

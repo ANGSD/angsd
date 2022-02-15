@@ -5,13 +5,15 @@
 #include "realSFS_optim.h"
 extern int howOften;
 #include "multisafreader.hpp"
-void readSFS(const char*fname,size_t hint,double *ret);
+void readSFS(const char *fname, size_t hint, double *ret);
 
-int * foldremapper=NULL;
-int * foldfactors=NULL;
+size_t * foldremapper = NULL;
+int * foldfactors = NULL;
+int * foldkeep = NULL;
 
 template<typename T>
-struct emPars{
+struct emPars
+{
   int threadId;
   std::vector <Matrix<T> *> gls;
   size_t from;
@@ -23,141 +25,124 @@ struct emPars{
   int dim;
 };
 
-
-
-pthread_t *thd=NULL;
+pthread_t *thd = NULL;
 size_t *bootstrap = NULL;
 size_t bootnSites = 0;//nspope; number of sites changes if bootstrapping chromosomes
 emPars<float> *emp = NULL;
 
 double ttol = 1e-16; 
 
+bool multi_saf_loop (int *bin, int *nchr, int i);
+size_t sfs_linear_index (int *bin, int *nchr, int npop, bool rev);
 
+// use a recursive nested loop so we don't need to rewrite this for each # of populations
 template <typename T>
-double lik1(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
-  assert(from >=0 && to >=0);
-  //fprintf(stderr,"[%s] from:%d to:%d\n",__FUNCTION__,from,to);
-  double r =0;
-  if(!bootstrap)
-    for(size_t s=from;s<to;s++){
-      double tmp =0;
-      for(size_t i=0;i<gls[0]->y;i++){
-	tmp += sfs[foldremapper[i]]* gls[0]->mat[s][i]*foldfactors[i];
-      }
-      r += log(tmp);
+double lik(double *sfs, std::vector< Matrix<T> *> &gls, size_t from, size_t to)
+{
+  assert(from >= 0 && to >=0);
+  double r = 0;
+  size_t ss, lind;
+
+  int chr[gls.size()];
+  int rbin[gls.size()];
+  int bin[gls.size()];
+  int stt[gls.size()];
+  int len[gls.size()];
+
+  for (int p = 0; p<gls.size(); ++p)
+    chr[p] = gls[p]->y-1;
+
+  for (size_t s = from; SIG_COND && s < to; ++s)
+  {
+    ss = !bootstrap ? s : bootstrap[s];
+
+    for (int p = 0; p<gls.size(); ++p)
+    {
+      bin[p] = 0;
+      stt[p] = gls[p]->mat[ss][0];
+      len[p] = gls[p]->mat[ss][1]-1;
     }
-  else
-    for(size_t s=from;s<to;s++){
-      double tmp =0;
-      for(size_t i=0;i<gls[0]->y;i++)
-	tmp += sfs[foldremapper[i]]* gls[0]->mat[bootstrap[s]][i]*foldfactors[i]; 
-      r += log(tmp);
+
+    double tmp = 0;
+    do 
+    {
+      for (int p = 0; p<gls.size(); ++p)
+        rbin[p] = stt[p] + bin[p];
+      lind = sfs_linear_index(rbin, chr, gls.size(), false);
+
+      double tmp2 = sfs[foldremapper[lind]] * foldfactors[lind];
+      for (int p=0; p<gls.size(); ++p)
+        tmp2 *= gls[p]->mat[ss][2 + bin[p]];
+      tmp += tmp2;
     }
+    while(multi_saf_loop(bin, len, gls.size()-1));
+
+    r += log(tmp);
+  }
+
   return r;
 }
 
-//this function also works with folded now tsk aug17 2019. its very late evening
+// use a recursive nested loop so we don't need to rewrite this for each # of populations
 template <typename T>
-double lik2(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
-  double r =0;
-  if(bootstrap==NULL){
-    for(size_t s=from;s<to;s++){
-      double tmp =0;
-      int inc =0;
-      for(size_t i=0;i<gls[0]->y;i++)
-	for(size_t j=0;j<gls[1]->y;j++){
-	  tmp += sfs[foldremapper[inc]]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*foldfactors[inc];
-	  inc++;
-	}
-      r += log(tmp);
-      //      fprintf(stderr,"r:%f\n",r);exit(0);
+void emStep(double *pre, std::vector<Matrix<T> *> &gls, double *post, size_t start, size_t stop, int dim, double *inner)
+{
+  for(int x=0; x<dim; x++)
+    post[x] = 0.0;
+  size_t ss, lind;
+   
+  int chr[gls.size()];
+  int rbin[gls.size()];
+  int bin[gls.size()];
+  int stt[gls.size()];
+  int len[gls.size()];
+
+  for (int p = 0; p<gls.size(); ++p)
+    chr[p] = gls[p]->y-1;
+
+  for(size_t s=start; SIG_COND && s<stop; s++)
+  {
+    ss = !bootstrap ? s : bootstrap[s];
+
+    for (int i = 0; i<gls.size(); ++i)
+    {
+      bin[i] = 0;
+      stt[i] = gls[i]->mat[ss][0];
+      len[i] = gls[i]->mat[ss][1] - 1;
     }
+
+    for(int i=0; i<dim; i++)
+      inner[i] = 0;
+
+    do {
+      for (int p = 0; p<gls.size(); ++p)
+        rbin[p] = stt[p] + bin[p];
+      lind = sfs_linear_index(rbin, chr, gls.size(), false);
+
+      double tmp2 = pre[foldremapper[lind]] * foldfactors[lind];
+      for (int i=0; i<gls.size(); ++i)
+        tmp2 *= gls[i]->mat[ss][2 + bin[i]];
+      inner[foldremapper[lind]] += tmp2;
+    }
+    while(multi_saf_loop(bin, len, gls.size()-1));
+
+    normalize(inner, dim);
+    for(int x=0; x<dim; x++)
+      post[x] += inner[x];
   }
-  else
-    for(size_t s=from;s<to;s++){
-      double tmp =0;
-      int inc =0;
-      for(size_t i=0;i<gls[0]->y;i++)
-	for(size_t j=0;j<gls[1]->y;j++){
-	  tmp += sfs[foldremapper[inc]]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j]*foldfactors[inc];
-	  inc++;
-	}
-      r += log(tmp);
-    }
-  return r;
 }
 
 template <typename T>
-double lik3(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
-  double r =0;
-  if(bootstrap==NULL)
-  for(size_t s=from;s<to;s++){
-    double tmp =0;
-    int inc =0;
-    for(size_t i=0;i<gls[0]->y;i++)
-      for(size_t j=0;j<gls[1]->y;j++)
-	for(size_t k=0;k<gls[2]->y;k++)
-	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*gls[2]->mat[s][k];
-    r += log(tmp);
-  }
-  else
-  for(size_t s=from;s<to;s++){
-    double tmp =0;
-    int inc =0;
-    for(size_t i=0;i<gls[0]->y;i++)
-      for(size_t j=0;j<gls[1]->y;j++)
-	for(size_t k=0;k<gls[2]->y;k++)
-	tmp += sfs[inc++]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j]*gls[2]->mat[bootstrap[s]][k];
-    r += log(tmp);
-  }
-  return r;
-}
-template <typename T>
-double lik4(double *sfs,std::vector< Matrix<T> *> &gls,size_t from,size_t to){
-  double r =0;
-  if(bootstrap==NULL)
-   for(size_t s=from;s<to;s++){
-    double tmp =0;
-    int inc =0;
-    for(size_t i=0;i<gls[0]->y;i++)
-      for(size_t j=0;j<gls[1]->y;j++)
-	for(size_t k=0;k<gls[2]->y;k++)
-	  for(size_t m=0;m<gls[3]->y;m++)
-	tmp += sfs[inc++]* gls[0]->mat[s][i] *gls[1]->mat[s][j]*gls[2]->mat[s][k]*gls[3]->mat[s][m];
-    r += log(tmp);
-  }
-  else
-  for(size_t s=from;s<to;s++){
-    double tmp =0;
-    int inc =0;
-    for(size_t i=0;i<gls[0]->y;i++)
-      for(size_t j=0;j<gls[1]->y;j++)
-	for(size_t k=0;k<gls[2]->y;k++)
-	  for(size_t m=0;m<gls[3]->y;m++)
-	tmp += sfs[inc++]* gls[0]->mat[bootstrap[s]][i] *gls[1]->mat[bootstrap[s]][j]*gls[2]->mat[bootstrap[s]][k]*gls[3]->mat[bootstrap[s]][m];
-    r += log(tmp);
-  }
-  return r;
-}
-
-template <typename T>
-void *like_slave(void *p){
+void *like_slave(void *p)
+{
   emPars<T> &pars = emp[(size_t) p];
-  if(pars.gls.size()==1)
-    pars.lik = lik1(pars.sfs,pars.gls,pars.from,pars.to);
-  else if(pars.gls.size()==2)
-    pars.lik = lik2(pars.sfs,pars.gls,pars.from,pars.to);
-  else if(pars.gls.size()==3)
-    pars.lik = lik3(pars.sfs,pars.gls,pars.from,pars.to);
-  else if(pars.gls.size()==4)
-    pars.lik = lik4(pars.sfs,pars.gls,pars.from,pars.to);
-  
+  pars.lik = lik(pars.sfs, pars.gls, pars.from, pars.to);
   pthread_exit(NULL);
 }
 
-
 template <typename T>
-double like_master(int nThreads){
+double like_master(int nThreads)
+{
   normalize(emp[0].sfs,emp[0].dim);
   for(size_t i=0;i<nThreads;i++){
     int rc = pthread_create(&thd[i],NULL,like_slave<T>,(void*) i);
@@ -177,156 +162,13 @@ double like_master(int nThreads){
   return res;
 }
 
-
-
 template <typename T>
-void emStep1(double *pre,std::vector< Matrix<T> * > &gls,double *post,size_t start,size_t stop,int dim,double *inner){
-  for(int x=0;x<dim;x++)
-    post[x] =0.0;
-    
-  for(size_t s=start;SIG_COND&&s<stop;s++){
-    if(bootstrap==NULL){
-      for(int i=0;i<dim;i++)
-	inner[i] =0;
-      for(int x=0;x<dim;x++)
-	inner[foldremapper[x]] += pre[foldremapper[x]]*gls[0]->mat[s][x]*foldfactors[x];
-    }else{
-      for(int i=0;i<dim;i++)
-	inner[i] =0;
-      for(int x=0;x<dim;x++)
-	inner[foldremapper[x]] += pre[foldremapper[x]]*gls[0]->mat[bootstrap[s]][x]*foldfactors[x];
-    }
-   normalize(inner,dim);
-   for(int x=0;x<dim;x++)
-     post[x] += inner[x];
-  }
- 
-}
-
-
-template <typename T>
-void emStep2(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start,size_t stop,int dim,double *inner){
-  for(int x=0;x<dim;x++)
-    post[x] =0.0;
-   
-  if(bootstrap==NULL)
-    for(size_t s=start;SIG_COND&&s<stop;s++){
-      int inc=0;
-      for(int i=0;i<dim;i++)
-	inner[i] =0;
-      for(size_t x=0;x<gls[0]->y;x++)
-	for(size_t y=0;y<gls[1]->y;y++){
-	  inner[foldremapper[inc]] += pre[foldremapper[inc]]*gls[0]->mat[s][x]*gls[1]->mat[s][y]*foldfactors[inc];
-	  assert(!std::isnan(inner[foldremapper[inc]]));
-	  inc++;
-	}
-      normalize(inner,dim);
-      for(int x=0;x<dim;x++)
-	post[x] += inner[x];
-    }
-  else
-    for(size_t s=start;SIG_COND&&s<stop;s++){
-      int inc=0;
-      for(int i=0;i<dim;i++)
-	inner[i] =0;
-      for(size_t x=0;x<gls[0]->y;x++)
-	for(size_t y=0;y<gls[1]->y;y++){
-	  inner[foldremapper[inc]] += pre[foldremapper[inc]]*gls[0]->mat[bootstrap[s]][x]*gls[1]->mat[bootstrap[s]][y]*foldfactors[inc];
-	  inc++;
-	}
-      normalize(inner,dim);
-      for(int x=0;x<dim;x++)
-	post[x] += inner[x];
-    }
-
- 
-}
-
-template <typename T>
-void emStep3(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start,size_t stop,int dim,double *inner){
-  for(int x=0;x<dim;x++)
-    post[x] =0.0;
-  if(bootstrap==NULL)
-  for(size_t s=start;SIG_COND&&s<stop;s++){
-    int inc=0;
-    for(size_t x=0;x<gls[0]->y;x++)
-      for(size_t y=0;y<gls[1]->y;y++)
-	for(size_t i=0;i<gls[2]->y;i++){
-	  inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i];
-	  inc++;
-	}
-   normalize(inner,dim);
-   for(int x=0;x<dim;x++)
-     post[x] += inner[x];
-  }
-  else
-  for(size_t s=start;SIG_COND&&s<stop;s++){
-    int inc=0;
-    for(size_t x=0;x<gls[0]->y;x++)
-      for(size_t y=0;y<gls[1]->y;y++)
-	for(size_t i=0;i<gls[2]->y;i++){
-	  inner[inc] = pre[inc]*gls[0]->mat[bootstrap[s]][x] * gls[1]->mat[bootstrap[s]][y] * gls[2]->mat[bootstrap[s]][i];
-	  inc++;
-	}
-   normalize(inner,dim);
-   for(int x=0;x<dim;x++)
-     post[x] += inner[x];
-  }
-   
-}
-
-template <typename T>
-void emStep4(double *pre,std::vector<Matrix<T> *> &gls,double *post,size_t start,size_t stop,int dim,double *inner){
-
-  for(int x=0;x<dim;x++)
-    post[x] =0.0;
-  if(bootstrap==NULL){
-    for(size_t s=start;SIG_COND&&s<stop;s++){
-      int inc=0;
-      for(size_t x=0;x<gls[0]->y;x++)
-	for(size_t y=0;y<gls[1]->y;y++)
-	  for(size_t i=0;i<gls[2]->y;i++)
-	    for(size_t j=0;j<gls[3]->y;j++){
-	      inner[inc] = pre[inc]*gls[0]->mat[s][x] * gls[1]->mat[s][y] * gls[2]->mat[s][i]* gls[3]->mat[s][j];
-	      inc++;
-	    }
-      normalize(inner,dim);//nspope; normalization/addition should happen for each site
-      for(int x=0;x<dim;x++)
-        post[x] += inner[x];
-    }
-  }
-  else{
-    for(size_t s=start;SIG_COND&&s<stop;s++){
-      int inc=0;
-      for(size_t x=0;x<gls[0]->y;x++)
-	for(size_t y=0;y<gls[1]->y;y++)
-	  for(size_t i=0;i<gls[2]->y;i++)
-	    for(size_t j=0;j<gls[3]->y;j++){
-	      inner[inc] = pre[inc]*gls[0]->mat[bootstrap[s]][x] * gls[1]->mat[bootstrap[s]][y] * gls[2]->mat[bootstrap[s]][i]* gls[3]->mat[bootstrap[s]][j];
-	      inc++;
-	    }
-    normalize(inner,dim);//nspope; normalization/addition should happen for each site
-    for(int x=0;x<dim;x++)
-      post[x] += inner[x];
-    }
-  }
-   
-}
-
-template <typename T>
-void *emStep_slave(void *p){
+void *emStep_slave(void *p)
+{
   emPars<T> &pars = emp[(size_t) p];
-  if(pars.gls.size()==1)
-    emStep1<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
-  else if(pars.gls.size()==2)
-    emStep2<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
-  else if(pars.gls.size()==3)
-    emStep3<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
-  else if(pars.gls.size()==4)
-    emStep4<T>(pars.sfs,pars.gls,pars.post,pars.from,pars.to,pars.dim,pars.inner);
+  emStep<T>(pars.sfs, pars.gls, pars.post, pars.from, pars.to, pars.dim, pars.inner);
   pthread_exit(NULL);
 }
-
 
 template<typename T>
 void emStep_master(double *post,int nThreads){
@@ -350,20 +192,11 @@ void emStep_master(double *post,int nThreads){
       post[j] /= double(bootnSites);
     else
       post[j] /= double(emp[0].gls[0]->x);//nspope; rescale *after* threads have merged
-
-#if 0
-  for(int i=0;i<nThreads;i++){
-    for(int j=0;j<dim;j++)
-      fprintf(stdout,"%f ",emp[i].post[j]);
-    fprintf(stdout,"\n");
-  }
-#endif
-  
 }
 
-
 template<typename T>
-emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads,int dim,size_t nSites){
+emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads,int dim,size_t nSites)
+{
   //  fprintf(stderr,"nSites:%d\n",nSites);
   emPars<T> *temp = new emPars<T>[nThreads];
   size_t blockSize = nSites/nThreads;
@@ -384,19 +217,14 @@ emPars<T> *setThreadPars(std::vector<Matrix<T> * > &gls,double *sfs,int nThreads
   }
   //fix last end point
   temp[nThreads-1].to=nSites;
-#if 0
-  fprintf(stderr,"--------------\n");
-  for(int i=0;i<nThreads;i++)
-    fprintf(stderr,"threadinfo %d)=(%lu,%lu)=%d \n",temp[i].threadId,temp[i].from,temp[i].to,temp[i].to-temp[i].from); //
-  fprintf(stderr,"--------------\n");
-#endif 
   
   thd= new pthread_t[nThreads];
   return temp;
 }
 
 template<typename T>
-void destroy(emPars<T> *a,int nThreads ){
+void destroy(emPars<T> *a,int nThreads)
+{
   for(int i=0;i<nThreads;i++){
     delete [] a[i].inner;
     delete [] a[i].post;
@@ -404,8 +232,6 @@ void destroy(emPars<T> *a,int nThreads ){
   delete [] a;
   delete [] thd;
 }
-
-
 
 template <typename T>
 double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<Matrix<T> *> &gls,int verbose){
@@ -440,8 +266,8 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
       sfs[i]= tmp[i];
       double tmpdiff = fabs(tmp[i]*gls[0]->x-expected[i]);
       if(tmpdiff>exp_diff){
-	exp_diff = tmpdiff;
-	exp_which_diff = i;
+        exp_diff = tmpdiff;
+        exp_which_diff = i;
       }
       expected[i] = gls[0]->x*tmp[i];
     }
@@ -452,7 +278,7 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
     if(verbose){
       fprintf(stdout,"%d\t%f",it,lik);
       for(int i=0;i<dim;i++)
-	fprintf(stdout,"\t%f",sfs[i]);
+        fprintf(stdout,"\t%f",sfs[i]);
       fprintf(stdout,"\n");
     }
     if((fabs(lik-oldLik)<tole)||(0&&(sqrt(sr2)<tole))){//should update simfiles...
@@ -461,7 +287,7 @@ double em(double *sfs,double tole,int maxIter,int nThreads,int dim,std::vector<M
     }
     oldLik=lik;
   }
-destroy<T>(emp,nThreads);
+  destroy<T>(emp,nThreads);
   return oldLik;
 }
 
@@ -476,7 +302,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   fprintf(stderr,"------------\n");
   double oldLik,lik;
   oldLik = like_master<T>(nThreads);
-  
+
   fprintf(stderr,"startlik=%f\n",oldLik);fflush(stderr);
   if(verbose){
     fprintf(stdout,"%d\t%f",-1,oldLik);
@@ -495,9 +321,10 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   int stepMax = 1;
   int mstep = 4;
   int stepMin = 1;
-  
+
   int iter =0;
   double expected[dim];
+  int lastInsta = -1;
   for(int i=0;i<dim;i++)
     expected[i] = p[i]; 
 
@@ -536,7 +363,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
 
     double alpha = sqrt(sr2/sv2);
     alpha =std::max(stepMin*1.0,std::min(1.0*stepMax,alpha));
-    
+
     //the magical step
     double ts =0;
     for(size_t j=0;j<dim;j++){
@@ -545,19 +372,26 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     }
     if(fabs(1-ts)>1e-8)
       fprintf(stderr,"\t-> Sum of parameters is not one? This could be due to loss of precision value:%e 1-value:%e \n",ts,1-ts);
+
 #if 1 //fix for going out of bound
     int printOutOfBounds = 0;
     for(size_t j=0;j<dim;j++){
       if(pnew[j]<ttol){
-	printOutOfBounds =1;
-	pnew[j]=ttol;
+        printOutOfBounds =1;
+        pnew[j]=ttol;
       }if(pnew[j]>1-ttol){
-	printOutOfBounds =1;
-	pnew[j]=1-ttol;
+        printOutOfBounds =1;
+        pnew[j]=1-ttol;
       }
     }
-    if(printOutOfBounds)
-      fprintf(stderr,"\t-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step\n");
+
+    if(printOutOfBounds){
+      if(lastInsta==-1)
+	lastInsta = iter;
+      if(lastInsta!=iter-2)
+	fprintf(stderr,"\t-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step\n");
+      lastInsta = iter;
+    }
 #endif
 
     int extra =0;
@@ -571,27 +405,27 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       iter++;
     }
     memcpy(p,pnew,sizeof(double)*dim);
-    
+
     //like_master is using sfs[] to calculate like
     lik = like_master<T>(nThreads);
     if(lik<oldLik||printOutOfBounds==1){
       if(printOutOfBounds==0)
-	fprintf(stderr,"\t-> New like is worse? new:%e old:%e diff:%e will skip accelerated EM in this round\n",lik,oldLik,lik-oldLik);
+        fprintf(stderr,"\t-> New like is worse? new:%e old:%e diff:%e will skip accelerated EM in this round\n",lik,oldLik,lik-oldLik);
       memcpy(p,p2,sizeof(double)*dim);
       lik = like_master<T>(nThreads);
       stepMax =1;
       mstep=4;
       stepMin =1;
       if(extra)//if have been doing the stabilizing step
-	iter--;
+        iter--;
     }
     double exp_diff = 0;
     int exp_which_diff = -1;
     for(int i=0;i<dim;i++){
       double tmpdiff = fabs(p[i]*gls[0]->x-expected[i]);
       if(tmpdiff>exp_diff){
-	exp_diff = tmpdiff;
-	exp_which_diff = i;
+        exp_diff = tmpdiff;
+        exp_which_diff = i;
       }
       expected[i] = gls[0]->x*p[i];
     }    
@@ -599,7 +433,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
     if(verbose){
       fprintf(stdout,"%d\t%f",iter,lik);
       for(int i=0;i<dim;i++)
-	fprintf(stdout,"\t%f",p[i]);
+        fprintf(stdout,"\t%f",p[i]);
       fprintf(stdout,"\n");
     }
     if(std::isnan(lik)) {
@@ -609,7 +443,7 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
       memcpy(p,p2,sizeof(double)*dim);
       break;
     }
-    
+
 #if 1
     if(fabs(lik-oldLik)<tole){
       oldLik=lik;
@@ -633,23 +467,17 @@ double emAccl(double *p,double tole,int maxIter,int nThreads,int dim,std::vector
   delete [] tmp;
   return oldLik;
 }
-int *makefoldremapper(args *arg,int pop1,int pop2);
-int *makefoldadjust(int *ary,int pop1);
+
+void make_folder (size_t*& mapping, int*& weight, int*& keep, int fold, int* chr, int npop);
+
 template <typename T>
 int main_opt(args *arg){
-  if(arg->fold&&arg->saf.size()>2){
-    fprintf(stderr,"\t-> Folding is currently only implemented for one and two populations.\n");
-    exit(0);
-  }
-  if(arg->saf.size()==1){
-    foldremapper = makefoldremapper(arg,0,0);
-    foldfactors = makefoldadjust(foldremapper,arg->saf[0]->nChr+1);
-  }  else if(arg->saf.size()==2){
-    foldremapper = makefoldremapper(arg,0,1);
-    //    fprintf(stderr,"foldremapper: %d %d\n",0,foldremapper[0]);exit(0);
-    foldfactors = makefoldadjust(foldremapper,(arg->saf[0]->nChr+1)*(arg->saf[1]->nChr+1));
-  }
-  
+
+  int chr[arg->saf.size()];
+  for (int i=0; i<arg->saf.size(); ++i)
+    chr[i] = arg->saf[i]->nChr;
+
+  make_folder(foldremapper, foldfactors, foldkeep, arg->fold==1, chr, arg->saf.size());
    
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
@@ -658,15 +486,17 @@ int main_opt(args *arg){
   if(nSites == 0){//if no -nSites is specified
     nSites=calc_nsites(saf,arg);
   }
-  if(fsizes<T>(saf,nSites)>getTotalSystemMemory())
+
+  // for v4 memory check doesn't apply... TODO: could guesstimate based on file size??
+  if(fsizes<T>(saf,nSites)>getTotalSystemMemory()){
     fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
-    
-  fprintf(stderr,"\t-> nSites: %lu\n",nSites);
-  float bytes_req_megs =(float) fsizes<T>(saf,nSites)/1024/1024;
+    fprintf(stderr,"\t-> nSites: %lu\n",nSites);
+  }
+  float bytes_req_megs=(float) fsizes<T>(saf,nSites)/1024/1024;
   float mem_avail_megs =(float) getTotalSystemMemory()/1024/1024;//in percentile
   //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
   fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is at least: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
-
+  
   std::vector<Matrix<T> *> gls;
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
@@ -692,13 +522,13 @@ int main_opt(args *arg){
     if(ret==-2&&arg->bootstrap&&arg->resample_chr)//nspope; start pos for new chrom
       chrStart.push_back(gls[0]->x);
 
-      {
+    {
       if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
-	//fprintf(stderr,"continue continue\n");
-	continue;
+        //fprintf(stderr,"continue continue\n");
+        continue;
       }
-
     }
+
     if(gls[0]->x==0)
       continue;
     
@@ -782,44 +612,49 @@ int main_opt(args *arg){
       double lik;
 
       if(arg->emAccl==0)
-	lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->verbose);
+        lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->verbose);
       else
-	lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl,arg->verbose);
+        lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl,arg->verbose);
 
       fprintf(stderr,"likelihood: %f\n",lik);
       fprintf(stderr,"------------\n");
-#if 1
-      //    fprintf(stdout,"#### Estimate of the sfs ####\n");
-      //all gls have the same ->x. That means the same numbe of sites.
+
+      // TODO: nsp check this. When bootstrapping contigs the number of sites can change.
       for(int x=0;x<ndim;x++)
-	fprintf(stdout,"%f ",((double)gls[0]->x)*sfs[x]);
+        if (bootnSites)
+          fprintf(stdout, "%f ", foldkeep[x]*bootnSites*sfs[x]);
+        else
+          fprintf(stdout, "%f ", foldkeep[x]*gls[0]->x*sfs[x]);
       fprintf(stdout,"\n");
       fflush(stdout);
 
-#endif
       if(++b<arg->bootstrap)
-	goto neverusegoto;
-    for(int i=0;i<gls.size();i++)
-      gls[i]->x =0;
+        goto neverusegoto;
+
+      for(int i=0;i<gls.size();i++)
+        gls[i]->x =0;
     
-    if(ret==-2&&arg->chooseChr!=NULL)
-      break;
-    if(arg->onlyOnce)
-      break;
+      if(ret==-2&&arg->chooseChr!=NULL)
+        break;
+      if(arg->onlyOnce)
+        break;
   }
   delGloc(saf,nSites);
   destroy(gls,nSites);
   destroy_args(arg);
   delete [] sfs;
   
-  fprintf(stderr,"\n\t-> NB NB output is no longer log probs of the frequency spectrum!\n");
+  fprintf(stderr,"\n\t-> NB output is no longer log probs of the frequency spectrum!\n");
   fprintf(stderr,"\t-> Output is now simply the expected values! \n");
   fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
   fprintf(stderr,"\n\t-> Please check that it has converged!\n\t-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run\n\t-> -maxIter INT -tole FLOAT\n");
+
   if(foldremapper)
     delete [] foldremapper;
   if(foldfactors)
     delete [] foldfactors;
+  if(foldkeep)
+    delete [] foldkeep;
   return 0;
 }
 

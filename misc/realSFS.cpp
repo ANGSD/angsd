@@ -42,6 +42,26 @@ int howOften =5e6;//how often should we print out (just to make sure something i
 #include "../aio.h"
 int really_kill =3;
 int VERBOSE = 1;
+
+extern std::vector <char *> dumpedFiles;
+
+void handler(int s) {
+  if(s==13)//this is sigpipe
+    exit(0);
+  if(VERBOSE)
+    fprintf(stderr,"\n\t-> Caught SIGNAL: Will try to exit nicely (no more threads are created.\n\t\t\t  We will wait for the current threads to finish)\n");
+  
+  if(--really_kill!=3)
+  fprintf(stderr,"\n\t-> If you really want \'realSFS\' to exit uncleanly ctrl+c: %d more times\n",really_kill+1);
+  fflush(stderr);
+  if(!really_kill)
+    exit(0);
+  VERBOSE=0;
+  SIG_COND=0;
+}
+
+// --- realSFS bins (and fold-related stuff) --- //
+
 /*
   when doing folded spectra we reuse the unfolded datastructure containing sample allele frequencies (SAF).
   and we loop over the entire unfolded matrix. But (here comes the trick).
@@ -87,7 +107,70 @@ also some subtle things with row vs col in the implementation(since c is rowwise
 
 */
 
-//
+//dynamic nested loop
+bool multi_saf_loop (int *bin, int *nchr, int i)
+{
+  if(++bin[i] <= nchr[i]) return true;
+  if(i==0) return false;
+  if(multi_saf_loop(bin, nchr, i-1)) 
+  {
+    bin[i] = 0;
+    return true;
+  }
+  return false;
+}
+
+size_t sfs_linear_index (int *bin, int *nchr, int npop, bool rev)
+{
+  size_t out = 0;
+  size_t tmp;
+  for(int i=npop-1; i>=0; --i)
+  {
+    size_t tmp = rev ? nchr[i] - bin[i] : bin[i];
+    for(int j=npop-1; j>i; --j)
+      tmp *= (nchr[j]+1);
+    out += tmp;
+  }
+  return out;
+}
+
+void make_folder (size_t*& mapping, int*& weight, int*& keep, int fold, int* chr, int npop)
+{
+  int bin [npop];
+  size_t dim_sfs = 1,
+         chr_sum = 0;
+  for (int i=0; i<npop; ++i)
+  {
+    dim_sfs *= (chr[i] + 1);
+    chr_sum += chr[i];
+    bin[i] = 0;
+  }
+
+  mapping = new size_t [dim_sfs];
+  weight = new int [dim_sfs];
+  keep = new int [dim_sfs];
+
+  size_t lind;
+  do 
+  {
+    lind = sfs_linear_index(bin, chr, npop, false);
+
+    int bin_sum = 0;
+    for(int i=0; fold && i<npop; ++i) bin_sum += bin[i];
+
+    bool do_fold = fold && 2*bin_sum > chr_sum;
+    bool double_counted = fold;
+    for(int i=0; double_counted && i<npop; ++i)
+      double_counted = double_counted && 2*bin[i] == chr[i];
+
+    mapping[lind] = do_fold ? sfs_linear_index(bin, chr, npop, true) : lind;
+    weight[lind] = double_counted ? 2 : 1;
+    keep[lind] = do_fold ? 0 : 1;
+  } 
+  while(multi_saf_loop(bin, chr, npop-1));
+}
+
+// old stuff, only keeping these until Fst is updated
 
 int *makefoldadjust(int *ary,int len){
   //  fprintf(stderr,"makefoldadjust:%d\n",len);
@@ -132,7 +215,6 @@ int *makefoldadjust(int *ary,int len){
   return ret;
 }
 
-
 int *makefoldremapper(args *arg,int pop1,int pop2){
   fprintf(stderr,"\t-> generating offset remapper lookup\n");
   int *mapper=NULL;
@@ -143,7 +225,7 @@ int *makefoldremapper(args *arg,int pop1,int pop2){
       mapper[i] = i;
     if(arg->fold==1){
       for(int i=0;i<ndim/2;i++)
-	mapper[ndim-i-1] =i;
+        mapper[ndim-i-1] =i;
     }
     for(int i=0;0&&i<ndim;i++)
       fprintf(stderr,"%d:%d\n",i,mapper[i]);
@@ -152,64 +234,99 @@ int *makefoldremapper(args *arg,int pop1,int pop2){
     int dimpop2 = arg->saf[pop2]->nChr+1;
     int ndim = dimpop1*dimpop2;
     //fprintf(stderr,"ndim:%d (%lu,%lu)\n",ndim,dimpop1,dimpop2);
-    
+
     int map[dimpop1][dimpop2];
     double tot=dimpop1+dimpop2-2;
     //fprintf(stderr,"tot:%.0f\n",tot);
     int inc=0;
-    
+
     for(size_t x=0;x<dimpop1;x++)
       for(size_t y=0;y<dimpop2;y++)
-	map[x][y] = inc++;
+        map[x][y] = inc++;
     mapper = new int [ndim];
     inc=0;
-    
+
     for(size_t x=0;x<dimpop1;x++){
       for(size_t y=0;y<dimpop2;y++){
-	double af= (x+y)/tot;
-	//      fprintf(stderr,"x:%lu y:%lu af:%f ",x,y,af);
-	if((arg->fold==1)&&(af>0.5)){
-	  mapper[inc] = map[dimpop1-x-1][dimpop2-y-1];
-	  //fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
-	}else{
-	  mapper[inc] = inc;
-	  //fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
-	}
-	inc++;
+        double af= (x+y)/tot;
+        //      fprintf(stderr,"x:%lu y:%lu af:%f ",x,y,af);
+        if((arg->fold==1)&&(af>0.5)){
+          mapper[inc] = map[dimpop1-x-1][dimpop2-y-1];
+          //fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
+        }else{
+          mapper[inc] = inc;
+          //fprintf(stderr,"(%lu,%lu)->%d->%d\n",dimpop1-x-1,dimpop2-y-1,inc,mapper[inc]);
+        }
+        inc++;
       }
     }
-#if 0
-    for(int i=0;i<ndim;i++)
-      fprintf(stdout,"%d %d\n",i,mapper[i]);
-    // exit(0);
-#endif
   }
   return mapper;
 }
 
-
-extern std::vector <char *> dumpedFiles;
-
-void handler(int s) {
-  if(s==13)//this is sigpipe
-    exit(0);
-  if(VERBOSE)
-    fprintf(stderr,"\n\t-> Caught SIGNAL: Will try to exit nicely (no more threads are created.\n\t\t\t  We will wait for the current threads to finish)\n");
-  
-  if(--really_kill!=3)
-  fprintf(stderr,"\n\t-> If you really want \'realSFS\' to exit uncleanly ctrl+c: %d more times\n",really_kill+1);
-  fflush(stderr);
-  if(!really_kill)
-    exit(0);
-  VERBOSE=0;
-  SIG_COND=0;
-
-}
-
-int print_header(int argc,char **argv){
+int bins (int argc, char **argv)
+{
+  args *pars = getArgs(argc, argv);
 
   if(argc<1){
-    fprintf(stderr,"Must supply afile.saf.idx \n");
+    fprintf(stderr,"Usage:\n\trealSFS bins [options] deme1.saf.idx [deme2.saf.idx ...]\n");
+    fprintf(stderr,"Options:\n");
+    fprintf(stderr,"\t-fold 0\t\t(0 = unfolded, 1 = folded SFS)\n");
+    fprintf(stderr,"Notes:\n");
+    fprintf(stderr,"\tReturns allele counts per population (cols) for each SFS bin (rows). If folded, bins that are out-of-bounds are marked as 'NaN'\n");
+    exit(0);
+  }
+
+  fprintf(stderr, "[bins] Printing allele counts for each flattened SFS bin\n");
+
+  if (pars->saf.size() == 0)
+  {
+    fprintf(stderr, "[bins] No saf.idx files, exiting\n");
+    exit(0);
+  }
+
+  size_t * foldremapper;
+  int * foldfactor;
+  int * foldkeep;
+
+  int bin [pars->saf.size()];
+  int chr[pars->saf.size()];
+  for (int i=0; i<pars->saf.size(); ++i) 
+  {
+    bin[i] = 0;
+    chr[i] = pars->saf[i]->nChr;
+  }
+
+  make_folder(foldremapper, foldfactor, foldkeep, pars->fold==1, chr, pars->saf.size());
+
+  size_t inc = 0;
+  do 
+  {
+    if (pars->remapping)
+      fprintf(stdout, "%lu\t%d\t%d", foldremapper[inc], foldfactor[inc], foldkeep[inc]);
+    for(int i=0; i<pars->saf.size(); ++i)
+      if (foldkeep[inc])
+        fprintf(stdout, "\t%d", bin[i]);
+      else
+        fprintf(stdout, "\tNaN");
+    fprintf(stdout, "\n");
+    inc++;
+  } 
+  while(multi_saf_loop(bin, chr, pars->saf.size()-1));
+
+  if (foldremapper) delete [] foldremapper;
+  if (foldfactor) delete [] foldfactor;
+  if (foldkeep) delete [] foldkeep;
+
+  return 0;
+}
+
+// --- realSFS print --- //
+
+int print_header(int argc, char **argv)
+{
+  if(argc<1){
+    fprintf(stderr,"Must supply file.saf.idx\n");
     return 0; 
   }
   
@@ -217,7 +334,7 @@ int print_header(int argc,char **argv){
   if(!pars)
     return 1;
   if(pars->saf.size()!=1){
-    fprintf(stderr,"print_header only implemeted for single safs\n");
+    fprintf(stderr,"print_header only implemented for single SAF\n");
     exit(0);
   }
   writesaf_header(stdout,pars->saf[0]);
@@ -225,26 +342,28 @@ int print_header(int argc,char **argv){
   destroy_args(pars);
   return 0;
 }
+
 template <typename T>
-int printMulti(args *arg){
+int print_multi(args *arg)
+{
   //fprintf(stderr,"[%s]\n",__FUNCTION__);
-  std::vector<persaf *> &saf =arg->saf;
+  std::vector<persaf *> &saf = arg->saf;
   for(int i=0;i<saf.size();i++)
     assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
 
   size_t nSites = arg->nSites;
-  if(nSites == 0){//if no -nSites is specified
-    nSites=calc_nsites(saf,arg);
-  }
+  if(nSites == 0) //if no -nSites is specified
+    nSites = calc_nsites(saf,arg);
+
   std::vector<Matrix<T> *> gls;
   for(int i=0;i<saf.size();i++)
     gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
 
-  int ndim=(int) parspace(saf);
-  double *sfs=new double[ndim];
-  
+  int ndim = (int) parspace(saf);
+  double *sfs = new double[ndim];
+
   //temp used for checking pos are in sync
-  setGloc(saf,nSites);
+  setGloc(saf, nSites);
   int *posiToPrint = new int[nSites];
   //used for printout old format
   FILE **oldfp = NULL;
@@ -271,35 +390,56 @@ int printMulti(args *arg){
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,1);//read nsites from data
     if(arg->oldout==0){
       for(int s=0;s<gls[0]->x;s++){
-	if(arg->chooseChr==NULL)
-	  fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
-	else
-	  fprintf(stdout,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
-	for(int i=0;i<saf.size();i++)
-	  for(int ii=0;ii<gls[i]->y;ii++)
-	    fprintf(stdout,"\t%f",log(gls[i]->mat[s][ii]));
-	fprintf(stdout,"\n");
+        if(arg->chooseChr==NULL)
+          fprintf(stdout,"%s\t%d",curChr,posiToPrint[s]+1);
+        else
+          fprintf(stdout,"%s\t%d",arg->chooseChr,posiToPrint[s]+1);
+
+        for(int i=0;i<saf.size();i++)
+        {
+          if (arg->banded)
+          {
+            fprintf(stdout, "\t%d\t%d", (int)(gls[i]->mat[s][0]), (int)(gls[i]->mat[s][1]));
+            for(size_t ii=0; ii<gls[i]->mat[s][1]; ii++)
+              fprintf(stdout,"\t%f", log(gls[i]->mat[s][2+ii]));
+          }
+          else
+          {
+            for(int ii=0; ii<gls[i]->mat[s][0]; ii++)
+              fprintf(stdout,"\t%f",log(0.));
+            for(int ii=0; ii<gls[i]->mat[s][1]; ii++)
+              fprintf(stdout,"\t%f",log(gls[i]->mat[s][2+ii]));
+            for(int ii=gls[i]->y; ii>gls[i]->mat[s][0]+gls[i]->mat[s][1]; ii--)
+              fprintf(stdout,"\t%f",log(0.));
+          }
+        }
+        fprintf(stdout,"\n");
       }
     }else{
       for(int s=0;s<gls[0]->x;s++){
-	if(arg->chooseChr==NULL)
-	  gzprintf(oldpos,"%s\t%d\n",curChr,posiToPrint[s]+1);
-	else
-	  gzprintf(oldpos,"%s\t%d\n",arg->chooseChr,posiToPrint[s]+1);
-	for(int i=0;i<saf.size();i++){
-	  double mytmp[gls[i]->y];
-	  for(int ii=0;ii<gls[i]->y;ii++)
-	    mytmp[ii] = log(gls[i]->mat[s][ii]);
-	  fwrite(mytmp,sizeof(double),gls[i]->y,oldfp[i]);
-	}
+        if(arg->chooseChr==NULL)
+          gzprintf(oldpos,"%s\t%d\n",curChr,posiToPrint[s]+1);
+        else
+          gzprintf(oldpos,"%s\t%d\n",arg->chooseChr,posiToPrint[s]+1);
+        for(int i=0;i<saf.size();i++){
+          double mytmp[gls[i]->y];
+          int k = 0;
+          for(int ii=0; ii<gls[i]->mat[s][0]; ii++)
+            mytmp[k++] = log(0.);
+          for(int ii=0; ii<gls[i]->mat[s][1]; ii++)
+            mytmp[k++] = log(gls[i]->mat[s][2+ii]);
+          for(int ii=gls[i]->y; ii>gls[i]->mat[s][0]+gls[i]->mat[s][1]; ii--)
+            mytmp[k++] = log(0.);
+          fwrite(mytmp,sizeof(double),gls[i]->y,oldfp[i]);
+        }
       }
     }
     if(ret==-3&&gls[0]->x==0){//no more data in files or in chr, eith way we break;g
       //fprintf(stderr,"breaking\n");
       break;
     }
-    for(int i=0;i<gls.size();i++)
-      gls[i]->x =0;
+    for(int i=0; i<gls.size(); i++)
+      gls[i]->x = 0;
 
     if(ret==-2&&arg->chooseChr!=NULL)
       break;
@@ -323,32 +463,36 @@ int printMulti(args *arg){
   return 0;
 }
 
-
 template<typename T>
-void print(int argc,char **argv){
+void print(int argc,char **argv)
+{
   if(argc<1){
-    fprintf(stderr,"\t-> Must supply afile.saf.idx files \n");
-    fprintf(stderr,"\t-> Examples \n");
-    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx \n");
-    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx -r chr1:10000000-12000000\n");
+    fprintf(stderr,"Usage:\n\trealSFS print [options] deme1.saf.idx [deme2.saf.idx ...]\n");
+    fprintf(stderr,"Options:\n");
+    fprintf(stderr,"\t-banded 0\t\tprint output as a banded matrix (position start length values)\n");
+    fprintf(stderr,"\t-oldout 0\t\tconvert to old binary format\n");
+    fprintf(stderr,"\t-r chrom:start-end\t\tprint for specified region only\n");
+    fprintf(stderr,"Examples:\n");
     fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx pop2.saf.idx -r chr2:10000000-12000000\n");
-    fprintf(stderr,"\t-> You can generate the oldformat by appending the -oldout 1 to the print command like\n");
-    fprintf(stderr,"\t-> ./realSFS print pop1.saf.idx pop2.saf.idx -oldout 1\n");
     return; 
   }
   
   args *pars = getArgs(argc,argv);
   for(int i=0;i<pars->saf.size();i++)
-    pars->saf[0]->kind = 2;
+    //pars->saf[0]->kind = 2; //<<must be a bug TODO check
+    pars->saf[i]->kind = 2;
   if(1||pars->saf.size()!=1){
-    fprintf(stderr,"\t-> Will jump to multisaf printer and will only print intersecting sites between populations\n");
-    printMulti<T>(pars);
+    fprintf(stderr,"[realSFS::print] printing intersection of sites between populations\n");
+    print_multi<T>(pars);
     return;
   }
+  //delete below
 
   writesaf_header(stderr,pars->saf[0]);
   
-  float *flt = new float[pars->saf[0]->nChr+1];
+  float *flt;
+  float buffer[pars->saf[0]->nChr+1];
+
   for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
 
     if(pars->chooseChr!=NULL)
@@ -359,26 +503,43 @@ void print(int argc,char **argv){
     size_t ret;
     int pos;
 
-    while((ret=iter_read(pars->saf[0],flt,sizeof(float)*(pars->saf[0]->nChr+1),&pos))){
-      fprintf(stdout,"%s\t%d",it->first,pos+1);
-      for(int is=0;is<pars->saf[0]->nChr+1;is++)
-	fprintf(stdout,"\t%f",flt[is]);
-      fprintf(stdout,"\n");
+    while((ret=iter_read(pars->saf[0], flt, buffer, &pos)))
+    {
+      fprintf(stdout,"%s\t%d", it->first, pos+1);
+
+      if(pars->banded)
+      {
+        fprintf(stdout, "\t%d\t%d", (int)(flt[0]), (int)(flt[1]));
+        for(size_t i=0; i<flt[1]; i++)
+          fprintf(stdout,"\t%f", flt[2+i]);
+      }
+      else
+      {
+        for(size_t i=0; i<flt[0]; i++)
+          fprintf(stdout,"\t%f",0.);
+        for(size_t i=0; i<flt[1]; i++)
+          fprintf(stdout,"\t%f", flt[2+i]);
+        for(size_t i=pars->saf[0]->nChr+1; i>flt[0]+flt[1]; i--)
+          fprintf(stdout,"\t%f",0.);
+        fprintf(stdout,"\n");
+      }
+
+      if (flt) delete [] flt;
     }
  
     if(pars->chooseChr!=NULL)
       break;
   }
   
-  delete [] flt;
+  if (flt) delete [] flt;
   destroy_args(pars);
 }
 
+// --- realSFS fst --- //
 
 /*
   return value 
   -3 indicates that we are doing multi sfs and that we are totally and should flush
-
  */
 
 int fst_index(int argc,char **argv){
@@ -411,7 +572,7 @@ int fst_index(int argc,char **argv){
     fprintf(stderr,"\t-> You therefore need to supply %d 2dsfs priors instead of:%lu\n",choose(saf.size(),2),arg->sfsfname.size());
     exit(0);
   }
-  fprintf(stderr,"\t-> IMPORTANT: please make sure that your saf files hasnt been folded with -fold 1 in -doSaf in angsd\n");
+  fprintf(stderr,"\t-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd\n");
   
   double **a1,**b1;
   int **remaps,**remaps_scaling;
@@ -598,6 +759,7 @@ int fst(int argc,char**argv){
   return 0;
 }
 
+// --- realSFS saf2theta --- //
 
 void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<int> &p,std::vector<float> *res,int nChr){
   assert(dat!=NULL);
@@ -739,7 +901,10 @@ int saf2theta(int argc,char**argv){
     for(int s=0;s<gls[0]->x;s++){
       double workarray[nChr+1];
       for(int i=0;i<nChr+1;i++)//gls->mat is float lets pluginto double
-	workarray[i] = gls[0]->mat[s][i];
+	workarray[i] = log(0);
+      int k = gls[0]->mat[s][0];
+      for(int i=0;i<gls[0]->mat[s][1];i++)
+	workarray[k++] = gls[0]->mat[s][2+i];
       if(arg->fold){
 	if((nChr+1) %2 ){
 	  //	  fprintf(stderr,"\t-> Folding odd number of categories\n");
@@ -864,8 +1029,11 @@ int saf2theta(int argc,char**argv){
   return 0;
 }
 
+// --- //
 
-int main(int argc,char **argv){
+int main(int argc,char **argv)
+{
+
   //start of signal handling
   struct sigaction sa;
   sigemptyset (&sa.sa_mask);
@@ -874,32 +1042,49 @@ int main(int argc,char **argv){
   sigaction(SIGPIPE, &sa, 0);
   sigaction(SIGINT, &sa, 0);  
 
-  if(argc==1){
-    //    fprintf(stderr, "\t->------------------\n\t-> ./realSFS\n\t->------------------\n");
-    // fprintf(stderr,"\t-> This is the new realSFS program which works on the newer binary files from ANGSD!!\n");
-    fprintf(stderr, "\t-> ---./realSFS------\n\t-> EXAMPLES FOR ESTIMATING THE (MULTI) SFS:\n\n\t-> Estimate the SFS for entire genome??\n");
-    fprintf(stderr,"\t-> ./realSFS afile.saf.idx \n");
-    fprintf(stderr, "\n\t-> 1) Estimate the SFS for entire chromosome 22 ??\n");
-    fprintf(stderr,"\t-> ./realSFS afile.saf.idx -r chr22 \n");
-    fprintf(stderr, "\n\t-> 2) Estimate the 2d-SFS for entire chromosome 22 ??\n");
-    fprintf(stderr,"\t-> ./realSFS afile1.saf.idx  afile2.saf.idx -r chr22 \n");
-
-    fprintf(stderr, "\n\t-> 3) Estimate the SFS for the first 500megabases (this will span multiple chromosomes) ??\n");
-    fprintf(stderr,"\t-> ./realSFS afile.saf.idx -nSites 500000000 \n");
-
-    fprintf(stderr, "\n\t-> 4) Estimate the SFS around a gene ??\n");
-    fprintf(stderr,"\t-> ./realSFS afile.saf.idx -r chr2:135000000-140000000 \n");
-    fprintf(stderr, "\n\t-> Other options [-P nthreads -tole tolerence_for_breaking_EM -maxIter max_nr_iterations -bootstrap number_of_replications -resample_chr 0/1]\n");
-
-    fprintf(stderr,"\n\t-> See realSFS print for possible print options\n");
-    fprintf(stderr,"\t-> Use realSFS print_header for printing the header\n");
-    fprintf(stderr,"\t-> Use realSFS cat for concatenating saf files\n");
-
-    fprintf(stderr,"\n\t->------------------\n\t-> NB: Output is now counts of sites instead of log probs!!\n");
-    fprintf(stderr,"\t-> NB: You can print data with ./realSFS print afile.saf.idx !!\n");
-    fprintf(stderr,"\t-> NB: Higher order SFS's can be estimated by simply supplying multiple .saf.idx files!!\n");
-    fprintf(stderr,"\t-> NB: Program uses accelerated EM, to use standard EM supply -m 0 \n");
-    fprintf(stderr,"\t-> Other subfunctions saf2theta, cat, check, dadi\n");
+  if(argc==1)
+  {
+    fprintf(stderr, "Usage:\n"); 
+    fprintf(stderr, "\trealSFS [options] deme1.saf.idx [deme2.saf.idx ...]\t(calculates [multi-]SFS)\n");
+    fprintf(stderr, "\trealSFS subcommand\t\t\t\t\t(displays usage for subcommands)\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "\t-r chrom[:start-end]\t(use only sites in specified region)\n");
+    fprintf(stderr, "\t-sites ?\t\t(use only these sites, see 'Notes')\n");
+    fprintf(stderr, "\t-anc ?\t\t\t(??, see 'Notes')\n");
+    fprintf(stderr, "\t-ref ?\t\t\t(??, see 'Notes')\n");
+    fprintf(stderr, "\t-cores 1\t\t(number of threads)\n");
+    fprintf(stderr, "\t-tole 1e-10\t\t(convergence tolerance for EM)\n");
+    fprintf(stderr, "\t-maxiter 100\t\t(maximum number of EM iterations)\n");
+    fprintf(stderr, "\t-bootstrap 0\t\t(number of bootstrap replicates)\n");
+    fprintf(stderr, "\t-resample_chr 0\t\t(0 = bootstrap sites; 1 = bootstrap chromosomes/contigs)\n");
+    fprintf(stderr, "\t-emaccl 1\t\t(0 = regular EM; 1 = accelerated EM)\n");
+    fprintf(stderr, "\t-fold 0\t\t\t(0 = unfolded SFS; 1 = folded SFS)\n");
+    fprintf(stderr, "\t-nsites 0\t\t(number of sites to use in calculation; 0 = all sites)\n");
+    fprintf(stderr, "\t-seed -1\t\t(random seed for start values; -1 = machine noise)\n");
+    fprintf(stderr, "Subcommands:\n");
+    fprintf(stderr, "\tbins\t\t\t(print SFS bins corresponding to flattened output)\n");
+    fprintf(stderr, "\tcat\t\t\t(concatenate two SAF files)\n");
+    fprintf(stderr, "\tcheck\t\t\t(checks that positions are ordered correctly)\n");
+    fprintf(stderr, "\tdadi\t\t\t(call SFS bin for each site via empirical Bayes)\n");
+    fprintf(stderr, "\tfst\t\t\t(index and calculate per-site Fst)\n");
+    fprintf(stderr, "\tprint\t\t\t(print SAF in various formats)\n");
+    fprintf(stderr, "\tprint_header\t\t(print SAF index information)\n");
+    fprintf(stderr, "\tsaf2theta\t\t(create inputs for theta calculation in windows)\n");
+    fprintf(stderr, "Examples:\n");
+    fprintf(stderr,"\t#one-dimensional SFS\n");
+    fprintf(stderr,"\t./realSFS deme.saf.idx\n\n");
+    fprintf(stderr,"\t#one-dimensional SFS for all of chromosome 22\n");
+    fprintf(stderr,"\t./realSFS deme.saf.idx -r chr22\n\n");
+    fprintf(stderr,"\t#two-dimensional SFS for all of chromosome 22\n");
+    fprintf(stderr,"\t./realSFS deme1.saf.idx deme2.saf.idx -r chr22\n\n");
+    fprintf(stderr,"\t#estimate the SFS for the first 500Mb (including multiple chromosomes)\n");
+    fprintf(stderr,"\t./realSFS deme.saf.idx -nsites 500000000\n\n");
+    fprintf(stderr,"\t#estimate the SFS for a specified region (e.g. around a gene)\n");
+    fprintf(stderr,"\t./realSFS deme.saf.idx -r chr2:135000000-140000000\n\n");
+    fprintf(stderr,"\t#generate 100 bootstrap replicates of SFS by resampling contigs\n");
+    fprintf(stderr,"\t./realSFS deme.saf.idx -bootstrap 100 -resample_chr 1\n");
+    fprintf(stderr, "Notes:\n");
+    fprintf(stderr, "\tOutput is the maximum likelihood estimate of sites for each SFS bin, as a flattened array. If multiple index files are supplied, the joint SFS is calculated. To see the SFS bins associated with each value in the array, use the 'bins' subcommand (especially useful for folded multidimensional SFS). Bootstrap replicates are output one/line after the MLE.\n\n");
     return 0;
   }
   ++argv;
@@ -907,41 +1092,53 @@ int main(int argc,char **argv){
   if(!strcasecmp(*argv,"print"))
     print<float>(--argc,++argv);
   else if(!strcasecmp(*argv,"cat"))
+  {
     saf_cat(--argc,++argv);
+  }
   else if(!strcasecmp(*argv,"fst"))
+  {
     fst(--argc,++argv);
+  }
   else if(!strcasecmp(*argv,"dadi"))
+  {
     main_dadi<float>(--argc,++argv);
+  }
   else if(!strcasecmp(*argv,"saf2theta"))
+  {
     saf2theta(--argc,++argv);
+  }
   else if(!strcasecmp(*argv,"check"))
+  {
     saf_check(--argc,++argv);
+  }
   else if(!strcasecmp(*argv,"print_header"))
     print_header(--argc,++argv);
+  else if(!strcasecmp(*argv,"bins"))
+    bins(--argc,++argv);
   else {
     args *arg = getArgs(argc,argv);
     if(arg->saf.size()>1)
-      fprintf(stderr,"\t-> Multi SFS is 'still' under development. Please report strange behaviour\n");
+      fprintf(stderr,"[main] Multi SFS is 'still' under development. Please report strange behaviour.\n");
     if(!arg)
       return 0;
 
     if(isatty(fileno(stdout))){
-      fprintf(stderr,"\t-> You are printing the optimized SFS to the terminal consider dumping into a file\n");
-      fprintf(stderr,"\t-> E.g.: \'./realSFS");
+      fprintf(stderr,"[main] You are printing the optimized SFS to the terminal-- consider dumping it into a file, e.g.:\n");
+      fprintf(stderr,"\t\'./realSFS");
       for(int i=0;i<argc;i++)
-	fprintf(stderr," %s",argv[i]);
-      fprintf(stderr," >sfs.ml.txt\'\n");   
+        fprintf(stderr," %s",argv[i]);
+      fprintf(stderr," >sfs.mle.txt\'\n");   
     }
-  
 
     main_opt<float>(arg);
-    
   }
+
   extern size_t *bootstrap;
   if(bootstrap!=NULL)
     delete [] bootstrap;
 
-  if(dumpedFiles.size()){
+  if(dumpedFiles.size())
+  {
     fprintf(stderr,"\t-> Output filenames:\n");
     for(int i=0;i<(int)dumpedFiles.size();i++){
       fprintf(stderr,"\t\t->\"%s\"\n",dumpedFiles[i]);
