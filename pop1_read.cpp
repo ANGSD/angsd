@@ -96,8 +96,22 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     r = sam_itr_next(fp, itr, b);
   
   if(r!=-1) {
+
+    //pathologial case with no data in CIGAAR. I dont see how this can happen, but we have observed this is some data.
+    //previously it was only one insertion, but in new data it has been a combination of softclip and insertion
+    int hasdata = 0;
+    for(int i=0;i<b->core.n_cigar;i++){
+      uint32_t *cigs = bam_get_cigar(b);
+      int opCode = cigs[i]&BAM_CIGAR_MASK; //what to do
+      if(opCode==BAM_CMATCH||opCode==BAM_CEQUAL||opCode==BAM_CDIFF){
+	hasdata = 1;
+	break;
+      }
+    }
+    if(hasdata==0)
+      	goto bam_iter_reread;
     if(b->core.n_cigar==1){
-      //pathologial case with only one insertion. I dont see how this can happen, but we have observed this is some data.
+
       uint32_t *cigs = bam_get_cigar(b);
       int opCode = cigs[0]&BAM_CIGAR_MASK; //what to do
       if(opCode==BAM_CINS)
