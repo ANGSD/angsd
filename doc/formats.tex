@@ -56,7 +56,10 @@ Second iteration of the saf files now contains two raw files and an index file. 
 This section describes the banded representation of the sample allele frequency likelihoods.  First 8 bytes in all three files is 8byte magic numer \emph{char[8] ``safv4''}.  
 \begin{itemize}
 \item[PREFIX.saf.gz] bgzf compressed. Full description in Table \ref{tab3}.
-\item[PREFIX.saf.pos.gz] bgzf compressed flat integer. Representing   the position. Each element is a cdatatype 'int' which is  4bytes. Similar to version 1.
+\item[PREFIX.saf.pos.gz] bgzf compressed flat integer. Representing
+  the position. Each element is a cdatatype 'int' which is
+  4bytes. Similar to version 1. Within the stream the positions are
+  zero indexed
 \item[PREFIX.saf.idx] uncompressed binary file containing blocks of   data described in \ref{tab4}. This is preceeded by a size\_t value which indicates the number of categories in the spectrum.
 \end{itemize}
 
