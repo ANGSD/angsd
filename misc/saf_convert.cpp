@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <htslib/bgzf.h>
 #include <htslib/kstring.h>
+#include <cassert>
+
 #include "safcat.h"
 #include "header.h"
 
