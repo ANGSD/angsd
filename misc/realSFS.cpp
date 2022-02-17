@@ -36,6 +36,7 @@
 #include "safcat.h"
 #include "realSFS_optim.h"
 #include "realSFS_dadi.h"
+#include "saf_convert.h"
 int SIG_COND =1;
 int howOften =5e6;//how often should we print out (just to make sure something is happening)
 #include "multisafreader.hpp"
@@ -1070,6 +1071,7 @@ int main(int argc,char **argv)
     fprintf(stderr, "\tprint\t\t\t(print SAF in various formats)\n");
     fprintf(stderr, "\tprint_header\t\t(print SAF index information)\n");
     fprintf(stderr, "\tsaf2theta\t\t(create inputs for theta calculation in windows)\n");
+    fprintf(stderr, "\ttext2saf\t\t(convert text saffile to binary safv3 file)\n");
     fprintf(stderr, "Examples:\n");
     fprintf(stderr,"\t#one-dimensional SFS\n");
     fprintf(stderr,"\t./realSFS deme.saf.idx\n\n");
@@ -1098,6 +1100,10 @@ int main(int argc,char **argv)
   else if(!strcasecmp(*argv,"fst"))
   {
     fst(--argc,++argv);
+  }
+  else if(!strcasecmp(*argv,"text2saf"))
+  {
+    main_text2safv4(--argc,++argv);
   }
   else if(!strcasecmp(*argv,"dadi"))
   {

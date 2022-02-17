@@ -2,11 +2,6 @@
   small utility functions for saf files
 */
 
-const char *SAF = ".saf.gz";
-const char *SAFPOS =".saf.pos.gz";
-const char *SAFIDX =".saf.idx";
-
-
 
 
 #include <cstdio>
@@ -25,6 +20,7 @@ const char *SAFIDX =".saf.idx";
 #include <libgen.h>
 #include <algorithm>
 #include "safreader.h"
+#include "safcat.h"
 #include "realSFS_args.h"
 #include <fstream>
 

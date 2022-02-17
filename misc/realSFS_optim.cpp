@@ -51,7 +51,6 @@ double lik(double *sfs, std::vector< Matrix<T> *> &gls, size_t from, size_t to)
 
   for (int p = 0; p<gls.size(); ++p)
     chr[p] = gls[p]->y-1;
-
   for (size_t s = from; SIG_COND && s < to; ++s)
   {
     ss = !bootstrap ? s : bootstrap[s];
@@ -69,17 +68,15 @@ double lik(double *sfs, std::vector< Matrix<T> *> &gls, size_t from, size_t to)
       for (int p = 0; p<gls.size(); ++p)
         rbin[p] = stt[p] + bin[p];
       lind = sfs_linear_index(rbin, chr, gls.size(), false);
-
       double tmp2 = sfs[foldremapper[lind]] * foldfactors[lind];
       for (int p=0; p<gls.size(); ++p)
-        tmp2 *= gls[p]->mat[ss][2 + bin[p]];
+	tmp2 *= gls[p]->mat[ss][2 + bin[p]];
       tmp += tmp2;
     }
     while(multi_saf_loop(bin, len, gls.size()-1));
 
     r += log(tmp);
   }
-
   return r;
 }
 
