@@ -655,4 +655,197 @@ int main_opt(args *arg){
   return 0;
 }
 
+template <typename T>
+int main_opt2(args *arg){
+  fprintf(stderr,"in main_opt2\n");
+  int chr[arg->saf.size()];
+  for (int i=0; i<arg->saf.size(); ++i)
+    chr[i] = arg->saf[i]->nChr;
+
+  make_folder(foldremapper, foldfactors, foldkeep, arg->fold==1, chr, arg->saf.size());
+   
+  std::vector<persaf *> &saf =arg->saf;
+  for(int i=0;i<saf.size();i++)
+    assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
+  size_t nSites = arg->nSites;
+  if(nSites == 0){//if no -nSites is specified
+    nSites=calc_nsites(saf,arg);
+  }
+
+  // for v4 memory check doesn't apply... TODO: could guesstimate based on file size??
+  if(fsizes<T>(saf,nSites)>getTotalSystemMemory()){
+    fprintf(stderr,"\t-> Looks like you will allocate too much memory, consider starting the program with a lower -nSites argument\n"); 
+    fprintf(stderr,"\t-> nSites: %lu\n",nSites);
+  }
+  float bytes_req_megs=(float) fsizes<T>(saf,nSites)/1024/1024;
+  float mem_avail_megs =(float) getTotalSystemMemory()/1024/1024;//in percentile
+  //fprintf(stderr,"en:%zu to:%f\n",bytes_req_megs,mem_avail_megs);
+  fprintf(stderr,"\t-> The choice of -nSites will require atleast: %f megabyte memory, that is at least: %.2f%% of total memory\n",bytes_req_megs,bytes_req_megs*100/mem_avail_megs);
+  
+  std::vector<Matrix<T> *> gls;
+  for(int i=0;i<saf.size();i++)
+    gls.push_back(alloc<T>(nSites,saf[i]->nChr+1));
+
+  int ndim=(int) parspace(saf);
+  double *sfs=new double[ndim];
+
+  //nspope; saf input is sorted by chromosome, and read in that order
+  //so only need to track starting pos of each chrom in gls[0]
+  //if ever saf input is allowed to be unsorted, -resample_chr will break
+  std::vector<size_t> chrStart(1,0);
+
+  //temp used for checking pos are in sync
+  setGloc(saf,nSites);
+  int firstrun = 1;
+  while(1) {
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL,arg->fl,1);//read nsites from data
+    int b=0;  
+
+    //fprintf(stderr,"\t\tRET:%d gls->x:%lu\n",ret,gls[0]->x);
+    if(ret==-2&&gls[0]->x==0)//no more data in files or in chr, eith way we break;
+      break;
+
+    if(ret==-2&&arg->bootstrap&&arg->resample_chr)//nspope; start pos for new chrom
+      chrStart.push_back(gls[0]->x);
+
+    {
+      if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
+        //fprintf(stderr,"continue continue\n");
+        continue;
+      }
+    }
+
+    if(gls[0]->x==0)
+      continue;
+    
+    fprintf(stderr,"\t-> Will run optimization on nSites: %lu\n",gls[0]->x);
+
+    //nspope; calculate number of sites for each chr
+    std::vector<size_t> chrSize (chrStart.size()-1);
+    if(arg->bootstrap&&arg->resample_chr&&chrStart.size()>1)
+      std::adjacent_difference(++chrStart.begin(), chrStart.end(), chrSize.begin());
+    chrSize.push_back(gls[0]->x-chrStart.back());
+    std::vector<size_t> bootChr (chrStart.size(), 0);
+  
+  neverusegoto:
+    if(arg->bootstrap)
+      fprintf(stderr,"Will do bootstrap replicate %d/%d\n",b+1,arg->bootstrap);
+    if(arg->sfsfname.size()!=0){
+      fprintf(stderr,"\t-> Reading SFS from file: \'%s\'\n",arg->sfsfname[0]);
+      readSFS(arg->sfsfname[0],ndim,sfs);
+    } else{
+      if(firstrun==1){
+	if(arg->seed==-1){
+	  for(int i=0;i<ndim;i++)
+	    //	  sfs[i] = ((double)(ndim))/(i+1);
+	    sfs[i] = 1;
+	}else{
+	  for(int i=0;i<ndim;i++){
+	    double r=drand48();
+	    while(r==0.0)
+	      r = drand48();
+	    sfs[i] = r;
+	  }
+	}
+	firstrun = 0;
+      }
+    }
+    if(foldremapper) { //implies 1 or 2 pops
+#if 0
+      fprintf(stdout,"SFSIN");
+      for(int i=0;i<ndim;i++)
+	fprintf(stdout,"%f\t",sfs[i]);
+      fprintf(stdout,"\n");
+#endif
+      
+      //this block is debug block for validating that the input sfs gets folded correctly
+      double newtmp[ndim];
+      for(int i=0;i<ndim;i++)
+	newtmp[i] = 0;
+      for(int i=0;i<ndim;i++){
+	newtmp[foldremapper[i]] += sfs[i];
+	//	fprintf(stderr,"%d %f\n",i,newtmp[i]);
+      }
+      for(int i=0;i<ndim;i++){
+	//	fprintf(stdout,"%f ",newtmp[i]);
+	sfs[i] = newtmp[i];
+      }
+    }
+    normalize(sfs,ndim);
+      
+      if(bootstrap==NULL &&arg->bootstrap)
+	bootstrap = new size_t[gls[0]->x];
+      
+      if(bootstrap){
+        if(arg->resample_chr){//nspope; resample chromosomes, delete/reallocate bootstrap[], fill in sites
+          size_t newNsites = 0;
+          for(size_t i=0; i<bootChr.size(); i++){
+            bootChr.at(i) = lrand48()%bootChr.size();
+            newNsites += chrSize.at(bootChr.at(i));
+          }
+  	  fprintf(stderr,"\t-> Resampled %lu chromosomes to get %lu total sites\n",bootChr.size(),newNsites);
+          delete [] bootstrap; bootstrap = NULL;//no leaks here
+          bootstrap = new size_t[newNsites];
+          bootnSites = newNsites;//doesn't equal gls[0]->x thus is defined globally and used by setThreadPars 
+          size_t k=0;
+          for(size_t i=0;i<bootChr.size();i++)
+            for(size_t j=0;j<chrSize.at(bootChr.at(i));j++)
+              bootstrap[k++] = chrStart.at(bootChr.at(i))+j;
+          std::sort(bootstrap,bootstrap+newNsites);
+        }else{
+	  for(size_t i=0;i<gls[0]->x;i++)
+	    bootstrap[i] = lrand48() % gls[0]->x;
+	  std::sort(bootstrap,bootstrap+gls[0]->x);
+        }
+      }
+      double lik;
+
+      if(arg->emAccl==0)
+        lik = em<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->verbose);
+      else
+        lik = emAccl<float>(sfs,arg->tole,arg->maxIter,arg->nThreads,ndim,gls,arg->emAccl,arg->verbose);
+
+      fprintf(stderr,"likelihood: %f\n",lik);
+      fprintf(stderr,"------------\n");
+
+      // TODO: nsp check this. When bootstrapping contigs the number of sites can change.
+      for(int x=0;x<ndim;x++)
+        if (bootnSites)
+          fprintf(stdout, "%f ", foldkeep[x]*bootnSites*sfs[x]);
+        else
+          fprintf(stdout, "%f ", foldkeep[x]*gls[0]->x*sfs[x]);
+      fprintf(stdout,"\n");
+      fflush(stdout);
+
+      if(++b<arg->bootstrap)
+        goto neverusegoto;
+
+      for(int i=0;i<gls.size();i++)
+        gls[i]->x =0;
+    
+      if(ret==-2&&arg->chooseChr!=NULL)
+        break;
+      if(arg->onlyOnce)
+        break;
+  }
+  delGloc(saf,nSites);
+  destroy(gls,nSites);
+  destroy_args(arg);
+  delete [] sfs;
+  
+  fprintf(stderr,"\n\t-> NB output is no longer log probs of the frequency spectrum!\n");
+  fprintf(stderr,"\t-> Output is now simply the expected values! \n");
+  fprintf(stderr,"\t-> You can convert to the old format simply with log(norm(x))\n");
+  fprintf(stderr,"\n\t-> Please check that it has converged!\n\t-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run\n\t-> -maxIter INT -tole FLOAT\n");
+
+  if(foldremapper)
+    delete [] foldremapper;
+  if(foldfactors)
+    delete [] foldfactors;
+  if(foldkeep)
+    delete [] foldkeep;
+  return 0;
+}
+
 template int main_opt<float>(args *arg);
+template int main_opt2<float>(args *arg);

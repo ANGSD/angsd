@@ -1117,6 +1117,11 @@ int main(int argc,char **argv)
   {
     saf_check(--argc,++argv);
   }
+  else if(!strcasecmp(*argv,"winsfs"))
+  {
+    args *arg = getArgs(--argc,++argv);
+    main_opt2<float>(arg);
+  }
   else if(!strcasecmp(*argv,"print_header"))
     print_header(--argc,++argv);
   else if(!strcasecmp(*argv,"bins"))
