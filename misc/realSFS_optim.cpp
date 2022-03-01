@@ -657,13 +657,16 @@ int main_opt(args *arg){
 
 template <typename T>
 int main_opt2(args *arg){
-  fprintf(stderr,"in main_opt2 args.win: %d args.block: %d\n\n",arg->win,arg->nSites);
+  fprintf(stderr,"in main_opt2 args.win: %d args.block: %d arg->saf.size(): %lu\n\n",arg->win,arg->nSites,arg->saf.size());
+  if(arg->saf.size()==0 ||arg->win<=0)
+    return 0;
   int chr[arg->saf.size()];
   for (int i=0; i<arg->saf.size(); ++i)
     chr[i] = arg->saf[i]->nChr;
 
   make_folder(foldremapper, foldfactors, foldkeep, arg->fold==1, chr, arg->saf.size());
-   
+
+  
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
     assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
@@ -689,6 +692,15 @@ int main_opt2(args *arg){
   int ndim=(int) parspace(saf);
   double *sfs=new double[ndim];
 
+  //prep tempsfs
+  double **tmpsfs = new double*[arg->win];
+  for(int i=0;i<arg->win;i++){
+    tmpsfs[i] = new double [ndim];
+    for(int j=0;j<ndim;j++)
+      tmpsfs[i][j] = 1;
+  }
+
+  
   //nspope; saf input is sorted by chromosome, and read in that order
   //so only need to track starting pos of each chrom in gls[0]
   //if ever saf input is allowed to be unsorted, -resample_chr will break
@@ -697,6 +709,7 @@ int main_opt2(args *arg){
   //temp used for checking pos are in sync
   setGloc(saf,nSites);
   int firstrun = 1;
+  int atwin = 0;
   while(1) {
     int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,NULL,NULL,arg->fl,1);//read nsites from data
     int b=0;  
@@ -747,7 +760,7 @@ int main_opt2(args *arg){
 	    sfs[i] = r;
 	  }
 	}
-	firstrun = 0;
+	//firstrun = 0;
       }
     }
     if(foldremapper) { //implies 1 or 2 pops
@@ -809,14 +822,20 @@ int main_opt2(args *arg){
       fprintf(stderr,"------------\n");
 
       // TODO: nsp check this. When bootstrapping contigs the number of sites can change.
-      for(int x=0;x<ndim;x++)
+      fprintf(stdout, "atwin[%d]nsites:%d ",atwin,gls[0]->x);
+      for(int x=0;x<ndim;x++){
+	double val;
         if (bootnSites)
-          fprintf(stdout, "%f ", foldkeep[x]*bootnSites*sfs[x]);
-        else
-          fprintf(stdout, "%f ", foldkeep[x]*gls[0]->x*sfs[x]);
+	  val = foldkeep[x]*bootnSites*sfs[x];
+	else
+	  val = foldkeep[x]*gls[0]->x*sfs[x];
+	tmpsfs[atwin][x] = val;
+	fprintf(stdout, "%f ", val);
+      }
       fprintf(stdout,"\n");
       fflush(stdout);
-
+      atwin++;
+      atwin = atwin % arg->win;
       if(++b<arg->bootstrap)
         goto neverusegoto;
 
@@ -827,6 +846,8 @@ int main_opt2(args *arg){
         break;
       if(arg->onlyOnce)
         break;
+
+
   }
   delGloc(saf,nSites);
   destroy(gls,nSites);
