@@ -1070,8 +1070,9 @@ int main(int argc,char **argv)
     fprintf(stderr, "\tfst\t\t\t(index and calculate per-site Fst)\n");
     fprintf(stderr, "\tprint\t\t\t(print SAF in various formats)\n");
     fprintf(stderr, "\tprint_header\t\t(print SAF index information)\n");
-    fprintf(stderr, "\tsaf2theta\t\t(create inputs for theta calculation in windows)\n");
+    fprintf(stderr, "\tsaf2theta\t\t(create inputs for theta calculation in bands)\n");
     fprintf(stderr, "\ttext2saf\t\t(convert text saffile to binary safv3 file)\n");
+    fprintf(stderr, "\twinsfs\t\t\t(Window SFS might be more stabile)\n");
     fprintf(stderr, "Examples:\n");
     fprintf(stderr,"\t#one-dimensional SFS\n");
     fprintf(stderr,"\t./realSFS deme.saf.idx\n\n");

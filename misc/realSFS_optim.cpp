@@ -657,7 +657,7 @@ int main_opt(args *arg){
 
 template <typename T>
 int main_opt2(args *arg){
-  fprintf(stderr,"in main_opt2\n");
+  fprintf(stderr,"in main_opt2 args.win: %d args.block: %d\n\n",arg->win,arg->nSites);
   int chr[arg->saf.size()];
   for (int i=0; i<arg->saf.size(); ++i)
     chr[i] = arg->saf[i]->nChr;
