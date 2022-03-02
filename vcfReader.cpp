@@ -279,7 +279,8 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 	  fprintf(stderr,"Check this file:line: %s:%d\n",__FILE__,__LINE__);
 	  bcf_float_set_vector_end(ln_gl[i]);
 	} else{
-	  dupergp[i] = pow(10,-farr[i]/10.0);
+	  dupergp[i] = farr[i];//FIX
+	  //	  dupergp[i] = pow(10,-farr[i]/10.0);
 
 	}
 	//	fprintf(stderr, "%f\n", farr[i]);
@@ -385,7 +386,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
       }
     }
   }
-  if(type==2){
+  if(0&&type==2){//FIX
     for(int ind=0;ind<hs->nsamples;ind++){
       double tsum = dupergp[3*ind]+dupergp[3*ind+1]+dupergp[3*ind+2];
       dupergp[3*ind] /= tsum;
