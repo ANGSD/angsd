@@ -14,7 +14,7 @@ int choose(int n,int m){
   else if(n==3&&m==2)
     return 3;
   else{
-    fprintf(stderr,"\t-> Never here\n");
+    fprintf(stderr,"\t-> For computing the pairwise fst, the recommended approach is to do these pairwise for each population rather than one joint.\n\t-> If not only the sites that are shared among all populations will be used\n");
     exit(0);
   }
   return -1;
