@@ -2,6 +2,9 @@
 #include "realSFS_shared.h"
 #include "Matrix.hpp"
 
+static size_t nverbose = 2000;
+
+
 template<typename T>
 void readGL(persaf *fp, size_t nSites, size_t dim, Matrix<T> *ret, int *pp, int scale2norm)
 {
@@ -59,7 +62,12 @@ int readdata(std::vector<persaf *> &saf,
   extern int ** posiG;
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
   if(lastread==0 ){
-    fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
+    if(nverbose>0){
+      fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
+      nverbose--;
+      if(nverbose==0)
+	fprintf(stderr,"\t-> Program has observed more than 1000 different scaffolds and information regarding new scaffolds will be silenced\n");
+    }
     int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr,fl,from_fst_context);
     if(ret==0&&from_fst_context==1)
       return -3;
@@ -90,7 +98,13 @@ int readdata(std::vector<persaf *> &saf,
   //  fprintf(stderr,"Done checking\n");
 
   if(lastread==0)
-    fprintf(stderr,"\t-> Only read nSites: %lu will therefore prepare next chromosome (or exit)\n",gls[0]->x);
+    if(nverbose>0){
+      fprintf(stderr,"\t-> Only read nSites: %lu will therefore prepare next chromosome (or exit)\n",gls[0]->x);
+      nverbose--;
+      if(nverbose==0)
+	fprintf(stderr,"\t-> Program has observed more than 1000 different scaffolds and information regarding new scaffolds will be silenced\n");  if(nverbose==0)
+	fprintf(stderr,"\t-> Program has observed more than 1000 different scaffolds and information regarding new scaffolds will be silenced\n");
+    }
   //fprintf(stderr,"readdata lastread:%d\n\n",lastread);
   // exit(0);
   if(pp!=NULL)
