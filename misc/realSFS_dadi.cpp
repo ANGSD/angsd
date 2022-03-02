@@ -133,7 +133,7 @@ int main_dadi(int argc, char** argv){
   char *lastchr=NULL;
   while(1) {
     static char *curChr=NULL;
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,1);//read nsites from data
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,1,0);//read nsites from data
     //    int b=0;  
 
     char *thisChr=arg->chooseChr?arg->chooseChr:curChr;

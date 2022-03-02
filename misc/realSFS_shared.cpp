@@ -7,7 +7,7 @@ int **posiG  = NULL;
 // 2) find over lap between different positions
 // this is run once for each chromsome
 
-int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr,filt *fl){
+int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr,filt *fl,int from_fst_context){
   //fprintf(stderr,"[%s] chooseChr:%s, start:%d stop:%d\n",__FUNCTION__,chooseChr,start,stop );
 
   if(0&&saf.size()==1&&chooseChr==NULL){//use entire genome, then don't do any strange filtering
@@ -138,6 +138,8 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   }
   if(hasdata==0){
     fprintf(stderr,"\t-> There is no data for this chr/scaffold lets skip\n");
+    if(from_fst_context==1)
+      return 0;
     chooseChr=NULL;
     goto aGotoHereIsTheEasiest;
   }

@@ -53,14 +53,16 @@ int readdata(std::vector<persaf *> &saf,
              int *pp,
              char **curChr,
              filt *fl,
-             int scale2norm)
+             int scale2norm,int from_fst_context)
 {
   static size_t lastread=0;
   extern int ** posiG;
   //  fprintf(stderr,"[%s] nSites:%d lastread:%d\n",__FUNCTION__,nSites,lastread);
   if(lastread==0 ){
     fprintf(stderr,"\t-> Done reading data from chromosome will prepare next chromosome\n");
-    int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr,fl); 
+    int ret = set_intersect_pos(saf,chooseChr,start,stop,curChr,fl,from_fst_context);
+    if(ret==0&&from_fst_context==1)
+      return -3;
     //    fprintf(stderr,"[%s] ret:%d\n",__FUNCTION__,ret);
     //    exit(0);
     if(ret==-3)

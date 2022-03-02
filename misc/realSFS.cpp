@@ -388,7 +388,7 @@ int print_multi(args *arg)
   }
   while(1) {
     static char *curChr=NULL;
-    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,1);//read nsites from data
+    int ret=readdata(saf,gls,nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,1,0);//read nsites from data
     if(arg->oldout==0){
       for(int s=0;s<gls[0]->x;s++){
         if(arg->chooseChr==NULL)
@@ -656,11 +656,10 @@ int fst_index(int argc,char **argv){
   setGloc(saf,nSites);
   int *posiToPrint = new int[nSites];
   for(myMap::iterator it = saf[0]->mm.begin();it!=saf[0]->mm.end();++it) {
-    //    fprintf(stderr,"doing chr:%s\n",it->first);
     if(arg->chooseChr!=NULL){
       it = saf[0]->mm.find(arg->chooseChr);
       if(it==saf[0]->mm.end()){
-	fprintf(stderr,"Problem finding chr: %s\n",arg->chooseChr);
+	fprintf(stderr,"Problem finding chr: \"%s\"\n",arg->chooseChr);
 	break;
       }
     }else{
@@ -679,8 +678,9 @@ int fst_index(int argc,char **argv){
     }
     posi.clear();
     while(1) {
-      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL,arg->fl,1);//read nsites from data
-      //  fprintf(stderr,"ret:%d glsx:%lu\n",ret,gls[0]->x);
+      int ret=readdata(saf,gls,nSites,it->first,arg->start,arg->stop,posiToPrint,NULL,arg->fl,1,1);//read nsites from data
+      if(ret==-3)
+	break;
       //if(gls[0]->x!=nSites&&arg->chooseChr==NULL&&ret!=-3){
 	//fprintf(stderr,"continue continue\n");
       //	continue;
@@ -885,7 +885,7 @@ int saf2theta(int argc,char**argv){
   static char *curChr=NULL;//why static?
 
   while(1) {
-    int ret=readdata(arg->saf,gls,arg->nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,0);//read nsites from data
+    int ret=readdata(arg->saf,gls,arg->nSites,arg->chooseChr,arg->start,arg->stop,posiToPrint,&curChr,arg->fl,0,0);//read nsites from data
     if(arg->chooseChr!=NULL){
       if(curChr==NULL)
 	curChr=strdup(arg->chooseChr);

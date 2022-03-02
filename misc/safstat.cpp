@@ -147,14 +147,18 @@ int fst_print(int argc,char **argv){
   writefst_header(stderr,pf);  
   args *pars = getArgs(--argc,++argv);  
   int *ppos = NULL;
-  fprintf(stderr,"choose:%d \n",choose((int)pf->names.size(),2));
+  //  fprintf(stderr,"\t->choose:%d \n",choose((int)pf->names.size(),2));
   double **ares = new double*[choose((int)pf->names.size(),2)];
   double **bres = new double*[choose((int)pf->names.size(),2)];
   for(myFstMap::iterator it=pf->mm.begin();it!=pf->mm.end();++it){
     if(pars->chooseChr!=NULL){
       it = pf->mm.find(pars->chooseChr);
       if(it==pf->mm.end()){
-	fprintf(stderr,"Problem finding chr: %s\n",pars->chooseChr);
+	fprintf(stderr,"\t-> Problem finding chr: \"%s\"\n",pars->chooseChr);
+	break;
+      }
+      if(it->second.nSites==0){
+	fprintf(stderr,"\t-> No data for chr: \"%s\"\n",pars->chooseChr);
 	break;
       }
     }
