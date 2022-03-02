@@ -282,7 +282,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 	  dupergp[i] = pow(10,-farr[i]/10.0);
 
 	}
-	fprintf(stderr, "%f\n", farr[i]);
+	//	fprintf(stderr, "%f\n", farr[i]);
       }
     }
   } else  if(type==0) {
