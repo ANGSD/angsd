@@ -9,12 +9,22 @@ http://www.popgen.dk/angsd
 Installation:
 =====
 1) Using a local folder containing htslib
-
+#download htslib
 git clone https://github.com/samtools/htslib.git;
-
+#download angsd
 git clone https://github.com/angsd/angsd.git;
+#install htslib (watch for errors)
+cd htslib
+make
+# you might have to use the command below below and run make again
+# git submodule update --init --recursive
 
-cd htslib;make;cd ../angsd;make HTSSRC=../htslib
+#install angsd
+cd ../angsd
+make HTSSRC=../htslib
+##
+
+
 
 2) Systemwide installation of htslib
 
