@@ -9,6 +9,7 @@ http://www.popgen.dk/angsd
 Installation:
 =====
 1) Using a local folder containing htslib
+```
 #download htslib
 git clone https://github.com/samtools/htslib.git;
 #download angsd
@@ -22,8 +23,7 @@ make
 #install angsd
 cd ../angsd
 make HTSSRC=../htslib
-##
-
+```
 
 
 2) Systemwide installation of htslib
