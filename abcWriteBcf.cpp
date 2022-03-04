@@ -280,9 +280,11 @@ void abcWriteBcf::print(funkyPars *pars){
       float *ebd = cnts->ebd[s];
       bcf_update_format_float(hdr, rec, "EBD",ebd ,4*bcf_hdr_nsamples(hdr) );
     }
-    if(pars->post&&pars->post[s]){
+    if(pars->post&&pars->post[s]) {
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
-
+      for(int i=0;i<3*bcf_hdr_nsamples(hdr);i++)
+	tmpfa[i] = pars->post[s][i];
+#if 0
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++){
 	double *val = pars->post[s] +i*3;
 	//	fprintf(stderr,"va: %f %f %f\n",val[0],val[1],val[2]);
@@ -300,6 +302,7 @@ void abcWriteBcf::print(funkyPars *pars){
 	  tmpfa[i*3+j] -= mmax;
 	//angsd::logrescale(tmpfa+i*3,3);	
       }
+#endif
       bcf_update_format_float(hdr, rec, "GP", tmpfa,3*bcf_hdr_nsamples(hdr) );
 
       free(tmpfa);
