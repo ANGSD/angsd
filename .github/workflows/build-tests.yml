@@ -2,7 +2,7 @@ name: build-tests
 
 on:
   push:
-    branches: [ master, nspope_bandedDP ]
+    branches: [ master, nspope_bandedDP, develop ]
   pull_request:
     branches: [ master, nspope_bandedDP ]
 
@@ -24,7 +24,7 @@ jobs:
     - name: Install dependencies    
       run: |
         sudo apt-get install -y libbz2-dev liblzma-dev libcurl4-openssl-dev
-        git clone --depth=5 git://github.com/ANGSD/smallBam.git
+        git clone --depth=5 https://github.com/ANGSD/smallBam.git
 
     - name: Run CMake
       run: |
