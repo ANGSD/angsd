@@ -24,12 +24,21 @@ cd ../angsd
 make HTSSRC=../htslib
 ```
 
-
 2) Systemwide installation of htslib
 
+```
 git clone https://github.com/angsd/angsd.git;
+cd angsd; make HTSSRC=systemwide
+```
 
-cd angsd;make
+3) Using htslib submodule
+
+```
+git clone https://github.com/angsd/angsd.git;
+cd angsd; make
+```
+
+
 
 Notes
 ====
