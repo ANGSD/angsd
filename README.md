@@ -1,5 +1,6 @@
 [![Build Status](https://img.shields.io/github/workflow/status/angsd/angsd/build-tests)](https://github.com/ANGSD/angsd)
 angsd:
+
 =====
 Program for analysing NGS data. 
 
@@ -8,18 +9,36 @@ http://www.popgen.dk/angsd
 Installation:
 =====
 1) Using a local folder containing htslib
-
-git clone https://github.com/samtools/htslib.git;
-
+```
+#download htslib
+git clone --recurse-submodules https://github.com/samtools/htslib.git;
+#download angsd
 git clone https://github.com/angsd/angsd.git;
 
-cd htslib;make;cd ../angsd;make HTSSRC=../htslib
+#install htslib
+cd htslib
+make
+
+#install angsd
+cd ../angsd
+make HTSSRC=../htslib
+```
 
 2) Systemwide installation of htslib
 
+```
 git clone https://github.com/angsd/angsd.git;
+cd angsd; make HTSSRC=systemwide
+```
 
-cd angsd;make
+3) Using htslib submodule
+
+```
+git clone https://github.com/angsd/angsd.git;
+cd angsd; make
+```
+
+
 
 Notes
 ====

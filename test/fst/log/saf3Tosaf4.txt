@@ -1,0 +1,836 @@
+HTSSRC not defined, assuming systemwide installation
+echo "Only subset of analyses is being tested"
+Only subset of analyses is being tested
+cd test;./testAll.sh ../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam
+--------------------
+Using PRG: '../angsd' and BAMDIR: '/science/willerslev/scratch/thorfinn/angsd_merge/smallBam'
+--------------------
+Testing vcfreading
+../angsd /science/willerslev/scratch/thorfinn/angsd_merge/smallBam/small2.bcf
+
+real	0m1.320s
+user	0m1.029s
+sys	0m0.056s
+Testing fst using msms
+
+real	0m12.857s
+user	0m26.416s
+sys	0m0.471s
+Problem with Fst test statistics exit code: 0
+Generating genotype likelihood based on the haplotypes
+-in fst/input/msout -out fst/output//glout -err 0.005000 -depth 8.000000 -Nsites 0 -singleOut 1 -regLen 0 -printSNP 1 -onlyPoly 0 -pileup 0 -simpleRand 0 -depthFile (null) -seed -1 -nind 0 -psmc 0 -do_seq_glf 1 -simHap 0
+[openFile] fst/output//glout .argg
+Number of samples:44
+Number of replications:10
+[openFileGz] fst/output//glout.glf.gz
+doing fst/output//glout.glf.gz with w
+[openFile] fst/output//glout .vPos
+[openFile] fst/output//glout .pgEstH
+
+count 1count 2count 3count 4count 5count 6count 7count 8count 9count 10Splitting gl file into different populations
+fname:fst/output//glout.glf.gz tot:22 first:0 last:5
+nsites:51085 processed
+fname:fst/output//glout.glf.gz tot:22 first:6 last:12
+nsites:51085 processed
+fname:fst/output//glout.glf.gz tot:22 first:13 last:21
+nsites:51085 processed
+Calculating perpop saf
+	-> angsd version: 0.935-82-gded8394 (htslib: 1.13-3-gd16bed5) build(Jul 19 2021 17:35:56)
+	-> ../angsd -glf fst/output//pop1.glf.gz -nind 6 -doSaf 1 -out fst/output//pop1 -fai fst/output//fai.fai -issim 1 
+	-> Inputtype is GLF
+	-> Printing at chr: 1 pos:4951 chunknumber 100 contains 50 sites
+	-> Printing at chr: 1 pos:9951 chunknumber 200 contains 50 sites
+	-> Printing at chr: 1 pos:14951 chunknumber 300 contains 50 sites
+	-> Printing at chr: 1 pos:19951 chunknumber 400 contains 50 sites
+	-> Printing at chr: 1 pos:24951 chunknumber 500 contains 50 sites
+	-> Printing at chr: 1 pos:29951 chunknumber 600 contains 50 sites
+	-> Printing at chr: 1 pos:34951 chunknumber 700 contains 50 sites
+	-> Printing at chr: 1 pos:39951 chunknumber 800 contains 50 sites
+	-> Printing at chr: 1 pos:44951 chunknumber 900 contains 50 sites
+	-> Printing at chr: 1 pos:49951 chunknumber 1000 contains 50 sites
+	-> Done reading data waiting for calculations to finish
+	-> Done waiting for threads
+	-> Output filenames:
+		->"fst/output//pop1.arg"
+		->"fst/output//pop1.saf.gz"
+		->"fst/output//pop1.saf.pos.gz"
+		->"fst/output//pop1.saf.idx"
+	-> Thu Jul 22 14:17:35 2021
+	-> Arguments and parameters for all analysis are located in .arg file
+	-> Total number of sites analyzed: 51085
+	-> Number of sites retained after filtering: 51085 
+	[ALL done] cpu-time used =  0.47 sec
+	[ALL done] walltime used =  1.00 sec
+	-> angsd version: 0.935-82-gded8394 (htslib: 1.13-3-gd16bed5) build(Jul 19 2021 17:35:56)
+	-> ../angsd -glf fst/output//pop2.glf.gz -nind 7 -doSaf 1 -out fst/output//pop2 -fai fst/output//fai.fai -issim 1 
+	-> Inputtype is GLF
+	-> Printing at chr: 1 pos:4951 chunknumber 100 contains 50 sites
+	-> Printing at chr: 1 pos:9951 chunknumber 200 contains 50 sites
+	-> Printing at chr: 1 pos:14951 chunknumber 300 contains 50 sites
+	-> Printing at chr: 1 pos:19951 chunknumber 400 contains 50 sites
+	-> Printing at chr: 1 pos:24951 chunknumber 500 contains 50 sites
+	-> Printing at chr: 1 pos:29951 chunknumber 600 contains 50 sites
+	-> Printing at chr: 1 pos:34951 chunknumber 700 contains 50 sites
+	-> Printing at chr: 1 pos:39951 chunknumber 800 contains 50 sites
+	-> Printing at chr: 1 pos:44951 chunknumber 900 contains 50 sites
+	-> Printing at chr: 1 pos:49951 chunknumber 1000 contains 50 sites
+	-> Done reading data waiting for calculations to finish
+	-> Done waiting for threads
+	-> Output filenames:
+		->"fst/output//pop2.arg"
+		->"fst/output//pop2.saf.gz"
+		->"fst/output//pop2.saf.pos.gz"
+		->"fst/output//pop2.saf.idx"
+	-> Thu Jul 22 14:17:35 2021
+	-> Arguments and parameters for all analysis are located in .arg file
+	-> Total number of sites analyzed: 51085
+	-> Number of sites retained after filtering: 51085 
+	[ALL done] cpu-time used =  0.54 sec
+	[ALL done] walltime used =  0.00 sec
+	-> angsd version: 0.935-82-gded8394 (htslib: 1.13-3-gd16bed5) build(Jul 19 2021 17:35:56)
+	-> ../angsd -glf fst/output//pop3.glf.gz -nind 9 -doSaf 1 -out fst/output//pop3 -fai fst/output//fai.fai -issim 1 
+	-> Inputtype is GLF
+	-> Printing at chr: 1 pos:4951 chunknumber 100 contains 50 sites
+	-> Printing at chr: 1 pos:9951 chunknumber 200 contains 50 sites
+	-> Printing at chr: 1 pos:14951 chunknumber 300 contains 50 sites
+	-> Printing at chr: 1 pos:19951 chunknumber 400 contains 50 sites
+	-> Printing at chr: 1 pos:24951 chunknumber 500 contains 50 sites
+	-> Printing at chr: 1 pos:29951 chunknumber 600 contains 50 sites
+	-> Printing at chr: 1 pos:34951 chunknumber 700 contains 50 sites
+	-> Printing at chr: 1 pos:39951 chunknumber 800 contains 50 sites
+	-> Printing at chr: 1 pos:44951 chunknumber 900 contains 50 sites
+	-> Printing at chr: 1 pos:49951 chunknumber 1000 contains 50 sites
+	-> Done reading data waiting for calculations to finish
+	-> Done waiting for threads
+	-> Output filenames:
+		->"fst/output//pop3.arg"
+		->"fst/output//pop3.saf.gz"
+		->"fst/output//pop3.saf.pos.gz"
+		->"fst/output//pop3.saf.idx"
+	-> Thu Jul 22 14:17:36 2021
+	-> Arguments and parameters for all analysis are located in .arg file
+	-> Total number of sites analyzed: 51085
+	-> Number of sites retained after filtering: 51085 
+	[ALL done] cpu-time used =  0.65 sec
+	[ALL done] walltime used =  1.00 sec
+Calculating perpop sfs based on the perpop saf
+[persaf::persaf_init] Version of fst/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop1.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 1.991760 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst/output//pop1.saf.idx):13
+	-> Dimension of parameter space: 13
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 51085
+------------
+startlik=-126158.292570
+lik[2]=-97493.076415 diff=2.866522e+04 alpha:1.000000 sr2:1.089919e-01 nsites_difference[0]: 1.500292e+04
+lik[5]=-97492.727021 diff=3.493933e-01 alpha:1.225671 sr2:2.064766e-06 nsites_difference[1]: 6.943311e+01
+lik[8]=-97492.727015 diff=6.758404e-06 alpha:1.544122 sr2:8.040048e-12 nsites_difference[4]: 1.179730e-01
+	-> New like is worse? new:-9.749273e+04 old:-9.749273e+04 diff:-1.164153e-10 will skip accelerated EM in this round
+lik[10]=-97492.727015 diff=1.309672e-10 alpha:1.263510 sr2:6.449162e-17 nsites_difference[1]: 3.211013e-04
+	-> New like is worse? new:-9.749273e+04 old:-9.749273e+04 diff:-7.275958e-11 will skip accelerated EM in this round
+lik[12]=-97492.727015 diff=7.275958e-11 alpha:1.000000 sr2:2.980636e-19 nsites_difference[3]: 1.655115e-05
+likelihood: -97492.727015
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 2.002831 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst/output//pop2.saf.idx):15
+	-> Dimension of parameter space: 15
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 51085
+------------
+startlik=-133651.703007
+lik[2]=-94707.562282 diff=3.894414e+04 alpha:1.000000 sr2:1.822019e-01 nsites_difference[0]: 2.440999e+04
+lik[5]=-94706.682469 diff=8.798133e-01 alpha:1.147182 sr2:4.506423e-06 nsites_difference[1]: 9.269236e+01
+lik[8]=-94706.682304 diff=1.641445e-04 alpha:1.618420 sr2:7.215103e-11 nsites_difference[10]: 4.443420e-01
+lik[11]=-94706.682304 diff=6.257324e-10 alpha:1.374226 sr2:5.450659e-16 nsites_difference[1]: 7.529244e-04
+	-> New like is worse? new:-9.470668e+04 old:-9.470668e+04 diff:-3.783498e-10 will skip accelerated EM in this round
+lik[13]=-94706.682304 diff=4.074536e-10 alpha:1.740313 sr2:6.505731e-20 nsites_difference[7]: 9.553632e-06
+	-> Breaking EM(sr2) at iter:14, sqrt(sr2):4.734822e-11
+likelihood: -94706.682304
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> The choice of -nSites will require atleast: 2.086853 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst/output//pop3.saf.idx):19
+	-> Dimension of parameter space: 19
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Will run optimization on nSites: 51085
+------------
+startlik=-144840.688808
+lik[2]=-102114.465310 diff=4.272622e+04 alpha:1.000000 sr2:1.734445e-01 nsites_difference[0]: 2.310034e+04
+lik[5]=-102113.217866 diff=1.247444e+00 alpha:1.152120 sr2:3.362106e-06 nsites_difference[0]: 7.021111e+01
+lik[8]=-102113.214326 diff=3.539660e-03 alpha:1.974183 sr2:1.482587e-09 nsites_difference[9]: 2.397465e+00
+lik[11]=-102113.214326 diff=1.342123e-07 alpha:1.626781 sr2:7.216593e-14 nsites_difference[9]: 1.081172e-02
+lik[14]=-102113.214326 diff=8.731149e-11 alpha:1.936405 sr2:3.509758e-18 nsites_difference[9]: 9.789416e-05
+likelihood: -102113.214326
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+Calculating parwise 2d sfs
+[persaf::persaf_init] Version of fst/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 3.994591 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst/output//pop1.saf.idx):13
+	-> dim(fst/output//pop2.saf.idx):15
+	-> Dimension of parameter space: 195
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	51085
+	-> Sites to keep[1] from pop1:	51085
+	-> [readdata] lastread:51085 posi:0
+	-> Comparing positions: 1 with 0 has:51085
+	-> Will run optimization on nSites: 51085
+------------
+startlik=-259809.995578
+lik[2]=-177903.848255 diff=8.190615e+04 alpha:1.000000 sr2:6.523050e-02 nsites_difference[15]: 1.087888e+04
+lik[5]=-177884.679484 diff=1.916877e+01 alpha:1.294809 sr2:1.886656e-05 nsites_difference[15]: 1.997030e+02
+lik[8]=-177884.594763 diff=8.472101e-02 alpha:2.250653 sr2:1.277129e-09 nsites_difference[82]: 1.306360e+00
+lik[11]=-177884.589120 diff=5.642820e-03 alpha:1.986917 sr2:1.501612e-12 nsites_difference[184]: 1.034448e-01
+lik[14]=-177884.586591 diff=2.529328e-03 alpha:4.000000 sr2:1.140845e-13 nsites_difference[184]: 8.276199e-02
+lik[17]=-177884.585984 diff=6.069266e-04 alpha:5.455981 sr2:1.561300e-14 nsites_difference[184]: 4.132367e-02
+lik[20]=-177884.585913 diff=7.061279e-05 alpha:1.719619 sr2:6.289741e-15 nsites_difference[184]: 7.191913e-03
+lik[23]=-177884.585810 diff=1.032519e-04 alpha:16.000000 sr2:1.300821e-15 nsites_difference[184]: 2.464626e-02
+lik[26]=-177884.585807 diff=2.729765e-06 alpha:1.327409 sr2:7.483800e-16 nsites_difference[16]: 1.491675e-03
+lik[29]=-177884.585806 diff=1.096603e-06 alpha:15.395197 sr2:1.240421e-17 nsites_difference[184]: 2.741033e-03
+lik[32]=-177884.585806 diff=1.923763e-07 alpha:2.643335 sr2:3.914612e-17 nsites_difference[82]: 3.210289e-04
+lik[35]=-177884.585806 diff=4.403410e-08 alpha:2.115554 sr2:1.944475e-19 nsites_difference[184]: 6.292359e-05
+	-> New like is worse? new:-1.778846e+05 old:-1.778846e+05 diff:-3.934838e-08 will skip accelerated EM in this round
+lik[37]=-177884.585806 diff=3.376044e-09 alpha:14.074665 sr2:7.549912e-20 nsites_difference[184]: 2.019969e-05
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[39]=-177884.585806 diff=1.600711e-09 alpha:1.000000 sr2:6.354749e-20 nsites_difference[184]: 1.857923e-05
+lik[42]=-177884.585806 diff=3.434252e-09 alpha:4.000000 sr2:5.376311e-20 nsites_difference[184]: 7.017338e-05
+lik[45]=-177884.585806 diff=1.688022e-09 alpha:16.000000 sr2:2.419443e-20 nsites_difference[184]: 1.266921e-04
+	-> Breaking EM(sr2) at iter:46, sqrt(sr2):1.838268e-11
+likelihood: -177884.585806
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 4.078613 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst/output//pop1.saf.idx):13
+	-> dim(fst/output//pop3.saf.idx):19
+	-> Dimension of parameter space: 247
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	51085
+	-> Sites to keep[1] from pop1:	51085
+	-> [readdata] lastread:51085 posi:0
+	-> Comparing positions: 1 with 0 has:51085
+	-> Will run optimization on nSites: 51085
+------------
+startlik=-270998.981379
+lik[2]=-184500.855462 diff=8.649813e+04 alpha:1.000000 sr2:6.216356e-02 nsites_difference[19]: 1.069461e+04
+lik[5]=-184476.232772 diff=2.462269e+01 alpha:1.303387 sr2:2.263291e-05 nsites_difference[19]: 2.081633e+02
+lik[8]=-184476.095020 diff=1.377525e-01 alpha:2.574079 sr2:2.517213e-09 nsites_difference[107]: 1.812189e+00
+lik[11]=-184476.094868 diff=1.518672e-04 alpha:1.693734 sr2:4.987150e-12 nsites_difference[20]: 8.479099e-02
+lik[14]=-184476.094865 diff=3.038615e-06 alpha:3.248168 sr2:3.366852e-14 nsites_difference[121]: 9.762511e-03
+lik[17]=-184476.094864 diff=4.873145e-07 alpha:1.272978 sr2:5.387024e-17 nsites_difference[20]: 3.516140e-04
+lik[20]=-184476.094864 diff=6.111804e-10 alpha:2.622354 sr2:3.591617e-20 nsites_difference[121]: 7.690249e-06
+	-> Breaking EM(sr2) at iter:21, sqrt(sr2):8.562676e-12
+likelihood: -184476.094864
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+[persaf::persaf_init] Version of fst/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:(null) chr:(null) start:-1 stop:-1 fstout:(null) oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+[main] Multi SFS is 'still' under development. Please report strange behaviour.
+	-> The choice of -nSites will require atleast: 4.089684 megabyte memory, that is at least: 0.00% of total memory
+	-> dim(fst/output//pop2.saf.idx):15
+	-> dim(fst/output//pop3.saf.idx):19
+	-> Dimension of parameter space: 285
+	-> Done reading data from chromosome will prepare next chromosome
+	-> Is in multi sfs, will now read data from chr:1
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	51085
+	-> Sites to keep[1] from pop1:	51085
+	-> [readdata] lastread:51085 posi:0
+	-> Comparing positions: 1 with 0 has:51085
+	-> Will run optimization on nSites: 51085
+------------
+startlik=-278492.391816
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[2]=-173947.629894 diff=1.045448e+05 alpha:1.000000 sr2:1.045592e-01 nsites_difference[0]: 1.612979e+04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[4]=-173925.627460 diff=2.200243e+01 alpha:1.169695 sr2:5.168197e-06 nsites_difference[0]: 9.183445e+01
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[6]=-173923.732083 diff=1.895376e+00 alpha:1.000000 sr2:4.279830e-08 nsites_difference[20]: 5.547968e+00
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[8]=-173923.399834 diff=3.322493e-01 alpha:2.652270 sr2:4.481360e-09 nsites_difference[66]: 1.429175e+00
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[10]=-173923.317747 diff=8.208656e-02 alpha:1.000000 sr2:7.974508e-10 nsites_difference[66]: 6.478096e-01
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[12]=-173923.289883 diff=2.786380e-02 alpha:3.154672 sr2:1.669426e-10 nsites_difference[66]: 2.928749e-01
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[14]=-173923.277193 diff=1.269005e-02 alpha:1.000000 sr2:3.808570e-11 nsites_difference[163]: 1.389165e-01
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[16]=-173923.270056 diff=7.137250e-03 alpha:3.409639 sr2:9.298926e-12 nsites_difference[163]: 7.326220e-02
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[18]=-173923.265504 diff=4.551767e-03 alpha:1.000000 sr2:2.448401e-12 nsites_difference[163]: 3.872390e-02
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[20]=-173923.262379 diff=3.125547e-03 alpha:3.878005 sr2:7.200505e-13 nsites_difference[92]: 2.493813e-02
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[22]=-173923.260126 diff=2.252980e-03 alpha:1.000000 sr2:2.519081e-13 nsites_difference[92]: 2.022579e-02
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[24]=-173923.258442 diff=1.683810e-03 alpha:4.000000 sr2:1.109153e-13 nsites_difference[92]: 1.670511e-02
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[26]=-173923.257146 diff=1.295651e-03 alpha:1.000000 sr2:6.095267e-14 nsites_difference[92]: 1.400826e-02
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[28]=-173923.256125 diff=1.021532e-03 alpha:4.000000 sr2:3.910901e-14 nsites_difference[92]: 1.189836e-02
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[30]=-173923.255303 diff=8.221286e-04 alpha:1.000000 sr2:2.741388e-14 nsites_difference[92]: 1.021753e-02
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[32]=-173923.254629 diff=6.732596e-04 alpha:4.000000 sr2:2.016759e-14 nsites_difference[92]: 8.857427e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[34]=-173923.254070 diff=5.595426e-04 alpha:1.000000 sr2:1.526795e-14 nsites_difference[92]: 7.741738e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[36]=-173923.253599 diff=4.709050e-04 alpha:4.000000 sr2:1.178531e-14 nsites_difference[92]: 6.815509e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[38]=-173923.253198 diff=4.005846e-04 alpha:1.000000 sr2:9.232942e-15 nsites_difference[92]: 6.038367e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[40]=-173923.252854 diff=3.439280e-04 alpha:4.000000 sr2:7.322373e-15 nsites_difference[92]: 5.380126e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[42]=-173923.252557 diff=2.976635e-04 alpha:1.000000 sr2:5.868686e-15 nsites_difference[92]: 4.817856e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[44]=-173923.252297 diff=2.594390e-04 alpha:4.000000 sr2:4.747511e-15 nsites_difference[92]: 4.333893e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[46]=-173923.252070 diff=2.275299e-04 alpha:1.000000 sr2:3.872544e-15 nsites_difference[92]: 3.914451e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[48]=-173923.251869 diff=2.006504e-04 alpha:4.000000 sr2:3.182537e-15 nsites_difference[92]: 3.548646e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[50]=-173923.251691 diff=1.778249e-04 alpha:1.000000 sr2:2.633244e-15 nsites_difference[92]: 3.227795e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[52]=-173923.251533 diff=1.583016e-04 alpha:4.000000 sr2:2.192222e-15 nsites_difference[92]: 2.944901e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[54]=-173923.251392 diff=1.414944e-04 alpha:1.000000 sr2:1.835361e-15 nsites_difference[92]: 2.694278e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[56]=-173923.251265 diff=1.269398e-04 alpha:4.000000 sr2:1.544536e-15 nsites_difference[92]: 2.471264e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[58]=-173923.251150 diff=1.142684e-04 alpha:1.000000 sr2:1.305970e-15 nsites_difference[92]: 2.272011e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[60]=-173923.251047 diff=1.031815e-04 alpha:4.000000 sr2:1.109088e-15 nsites_difference[92]: 2.093317e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[62]=-173923.250954 diff=9.343761e-05 alpha:1.000000 sr2:9.456986e-16 nsites_difference[92]: 1.932503e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[64]=-173923.250869 diff=8.483793e-05 alpha:4.000000 sr2:8.094018e-16 nsites_difference[92]: 1.787311e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[66]=-173923.250792 diff=7.721843e-05 alpha:1.000000 sr2:6.951590e-16 nsites_difference[92]: 1.655830e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[68]=-173923.250721 diff=7.044326e-05 alpha:4.000000 sr2:5.989734e-16 nsites_difference[92]: 1.536431e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[70]=-173923.250657 diff=6.439886e-05 alpha:1.000000 sr2:5.176537e-16 nsites_difference[92]: 1.427722e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[72]=-173923.250598 diff=5.898846e-05 alpha:4.000000 sr2:4.486348e-16 nsites_difference[92]: 1.328503e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[74]=-173923.250544 diff=5.413184e-05 alpha:1.000000 sr2:3.898429e-16 nsites_difference[92]: 1.237739e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[76]=-173923.250494 diff=4.976048e-05 alpha:4.000000 sr2:3.395919e-16 nsites_difference[92]: 1.154533e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[78]=-173923.250448 diff=4.581572e-05 alpha:1.000000 sr2:2.965038e-16 nsites_difference[92]: 1.078102e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[80]=-173923.250406 diff=4.224663e-05 alpha:4.000000 sr2:2.594466e-16 nsites_difference[92]: 1.007764e-03
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[82]=-173923.250367 diff=3.901060e-05 alpha:1.000000 sr2:2.274860e-16 nsites_difference[92]: 9.429170e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[84]=-173923.250331 diff=3.607036e-05 alpha:4.000000 sr2:1.998478e-16 nsites_difference[92]: 8.830347e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[86]=-173923.250297 diff=3.339307e-05 alpha:1.000000 sr2:1.758873e-16 nsites_difference[92]: 8.276504e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[88]=-173923.250266 diff=3.095058e-05 alpha:4.000000 sr2:1.550660e-16 nsites_difference[92]: 7.763510e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[90]=-173923.250238 diff=2.871899e-05 alpha:1.000000 sr2:1.369320e-16 nsites_difference[92]: 7.287697e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[92]=-173923.250211 diff=2.667517e-05 alpha:4.000000 sr2:1.211049e-16 nsites_difference[92]: 6.845793e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[94]=-173923.250186 diff=2.480159e-05 alpha:1.000000 sr2:1.072637e-16 nsites_difference[92]: 6.434879e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[96]=-173923.250163 diff=2.308088e-05 alpha:4.000000 sr2:9.513591e-17 nsites_difference[92]: 6.052338e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[98]=-173923.250142 diff=2.149862e-05 alpha:1.000000 sr2:8.449038e-17 nsites_difference[92]: 5.695821e-04
+	-> Instability detected, accelerated guess is too close to bound or outside will fallback to regular EM for this step
+lik[100]=-173923.250122 diff=2.004098e-05 alpha:4.000000 sr2:7.512986e-17 nsites_difference[92]: 5.363215e-04
+likelihood: -173923.250122
+------------
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+
+	-> NB output is no longer log probs of the frequency spectrum!
+	-> Output is now simply the expected values! 
+	-> You can convert to the old format simply with log(norm(x))
+
+	-> Please check that it has converged!
+	-> You can add start new optimization by supplying -sfs FILE, where is >FILE from this run
+	-> -maxIter INT -tole FLOAT
+Calculating fst index for 3 pairwise, and multi fst
+not implemented yet for safv4, exiting
+[persaf::persaf_init] Version of fst/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop2.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst/output//pop1.pop2.saf.idx.ml chr:(null) start:-1 stop:-1 fstout:fst/output//pop1.pop2 oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:12 sfs2:14 dimspace:195 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> Reading: fst/output//pop1.pop2.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	51085
+	-> Sites to keep[1] from pop1:	51085
+	-> [readdata] lastread:51085 posi:0
+	-> Comparing positions: 1 with 0 has:51085
+	-> Will now do fst temp dump using a chunk of 51085
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst/output//pop1.pop2.fst.idx 
+	 realSFS fst stats2 fst/output//pop1.pop2.fst.idx 
+not implemented yet for safv4, exiting
+[persaf::persaf_init] Version of fst/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst/output//pop1.pop3.saf.idx.ml chr:(null) start:-1 stop:-1 fstout:fst/output//pop1.pop3 oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:12 sfs2:18 dimspace:247 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> Reading: fst/output//pop1.pop3.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	51085
+	-> Sites to keep[1] from pop1:	51085
+	-> [readdata] lastread:51085 posi:0
+	-> Comparing positions: 1 with 0 has:51085
+	-> Will now do fst temp dump using a chunk of 51085
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst/output//pop1.pop3.fst.idx 
+	 realSFS fst stats2 fst/output//pop1.pop3.fst.idx 
+not implemented yet for safv4, exiting
+[persaf::persaf_init] Version of fst/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst/output//pop2.pop3.saf.idx.ml chr:(null) start:-1 stop:-1 fstout:fst/output//pop2.pop3 oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:14 sfs2:18 dimspace:285 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> Reading: fst/output//pop2.pop3.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	51085
+	-> Sites to keep[1] from pop1:	51085
+	-> [readdata] lastread:51085 posi:0
+	-> Comparing positions: 1 with 0 has:51085
+	-> Will now do fst temp dump using a chunk of 51085
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst/output//pop2.pop3.fst.idx 
+	 realSFS fst stats2 fst/output//pop2.pop3.fst.idx 
+not implemented yet for safv4, exiting
+[persaf::persaf_init] Version of fst/output//pop1.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop1.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop1.saf.pos.gz
+[persaf::persaf_init] Version of fst/output//pop2.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop2.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop2.saf.pos.gz
+[persaf::persaf_init] Version of fst/output//pop3.saf.idx is 3
+[persaf::persaf_init] Assuming .saf.gz file is fst/output//pop3.saf.gz
+[persaf::persaf_init] Assuming .saf.pos.gz file is fst/output//pop3.saf.pos.gz
+	-> args: tole:0.000000 nthreads:4 maxiter:100 nsites:0 start:fst/output//pop1.pop2.saf.idx.ml chr:(null) start:-1 stop:-1 fstout:fst/output//pop1.pop2.pop3 oldout:0 seed:-1 bootstrap:0 resample_chr:0 whichFst:0 fold:0 ref:(null) anc:(null)
+	-> nSites: 100000
+	-> IMPORTANT: please make sure that your saf files haven't been folded with -fold 1 in -doSaf in angsd
+	-> [reynoldFst] sfs1:12 sfs2:14 dimspace:195 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> [reynoldFst] sfs1:12 sfs2:18 dimspace:247 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> [reynoldFst] sfs1:14 sfs2:18 dimspace:285 
+	-> generating offset remapper lookup
+	-> isSame:1 adjusting foldfactors
+	-> Reading: fst/output//pop1.pop2.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Reading: fst/output//pop1.pop3.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Reading: fst/output//pop2.pop3.saf.idx.ml assuming counts (will normalize to probs internally)
+	-> Done reading data from chromosome will prepare next chromosome
+	-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect 
+	-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites
+	-> Sites to keep[1] from pop0:	51085
+	-> Sites to keep[1] from pop1:	51085
+	-> Sites to keep[1] from pop2:	51085
+	-> [readdata] lastread:51085 posi:0
+	-> Comparing positions: 1 with 0 has:51085
+	-> Comparing positions: 2 with 0 has:51085
+	-> Will now do fst temp dump using a chunk of 51085
+	-> Only read nSites: 0 will therefore prepare next chromosome (or exit)
+	-> Will now do fst temp dump using a chunk of 0
+	-> fst index finished with no errors!
+		 Example runs:
+	 realSFS fst stats  fst/output//pop1.pop2.pop3.fst.idx 
+	 realSFS fst stats2 fst/output//pop1.pop2.pop3.fst.idx 
+Calculating fst stats for 3 pairwise, and multi fst
+not implemented yet for safv4, exiting
+	-> Assuming idxname:fst/output//pop1.pop2.fst.idx
+	-> Assuming .fst.gz file: fst/output//pop1.pop2.fst.gz
+	-> FST.Unweight[nObs:51085]:0.114638 Fst.Weight:0.186979
+not implemented yet for safv4, exiting
+	-> Assuming idxname:fst/output//pop1.pop3.fst.idx
+	-> Assuming .fst.gz file: fst/output//pop1.pop3.fst.gz
+	-> FST.Unweight[nObs:51085]:0.121007 Fst.Weight:0.192111
+not implemented yet for safv4, exiting
+	-> Assuming idxname:fst/output//pop2.pop3.fst.idx
+	-> Assuming .fst.gz file: fst/output//pop2.pop3.fst.gz
+	-> FST.Unweight[nObs:51085]:0.069461 Fst.Weight:0.125000
+not implemented yet for safv4, exiting
+	-> Assuming idxname:fst/output//pop1.pop2.pop3.fst.idx
+	-> Assuming .fst.gz file: fst/output//pop1.pop2.pop3.fst.gz
+	-> FST.Unweight[nObs:51085]:0.114638 Fst.Weight:0.186979
+	-> FST.Unweight[nObs:51085]:0.121007 Fst.Weight:0.192111
+	-> FST.Unweight[nObs:51085]:0.069461 Fst.Weight:0.125000
+fst/output/fai.fai: OK
+fst/output/glout.glf.gz: OK
+fst/output/glout.pgEstH: OK
+fst/output/glout.vPos: OK
+fst/output/pop1.glf.gz: OK
+fst/output/pop1.pop2.fst.gz: FAILED
+fst/output/pop1.pop2.fst.idx: OK
+fst/output/pop1.pop2.pop3.fst.gz: FAILED
+fst/output/pop1.pop2.pop3.fst.idx: OK
+fst/output/pop1.pop2.saf.idx.ml: FAILED
+fst/output/pop1.pop3.fst.gz: FAILED
+fst/output/pop1.pop3.fst.idx: OK
+fst/output/pop1.pop3.saf.idx.ml: FAILED
+fst/output/pop1.saf.gz: FAILED
+fst/output/pop1.saf.idx: FAILED
+fst/output/pop1.saf.idx.ml: FAILED
+fst/output/pop1.saf.pos.gz: FAILED
+fst/output/pop2.glf.gz: OK
+fst/output/pop2.pop3.fst.gz: FAILED
+fst/output/pop2.pop3.fst.idx: OK
+fst/output/pop2.pop3.saf.idx.ml: FAILED
+fst/output/pop2.saf.gz: FAILED
+fst/output/pop2.saf.idx: FAILED
+fst/output/pop2.saf.idx.ml: FAILED
+fst/output/pop2.saf.pos.gz: FAILED
+fst/output/pop3.glf.gz: OK
+fst/output/pop3.saf.gz: FAILED
+fst/output/pop3.saf.idx: FAILED
+fst/output/pop3.saf.idx.ml: FAILED
+fst/output/pop3.saf.pos.gz: FAILED
+fst/output/pop1.pop2.fst.idx.res: OK
+fst/output/pop1.pop2.pop3.fst.idx.res: OK
+fst/output/pop1.pop3.fst.idx.res: OK
+fst/output/pop2.pop3.fst.idx.res: OK
+md5sum: WARNING: 2 lines are improperly formatted
+md5sum: WARNING: 19 computed checksums did NOT match
+Testing haplocall
+../angsd
+
+real	0m2.437s
+user	0m2.320s
+sys	0m0.048s
+make: *** [test] Error 1
+
+##start by looking at the ml files
+
+[fvr124@compute12-snm-willerslev angsd.dev]$ Rscript -e "range(abs(scan('test/fst/output/pop2.saf.idx.ml')-scan('../angsd.master/test/fst/output/pop2.saf.idx.ml')))"
+Read 15 items
+Read 15 items
+[1] 0e+00 2e-06
+[fvr124@compute12-snm-willerslev angsd.dev]$ Rscript -e "range(abs(scan('test/fst/output/pop3.saf.idx.ml')-scan('../angsd.master/test/fst/output/pop3.saf.idx.ml')))"
+Read 19 items
+Read 19 items
+[1] 0e+00 1e-06
+[fvr124@compute12-snm-willerslev angsd.dev]$ 
+
+[fvr124@compute12-snm-willerslev angsd.dev]$ Rscript -e "range(abs(scan('test/fst/output/pop1.saf.idx.ml')-scan('../angsd.master/test/fst/output/pop1.saf.idx.ml')))"
+Read 13 items
+Read 13 items
+[1] 0e+00 1e-06
+[fvr124@compute12-snm-willerslev angsd.dev]$ Rscript -e "range(abs(scan('test/fst/output/pop2.saf.idx.ml')-scan('../angsd.master/test/fst/output/pop2.saf.idx.ml')))"
+Read 15 items
+Read 15 items
+[1] 0e+00 2e-06
+[fvr124@compute12-snm-willerslev angsd.dev]$ Rscript -e "range(abs(scan('test/fst/output/pop3.saf.idx.ml')-scan('../angsd.master/test/fst/output/pop3.saf.idx.ml')))"
+Read 19 items
+Read 19 items
+[1] 0e+00 1e-06
+[fvr124@compute12-snm-willerslev angsd.dev]$ Rscript -e "range(abs(scan('test/fst/output/pop1.pop2.saf.idx.ml')-scan('../angsd.master/test/fst/output/pop1.pop2.saf.idx.ml')))"
+Read 195 items
+Read 195 items
+[1] 0e+00 1e-06
+[fvr124@compute12-snm-willerslev angsd.dev]$ Rscript -e "range(abs(scan('test/fst/output/pop1.pop3.saf.idx.ml')-scan('../angsd.master/test/fst/output/pop1.pop3.saf.idx.ml')))"
+Read 247 items
+Read 247 items
+[1] 0e+00 1e-06
+[fvr124@compute12-snm-willerslev angsd.dev]$ Rscript -e "range(abs(scan('test/fst/output/pop2.pop3.saf.idx.ml')-scan('../angsd.master/test/fst/output/pop2.pop3.saf.idx.ml')))"
+Read 285 items
+Read 285 items
+[1] 0e+00 1e-06
+[fvr124@compute12-snm-willerslev angsd.dev]$ 
+
+##all is fine, lets check fst a b
+[fvr124@compute12-snm-willerslev angsd.dev]$ diff <(./misc/realSFS fst print test/fst/output/pop1.pop2.fst.idx ) <(./misc/realSFS fst print ../angsd.master/test/fst/output/pop1.pop2.fst.idx) 
+not implemented yet for safv4, exiting
+not implemented yet for safv4, exiting
+	-> Assuming idxname:test/fst/output/pop1.pop2.fst.idx
+	-> Assuming idxname:../angsd.master/test/fst/output/pop1.pop2.fst.idx
+	-> Assuming .fst.gz file: test/fst/output/pop1.pop2.fst.gz
+	-> Assuming .fst.gz file: ../angsd.master/test/fst/output/pop1.pop2.fst.gz
+	-> Information from index file: nSites:51085 nChrs:1
+	-> Population[0]: fst/output//pop1.saf.idx
+	-> Population[1]: fst/output//pop2.saf.idx
+		0	1	51085	8
+choose:1 
+	-> Information from index file: nSites:51085 nChrs:1
+	-> Population[0]: fst/output//pop1.saf.idx
+	-> Population[1]: fst/output//pop2.saf.idx
+		0	1	51085	8
+choose:1 
+pars->stop:-1 ppos:51084 first:0 last:51085
+pars->stop:-1 ppos:51084 first:0 last:51085
+31036c31036
+< 1	31036	0.397093	0.657860
+---
+> 1	31036	0.397092	0.657860
+34865c34865
+< 1	34865	0.464006	0.734764
+---
+> 1	34865	0.464006	0.734763
+37909c37909
+< 1	37909	0.104080	0.452028
+---
+> 1	37909	0.104079	0.452028
+[fvr124@compute12-snm-willerslev angsd.dev]$ diff <(./misc/realSFS fst print test/fst/output/pop1.pop3.fst.idx ) <(./misc/realSFS fst print ../angsd.master/test/fst/output/pop1.pop3.fst.idx) 
+not implemented yet for safv4, exiting
+not implemented yet for safv4, exiting
+	-> Assuming idxname:test/fst/output/pop1.pop3.fst.idx
+	-> Assuming idxname:../angsd.master/test/fst/output/pop1.pop3.fst.idx
+	-> Assuming .fst.gz file: test/fst/output/pop1.pop3.fst.gz
+	-> Information from index file: nSites:51085 nChrs:1
+	-> Population[0]: fst/output//pop1.saf.idx
+	-> Population[1]: fst/output//pop3.saf.idx
+		0	1	51085	8
+choose:1 
+pars->stop:-1 ppos:51084 first:0 last:51085
+	-> Assuming .fst.gz file: ../angsd.master/test/fst/output/pop1.pop3.fst.gz
+	-> Information from index file: nSites:51085 nChrs:1
+	-> Population[0]: fst/output//pop1.saf.idx
+	-> Population[1]: fst/output//pop3.saf.idx
+		0	1	51085	8
+choose:1 
+pars->stop:-1 ppos:51084 first:0 last:51085
+26673c26673
+< 1	26673	0.582821	0.770885
+---
+> 1	26673	0.582821	0.770884
+35170c35170
+< 1	35170	0.430004	0.707848
+---
+> 1	35170	0.430004	0.707847
+35191c35191
+< 1	35191	0.207824	0.613207
+---
+> 1	35191	0.207823	0.613207
+[fvr124@compute12-snm-willerslev angsd.dev]$ diff <(./misc/realSFS fst print test/fst/output/pop2.pop3.fst.idx ) <(./misc/realSFS fst print ../angsd.master/test/fst/output/pop2.pop3.fst.idx) 
+not implemented yet for safv4, exiting
+not implemented yet for safv4, exiting
+	-> Assuming idxname:test/fst/output/pop2.pop3.fst.idx
+	-> Assuming idxname:../angsd.master/test/fst/output/pop2.pop3.fst.idx
+	-> Assuming .fst.gz file: test/fst/output/pop2.pop3.fst.gz
+	-> Information from index file: nSites:51085 nChrs:1
+	-> Population[0]: fst/output//pop2.saf.idx
+	-> Population[1]: fst/output//pop3.saf.idx
+		0	1	51085	8
+choose:1 
+pars->stop:-1 ppos:51084 first:0 last:51085
+	-> Assuming .fst.gz file: ../angsd.master/test/fst/output/pop2.pop3.fst.gz
+	-> Information from index file: nSites:51085 nChrs:1
+	-> Population[0]: fst/output//pop2.saf.idx
+	-> Population[1]: fst/output//pop3.saf.idx
+		0	1	51085	8
+choose:1 
+pars->stop:-1 ppos:51084 first:0 last:51085
+2400c2400
+< 1	2400	0.345430	0.663074
+---
+> 1	2400	0.345429	0.663074
+[fvr124@compute12-snm-willerslev angsd.dev]$ 
+
+
+#all is fine down to last digit
+#check global fst valus:
+
+[fvr124@compute12-snm-willerslev angsd.dev]$ ./misc/realSFS fst stats test/fst/output/pop1.pop2.fst.idx
+not implemented yet for safv4, exiting
+	-> Assuming idxname:test/fst/output/pop1.pop2.fst.idx
+	-> Assuming .fst.gz file: test/fst/output/pop1.pop2.fst.gz
+	-> FST.Unweight[nObs:51085]:0.114638 Fst.Weight:0.186979
+0.114638	0.186979
+[fvr124@compute12-snm-willerslev angsd.dev]$ ./misc/realSFS fst stats ../angsd.master/test/fst/output/pop1.pop2.fst.idx
+not implemented yet for safv4, exiting
+	-> Assuming idxname:../angsd.master/test/fst/output/pop1.pop2.fst.idx
+	-> Assuming .fst.gz file: ../angsd.master/test/fst/output/pop1.pop2.fst.gz
+	-> FST.Unweight[nObs:51085]:0.114638 Fst.Weight:0.186979
+0.114638	0.186979
+[fvr124@compute12-snm-willerslev angsd.dev]$ ./misc/realSFS fst stats test/fst/output/pop1.pop3.fst.idx
+not implemented yet for safv4, exiting
+	-> Assuming idxname:test/fst/output/pop1.pop3.fst.idx
+	-> Assuming .fst.gz file: test/fst/output/pop1.pop3.fst.gz
+	-> FST.Unweight[nObs:51085]:0.121007 Fst.Weight:0.192111
+0.121007	0.192111
+[fvr124@compute12-snm-willerslev angsd.dev]$ ./misc/realSFS fst stats ../angsd.master/test/fst/output/pop1.pop3.fst.idx
+not implemented yet for safv4, exiting
+	-> Assuming idxname:../angsd.master/test/fst/output/pop1.pop3.fst.idx
+	-> Assuming .fst.gz file: ../angsd.master/test/fst/output/pop1.pop3.fst.gz
+	-> FST.Unweight[nObs:51085]:0.121007 Fst.Weight:0.192111
+0.121007	0.192111
+[fvr124@compute12-snm-willerslev angsd.dev]$ ./misc/realSFS fst stats test/fst/output/pop2.pop3.fst.idx
+not implemented yet for safv4, exiting
+	-> Assuming idxname:test/fst/output/pop2.pop3.fst.idx
+	-> Assuming .fst.gz file: test/fst/output/pop2.pop3.fst.gz
+	-> FST.Unweight[nObs:51085]:0.069461 Fst.Weight:0.125000
+0.069461	0.125000
+[fvr124@compute12-snm-willerslev angsd.dev]$ ./misc/realSFS fst stats ../angsd.master/test/fst/output/pop2.pop3.fst.idx
+not implemented yet for safv4, exiting
+	-> Assuming idxname:../angsd.master/test/fst/output/pop2.pop3.fst.idx
+	-> Assuming .fst.gz file: ../angsd.master/test/fst/output/pop2.pop3.fst.gz
+	-> FST.Unweight[nObs:51085]:0.069461 Fst.Weight:0.125000
+0.069461	0.125000
+[fvr124@compute12-snm-willerslev angsd.dev]$ 
+
+##check pbs
+[fvr124@compute12-snm-willerslev angsd.dev]$ ./misc/realSFS fst stats test/fst/output/pop1.pop2.pop3.fst.idx 2>/dev/null
+0.114638	0.186979
+0.121007	0.192111
+0.069461	0.125000
+pbs.pop1	0.143399
+pbs.pop2	0.063600
+pbs.pop3	0.069932
+[fvr124@compute12-snm-willerslev angsd.dev]$ ./misc/realSFS fst stats ../angsd.master/test/fst/output/pop1.pop2.pop3.fst.idx 2>/dev/null
+0.114638	0.186979
+0.121007	0.192111
+0.069461	0.125000
+pbs.pop1	0.143399
+pbs.pop2	0.063600
+pbs.pop3	0.069932
+
+
+[fvr124@compute12-snm-willerslev test]$ cat fst/output/pop*.res
+0.114638	0.186979
+0.114638	0.186979
+0.121007	0.192111
+0.069461	0.125000
+pbs.pop1	0.143399
+pbs.pop2	0.063600
+pbs.pop3	0.069932
+0.121007	0.192111
+0.069461	0.125000
+[fvr124@compute12-snm-willerslev test]$ cat ../../angsd.master/test/fst/output/pop*.res
+0.114638	0.186979
+0.114638	0.186979
+0.121007	0.192111
+0.069461	0.125000
+pbs.pop1	0.143399
+pbs.pop2	0.063600
+pbs.pop3	0.069932
+0.121007	0.192111
+0.069461	0.125000
+[fvr124@compute12-snm-willerslev test]$ 
+

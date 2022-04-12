@@ -4,6 +4,7 @@
 #include <string>
 #include <errno.h>
 #include <cassert>
+#include <inttypes.h>
 #include "analysisFunction.h"
 #include "vcfReader.h"
 
@@ -278,10 +279,11 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 	  fprintf(stderr,"Check this file:line: %s:%d\n",__FILE__,__LINE__);
 	  bcf_float_set_vector_end(ln_gl[i]);
 	} else{
-	  dupergp[i] = farr[i];
+	  dupergp[i] = farr[i];//FIX
+	  //	  dupergp[i] = pow(10,-farr[i]/10.0);
 
 	}
-	//	fprintf(stderr, "%f %f\n", farr[i], ln_gl[i]);
+	//	fprintf(stderr, "%f\n", farr[i]);
       }
     }
   } else  if(type==0) {
@@ -382,6 +384,14 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 	    dupergl[ind*10+o] = 0.0;
 
       }
+    }
+  }
+  if(0&&type==2){//FIX
+    for(int ind=0;ind<hs->nsamples;ind++){
+      double tsum = dupergp[3*ind]+dupergp[3*ind+1]+dupergp[3*ind+2];
+      dupergp[3*ind] /= tsum;
+      dupergp[3*ind+1] /= tsum;
+      dupergp[3*ind+2] /= tsum;
     }
   }
   if(type==0||type==1){

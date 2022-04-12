@@ -1,7 +1,8 @@
 #pragma once
 #include "realSFS_args.h"
 #include "safreader.h"
-int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr,filt *fl);
+
+int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int stop,char **curChr,filt *fl,int from_fst_context);
 size_t calc_nsites(std::vector<persaf *> &pp,args *ar);
 size_t helper(persaf * pp,char *chr);
 void delGloc(std::vector<persaf *> &saf,size_t nSites);

@@ -8,12 +8,13 @@
 #include "header.h"
 
 typedef struct{
-  size_t nSites;
-  size_t nChr;
+  size_t nSites;//sum of all sites
+  size_t sumBand;
+  size_t nChr;//nr of chromosomes(bins)
   myMap mm;
   BGZF *pos;
   BGZF *saf;
-  int version;
+  int version;//safv3 = 2, safv4=3; abit stupid the v doesn follow safv
   keep<char> *toKeep;
   int at;
   int *ppos;
@@ -22,9 +23,8 @@ typedef struct{
   int dontRead;
 }persaf;
 
-size_t iter_read(persaf *saf, void *data, size_t length,int *pos);
-template <typename T>
-persaf* persaf_init(char *fname,int verbose);
-void writesaf_header(FILE *fp,persaf *pp);
+template <typename T> size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos);
+template <typename T> persaf* persaf_init(char *fname, int verbose);
+void writesaf_header(FILE *fp, persaf *pp);
 void persaf_destroy(persaf *pp);
-myMap::iterator iter_init(persaf *,char *,int,int);
+myMap::iterator iter_init(persaf*, char*, int, int);

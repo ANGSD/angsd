@@ -1206,7 +1206,7 @@ void abcAsso::dosageAsso(funkyPars  *pars,assoStruct *assoc){
   designNull.matrix=new double*[pars->nInd];
     
   angsd::Matrix<double> design; 
-  design.x=3*pars->nInd;
+  design.x=pars->nInd;
   design.y=covmat.y+2;
   design.matrix=new double*[pars->nInd];
    
