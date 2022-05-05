@@ -14,6 +14,7 @@ class abcSaf : public abc{
   BGZF *outfileSAFPOS;
   int underFlowProtect;
   int isSim;
+  int minInd;
   int noTrans;
   char *anc;
   char *pest;

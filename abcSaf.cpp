@@ -41,7 +41,9 @@ void abcSaf::getOptions(argStruct *arguments){
   doSaf = angsd::getArg("-doSaf",doSaf,arguments);
   doPost = angsd::getArg("-doPost",doPost,arguments);
   isHap = angsd::getArg("-isHap",isHap,arguments);
+  isSim = angsd::getArg("-isSim",isSim,arguments);
   pest = angsd::getArg("-pest",pest,arguments);
+  minInd = angsd::getArg("-minInd",minInd,arguments);
 
   if(doSaf==3){ //DRAGON
     fprintf(stderr,"\t-> Please use -doPost 3 instead for -doSaf 3\n");
@@ -88,8 +90,6 @@ void abcSaf::getOptions(argStruct *arguments){
 
   underFlowProtect=angsd::getArg("-underFlowProtect",underFlowProtect,arguments);
 
-  int isSim = 0;
-  isSim = angsd::getArg("-isSim",isSim,arguments);
 
   if(doSaf==0)
     return;
@@ -102,6 +102,9 @@ void abcSaf::getOptions(argStruct *arguments){
       exit(0);
     }
   }
+
+
+
   if(doSaf==5){
     int doMajorMinor =0;
     doMajorMinor = angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
@@ -164,6 +167,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   tmpChr = NULL;
   isHap = 0;
   sumBand = 0;
+  minInd=0;
   //for use when dumping binary indexed saf files
   const char *SAF = ".saf.gz";
   const char *SAFPOS =".saf.pos.gz";
@@ -675,6 +679,8 @@ void abcSaf::algoJointPost(double **post,
                            int *keepSites, 
                            realRes *r) 
 {
+
+
   int counter = 0;
   int numChr = nInd*2;
 
@@ -1253,6 +1259,31 @@ void abcSaf::run(funkyPars  *p){
     memset(r->oklist,0,p->numSites);
     r->pLikes=new float*[p->numSites];
     r->pBound=new int*[p->numSites];
+
+
+
+	  if(isSim){
+		for(int s=0;s<p->numSites;s++){
+			if(p->keepSites[s]==0)
+				continue;
+			int efSize=0;
+			for(int i=0;i<p->nInd;i++){
+				for(int ii=1;ii<10;ii++){
+					if(p->likes[s][i*10+ii]!=p->likes[s][i*10+0]){
+						efSize++;
+						break;
+					}
+				}
+			}
+		p->keepSites[s] = efSize;
+		if(minInd!=0&&minInd>efSize){
+			p->keepSites[s] = 0;
+		fprintf(stderr,"\n\n%d\n\n",minInd);
+		}
+		}
+	  }
+
+
     
     if(doSaf==1&&isHap==0)
       algoJoint(p->likes,p->anc,p->numSites,p->nInd,p->keepSites,r,noTrans);
