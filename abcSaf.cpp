@@ -720,8 +720,8 @@ void abcSaf::algoJointPost(double **post,
       saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1));
     }
 
-    for (unsigned i=0; i<2*nInd+1; ++i)
-      hj[i] = log(hj[i]);
+    for(int j=lower; j<=upper; j++)
+      hj[j] = log(hj[j]) + tmx;
 
     if(saf_sparsify_and_normalize (hj, lower, upper, scoreTol))
       r->oklist[s] = 3;
