@@ -1,28 +1,28 @@
-	-> angsd version: 0.937-81-g88fd84d-dirty (htslib: 1.14-9-ge769401) build(May 28 2022 15:47:46)
-	-> ../../../fixed_angsd/angsd/angsd -doMaf 4 -beagle test3.beagle -fai ref3.fa.fai -out test3 
-	-> Sat May 28 17:19:11 2022
+	-> angsd version: 0.937-82-g9e58925-dirty (htslib: 1.14-9-ge769401) build(May 29 2022 13:41:02)
+	-> ../angsd -doMaf 4 -beagle beagle_reader/test2.beagle -fai beagle_reader/ref//ref2.fa.fai -out beagle_reader/test_results//test2 
+	-> Sun May 29 13:42:00 2022
 ----------------
 multiReader.cpp:
 	-nLines	50	(Number of lines to read)
-	-beagle	test3.beagle	(Beagle Filename (can be .gz))
-	-bgen	test3.beagle	(Bgen Filename)
-	-vcf-GL	test3.beagle	(vcf Filename (can be bcf compressed or uncompressed))
-	-vcf-PL	test3.beagle	(vcf Filename (can be bcf compressed or uncompressed))
-	-vcf-GP	test3.beagle	(vcf Filename (can be bcf compressed or uncompressed))(*not used)
-	-glf	test3.beagle	(glf Filename (can be .gz))
-	-pileup	test3.beagle	(pileup Filename (can be .gz))
+	-beagle	beagle_reader/test2.beagle	(Beagle Filename (can be .gz))
+	-bgen	beagle_reader/test2.beagle	(Bgen Filename)
+	-vcf-GL	beagle_reader/test2.beagle	(vcf Filename (can be bcf compressed or uncompressed))
+	-vcf-PL	beagle_reader/test2.beagle	(vcf Filename (can be bcf compressed or uncompressed))
+	-vcf-GP	beagle_reader/test2.beagle	(vcf Filename (can be bcf compressed or uncompressed))(*not used)
+	-glf	beagle_reader/test2.beagle	(glf Filename (can be .gz))
+	-pileup	beagle_reader/test2.beagle	(pileup Filename (can be .gz))
 	-intName 1	(Assume First column is chr_position)
 	-isSim	1	(Simulated data assumes ancestral is A)
 	-nInd	0		(Number of individuals)
 	-minQ	13	(minimum base quality; only used in pileupreader)
-	-fai	ref3.fa.fai	(fai file)
+	-fai	beagle_reader/ref//ref2.fa.fai	(fai file)
 	-minQ	13	(minimum base quality; only used in pileupreader)
 ----------------
 multiReader.cpp:
 ---------------
 parseArgs_bambi.cpp: bam reader:
-	-bam/-b		test3.beagle	(list of BAM/CRAM files)
-	-i		test3.beagle	(Single BAM/CRAM file)
+	-bam/-b		beagle_reader/test2.beagle	(list of BAM/CRAM files)
+	-i		beagle_reader/test2.beagle	(Single BAM/CRAM file)
 	-r		(null)	Supply a single region in commandline (see examples below)
 	-rf		(null)	Supply multiple regions in a file (see examples below)
 	-remove_bads	1	Discard 'bad' reads, (flag & 512) 
@@ -157,8 +157,8 @@ abcHetPlas.cpp:
 	-doHetPlas=0 (Perform hetplasmid analysis)
 	-maxIter=100	(Max number of iterations)
 	-minLRT=-1.000000
-		->"test3.arg"
-		->"test3.mafs.gz"
+		->"beagle_reader/test_results//test2.arg"
+		->"beagle_reader/test_results//test2.mafs.gz"
 
 	[ALL done] cpu-time used =  0.00 sec
 	[ALL done] walltime used =  0.00 sec
