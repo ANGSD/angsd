@@ -118,6 +118,13 @@ if [ ! $? -eq 0  ]   ;then
 fi
 fi
 
+echo "Testing beagle reader"
+time ./testBeagleReader.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with beagle reader exit code: $?"
+    RVAL=1
+fi
+
 
 exit ${RVAL}
 
