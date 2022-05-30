@@ -1,0 +1,164 @@
+	-> angsd version: 0.937-82-g9e58925-dirty (htslib: 1.14-9-ge769401) build(May 29 2022 13:41:02)
+	-> ../angsd -doMaf 4 -beagle beagle_reader/test1.beagle -fai beagle_reader/ref//ref1.fa.fai -out beagle_reader/test_results//test1 
+	-> Sun May 29 13:42:00 2022
+----------------
+multiReader.cpp:
+	-nLines	50	(Number of lines to read)
+	-beagle	beagle_reader/test1.beagle	(Beagle Filename (can be .gz))
+	-bgen	beagle_reader/test1.beagle	(Bgen Filename)
+	-vcf-GL	beagle_reader/test1.beagle	(vcf Filename (can be bcf compressed or uncompressed))
+	-vcf-PL	beagle_reader/test1.beagle	(vcf Filename (can be bcf compressed or uncompressed))
+	-vcf-GP	beagle_reader/test1.beagle	(vcf Filename (can be bcf compressed or uncompressed))(*not used)
+	-glf	beagle_reader/test1.beagle	(glf Filename (can be .gz))
+	-pileup	beagle_reader/test1.beagle	(pileup Filename (can be .gz))
+	-intName 1	(Assume First column is chr_position)
+	-isSim	1	(Simulated data assumes ancestral is A)
+	-nInd	0		(Number of individuals)
+	-minQ	13	(minimum base quality; only used in pileupreader)
+	-fai	beagle_reader/ref//ref1.fa.fai	(fai file)
+	-minQ	13	(minimum base quality; only used in pileupreader)
+----------------
+multiReader.cpp:
+---------------
+parseArgs_bambi.cpp: bam reader:
+	-bam/-b		beagle_reader/test1.beagle	(list of BAM/CRAM files)
+	-i		beagle_reader/test1.beagle	(Single BAM/CRAM file)
+	-r		(null)	Supply a single region in commandline (see examples below)
+	-rf		(null)	Supply multiple regions in a file (see examples below)
+	-remove_bads	1	Discard 'bad' reads, (flag & 512) 
+	-uniqueOnly	0	Discards reads that doesn't map uniquely
+	-show		0	Mimic 'samtools mpileup' also supply -ref fasta for printing reference column
+	-minMapQ	0	Discard reads with mapping quality below
+	-minQ		13	Discard bases with base quality below
+	-trim		0	Number of based to discard at both ends of the reads
+	-trim		0	Number of based to discard at 5' ends of the reads
+	-trim		0	Number of based to discard at 3' ends of the reads
+	-only_proper_pairs 1	Only use reads where the mate could be mapped
+	-C		0	adjust mapQ for excessive mismatches (as SAMtools), supply -ref
+	-baq		0	adjust qscores around indels (1=normal baq 2= extended(as SAMtools)), supply -ref
+	-redo-baq		0 (recompute baq, instead of using BQ tag)
+	-setQscore	-1	Set qscore to this value, relevant for missing qscores
+	-checkBamHeaders 1	Exit if difference in BAM headers
+	-doCheck	1	Keep going even if datafile is not suffixed with .bam/.cram
+	-downSample	0.000	Downsample to the fraction of original data
+	-nReads		50	Number of reads to pop from each BAM/CRAMs
+	-minChunkSize	250	Minimum size of chunk sent to analyses
+	--ignore-RG	1	(dev only)
+	+RG		(null)	Readgroups to include in analysis(can be filename)
+	+LB		(null)	Libraries to include in analysis(can be filename)
+
+Examples for region specification:
+		chr:		Use entire chromosome: chr
+		chr:start-	Use region from start to end of chr
+		chr:-stop	Use region from beginning of chromosome: chr to stop
+		chr:start-stop	Use region from start to stop from chromosome: chr
+		chr:site	Use single site on chromosome: chr
+--------------------
+[shared.cpp:init()]
+	-nThreads	1	Number of threads to use
+	-nQueueSize	-1	Maximum number of queud elements
+	-howOften	100	How often should the program show progress
+--------------
+abcFilter.cpp:
+	-sites		(null)	(File containing sites to keep (chr pos))
+	-sites		(null)	(File containing sites to keep (chr regStart regStop))
+	-sites		(null)	(File containing sites to keep (chr pos major minor))
+	-sites		(null)	(File containing sites to keep (chr pos major minor af ac an))
+	-minInd		0	Only use site if atleast minInd of samples has data
+	-setMinDepthInd	1	Only use site if atleast minInd of samples has this minimum depth 
+	-capDepth	-1	Only use the first capDepth bases
+	-strict	1	 (experimental)
+	1) You can force major/minor by -doMajorMinor 3
+	And make sure file contains 4 columns (chr tab pos tab major tab minor)
+---------------
+abcCounts.cpp:
+	-doCounts	0	(Count the number A,C,G,T. All sites, All samples)
+	-doEBD	0	(Calculate effective basedepth, this will be output in bcffile, beta)
+	-minQfile	(null)	 file with individual quality score thresholds)
+	-setMaxDepth	-1	(If total depth is larger then site is removed from analysis.
+				 -1 indicates no filtering)
+	-setMinDepth	-1	(If total depth is smaller then site is removed from analysis.
+				 -1 indicates no filtering)
+	-setMaxDepthInd	-1	(If depth persample is larger then individual is removed from analysis (from site).
+				 -1 indicates no filtering)
+	-setMinDepthInd	-1	(If depth persample is smaller then individual is removed from analysis (from site).
+				 -1 indicates no filtering)
+	-minInd		0	(Discard site if effective sample size below value.
+				 0 indicates no filtering)
+	-setMaxDiffObs	0	(Discard sites where we observe to many different alleles.
+				 0 indicates no filtering)
+Filedumping:
+	-doDepth	0	(dump distribution of seqdepth)	.depthSample,.depthGlobal
+	  -maxDepth	100	(bin together high depths)
+	-doQsDist	0	(dump distribution of qscores)	.qs
+	-minQ	13	(minimumQ)
+	-dumpCounts	0
+	  1: total seqdepth for site	.pos.gz
+	  2: seqdepth persample		.pos.gz,.counts.gz
+	  3: A,C,G,T sum over samples	.pos.gz,.counts.gz
+	  4: A,C,G,T sum every sample	.pos.gz,.counts.gz
+	  5: mean read length	.pos.gz,.counts.gz
+	-iCounts	0 (Internal format for dumping binary single chrs,1=simple,2=advanced)
+	-qfile	(null)	(Only for -iCounts 2)
+	-ffile	(null)	(Only for -iCounts 2)
+---------------------
+abcGL.cpp:
+	-GL=0: 
+	1: SAMtools
+	2: GATK
+	3: SOAPsnp
+	4: SYK
+	5: phys
+	6: Super simple sample an allele type GL. (1.0,0.5,0.0)
+	7: outgroup gls
+	-trim		0		(zero means no trimming)
+	-tmpdir		angsd_tmpdir/	(used by SOAPsnp)
+	-errors		(null)		(used by SYK)
+	-minInd		0		(0 indicates no filtering)
+
+Filedumping:
+	-doGlf	0
+	1: binary glf (10 log likes)	.glf.gz
+	2: beagle likelihood file	.beagle.gz
+	3: binary 3 times likelihood	.glf.gz
+	4: text version (10 log likes)	.glf.gz
+	5: binary saf files (usefull for realSFS)	.glf.gz
+
+	-> doMcall=0
+------------------------
+abcFreq.cpp:
+-doMaf	4 (Calculate persite frequencies '.mafs.gz')
+	1: Frequency (fixed major and minor)
+	2: Frequency (fixed major unknown minor)
+	4: Frequency from genotype probabilities
+	8: AlleleCounts based method (known major minor)
+	NB. Filedumping is supressed if value is negative
+-doPost	0	(Calculate posterior prob 3xgprob)
+	1: Using frequency as prior
+	2: Using uniform prior
+	3: Using SFS as prior (still in development)
+	4: Using reference panel as prior (still in development), requires a site file with chr pos major minor af ac an
+Filters:
+	-minMaf  	-1.000000	(Remove sites with MAF below)
+	-SNP_pval	1.000000	(Remove sites with a pvalue larger)
+	-rmTriallelic	0.000000	(Remove sites with a pvalue lower)
+	-forceMaf	0	(Write .mafs file when running -doAsso (by default does not output .mafs file with -doAsso))
+	-skipMissing	1	(Set post to 0.33 if missing (do not use freq as prior))
+Extras:
+	-ref	(null)	(Filename for fasta reference)
+	-anc	(null)	(Filename for fasta ancestral)
+	-eps	0.001000 [Only used for -doMaf &8]
+	-beagleProb	0 (Dump beagle style postprobs)
+	-indFname	(null) (file containing individual inbreedcoeficients)
+	-underFlowProtect	0 (file containing individual inbreedcoeficients)
+NB These frequency estimators requires major/minor -doMajorMinor
+------------------------
+abcHetPlas.cpp:
+	-doHetPlas=0 (Perform hetplasmid analysis)
+	-maxIter=100	(Max number of iterations)
+	-minLRT=-1.000000
+		->"beagle_reader/test_results//test1.arg"
+		->"beagle_reader/test_results//test1.mafs.gz"
+
+	[ALL done] cpu-time used =  0.00 sec
+	[ALL done] walltime used =  0.00 sec
