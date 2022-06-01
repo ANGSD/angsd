@@ -28,18 +28,18 @@ if [[ ! -d saf_beagle/input ]]; then
   mkdir -p saf_beagle/input
   
   echo "Generating beagle input" &>>${LOG}
-  printf "marker\tallele1\tallele2\tInd0\tInd0\tInd0\tInd1\tInd1\tInd1\tInd2\tInd2\tInd2\n" >${BEAG}
+  printf "marker allele1 allele2 Ind0 Ind0 Ind0 Ind1 Ind1 Ind1 Ind2 Ind2 Ind2\n" >${BEAG}
   #should all make symmetric SAF centered around mid-freq bin, with different 'peakiness'
-  printf "chr1_1\t0\t1\t0.1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\t0.1\n" >>${BEAG}
-  printf "chr1_2\t0\t1\t0.8\t0.1\t0.1\t0.1\t0.8\t0.1\t0.1\t0.1\t0.8\n" >>${BEAG}
-  printf "chr1_3\t0\t1\t1.0\t0.0\t0.0\t0.0\t1.0\t0.0\t0.0\t0.0\t1.0\n" >>${BEAG}
+  printf "chr1_1 0 1 0.1 0.8 0.1 0.1 0.8 0.1 0.1 0.8 0.1\n" >>${BEAG}
+  printf "chr1_2 0 1 0.8 0.1 0.1 0.1 0.8 0.1 0.1 0.1 0.8\n" >>${BEAG}
+  printf "chr1_3 0 1 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0\n" >>${BEAG}
   #should make uniform SAF
-  printf "chr1_4\t0\t1\t0.33\t0.33\t0.33\t0.33\t0.33\t0.33\t0.33\t0.33\t0.33\n" >>${BEAG}
-  printf "chr1_5\t0\t1\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\n" >>${BEAG}
-  printf "chr1_6\t0\t1\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\n" >>${BEAG}
+  printf "chr1_4 0 1 0.33 0.33 0.33 0.33 0.33 0.33 0.33 0.33 0.33\n" >>${BEAG}
+  printf "chr1_5 0 1 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00\n" >>${BEAG}
+  printf "chr1_6 0 1 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00\n" >>${BEAG}
   #should make mirror-image SAF with mode at lowest/highest freq
-  printf "chr1_7\t0\t1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\n" >>${BEAG}
-  printf "chr1_8\t0\t1\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\n" >>${BEAG}
+  printf "chr1_7 0 1 0.8 0.1 0.1 0.8 0.1 0.1 0.8 0.1 0.1\n" >>${BEAG}
+  printf "chr1_8 0 1 0.1 0.1 0.8 0.1 0.1 0.8 0.1 0.1 0.8\n" >>${BEAG}
 
   echo "Generating true SAF" &>>${LOG}
   #symmetric SAF centered around mid-freq bin, with different 'peakiness'
