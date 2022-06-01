@@ -19,17 +19,13 @@ echo "Cleaning old output dir saf_beagle" &>>${LOG}
 mkdir -p saf_beagle/output
 ODIR=saf_beagle/output/
 
-REF=saf_beagle/input/ref.fa
+REF=saf_beagle/output/ref.fa
 BEAG=saf_beagle/input/beagle.txt
 TRUTH=saf_beagle/input/true.saf.print
 
 #generate inputs if not already present
 if [[ ! -d saf_beagle/input ]]; then
   mkdir -p saf_beagle/input
-
-  echo "Generating reference fasta" &>>${LOG}
-  printf ">chr1\nAAAAAAAAAAAAAAA\n" >${REF}
-  sleep 10 && printf "chr1\t15\t6\t15\t16\n" >${REF}.fai
   
   echo "Generating beagle input" &>>${LOG}
   printf "marker\tallele1\tallele2\tInd0\tInd0\tInd0\tInd1\tInd1\tInd1\tInd2\tInd2\tInd2\n" >${BEAG}
@@ -58,6 +54,10 @@ if [[ ! -d saf_beagle/input ]]; then
 
   #may need to `touch ${REF}.fai`
 fi
+
+echo "Generating reference fasta" &>>${LOG}
+printf ">chr1\nAAAAAAAAAAAAAAA\n" >${REF}
+sleep 2 && printf "chr1\t15\t6\t15\t16\n" >${REF}.fai
 
 echo "Generating saf likelihoods" &>>${LOG}
 $WDIR/angsd -beagle ${BEAG} -ref ${REF} -anc ${REF} -fai ${REF}.fai -out ${ODIR}/out -dosaf 4 &>>${LOG}
