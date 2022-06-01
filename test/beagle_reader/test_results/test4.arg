@@ -1,6 +1,6 @@
-	-> angsd version: 0.937-82-g9e58925-dirty (htslib: 1.14-9-ge769401) build(May 29 2022 13:41:02)
+	-> angsd version: 0.937-85-g1f3b31a-dirty (htslib: 1.13-3-gd16bed5) build(May 30 2022 11:43:09)
 	-> ../angsd -doMaf 4 -beagle beagle_reader/test4.beagle -fai beagle_reader/ref//ref4.fa.fai -out beagle_reader/test_results//test4 
-	-> Sun May 29 13:42:00 2022
+	-> Wed Jun  1 07:23:01 2022
 ----------------
 multiReader.cpp:
 	-nLines	50	(Number of lines to read)
@@ -157,8 +157,3 @@ abcHetPlas.cpp:
 	-doHetPlas=0 (Perform hetplasmid analysis)
 	-maxIter=100	(Max number of iterations)
 	-minLRT=-1.000000
-		->"beagle_reader/test_results//test4.arg"
-		->"beagle_reader/test_results//test4.mafs.gz"
-
-	[ALL done] cpu-time used =  0.00 sec
-	[ALL done] walltime used =  0.00 sec
