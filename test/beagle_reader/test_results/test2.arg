@@ -1,6 +1,6 @@
 	-> angsd version: 0.937-85-g1f3b31a-dirty (htslib: 1.13-3-gd16bed5) build(May 30 2022 11:43:09)
 	-> ../angsd -doMaf 4 -beagle beagle_reader/test2.beagle -fai beagle_reader/ref//ref2.fa.fai -out beagle_reader/test_results//test2 
-	-> Wed Jun  1 08:21:22 2022
+	-> Wed Jun  1 08:38:19 2022
 ----------------
 multiReader.cpp:
 	-nLines	50	(Number of lines to read)

@@ -36,9 +36,10 @@ if [[ ! -d saf_beagle/input ]]; then
   #should make uniform SAF
   printf "chr1_4\t0\t1\t0.33\t0.33\t0.33\t0.33\t0.33\t0.33\t0.33\t0.33\t0.33\n" >>${BEAG}
   printf "chr1_5\t0\t1\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\n" >>${BEAG}
+  printf "chr1_6\t0\t1\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\t1.00\n" >>${BEAG}
   #should make mirror-image SAF with mode at lowest/highest freq
-  printf "chr1_6\t0\t1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\n" >>${BEAG}
-  printf "chr1_7\t0\t1\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\n" >>${BEAG}
+  printf "chr1_7\t0\t1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\n" >>${BEAG}
+  printf "chr1_8\t0\t1\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\t0.1\t0.1\t0.8\n" >>${BEAG}
 
   echo "Generating true SAF" &>>${LOG}
   #symmetric SAF centered around mid-freq bin, with different 'peakiness'
@@ -48,9 +49,10 @@ if [[ ! -d saf_beagle/input ]]; then
   #uniform SAF
   printf "chr1\t4\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\n" >>${TRUTH}
   printf "chr1\t5\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\n" >>${TRUTH}
+  printf "chr1\t6\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\n" >>${TRUTH}
   #mirror-image SAF with mode at lowest/highest freq
-  printf "chr1\t6\t0.000000\t-2.079442\t-3.283414\t-4.589666\t-5.362856\t-6.238325\t-6.238325\n" >>${TRUTH}
-  printf "chr1\t7\t-6.238325\t-6.238325\t-5.362856\t-4.589666\t-3.283414\t-2.079442\t0.000000\n" >>${TRUTH}
+  printf "chr1\t7\t0.000000\t-2.079442\t-3.283414\t-4.589666\t-5.362856\t-6.238325\t-6.238325\n" >>${TRUTH}
+  printf "chr1\t8\t-6.238325\t-6.238325\t-5.362856\t-4.589666\t-3.283414\t-2.079442\t0.000000\n" >>${TRUTH}
 
   #may need to `touch ${REF}.fai`
 fi
