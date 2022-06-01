@@ -29,7 +29,7 @@ if [[ ! -d saf_beagle/input ]]; then
 
   echo "Generating reference fasta" &>>${LOG}
   printf ">chr1\nAAAAAAAAAAAAAAA\n" >${REF}
-  sleep 2 && printf "chr1\t15\t6\t15\t16\n" >${REF}.fai
+  sleep 10 && printf "chr1\t15\t6\t15\t16\n" >${REF}.fai
   
   echo "Generating beagle input" &>>${LOG}
   printf "marker\tallele1\tallele2\tInd0\tInd0\tInd0\tInd1\tInd1\tInd1\tInd2\tInd2\tInd2\n" >${BEAG}
@@ -58,7 +58,6 @@ if [[ ! -d saf_beagle/input ]]; then
 
   #may need to `touch ${REF}.fai`
 fi
-
 
 echo "Generating saf likelihoods" &>>${LOG}
 $WDIR/angsd -beagle ${BEAG} -ref ${REF} -anc ${REF} -fai ${REF}.fai -out ${ODIR}/out -dosaf 4 &>>${LOG}
