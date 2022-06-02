@@ -1262,27 +1262,27 @@ void abcSaf::run(funkyPars  *p){
 
 
 
-	  if(isSim){
-		for(int s=0;s<p->numSites;s++){
-			if(p->keepSites[s]==0)
-				continue;
-			int efSize=0;
-			for(int i=0;i<p->nInd;i++){
-				for(int ii=1;ii<10;ii++){
-					if(p->likes[s][i*10+ii]!=p->likes[s][i*10+0]){
-						efSize++;
-						break;
-					}
-				}
-			}
-		p->keepSites[s] = efSize;
-		if(minInd!=0&&minInd>efSize){
-			p->keepSites[s] = 0;
-		fprintf(stderr,"\n\n%d\n\n",minInd);
-		}
-		}
+    if(1||isSim){
+      for(int s=0;s<p->numSites;s++){
+	if(p->keepSites[s]==0)
+	  continue;
+	int efSize=0;
+	for(int i=0;i<p->nInd;i++){
+	  for(int ii=1;ii<10;ii++){
+	    if(p->likes[s][i*10+ii]!=p->likes[s][i*10+0]){
+	      efSize++;
+	      break;
+	    }
 	  }
-
+	}
+	p->keepSites[s] = efSize;
+	if(minInd!=0&&minInd>efSize){
+	  p->keepSites[s] = 0;
+	  //	  fprintf(stderr,"\n\n%d\n\n",minInd);
+	}
+      }
+    }
+    
 
     
     if(doSaf==1&&isHap==0)
