@@ -1,6 +1,23 @@
 # Changelog [beagle file reading]
 
 
+## * 220602 isinaltinkaya
+
+### Type
+fix; test
+
+### Reference
+Fixes the issue in the tests of pull request #490
+
+### Affected files
+beagleReader.cpp
+test/testBeagleReader.sh
+
+### Details
+Add support for tab separated beagle file reading.
+The previous fix only considered space as delimiter.
+Add test case for tab delimited separated files.
+
 ## * 220528 isinaltinkaya
 
 ### Type

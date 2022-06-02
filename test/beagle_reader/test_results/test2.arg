@@ -1,6 +1,6 @@
-	-> angsd version: 0.937-82-g9e58925-dirty (htslib: 1.14-9-ge769401) build(May 29 2022 13:41:02)
-	-> ../angsd -doMaf 4 -beagle beagle_reader/test2.beagle -fai beagle_reader/ref//ref2.fa.fai -out beagle_reader/test_results//test2 
-	-> Sun May 29 13:42:00 2022
+	-> angsd version: 0.937-84-g76c1d49-dirty (htslib: 1.14-9-ge769401) build(Jun  2 2022 12:38:09)
+	-> ../angsd -doMaf 4 -beagle beagle_reader/test2.beagle -fai beagle_reader/ref/ref2.fa.fai -out beagle_reader/test_results/test2 
+	-> Thu Jun  2 12:40:02 2022
 ----------------
 multiReader.cpp:
 	-nLines	50	(Number of lines to read)
@@ -15,7 +15,7 @@ multiReader.cpp:
 	-isSim	1	(Simulated data assumes ancestral is A)
 	-nInd	0		(Number of individuals)
 	-minQ	13	(minimum base quality; only used in pileupreader)
-	-fai	beagle_reader/ref//ref2.fa.fai	(fai file)
+	-fai	beagle_reader/ref/ref2.fa.fai	(fai file)
 	-minQ	13	(minimum base quality; only used in pileupreader)
 ----------------
 multiReader.cpp:
@@ -157,8 +157,8 @@ abcHetPlas.cpp:
 	-doHetPlas=0 (Perform hetplasmid analysis)
 	-maxIter=100	(Max number of iterations)
 	-minLRT=-1.000000
-		->"beagle_reader/test_results//test2.arg"
-		->"beagle_reader/test_results//test2.mafs.gz"
+		->"beagle_reader/test_results/test2.arg"
+		->"beagle_reader/test_results/test2.mafs.gz"
 
 	[ALL done] cpu-time used =  0.00 sec
 	[ALL done] walltime used =  0.00 sec

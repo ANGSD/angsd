@@ -60,13 +60,23 @@ void parse_beagle_fields(char *&buffer, char *&tok, char *&bufpos, char *&bufmaj
 	char *tok1;
 
 	buf=strdup(buffer);
-	bpost = strchr(buffer,' ');
+	// bpost = strchr(buffer,"\t ");
+	// bpost = strchr(buffer,*delims);
 
+
+	bpost=strchr (buffer, ' ');
+	if(bpost == NULL){
+		bpost=strchr (buffer,'\t');
+	}
+
+
+	
 	bufmaj=&refToChar[strtok_r(NULL,delims,&bpost)[0]];
 	bufmin=&refToChar[strtok_r(NULL,delims,&bpost)[0]];
 
 
-	tok = strtok_r(buffer,(const char *)" ",&buffer);
+	// tok = strtok_r(buffer,(const char *)" ",&buffer);
+	tok = strtok_r(buffer,(const char *)delims,&buffer);
 	tok1=strrchr(tok,'_');
 	bufpos=strrchr(tok,'_');
 	bufpos=bufpos+1;
