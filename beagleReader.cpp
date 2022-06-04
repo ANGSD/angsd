@@ -55,27 +55,23 @@ void parsepost(char *buffer,double *post,int nInd,const char *delims){
 void parse_beagle_fields(char *&buffer, char *&tok, char *&bufpos, char *&bufmaj, char *&bufmin, char *&bpost){
 
 	static const char *delims = "\t \n";
-	char *buf;
+
+	//buf is never freed and shows leak in valgrind 
+	//only allocated once
+	static char *buf=(char*)malloc(4096);
 	char *bufchr;
 	char *tok1;
 
-	buf=strdup(buffer);
-	// bpost = strchr(buffer,"\t ");
-	// bpost = strchr(buffer,*delims);
-
+	strcpy(buf,buffer);
 
 	bpost=strchr (buffer, ' ');
 	if(bpost == NULL){
 		bpost=strchr (buffer,'\t');
 	}
 
-
-	
 	bufmaj=&refToChar[strtok_r(NULL,delims,&bpost)[0]];
 	bufmin=&refToChar[strtok_r(NULL,delims,&bpost)[0]];
 
-
-	// tok = strtok_r(buffer,(const char *)" ",&buffer);
 	tok = strtok_r(buffer,(const char *)delims,&buffer);
 	tok1=strrchr(tok,'_');
 	bufpos=strrchr(tok,'_');
@@ -84,7 +80,7 @@ void parse_beagle_fields(char *&buffer, char *&tok, char *&bufpos, char *&bufmaj
 
 	bufchr= tok;
 	tok=bufchr;
-	buffer=buf;
+	strcpy(buffer,buf);
 }
 
 
@@ -94,10 +90,10 @@ funkyPars *beagle_reader::fetch(int chunksize){
 	static const char *delims2 = "_\t \n";
 	double **post = new double*[chunksize];
 
-	char *bufpos;
-	char *bufmaj;
-	char *bufmin;
-	char *bpost;
+	char *bufpos=NULL;
+	char *bufmaj=NULL;
+	char *bufmin=NULL;
+	char *bpost=NULL;
 
 	funkyPars * myfunky =funkyPars_init();
 	myfunky->posi = new int[chunksize];
