@@ -8,6 +8,7 @@ private:
   void printArg(FILE *fp);
   int l;
   char *buffer;
+  char *buf;
   char *original;
   gzFile gz;
   int intName;

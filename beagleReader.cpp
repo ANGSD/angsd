@@ -6,6 +6,7 @@
 
 beagle_reader::~beagle_reader(){
 	free(buffer);
+	free(buf);
 }
 
 
@@ -15,14 +16,25 @@ beagle_reader::beagle_reader(gzFile gz_a,const aMap *revMap_a,int intName_a,int 
 	l=128;
 	intName = intName_a;
 
-	original=buffer =(char *) calloc(l,sizeof(char));
+	original=buffer=(char *) calloc(l,sizeof(char));
+	buf=(char *) calloc(l,sizeof(char));
+
+
 	const char *delims = "\t \n";
 
 	int nCol=1;
 
+	int presize=l;
 	aio::tgets(gz,&buffer,&l);
 	if(buffer!=original)
 		original=buffer;
+
+
+	if(l>presize){
+		buf=(char*)realloc(buf,strlen(buffer)+1);
+		presize=l;
+	}
+
 	strtok_r(buffer,delims,&buffer);
 	while(strtok_r(NULL,delims,&buffer))
 		nCol++;
@@ -49,40 +61,56 @@ void parsepost(char *buffer,double *post,int nInd,const char *delims){
 //chr_A_B_C -> chr: chr_A_B ; pos: C
 //bpost = to give parsepost
 //bufpos = position info
-//tok = chr info
+//buf = contig id
 //bufmaj = major
 //bufmin = minor
-void parse_beagle_fields(char *&buffer, char *&tok, char *&bufpos, char *&bufmaj, char *&bufmin, char *&bpost){
+void parse_beagle_fields(char *buffer, char **buf, char **bufpos, char **bufmaj, char **bufmin, char **bpost,const char *delims){
 
-	static const char *delims = "\t \n";
-	char *buf;
-	char *bufchr;
-	char *tok1;
+	
+	// copy buffer to working buffer buf
+	// we need to keep buffer as it is 
+	// size of buf is reallocated together with buffer
+	// buff is cleaned together with buffer
+	strcpy(*buf,buffer);
 
-	buf=strdup(buffer);
-	bpost = strchr(buffer,' ');
+	char *a;
+	
+	//line= chr_a_b_123 g c 0.05 0.05 0.05
+	//point to the first delim
+	//a=chr_a_b_123
+	a = strtok_r(*buf,delims,bpost);
 
-	bufmaj=&refToChar[strtok_r(NULL,delims,&bpost)[0]];
-	bufmin=&refToChar[strtok_r(NULL,delims,&bpost)[0]];
+	//bpost is now after first delim
+	//bpost=g c 0.05 0.05 0.05
+	// fprintf(stderr,"\n\nbpost=%s\n",*bpost);
+	if ((a=strrchr(a,'_'))!=NULL){
+		//a= _123
+		//a+1= 123
 
+		*bufpos=a+1;
+		//bufpos now stores the position info=123
+	}
 
-	tok = strtok_r(buffer,(const char *)" ",&buffer);
-	tok1=strrchr(tok,'_');
-	bufpos=strrchr(tok,'_');
-	bufpos=bufpos+1;
-	*tok1='\0';
+	//here buf=chr_a_b_123
+	
+	//terminate after contig id
+	//write \0 to the start of position info
+	*strrchr(*buf,'_')='\0';
 
-	bufchr= tok;
-	tok=bufchr;
-	buffer=buf;
+	//here buf now contains contig id=chr_a_b
+	//extract major and minor from bpost
+	*bufmaj=&refToChar[strtok_r(*bpost,delims,bpost)[0]];
+	*bufmin=&refToChar[strtok_r(NULL,delims,bpost)[0]];
+
 }
 
 
 funkyPars *beagle_reader::fetch(int chunksize){
 
 	static const char *delims = "\t \n";
-	static const char *delims2 = "_\t \n";
 	double **post = new double*[chunksize];
+
+	// double **postbuf = new double*[chunksize];
 
 	char *bufpos;
 	char *bufmaj;
@@ -105,13 +133,11 @@ funkyPars *beagle_reader::fetch(int chunksize){
 	static int changed =0;
 READAGAIN:
 	if(changed){
-			char *tok;
 		//parse an entire site:
 		// fprintf(stdout,"nSites %d\n",nSites);
 		myfunky->refId = lastRefId;
-		// fprintf(stdout,"BUFfer= %s\n",buffer);
 
-		parse_beagle_fields(buffer,tok,bufpos,bufmaj,bufmin,bpost);
+		parse_beagle_fields(buffer,&buf,&bufpos,&bufmaj,&bufmin,&bpost,delims);
 
 		myfunky->posi[nSites] = atoi(bufpos)-1;
 
@@ -126,8 +152,15 @@ READAGAIN:
 	buffer=original;
 
 
+	int presize=l;
+
 	while(aio::tgets(gz,&buffer,&l)) {
 
+
+		if(l>presize){
+			buf=(char*)realloc(buf,strlen(buffer)+1);
+			presize=l;
+		}
 
 		if(buffer!=original)
 			original=buffer;
@@ -137,14 +170,13 @@ READAGAIN:
 
 			//identifier is chr_pos or snp name
 
-			char *tok;
-		parse_beagle_fields(buffer,tok,bufpos,bufmaj,bufmin,bpost);
+			parse_beagle_fields(buffer,&buf,&bufpos,&bufmaj,&bufmin,&bpost,delims);
 
-
-			aMap ::const_iterator it = revMap->find(tok);
+			//buf now contains contig id
+			aMap ::const_iterator it = revMap->find(buf);
 
 			if(it==revMap->end()){
-				fprintf(stderr,"\t-> Problem finding chr:%s from faifile\n",tok);
+				fprintf(stderr,"\t-> Problem finding chr:%s from faifile\n",buf);
 				exit(0);
 			}
 			if(lastRefId==-1){
@@ -165,8 +197,7 @@ READAGAIN:
 
 		else{
 
-			char *tok;
-		parse_beagle_fields(buffer,tok,bufpos,bufmaj,bufmin,bpost);
+		parse_beagle_fields(buffer,&buf,&bufpos,&bufmaj,&bufmin,&bpost,delims);
 			myfunky->refId = 0;
 			myfunky->posi[nSites] = positions++;
 		}
