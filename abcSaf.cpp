@@ -1277,6 +1277,7 @@ void abcSaf::run(funkyPars  *p){
 
 
 
+	if(doSaf!=4){
     if(1||isSim){
       for(int s=0;s<p->numSites;s++){
 	if(p->keepSites[s]==0)
@@ -1297,6 +1298,7 @@ void abcSaf::run(funkyPars  *p){
 	}
       }
     }
+	}
     
 
     
