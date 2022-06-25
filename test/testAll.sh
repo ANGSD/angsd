@@ -74,7 +74,13 @@ if [ ! $? -eq 0 ] ;then
     RVAL=1
 fi
 
-
+echo "Testing saf_beagle"
+time ./testSaf_beagle.sh $WDIR
+if [ ! $? -eq 0 ] ;then
+    echo "Problem with saf_beagle test statistics exit code: $?"
+    cat ./testSaf_beagle.sh.log
+    RVAL=1
+fi
 
 echo "Testing SFS"
 time ./testSFS.sh $WDIR

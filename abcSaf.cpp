@@ -12,6 +12,8 @@
 #include "aio.h"
 #include <limits>
 
+#include <iostream>
+
 #define MINLIKE -1000.0 //this is for setting genotypelikelhoods to missing (EXPLAINED BELOW)
 
 const double NEG_INF = -std::numeric_limits<double>::infinity();
@@ -696,6 +698,14 @@ void abcSaf::algoJointPost(double **post,
     double tmx = 0.;
 
     //initialize
+    for (int i=0; i<nInd*3; ++i)
+    {
+      if(liks[i] < 0.0)
+      {
+        fprintf(stderr, "Negative genotype probability in %s will exit (site=%d,ind=%d,lik=%f)\n", __FUNCTION__, s, i, liks[i]);
+        exit(0);
+      }
+    }
     memcpy(hj, liks, 3*sizeof(double));
 
     int lower = 0,
@@ -709,6 +719,9 @@ void abcSaf::algoJointPost(double **post,
       p[2] = liks[i*3+2];
       saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1));
     }
+
+    for(int j=lower; j<=upper; j++)
+      hj[j] = log(hj[j]) + tmx;
 
     if(saf_sparsify_and_normalize (hj, lower, upper, scoreTol))
       r->oklist[s] = 3;
@@ -972,7 +985,9 @@ void abcSaf::algoJoint(double **liks,
           hj[2] = p[2];
         }
         else
+        {
           saf_algo_dip(hj, lower, upper, tmx, score_tol, p, i, 2*(i+1));
+        }
       }
 
       for(int j=lower; j<=upper; j++)
@@ -1262,6 +1277,7 @@ void abcSaf::run(funkyPars  *p){
 
 
 
+	if(doSaf!=4){
     if(1||isSim){
       for(int s=0;s<p->numSites;s++){
 	if(p->keepSites[s]==0)
@@ -1282,6 +1298,7 @@ void abcSaf::run(funkyPars  *p){
 	}
       }
     }
+	}
     
 
     
