@@ -66,8 +66,7 @@ void phatLoop(funkyPars *pars,double eps,double nInd,freqStruct *freqs){
 }
 
 void abcFreq::printArg(FILE *argFile){
-  fprintf(argFile,"---------------------
----\n%s:\n",__FILE__);
+  fprintf(argFile,"------------------------\n%s:\n",__FILE__);
   fprintf(argFile,"-doMaf\t%d (Calculate persite frequencies \'.mafs.gz\')\n",doMaf);
   fprintf(argFile,"\t1: Frequency (fixed major and minor)\n");
   fprintf(argFile,"\t2: Frequency (fixed major unknown minor)\n");
