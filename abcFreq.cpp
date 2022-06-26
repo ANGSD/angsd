@@ -66,7 +66,8 @@ void phatLoop(funkyPars *pars,double eps,double nInd,freqStruct *freqs){
 }
 
 void abcFreq::printArg(FILE *argFile){
-  fprintf(argFile,"------------------------\n%s:\n",__FILE__);
+  fprintf(argFile,"---------------------
+---\n%s:\n",__FILE__);
   fprintf(argFile,"-doMaf\t%d (Calculate persite frequencies \'.mafs.gz\')\n",doMaf);
   fprintf(argFile,"\t1: Frequency (fixed major and minor)\n");
   fprintf(argFile,"\t2: Frequency (fixed major unknown minor)\n");
@@ -80,7 +81,7 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"\t4: Using reference panel as prior (still in development), requires a site file with chr pos major minor af ac an\n");
   fprintf(argFile,"Filters:\n");
   fprintf(argFile,"\t-minMaf  \t%f\t(Remove sites with MAF below)\n",minMaf);
-  fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",SNP_pval);
+  fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",angsd::to_pval(chisq1,SNP_pval));
   fprintf(argFile,"\t-rmTriallelic\t%f\t(Remove sites with a pvalue lower)\n",rmTriallelic);
   fprintf(argFile,"\t-forceMaf\t%d\t(Write .mafs file when running -doAsso (by default does not output .mafs file with -doAsso))\n",forceMaf);
   fprintf(argFile,"\t-skipMissing\t%d\t(Set post to 0.33 if missing (do not use freq as prior))\n",skipMissing);
