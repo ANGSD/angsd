@@ -45,7 +45,11 @@ struct Chisqdist : chisq::Gamma {
     return exp(-0.5*(x2-(nu-2.)*log(x2))-fac);
   }
   double cdf(double x2) {
-    //fprintf(stderr,"x2:%f\n",x2);
+    //    fprintf(stderr,"x2:%f\n",x2);
+    if(std::isnan(x2)){
+      fprintf(stderr,"\t-> Problem computing cdf for chiseq, input is NaN, will exit\n");
+      exit(0);
+    }
     if (x2 < 0.) {
       fprintf(stderr,"bad x2 in Chisqdist:%f \n",x2);
       exit(0);

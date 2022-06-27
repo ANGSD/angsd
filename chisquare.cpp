@@ -12,7 +12,7 @@ using namespace chisq;
   modified by thorfinn@binf.ku.dk 30 aug 2013
 
   ppl on the internet complain that numerecial recp can't be used in academic gnu software, will need to check that and use a different impl.
- */
+*/
 
 
 const double Gauleg18::y[18] = {0.0021695375159141994,
