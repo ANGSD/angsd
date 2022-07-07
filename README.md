@@ -1,5 +1,6 @@
-[![Build Status](https://img.shields.io/github/workflow/status/angsd/angsd/build-tests)](https://github.com/ANGSD/angsd)
-angsd:
+## [![Build Status](https://github.com/ANGSD/angsd/actions/workflows/build-tests.yml/badge.svg)](https://github.com/ANGSD/angsd/actions/workflows/build-tests.yml) 
+
+
 
 =====
 Program for analysing NGS data. 
