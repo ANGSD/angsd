@@ -182,7 +182,13 @@ int main(int argc, char** argv){
     main_sites(--argc,++argv);
     return 0;
   }
-
+  //users keep asking about the -fold argument in main angsd. So lets scan and exit with a proper msg
+  for(int i=0;i<argc;i++)
+    if(!strcasecmp(argv[i],"-fold")){
+      fprintf(stderr,"\t-> The folding has been moved from main angsd to realSFS subfunction.\n\t-> Remove -fold when doing -dosaf but apply it in realSFS\n\t-> Will exit\n");
+      return 1;
+    }
+  
   argStruct *args=setArgStruct(argc,argv);  
 
   //no arguments supplied -> print info
