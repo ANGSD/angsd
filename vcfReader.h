@@ -39,9 +39,9 @@ float pl2ln[PHREDMAX];
   int parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type);
   int pl_gl_gp;
   int ln_gl_m;
-  float *ln_gl;
-  float *farr;
-  int32_t *iarr;
+  float *ln_gl = NULL;
+  float *farr = NULL;
+  int32_t *iarr = NULL;
   int mfarr;
   int miarr;
   std::vector<regs> *regions;//this is a pointer. I should really be more consistent, but i dont want to copy construct
@@ -53,5 +53,15 @@ public:
   void seek(char *seek){htsstuff_seek(hs,seek);}
   int vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec);
   vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *regions_a);
-  ~vcfReader(){htsstuff_destroy(hs);free(pl);free(ln_gl);free(iarr);free(farr);free(itrname.s);}
+  ~vcfReader(){
+    htsstuff_destroy(hs);
+    if(pl)
+      free(pl);
+    if(ln_gl!=NULL)
+      free(ln_gl);
+    if(iarr)
+      free(iarr);
+    if(farr)
+      free(farr);
+    free(itrname.s);}
 };

@@ -232,6 +232,8 @@ int isindel(const bcf_hdr_t *h, const bcf1_t *v){
 //type=0 -> PL
 //type=1 -> GL
 //type=2 -> GP
+
+int dumpcounterverbose[2] = {0,0};
 int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type){
   assert(type>=0&&type<=2);
   int n;
@@ -261,9 +263,13 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     for(int i=0;i<3*hs->nsamples;i++)
       dupergp[i] = 0;
   }
-  
   if(type==2) {
     n = bcf_get_format_float(hs->hdr, rec, "GP", &farr, &mfarr);
+    if(n>=ln_gl_m){
+      ln_gl_m  = n;
+      kroundup32(ln_gl_m);
+      ln_gl = (float *) realloc(ln_gl,sizeof(float)*ln_gl_m);
+    }
     if(n<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
@@ -271,26 +277,28 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
       return 0;
     }{
       // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
-      for (int i=0; i<n; i++){
-	if (bcf_float_is_missing(farr[i]) ){
-	  bcf_float_set_missing(ln_gl[i]);
-	  fprintf(stderr,"Check this file:line: %s:%d\n",__FILE__,__LINE__);
-	} else if ( farr[i]==bcf_float_vector_end ){
-	  fprintf(stderr,"Check this file:line: %s:%d\n",__FILE__,__LINE__);
-	  bcf_float_set_vector_end(ln_gl[i]);
-	} else{
-	  dupergp[i] = farr[i];//FIX
-	  //	  dupergp[i] = pow(10,-farr[i]/10.0);
 
+      for(int nsample = 0 ;nsample < r->nInd; nsample++){
+	if (bcf_float_is_missing(farr[nsample*3])){
+	  if(dumpcounterverbose[0]++ <10)
+	    fprintf(stderr,"[bcf_float_is_missing error], this might be an error or missing data, this msg is printed %d times more \n",10-dumpcounterverbose[0]);
+	}else if ( farr[nsample*3]==bcf_float_vector_end ){
+	  if(dumpcounterverbose[1]++ <10)
+	    fprintf(stderr,"[bcf_float_vector_end], this might be an error or missing data, this msg is printed %d times more\n",10-dumpcounterverbose[1]);
+	  exit(0);
+	} else{
+	  dupergp[nsample*3] = farr[nsample*3];
+	  dupergp[nsample*3+1] = farr[nsample*3+1];
+	  dupergp[nsample*3+2] = farr[nsample*3+2];
 	}
-	//	fprintf(stderr, "%f\n", farr[i]);
       }
     }
   } else  if(type==0) {
     //parse PL
     n = bcf_get_format_int32(hs->hdr, rec, "PL", &iarr, &miarr);
     if(n>=ln_gl_m){
-      ln_gl_m *=2;
+      ln_gl_m  = n;
+      kroundup32(ln_gl_m);
       ln_gl = (float *) realloc(ln_gl,sizeof(float)*ln_gl_m);
     }
     if(n<0){
@@ -316,7 +324,8 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
   }else if(type==1) {
     n = bcf_get_format_float(hs->hdr, rec, "GL", &farr, &mfarr);
     if(n>=ln_gl_m){
-      ln_gl_m *=2;
+      ln_gl_m  = n;
+      kroundup32(ln_gl_m);
       ln_gl = (float *) realloc(ln_gl,sizeof(float)*ln_gl_m);
     }
     
@@ -536,7 +545,7 @@ vcfReader::vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *re
   iarr=NULL;
   mfarr=0;
   miarr=0;
-  ln_gl_m = 1024;
+  ln_gl_m = 8;
   ln_gl =(float *) malloc(sizeof(float)*ln_gl_m);
   pl_gl_gp = pl_or_gl_a;
   hs=htsstuff_init(fname,seek);
