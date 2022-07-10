@@ -86,7 +86,10 @@ void abcSaf::getOptions(argStruct *arguments){
 
   int GL = 0;
   GL = angsd::getArg("-GL",GL,arguments);
-
+  int doPost = 0;
+  doPost = angsd::getArg("-doPost",doPost,arguments);
+  
+  
   if(doSaf==0&&doPost!=3)
     return;
 
@@ -118,10 +121,18 @@ void abcSaf::getOptions(argStruct *arguments){
     }
   }
   int ai = arguments->inputtype;
-  if(GL==0 &&(ai!=INPUT_GLF && ai !=INPUT_GLF3 && ai !=INPUT_VCF_GL &&ai !=INPUT_BEAGLE&&ai!=INPUT_GLF10_TEXT)){
-    fprintf(stderr,"\t-> Must supply genotype likelihoods (-GL [INT])\n");
-    printArg(arguments->argumentFile);
-    exit(0);
+  if(doSaf !=4){
+    if(GL==0 &&(ai!=INPUT_GLF && ai !=INPUT_GLF3 && ai !=INPUT_VCF_GL &&ai !=INPUT_BEAGLE&&ai!=INPUT_GLF10_TEXT)){
+      fprintf(stderr,"\t-> Must supply genotype likelihoods (-GL [INT])\n");
+      printArg(arguments->argumentFile);
+      exit(0);
+    }
+  }
+  if(doSaf==4){
+    if(doPost==0 && ai!=INPUT_VCF_GP){
+      fprintf(stderr,"\t-> You have requested to do SAF estimation from genotype posteriors (GP), either use input file that contains GP or compute -doPost\n");
+    }else
+      fprintf(stderr,"\t-> You have requested to do SAF estimation from genotype posteriors, this has not been tested fully\n");
   }
   if(doSaf==2){
     fprintf(stderr,"\t-> (Using Filipe G Vieira modification of: %s)\n",__FILE__);

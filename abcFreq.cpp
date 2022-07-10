@@ -211,12 +211,15 @@ void abcFreq::getOptions(argStruct *arguments){
   }
 
   if((inputtype==INPUT_BEAGLE||inputtype==INPUT_BGEN)&&abs(doMaf)!=4){
-    fprintf(stderr,"Only \'-doMaf 4\' can not be performed on posterior input\n");
+    fprintf(stderr,"\t-> Only \'-doMaf 4\' can be performed on posterior input\n");
     exit(0);
   }
-  if(inputtype!=INPUT_BEAGLE&&inputtype!=INPUT_BGEN&&inputtype!=INPUT_VCF_GP&&abs(doMaf)==4){
-    fprintf(stderr,"\t \'-doMaf 4\' can only be performed on genotype probabilities provided by the user (-beagle).\n");
-    exit(0);
+  if(doMaf & 4){
+    
+    if(inputtype!=INPUT_BEAGLE && inputtype!=INPUT_BGEN && inputtype!=INPUT_VCF_GP ){
+      fprintf(stderr,"\t-> \'-doMaf 4\' can only be performed on genotype probabilities -dopost, -vcf-gp, -beagle \n");
+      exit(0);
+    }
   }
 
   if((inputtype==INPUT_BAM || inputtype==INPUT_PILEUP )&& GL==0 &&doMaf!=8){
