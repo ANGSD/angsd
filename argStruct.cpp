@@ -26,10 +26,10 @@ void whatIsTheInput(int type){
     fprintf(stderr,"\t-> Inputtype is pileup\n");
     break;
   case INPUT_VCF_GP:
-    fprintf(stderr,"\t-> Inputtype is vcf/bcf\n");
+    fprintf(stderr,"\t-> Inputtype is vcf/bcf gp\n");
     break;
   case INPUT_VCF_GL:
-    fprintf(stderr,"\t-> Inputtype is vcf/bcf\n");
+    fprintf(stderr,"\t-> Inputtype is vcf/bcf gl\n");
     break;
   case INPUT_GLF10_TEXT:
     fprintf(stderr,"\t-> Inputtype is GLF10 text\n");
