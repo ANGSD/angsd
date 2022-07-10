@@ -145,10 +145,7 @@ void abcFreq::getOptions(argStruct *arguments){
   if(doMaf==0 )//&& doPost==0?
     return;
   underflowprotect=angsd::getArg("-underFlowProtect",underflowprotect,arguments);
-  chisq1 = new Chisqdist(1);
-  chisq2 = new Chisqdist(2);
-  chisq3 = new Chisqdist(3);
-  
+
   minMaf=angsd::getArg("-minMaf",minMaf,arguments);
   //  assert(minMaf<=1&&minMaf>=0);
 
@@ -256,10 +253,14 @@ void abcFreq::getOptions(argStruct *arguments){
 
 //constructor
 abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
+  chisq1=chisq2=chisq3=NULL;
+  chisq1 = new Chisqdist(1);
+  chisq2 = new Chisqdist(2);
+  chisq3 = new Chisqdist(3);
+  fprintf(stderr,"chisq has been mad\n");
   skipMissing = 1;
   underflowprotect =0;
   minInd = 0;
-  chisq1=chisq2=chisq3=NULL;
   inputIsBeagle =0;
   beagleProb = 0; //<-output for beagleprobs
   minMaf =-1.0;
