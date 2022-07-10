@@ -1,14 +1,16 @@
 //DRAGON fix degree of freedom in chisq unknown
 #include "abc.h"
 typedef struct{
-  double *freq_EM; 
+  double *freq_EM;
   double *freq_EM_unknown; 
+  double *freq_post; 
+  double *freq_phat; //counts based freq
   double *lrt_tri; 
   double *lrt_EM; 
   double *lrt_EM_unknown;
-  double *freq;//can be copy of the two above, or the pp
+  double *freq;//this is simply a copy pointer to one of the above
   double *lrt;//can be a copy of hte two above
-  double *phat; //counts based freq
+
 }freqStruct;
 
 

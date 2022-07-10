@@ -56,12 +56,10 @@ double phatFun(suint *counts,int nFiles,double eps,char major,char minor) {
 
 //simple phat estimator will loop over all sites in the pars
 void phatLoop(funkyPars *pars,double eps,double nInd,freqStruct *freqs){
-  freqs->phat = new double[pars->numSites];
-  freqs->freq = new double[pars->numSites];
+  freqs->freq_phat = new double[pars->numSites];
   for(int s=0;s<pars->numSites;s++)
     if(pars->keepSites[s]){
-      freqs->phat[s] = phatFun(pars->counts[s],nInd,eps,pars->major[s],pars->minor[s]);
-      freqs->freq[s] = freqs->phat[s];
+      freqs->freq_phat[s] = phatFun(pars->counts[s],nInd,eps,pars->major[s],pars->minor[s]);
     }
 }
 
@@ -257,7 +255,6 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   chisq1 = new Chisqdist(1);
   chisq2 = new Chisqdist(2);
   chisq3 = new Chisqdist(3);
-  fprintf(stderr,"chisq has been mad\n");
   skipMissing = 1;
   underflowprotect =0;
   minInd = 0;
@@ -409,9 +406,9 @@ void abcFreq::print(funkyPars *pars) {
     if(doMaf &2)
       ksprintf(&bufstr,"%f\t",freq->freq_EM_unknown[s]);
     if(doMaf &4)
-      ksprintf(&bufstr,"%f\t",freq->freq[s]);
+      ksprintf(&bufstr,"%f\t",freq->freq_post[s]);
     if(doMaf &8)
-      ksprintf(&bufstr,"%f\t",freq->phat[s]);
+      ksprintf(&bufstr,"%f\t",freq->freq_phat[s]);
     if(doSNP){
       if(doMaf &1)
 	ksprintf(&bufstr,"%e\t",angsd::to_pval(chisq1,freq->lrt_EM[s]));
@@ -469,14 +466,16 @@ void abcFreq::clean(funkyPars *pars) {
   freqStruct *freq =(freqStruct *) pars->extras[index];
 
   //cleaning
-  delete [] freq->freq;
+
   delete [] freq->lrt;//maybe in doSNP
   delete [] freq->freq_EM;
   delete [] freq->freq_EM_unknown;
+  delete [] freq->freq_post;
+  delete [] freq->freq_phat;
   delete [] freq->lrt_tri;
   delete [] freq->lrt_EM;
   delete [] freq->lrt_EM_unknown;
-  delete [] freq->phat;
+
   delete freq;
     
   if(pars->post!=NULL){
@@ -494,12 +493,13 @@ freqStruct *allocFreqStruct(){
   
  freq->freq_EM=NULL;
  freq->freq_EM_unknown= NULL;
+ freq->freq_post = NULL;
+ freq->freq_phat = NULL;
  freq->lrt_tri=NULL;
  freq->lrt_EM=NULL;
  freq->lrt_EM_unknown=NULL;
- freq->freq = NULL;
  freq->lrt = NULL;
- freq->phat = NULL;
+
  return freq;
 }
 
@@ -562,15 +562,18 @@ void abcFreq::run(funkyPars *pars) {
 
   if(doMaf!=0) {
 
-    if(doMaf&8)
+    if(doMaf&8){
       phatLoop(pars,eps,nInd,freq);
-    
-    if(doMaf&4)
+      freq->freq = freq->freq_phat;
+    }
+    if(doMaf&4){
       postFreq(pars,freq);
-    if(doMaf % 4){ // doMaf =1 or doMaf 2
+      freq->freq = freq->freq_post;
+    }
+    if((doMaf& 2 ) || (doMaf & 1)){ // doMaf =1 or doMaf 2
       likeFreq(pars,freq);
     }
-    assert(freq->freq!=NULL);
+
     
     for(int s=0;s<pars->numSites;s++){
       if(pars->keepSites[s]==0)
@@ -652,15 +655,15 @@ void abcFreq::run(funkyPars *pars) {
 Estimate the allele frequency from the posterior probabilities
 */
 void abcFreq::postFreq(funkyPars  *pars,freqStruct *freq){
-  if(freq->freq==NULL)
-  freq->freq = new double[pars->numSites]; 
+  if(freq->freq_post==NULL)
+    freq->freq_post = new double[pars->numSites]; 
 
   for(int s=0;s<pars->numSites;s++){
-    freq->freq[s]=0;
+    freq->freq_post[s]=0;
     for(int i=0;i<pars->nInd;i++){
-      freq->freq[s] += pars->post[s][i*3+1]+2*pars->post[s][i*3+2];
+      freq->freq_post[s] += pars->post[s][i*3+1]+2*pars->post[s][i*3+2];
     }
-    freq->freq[s] = freq->freq[s]/(pars->nInd*2);
+    freq->freq_post[s] = freq->freq_post[s]/(pars->nInd*2);
   }
 
 }
@@ -675,8 +678,7 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
   else
     loglike=angsd::get3likesRescale(pars);
   assert(loglike!=NULL);
-  if(freq->freq == NULL)
-  freq->freq = new double[pars->numSites];
+
   if(doSNP)
     freq->lrt = new double[pars->numSites];
 
@@ -719,8 +721,8 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
 
     if(doMaf &1) {
       double mstart = EM_start;
-      if(freq->phat!=NULL)
-	mstart = freq->phat[s];
+      if(freq->freq_phat!=NULL)
+	mstart = freq->freq_phat[s];
 
       freq->freq_EM[s]=emFrequency(loglike[s],pars->nInd,emIter,mstart,keepList,keepInd[s]);
       if(doSNP){
@@ -732,8 +734,8 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
     
     if( doMaf &2) {
       double mstart = EM_start;
-      if(freq->phat!=NULL)
-	mstart = freq->phat[s];
+      if(freq->freq_phat!=NULL)
+	mstart = freq->freq_phat[s];
       
       freq->freq_EM_unknown[s]=emFrequencyNoFixed(pars->likes[s],pars->nInd,emIter,mstart,keepList,keepInd[s],pars->major[s],pars->posi[s]);
       if(doSNP){
@@ -761,13 +763,11 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
     delete [] loglike;
   }
  
-  for(int s=0;s<pars->numSites;s++){
-    if(doMaf &2 )
-      freq->freq[s]=freq->freq_EM_unknown[s];
-    else if(doMaf &1 )
-      freq->freq[s]=freq->freq_EM[s];
-  }
-
+  if(doMaf & 2)
+    freq->freq = freq->freq_EM_unknown;
+  if(doMaf & 1)
+    freq->freq = freq->freq_EM;
+  
   //thorfinn april 16 2012
   for(int s=0;s<pars->numSites;s++){
     if((doMaf &2) && doSNP )
