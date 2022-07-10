@@ -195,7 +195,7 @@ void abcWriteBcf::print(funkyPars *pars){
       assert(bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1)==0);
     }
     if(freq){
-      float tmpf = freq->freq_EM[s];
+      float tmpf = freq->freq[s];
       assert(bcf_update_info_float(hdr, rec, "AF", &tmpf, 1)==0);
     }
     
@@ -247,7 +247,7 @@ void abcWriteBcf::print(funkyPars *pars){
       bcf_update_format_int32(hdr, rec, "DP", tmpfa,bcf_hdr_nsamples(hdr) );
       free(tmpfa);
     }
-    if(pars->likes[s]){
+    if(pars->likes && pars->likes[s]){
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
       int32_t *tmpi = (int32_t*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(int32_t));
 
@@ -284,7 +284,15 @@ void abcWriteBcf::print(funkyPars *pars){
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));
       for(int i=0;i<3*bcf_hdr_nsamples(hdr);i++)
 	tmpfa[i] = pars->post[s][i];
+      
+      for(int i=0;i<bcf_hdr_nsamples(hdr);i++)
+	if(tmpfa[3*i]+tmpfa[3*i+1]+tmpfa[3*i+2]==0){
+	  bcf_float_set_missing(tmpfa[3*i]);
+	  tmpfa[3*i+1] = tmpfa[3*i+2] = tmpfa[3*i]; 
+
+	}
 #if 0
+	//this block of code was for earlier version of the vcf standard
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++){
 	double *val = pars->post[s] +i*3;
 	//	fprintf(stderr,"va: %f %f %f\n",val[0],val[1],val[2]);
