@@ -78,7 +78,7 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
   }
   
 
-  if(arguments->inputtype!=INPUT_BEAGLE&&doPost==0){
+  if(arguments->inputtype!=INPUT_BEAGLE&&doPost==0&&arguments->inputtype!=INPUT_VCF_GP){
     fprintf(stderr,"\n\t-> You need -doPost to call genotypes \n");
     exit(0);
 
