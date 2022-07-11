@@ -1278,7 +1278,6 @@ void print_array(FILE *fp,double *ary,int len,int doLogTransform){
 void abcSaf::run(funkyPars  *p){
   if(p->numSites==0||(doSaf==0 ))
     return;
-  //  fprintf(stderr,"-doSaf:%d -p->nind:%d\n",doSaf,p->nInd);
   if(doSaf>0&&doSaf!=3) {
     realRes *r = new realRes;
     r->oklist=new char[p->numSites];
@@ -1287,16 +1286,20 @@ void abcSaf::run(funkyPars  *p){
     r->pBound=new int*[p->numSites];
 
 
-
-	if(doSaf!=4){
+    int stride = 10;
+    double **inputdata = p->likes;
+    if(doSaf == 4){
+      stride = 3;
+      inputdata = p->post;
+    }
     if(1||isSim){
       for(int s=0;s<p->numSites;s++){
 	if(p->keepSites[s]==0)
 	  continue;
 	int efSize=0;
 	for(int i=0;i<p->nInd;i++){
-	  for(int ii=1;ii<10;ii++){
-	    if(p->likes[s][i*10+ii]!=p->likes[s][i*10+0]){
+	  for(int ii=1;ii<stride;ii++){
+	    if(inputdata[s][i*stride+ii]!=inputdata[s][i*stride+0]){
 	      efSize++;
 	      break;
 	    }
@@ -1309,7 +1312,7 @@ void abcSaf::run(funkyPars  *p){
 	}
       }
     }
-	}
+  
     
 
     
