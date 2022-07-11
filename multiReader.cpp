@@ -78,7 +78,6 @@ void multiReader::printArg(FILE *argFile,argStruct *args){
 
 
 void multiReader::getOptions(argStruct *arguments){
-
   nLines=angsd::getArg("-nLines",nLines,arguments);
   arguments->nLines = nLines;
   fname=angsd::getArg("-beagle",fname,arguments);
@@ -92,10 +91,9 @@ void multiReader::getOptions(argStruct *arguments){
   fname=angsd::getArg("-vcf-pl",fname,arguments);
   fname=angsd::getArg("-glf10_text",fname,arguments);
   intName=angsd::getArg("-intName",intName,arguments);
-  isSim=angsd::getArg("-isSim",intName,arguments);
+  isSim=angsd::getArg("-isSim",isSim,arguments);
   nInd=angsd::getArg("-nInd",nInd,arguments);
   arguments->nInd = nInd;
-
   //read fai if suppplied (used by other than native bam readers)
 
   char *tmptmp=NULL;
@@ -121,11 +119,11 @@ multiReader::multiReader(argStruct *args_arg){
 
   nInd =0;
   isSim =0;
+
   args=NULL;
   args = args_arg;
   void printTime(FILE *fp);
   printTime(args->argumentFile); 
-
 
   //type = args->inputtype;
 
@@ -178,7 +176,6 @@ multiReader::multiReader(argStruct *args_arg){
       exit(0);
     }
   }
-  
   if(args->fai){
     if(!(args->hd=getHeadFromFai(args->fai)))
       exit(0);
@@ -240,7 +237,6 @@ multiReader::multiReader(argStruct *args_arg){
     args->nInd = myvcf->hs->nsamples;
   }
   //make args->hd
-  
   revMap = buildRevTable(args->hd);
   args->revMap = revMap;
   setArgsBam(args);
@@ -278,7 +274,6 @@ multiReader::multiReader(argStruct *args_arg){
     fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);
     exit(0);
   }
-
   switch(args->inputtype){
   case INPUT_PILEUP:{
     mpil = new mpileup(args->nInd,gz,args->revMap,minQ);
@@ -289,6 +284,7 @@ multiReader::multiReader(argStruct *args_arg){
     break;
   }
   case INPUT_GLF3:{
+
     isSim = 1; //Added by FGV on 22/02/2015: GLF3 is always simulated data until a better alternative can be found
     myglf = new glfReader(args->nInd,gz,3);
     break;
@@ -311,6 +307,7 @@ multiReader::multiReader(argStruct *args_arg){
   default:{
     break;
   }
+
   }
   if(args->inputtype==INPUT_VCF_GL||args->inputtype==INPUT_VCF_GL){
     fprintf(stderr,"\t-> VCF still beta. Remember that\n");
@@ -353,7 +350,6 @@ multiReader::~multiReader(){
 }
 
 funkyPars *multiReader::fetch(){
-  //  fprintf(stderr,"fetching\n");`
   funkyPars *fp = NULL;
   switch(args->inputtype){
   case INPUT_PILEUP:{
