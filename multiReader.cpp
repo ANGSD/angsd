@@ -408,7 +408,7 @@ funkyPars *multiReader::fetch(){
     break;
   }
   }
-  if(isSim==1){
+  if(isSim==1&&fp!=NULL){
     fp->anc = new char[fp->numSites];
     memset(fp->anc,0,fp->numSites);
   }
