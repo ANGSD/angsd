@@ -3,15 +3,14 @@
 #include <cfloat>
 
 glfReader::~glfReader(){
-
+  
 };
 
-glfReader::glfReader(int &nInd_a,gzFile gz_a,int nGL_a,int isSim_a){
+glfReader::glfReader(int &nInd_a,gzFile gz_a,int nGL_a){
   //  fprintf(stderr,"nind:%d from:%d to:%d gz:%p isSim:%d\n",nInd_a,from_a,to_a,gz_a,isSim_a);
   nInd = nInd_a;
   gz = gz_a;
   nGL = nGL_a;
-  isSim = isSim_a;
 }
 
 
@@ -19,8 +18,6 @@ funkyPars *glfReader::fetch(int chunkSize){
   funkyPars *r = funkyPars_init();  
   r->likes=new double*[chunkSize];
   r->posi=new int[chunkSize];
-  r->anc = new char[chunkSize];
-  memset(r->anc,0,chunkSize);
   r->refId = 0;
   static int pos = 0;
   int l;

@@ -285,12 +285,12 @@ multiReader::multiReader(argStruct *args_arg){
     break;
   }
   case INPUT_GLF:{
-    myglf = new glfReader(args->nInd,gz,10,isSim);
+    myglf = new glfReader(args->nInd,gz,10);
     break;
   }
   case INPUT_GLF3:{
     isSim = 1; //Added by FGV on 22/02/2015: GLF3 is always simulated data until a better alternative can be found
-    myglf = new glfReader(args->nInd,gz,3,isSim);
+    myglf = new glfReader(args->nInd,gz,3);
     break;
   }
   case INPUT_GLF10_TEXT:{
@@ -315,9 +315,9 @@ multiReader::multiReader(argStruct *args_arg){
   if(args->inputtype==INPUT_VCF_GL||args->inputtype==INPUT_VCF_GL){
     fprintf(stderr,"\t-> VCF still beta. Remember that\n");
     fprintf(stderr,"\t   1. indels are are discarded\n");
-    fprintf(stderr,"\t   2. will use chrom, pos PL columns\n");
-    fprintf(stderr,"\t   3. GL tags are interpreted as log10 and are scaled to ln (NOT USED)\n");
-    fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs (spec says phredscaled...) (NOT USED)\n");
+    fprintf(stderr,"\t   2. will use chrom, pos PL,GL,GP columns and tags\n");
+    fprintf(stderr,"\t   3. GL/PL tags are interpreted as log10 and are scaled to ln\n");
+    fprintf(stderr,"\t   4. GP tags are interpreted directly as unscaled post probs)\n");
     fprintf(stderr,"\t   5. FILTER column is currently NOT used (not sure what concensus is)\n");
     fprintf(stderr,"\t   6. -sites does NOT work with vcf input but -r does\n");
     fprintf(stderr,"\t   7. vcffilereading is still BETA, please report strange behaviour\n");
@@ -408,6 +408,11 @@ funkyPars *multiReader::fetch(){
     break;
   }
   }
+  if(isSim==1){
+    fp->anc = new char[fp->numSites];
+    memset(fp->anc,0,fp->numSites);
+  }
+  
   if(fp&&0)
     fprintf(stderr,"numSites:%d\n",fp->numSites);
   if(fp!=NULL && fp->refId==-1){
