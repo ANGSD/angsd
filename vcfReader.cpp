@@ -261,7 +261,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
   }else if(type==2){
     dupergp= new double[3*hs->nsamples];
     for(int i=0;i<3*hs->nsamples;i++)
-      dupergp[i] = 0;
+      dupergp[i] = 1;
   }
   if(type==2) {
     n = bcf_get_format_float(hs->hdr, rec, "GP", &farr, &mfarr);
