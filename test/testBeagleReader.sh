@@ -11,8 +11,6 @@ fi
 LOG=${0}.log
 rm -f ${LOG}
 
-echo $ANGSD
-
 function f(){
 	cut -f2 --complement $1|sed 1d
 }
@@ -38,7 +36,7 @@ echo "Running test: ${0} with ${ANGSD}" >> ${LOG}
 TDIR=beagle_reader
 REFDIR=${TDIR}/ref
 RESDIR=${TDIR}/test_results
-rm -rv ${RESDIR} >> ${LOG}
+rm -rfv ${RESDIR} >> ${LOG}
 mkdir -pv ${RESDIR} >> ${LOG}
 
 ${ANGSD} -doMaf 4 -beagle ${TDIR}/test1.beagle -fai ${REFDIR}/ref1.fa.fai -out ${RESDIR}/test1 >> ${LOG} 2>&1 
