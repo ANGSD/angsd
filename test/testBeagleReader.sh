@@ -29,17 +29,17 @@ function fzd(){
 
 
 
-echo "==========${0}=========="
-echo "Running test: ${0} with ${ANGSD}"
-echo
+echo "==========${0}==========" >> ${LOG}
+echo "Running test: ${0} with ${ANGSD}" >> ${LOG}
+
 
 
 
 TDIR=beagle_reader
 REFDIR=${TDIR}/ref
 RESDIR=${TDIR}/test_results
-rm -rv ${RESDIR}
-mkdir -pv ${RESDIR}
+rm -rv ${RESDIR} >> ${LOG}
+mkdir -pv ${RESDIR} >> ${LOG}
 
 
 
@@ -107,8 +107,6 @@ if [[ -n $($(cmp <(fz ${RESDIR}/test5.mafs.gz) <(f ${TDIR}/angsd_results/test1.m
     RVAL=1
 fi
 
+echo "==========$0===============" >> ${LOG}
 
-echo
-echo "==========$0==============="
-echo
 exit $RVAL
