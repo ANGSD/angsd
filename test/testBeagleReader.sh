@@ -9,7 +9,7 @@ else
 fi
 
 LOG=${0}.log
-rm -f ${LOG}
+rm -vf ${LOG}
 
 echo $ANGSD
 
@@ -38,7 +38,7 @@ echo
 TDIR=beagle_reader
 REFDIR=${TDIR}/ref
 RESDIR=${TDIR}/test_results
-rm -rv ${RESDIR}
+rm -rfv ${RESDIR}
 mkdir -pv ${RESDIR}
 
 

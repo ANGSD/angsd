@@ -13,8 +13,8 @@ fi
 if [ $# -eq 1 ] 
 then
 
-rm -f output/smallBamGL*
-rm -f -r angsd_tmpdir 
+rm -fv output/smallBamGL*
+rm -fvr angsd_tmpdir 
 
 #samtools
 $ANGSD -GL 1 -out output/smallBamGL1 -nThreads 10 -doMajorMinor 1 -doMaf 1 -bam smallBam.filelist -doGlf 1 -r 1:14000000-14010000 -nlines 5000  &>>$OUTFILE
@@ -58,14 +58,14 @@ fi
 
 if [ $# -eq 0 ] 
 then
-rm oldResults/smallBamGL1*
+rm -fv oldResults/smallBamGL1*
 
 ANGSD='../angsd0.584/angsd'
 $ANGSD -GL 1 -out oldResults/smallBamGL1 -nThreads 10 -doMajorMinor 1 -doMaf 1 -bam smallBam.filelist -doGlf 1 -r 1:14000000-14010000 
 #GATK
 $ANGSD -GL 2 -out oldResults/smallBamGL2 -nThreads 10 -doMajorMinor 1 -doMaf 1 -bam smallBam.filelist -doGlf 1 -r 1:14000000-14010000 
 #do Calibration SOAP
-rm -r angsd_tmpdir 
+rm -rfv angsd_tmpdir 
 $ANGSD -GL 3 -out oldResults/smallBamGL1 -nThreads 10 -bam smallBam.filelist -r 1:14000000-14010000 -ref /pontus/genomes/refgenomes/hg19/tsk/hg19.db135.removed.noChr.fa -nlines 5000 -minQ 0
 $ANGSD -GL 3 -out oldResults/smallBamGL3 -nThreads 1 -doMajorMinor 1 -doMaf 1 -bam smallBam.filelist -doGlf 1 -r 1:14000000-14010000  
 
