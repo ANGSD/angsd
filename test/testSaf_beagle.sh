@@ -46,10 +46,6 @@ if [[ ! -d saf_beagle/input ]]; then
   printf "chr1\t1\t-5.345201\t-3.265759\t-1.405563\t0.000000\t-1.405563\t-3.265759\t-5.345201\n" >${TRUTH}
   printf "chr1\t2\t-1.963610\t-0.851204\t-0.851204\t0.000000\t-0.851204\t-0.851204\t-1.963610\n" >>${TRUTH}
   printf "chr1\t3\t-inf\t-inf\t-inf\t0.000000\t-inf\t-inf\t-inf\n" >>${TRUTH}
-  #uniform SAF
-  printf "chr1\t4\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\n" >>${TRUTH}
-  printf "chr1\t5\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\n" >>${TRUTH}
-  printf "chr1\t6\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\t0.000000\n" >>${TRUTH}
   #mirror-image SAF with mode at lowest/highest freq
   printf "chr1\t7\t0.000000\t-2.079442\t-3.283414\t-4.589666\t-5.362856\t-6.238325\t-6.238325\n" >>${TRUTH}
   printf "chr1\t8\t-6.238325\t-6.238325\t-5.362856\t-4.589666\t-3.283414\t-2.079442\t0.000000\n" >>${TRUTH}
