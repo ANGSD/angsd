@@ -2,7 +2,15 @@ CC  ?= gcc
 CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
-CRYPTOLIB = -lcrypto
+
+CRYPTO_TRY=$(shell echo 'int main(){}'|g++ -x c++ - -lcrypto; echo $$?)
+ifeq "$(CRYPTO_TRY)" "0"
+$(info Crypto library is available to link; adding -lcrypto to LIBS)
+LIBS += -lcrypto
+else
+$(info Crypto library is not available to link; will not use -lcrypto)
+endif
+
 
 #if htslib source is defined
 ifdef HTSSRC
@@ -111,7 +119,7 @@ misc: analysisFunction.o bfgs.o prep_sites.o
 
 
 angsd: version.h $(OBJ)
-	$(CXX) $(FLAGS) -o angsd *.o $(LIBS) $(CRYPTOLIB)
+	$(CXX) $(FLAGS) -o angsd *.o $(LIBS)
 
 
 testclean:
