@@ -3,7 +3,15 @@ CC  ?= gcc
 CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
-CRYPTOLIB = -lcrypto
+
+CRYPTO_TRY=$(shell echo 'int main(){}'|g++ -x c++ - -lcrypto 2>/dev/null; echo $$?)
+ifeq "$(CRYPTO_TRY)" "0"
+$(info Crypto library is available to link; adding -lcrypto to LIBS)
+LIBS += -lcrypto
+else
+$(info Crypto library is not available to link; will not use -lcrypto)
+endif
+
 
 ifdef HTSSRC
 $(info misc-HTSSRC defined $(HTSSRC))
@@ -95,22 +103,22 @@ header.o: header.cpp header.h
 	$(CXX) $(FLAGS) -c header.cpp 
 
 smartCount:	smartCount.c  
-	$(CC) $(FLAGS) smartCount.c -lz -o smartCount -std=gnu99 -lpthread $(LIBS) $(CRYPTOLIB)
+	$(CC) $(FLAGS) smartCount.c -lz -o smartCount -std=gnu99 -lpthread $(LIBS) 
 
 thetaStat:	thetaStat.cpp stats.cpp 
-	$(CXX) $(FLAGS) thetaStat.cpp -o thetaStat -lpthread $(LIBS) $(CRYPTOLIB) -lz
+	$(CXX) $(FLAGS) thetaStat.cpp -o thetaStat -lpthread $(LIBS) -lz
 
 msToGlf: msToGlf.c
-	$(CC) $(FLAGS) msToGlf.c -O3 -o msToGlf -std=gnu99 $(LIBS) $(CRYPTOLIB) -lz -lm -lbz2 -llzma -lpthread
+	$(CC) $(FLAGS) msToGlf.c -O3 -o msToGlf -std=gnu99 $(LIBS) -lz -lm -lbz2 -llzma -lpthread
 
 msHOT2glf: msHOT2glf.c
-	$(CC) $(FLAGS) msHOT2glf.c -O3 -o msHOT2glf -std=gnu99 $(LIBS) $(CRYPTOLIB) -lz -lm -lbz2 -llzma -lpthread
+	$(CC) $(FLAGS) msHOT2glf.c -O3 -o msHOT2glf -std=gnu99 $(LIBS) -lz -lm -lbz2 -llzma -lpthread
 
 multisafreader.hpp: Matrix.hpp realSFS_shared.o 
 
 
 realSFS: realSFS.cpp safreader.o keep.hpp safstat.o realSFS_args.o header.o fstreader.o safcat.o multisafreader.hpp realSFS_optim.o realSFS_shared.o realSFS_dadi.o saf_convert.o
-	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../aio.o ../analysisFunction.o ../chisquare.o realSFS_dadi.o saf_convert.o $(LIBS) $(CRYPTOLIB) -lz -lpthread
+	$(CXX) $(FLAGS) realSFS.cpp -o realSFS  safreader.o realSFS_args.o safstat.o fstreader.o header.o safcat.o realSFS_optim.o realSFS_shared.o ../prep_sites.o ../aio.o ../analysisFunction.o ../chisquare.o realSFS_dadi.o saf_convert.o $(LIBS) -lz -lpthread
 
 hmm_psmc.o: hmm_psmc.cpp hmm_psmc.h compute.c
 	$(CXX) $(FLAGS) -c hmm_psmc.cpp
@@ -122,7 +130,7 @@ main_psmc.o: main_psmc.cpp main_psmc.h fpsmc.h fpsmc.o
 	$(CXX) $(FLAGS) -c main_psmc.cpp
 
 ngsPSMC: ngsPSMC.cpp psmcreader.o header.o main_psmc.o fpsmc.o  hmm_psmc.o
-	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o fpsmc.o main_psmc.o hmm_psmc.o ../bfgs.o $(LIBS) $(CRYPTOLIB) -lz
+	$(CXX) $(FLAGS) ngsPSMC.cpp -o ngsPSMC psmcreader.o header.o fpsmc.o main_psmc.o hmm_psmc.o ../bfgs.o $(LIBS) -lz
 
 clean:
 	rm -f *.o $(PROGRAMS) $(PROGRAMS_MISC) *~

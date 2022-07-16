@@ -3,7 +3,7 @@ CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
 
-CRYPTO_TRY=$(shell echo 'int main(){}'|g++ -x c++ - -lcrypto; echo $$?)
+CRYPTO_TRY=$(shell echo 'int main(){}'|g++ -x c++ - -lcrypto 2>/dev/null; echo $$?)
 ifeq "$(CRYPTO_TRY)" "0"
 $(info Crypto library is available to link; adding -lcrypto to LIBS)
 LIBS += -lcrypto
