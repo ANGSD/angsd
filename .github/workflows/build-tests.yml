@@ -24,9 +24,14 @@ jobs:
     - name: Install dependencies    
       run: |
         sudo apt-get update;sudo apt-get install -y libbz2-dev liblzma-dev libcurl4-openssl-dev
-        git clone --depth=5 https://github.com/ANGSD/smallBam.git
-
-    - name: Run CMake
+        git clone --depth=1 https://github.com/ANGSD/smallBam.git
+        git clone --depth=1 --recursive https://github.com/samtools/htslib
+    - name: Compile dependencies (htslib)
       run: |
-        make
+        cd htslib;make    
+    - name: Compile main program (angsd and misc/*)
+      run: |
+        make HTSSRC=../htslib/
+    - name: Run Unit tests
+      run: |
         make test BAMDIR=./smallBam/
