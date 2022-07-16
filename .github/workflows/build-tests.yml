@@ -27,7 +27,7 @@ jobs:
         cd htslib;make    
     - name: Compile main program (angsd and misc/*)
       run: |
-        make HTSSRC=../htslib/
+        make HTSSRC=htslib/
     - name: Run Unit tests
       run: |
         make test BAMDIR=./smallBam/
