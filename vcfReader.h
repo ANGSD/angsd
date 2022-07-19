@@ -1,6 +1,7 @@
-#include <htslib/vcf.h>
-#include<cstdio>
+#include <cstdlib>
+#include <cstdio>
 #include <cstring>
+#include <htslib/vcf.h>
 
 #include "argStruct.h"
 #include "analysisFunction.h"
@@ -39,9 +40,8 @@ float pl2ln[PHREDMAX];
   int parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type);
   int pl_gl_gp;
   int ln_gl_m;
-  float *ln_gl = NULL;
-  float *farr = NULL;
-  int32_t *iarr = NULL;
+  float *ln_gl,*farr;
+  int32_t *iarr;
   int mfarr;
   int miarr;
   std::vector<regs> *regions;//this is a pointer. I should really be more consistent, but i dont want to copy construct
@@ -63,5 +63,6 @@ public:
       free(iarr);
     if(farr)
       free(farr);
-    free(itrname.s);}
+    free(itrname.s);
+  }
 };

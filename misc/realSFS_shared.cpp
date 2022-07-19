@@ -222,6 +222,8 @@ size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
     return fsizes_v2<T>(pp,nSites);
   if(pp[0]->version==3)
     return fsizes_v3<T>(pp,nSites);
+  assert(0!=0);
+  return 0;
 }
 
 template size_t fsizes<float>(std::vector<persaf *> &pp, size_t nSites);

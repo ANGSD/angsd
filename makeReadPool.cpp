@@ -260,7 +260,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
       rdObjRegionDone =1;
       break;
     }else if(ret.first[ret.l+i-1]>b->core.pos){
-      fprintf(stderr,"[%s] unsorted file detected will exit new(-1)=%d new=%ld,ret.l=%d i=%d\n",__FUNCTION__,ret.first[ret.l+i-1],b->core.pos,ret.l,i);
+      fprintf(stderr,"\t-> [%s] unsorted file detected will exit new(-1)=%d new=%lld,ret.l=%d i=%d\n",__FUNCTION__,ret.first[ret.l+i-1],b->core.pos,ret.l,i);
       exit(0);
     }
     
