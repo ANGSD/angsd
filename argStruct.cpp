@@ -387,6 +387,11 @@ std::vector<char*> angsd::getFilenames(const char * name,int nInd){
       ret.erase(ret.begin()+nInd,ret.end());//we don't free this memory, it doesn't really matter
       // fprintf(stderr,"\t->  filename list now contains only: %lu\n",ret.size());
     }
+     for(size_t ii=0;ii<ret.size();ii++)
+       if(strchr(ret[ii],'\r')){
+	 fprintf(stderr,"\t\t-> Filelist: \'%s\' contains carriage return. Looks like a windows file please remove hidden \'\r\' from: \'%s\'\n",name,ret[ii]);
+	 exit(0);
+       }
 #if 0
      for(size_t ii=0;ii<ret.size();ii++)
        fprintf(stderr,"%zu->%s\n",ii,ret[ii]);

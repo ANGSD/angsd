@@ -186,7 +186,10 @@ multiReader::multiReader(argStruct *args_arg){
     }
     if(args->inputtype==INPUT_BAM){
       htsFile *in=sam_open(args->nams[0],"r");
-      assert(in);
+      if(in==NULL){
+	fprintf(stderr,"\t-> Problems opening file: \'%s\' will exit\n",args->nams[0]);
+	exit(0);
+      }
       args->hd= sam_hdr_read(in);
       hts_close(in);
     }
