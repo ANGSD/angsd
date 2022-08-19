@@ -11,17 +11,19 @@
 #include <cmath>
 #include <cassert>
 #include <ctype.h>
-#include "ksort.h"
 #include "mUpPile.h"
+
+extern int refToInt[256];
+#define ERR_DEP 0.83f
+#if 0
+
+
 
 
 KSORT_INIT_GENERIC(uint16_t)
 
-#define ERR_DEP 0.83f
 
-extern int refToInt[256];
 
-#if 0
 typedef struct __errmod_coef_t {
   
 
