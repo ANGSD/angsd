@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <cassert>
 #include <inttypes.h>
+#include <cstdlib>
 #include "analysisFunction.h"
 #include "vcfReader.h"
 
@@ -543,6 +544,8 @@ vcfReader::vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *re
   regions = regions_a;
   farr=NULL;
   iarr=NULL;
+  ln_gl = NULL;
+  
   mfarr=0;
   miarr=0;
   ln_gl_m = 8;
@@ -557,3 +560,4 @@ vcfReader::vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *re
   curChr=-1;
   pl=NULL;
 }
+

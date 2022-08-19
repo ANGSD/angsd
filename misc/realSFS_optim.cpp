@@ -657,7 +657,7 @@ int main_opt(args *arg){
 
 template <typename T>
 int main_opt2(args *arg){
-  fprintf(stderr,"in main_opt2 args.win: %d args.block: %d arg->saf.size(): %lu\n\n",arg->win,arg->nSites,arg->saf.size());
+  fprintf(stderr,"in main_opt2 args.win: %d args.block: %lu arg->saf.size(): %lu\n\n",arg->win,arg->nSites,arg->saf.size());
   if(arg->saf.size()==0 ||arg->win<=0)
     return 0;
   int chr[arg->saf.size()];
@@ -822,7 +822,7 @@ int main_opt2(args *arg){
       fprintf(stderr,"------------\n");
 
       // TODO: nsp check this. When bootstrapping contigs the number of sites can change.
-      fprintf(stdout, "atwin[%d]nsites:%d ",atwin,gls[0]->x);
+      fprintf(stdout, "atwin[%d] nsites:%lu ",atwin,gls[0]->x);
       for(int x=0;x<ndim;x++){
 	double val;
         if (bootnSites)

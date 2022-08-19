@@ -53,10 +53,10 @@ ibs: ibs.cpp
 	$(CXX) $(FLAGS) ibs.cpp -o ibs -lz
 
 supersim: supersim.cpp rbeta.cpp
-	$(CXX) $(FLAGS) supersim.cpp -lz -o supersim $(LIBS)
+	$(CXX) $(FLAGS) supersim.cpp -lz -o supersim $(LIBS) -Wno-unused-result
 
 contamination: contamination.cpp kmath.o
-	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination kmath.o -lpthread
+	$(CXX) $(FLAGS) contamination.cpp -lz -o contamination kmath.o -lpthread 
 
 contamination2: contamination2.cpp kmath.o
 	$(CXX) $(FLAGS) contamination2.cpp -lz -o contamination2 kmath.o -lpthread
