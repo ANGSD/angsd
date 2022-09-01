@@ -674,7 +674,7 @@ int angsd::matinv( double x[], int n, int m, double space[])
 {
   //from rasmus nielsens code
   /* x[n*m]  ... m>=n*/
-  register int i,j,k; 
+  int i,j,k; 
   int *irow=(int*) space;
   double ee=1.0e-20, t,t1,xmax;
   double det=1.0;
