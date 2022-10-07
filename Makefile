@@ -58,6 +58,7 @@ endif
 
 #modied from htslib makefile
 FLAGS = -O3
+CPPFLAGS := $(filter-out -DNDEBUG,$(CPPFLAGS))
 FLAGS2 = $(CPPFLAGS) $(FLAGS) $(LDFLAGS)
 
 CFLAGS := $(FLAGS2) $(CFLAGS)
