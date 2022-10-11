@@ -9,7 +9,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
 #include <ctype.h>
 #include <cmath>
 #include <htslib/hts.h>
@@ -19,6 +18,7 @@
 #include "abcGetFasta.h"
 #include "cigstat.h"
 #include "from_samtools.h"
+#include "aio.h"
 
 //three externs below are from
 extern int uniqueOnly;
@@ -62,16 +62,16 @@ int getNumBest(bam1_t *b) {
 int restuff(bam1_t *b){
   //  fprintf(stderr,"ohh yes: b.refID=%d b.pos=%d\n",b.refID,b.pos);
  extern abcGetFasta *gf;
- assert(gf->ref->curChr==b->core.tid);
+ aio::doAssert(gf->ref->curChr==b->core.tid,1,AT,"");
 
  if(baq){
-   assert(gf->ref!=NULL);
-   assert(gf->ref->curChr==b->core.tid);
+   aio::doAssert(gf->ref!=NULL,1,AT,"");
+   aio::doAssert(gf->ref->curChr==b->core.tid,1,AT,"");
    sam_prob_realn(b,gf->ref->seqs,gf->ref->chrLen,baq);
  }
 
  if(adjustMapQ!=0){
-   assert(gf->ref!=NULL);
+   aio::doAssert(gf->ref!=NULL,1,AT,"");
    int q = sam_cap_mapq(b,gf->ref->seqs,gf->ref->chrLen,adjustMapQ);
    if(q<0)
      return 0;
@@ -139,7 +139,7 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     if(uniqueOnly==0&&only_proper_pairs==0 &&remove_bads==0&&minMapQ==0&&adjustMapQ==0&&baq==0){
       //fprintf(stderr,"r:%d\n",r);
       if(cigstat)
-	assert(cigstat_calc(b)==0);
+	aio::doAssert(cigstat_calc(b)==0,1,AT,"");
       return r;
     }
     
@@ -163,7 +163,7 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     
     if(gf->ref!=NULL&&gf->ref->curChr==b->core.tid){
       if(adjustMapQ!=0){
-	assert(gf->ref!=NULL);
+	aio::doAssert(gf->ref!=NULL,1,AT,"");
 	int q = sam_cap_mapq(b,gf->ref->seqs,gf->ref->chrLen,adjustMapQ);
 	if(q<0)
 	  goto bam_iter_reread;
@@ -177,7 +177,7 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
   }
   // fprintf(stderr,"r:%d\n",r);
   if(cigstat)
-    assert(cigstat_calc(b)==0);
+    aio::doAssert(cigstat_calc(b)==0,1,AT,"");
   return r; 
 }
 

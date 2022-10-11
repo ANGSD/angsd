@@ -1,4 +1,3 @@
-#include <cassert>
 #include "analysisFunction.h"
 #include "glfReader_text.h"
 #include "aio.h"
@@ -21,7 +20,7 @@ glfReader_text::glfReader_text(int nInd_a,gzFile gz_a,const aMap *revMap_a){
 void parselikes10(char *buffer,double *likes,int nInd,const char *delims){
   for(int i=0;i<nInd*10;i++){
     char *tsk = strtok_r(NULL,delims,&buffer);
-    assert(tsk!=NULL);
+    aio::doAssert(tsk!=NULL,1,AT,"");
     likes[i] = atof(tsk);
   }
   

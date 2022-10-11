@@ -1,4 +1,3 @@
-#include <cassert>
 #include "abc.h"
 #include "shared.h"
 #include "multiReader.h"
@@ -44,7 +43,7 @@ bam_hdr_t *getHeadFromFai(const char *fname){
 }
 
 aMap *buildRevTable(const bam_hdr_t *hd){
-  assert(hd);
+  aio::doAssert(hd==NULL,1,AT,"");
   aMap *ret = new aMap;
   for(int i=0;i<hd->n_targets;i++){
     ret->insert(std::pair<char *,int>(strdup(hd->target_name[i]),i));

@@ -3,11 +3,11 @@
 #include <cmath>
 #include <string>
 #include <errno.h>
-#include <cassert>
 #include <inttypes.h>
 #include <cstdlib>
 #include "analysisFunction.h"
 #include "vcfReader.h"
+#include "aio.h"
 
 bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
   bam_hdr_t *ret = bam_hdr_init();
@@ -50,7 +50,7 @@ bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
 }
 
 void htsstuff_seek(htsstuff *hs,char *seek){
-  assert(seek);
+  aio::doAssert(seek==NULL,1,AT,"");
   if(seek){
     fprintf(stderr,"\t-> Setting iterator to: %s\n",seek);fflush(stderr);
     if(hs->idx==NULL)
@@ -67,7 +67,7 @@ void htsstuff_seek(htsstuff *hs,char *seek){
     if(hs->iter)
       hts_itr_destroy(hs->iter);
     hs->iter=bcf_itr_querys(hs->idx,hs->hdr,seek);
-    assert(hs->iter);
+    aio::doAssert(hs->iter==NULL,1,AT,"");
   }
 }
 
@@ -83,10 +83,10 @@ htsstuff *htsstuff_init(char *fname,char *seek){
   hs->iter=NULL;
   hs->nsamples = 0;
   hs->hts_file=hts_open(hs->fname,"r");
-  assert(hs->hts_file);
+  aio::doAssert(hs->hts_file==NULL,1,AT,"");
   
   hs->hdr = bcf_hdr_read(hs->hts_file);
-  assert(hs->hdr);
+  aio::doAssert(hs->hdr==NULL,1,AT,"");
 
   hs->nsamples = bcf_hdr_nsamples(hs->hdr);
   if(hs->seek)
@@ -208,7 +208,7 @@ int whichisindel(const bcf_hdr_t *h){
 int isindel(const bcf_hdr_t *h, const bcf1_t *v){
   bcf_unpack((bcf1_t*)v, BCF_UN_ALL);
   static int hit = whichisindel(h);//only calculated once
-  //  assert(hit!=-1);//we assume INDEL exists in INFO field
+  //  aio::doAssert(hit!=-1);//we assume INDEL exists in INFO field
   if(hit==-1)
     return 0;
   int returnvalue = 0;
@@ -236,7 +236,7 @@ int isindel(const bcf_hdr_t *h, const bcf1_t *v){
 
 int dumpcounterverbose[2] = {0,0};
 int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type){
-  assert(type>=0&&type<=2);
+  aio::doAssert(type>=0&&type<=2,1,AT,"");
   int n;
   if(isindel(hs->hdr,rec)!=0)
     return 0;
@@ -361,7 +361,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
   if(type==0||type==1){
     if(n>=0){//case where we have data
      // fprintf(stderr,"data\n");
-      assert((n % hs->nsamples)==0 );
+      aio::doAssert((n % hs->nsamples)==0 ,1,AT,"");
       int myofs=n/hs->nsamples;
       for(int ind=0;ind<hs->nsamples;ind++){
 	int rollback =0;

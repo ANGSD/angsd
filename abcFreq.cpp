@@ -9,7 +9,6 @@
 
 */
 
-#include <cassert>
 #include <cmath>
 #include <htslib/kstring.h>
 #include <htslib/bgzf.h>
@@ -442,7 +441,7 @@ void abcFreq::print(funkyPars *pars) {
 
       int major = pars->major[s];
       int minor = pars->minor[s];
-      assert(major!=4&&minor!=4);
+	  aio::doAssert(major!=4&&minor!=4,1,AT,"");
 	
       for(int i=0;i<3*pars->nInd;i++) {
 	ksprintf(&bufstr, "\t%f",pars->post[s][i]);
@@ -596,7 +595,7 @@ void abcFreq::run(funkyPars *pars) {
     }
   }
   if(doPost) {
-    assert(pars->likes!=NULL);
+	  aio::doAssert(pars->likes!=NULL,1,AT,"");
 
     double **post = new double*[pars->numSites];
     double **like=angsd::get3likes(pars);
@@ -622,7 +621,7 @@ void abcFreq::run(funkyPars *pars) {
 	   fprintf(stderr,"\t-> Problem calling genotypes at: (%s,%d)\n",header->target_name[pars->refId],pars->posi[s]+1);	   
       }
       else if(doPost==4){
-	assert(fl!=NULL);
+		aio::doAssert(fl!=NULL,1,AT,"");
 	//af for this pos: fl->af[pars->posi[s]]
 	//an for this pos: fl->an[pars->posi[s]]
 	//ac for this pos: fl->ac[pars->posi[s]]
@@ -680,7 +679,7 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
     loglike= pars->likes;
   else
     loglike=angsd::get3likesRescale(pars);
-  assert(loglike!=NULL);
+  aio::doAssert(loglike!=NULL,1,AT,"");
 
   if(doSNP)
     freq->lrt = new double[pars->numSites];
@@ -1283,7 +1282,7 @@ double abcFreq::emFrequency(double *loglike,int numInds, int iter,double start,i
       break;
     }
     p=-999;
-    assert(p!=999);
+	aio::doAssert(p!=999,1,AT,"");
     return p;
   }
 

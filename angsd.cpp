@@ -9,7 +9,6 @@
 */
 
 #include "version.h"
-#include <cassert>
 #include <iostream>//for printing time
 #include <cstring> //for cstring functions
 #include <cstdlib> //for exit()
@@ -20,6 +19,7 @@
 #include "shared.h"
 #include "argStruct.h"
 #include "multiReader.h"
+#include "aio.h"
 
 
 extern std::vector <char *> dumpedFiles;
@@ -221,8 +221,8 @@ int main(int argc, char** argv){
    parseArgStruct(args);
    
    //Below is main loop which will run until nomore data
-   assert(args->hd);
-   assert(args->revMap);
+   aio::doAssert(args->hd==NULL,1,AT,"");
+   aio::doAssert(args->revMap==NULL,1,AT,"");
 
    extern int cigstat;
    if(cigstat)

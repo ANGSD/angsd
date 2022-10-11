@@ -6,7 +6,6 @@
   part of angsd
   NB for cov. maf > 0.001 is hardcoded (don't want the world to explode)
 */
-#include <cassert>
 #include <cmath>
 #include <cstdlib>
 #include <htslib/kstring.h>
@@ -268,12 +267,12 @@ void abcIBS::printHaplo(funkyPars *pars){
   if(makeMatrix){
     for(int i=0;i<pars->nInd;i++){
       for(int j=0;j<pars->nInd;j++){
-	assert( haplo->ibsMatrix[i*pars->nInd+j] >= 0  || haplo->nonMis[i*pars->nInd+j] >= 0 );
+	aio::doAssert( haplo->ibsMatrix[i*pars->nInd+j] >= 0  || haplo->nonMis[i*pars->nInd+j] >= 0 ,1,AT,"");
 	//	  fprintf(stdout,"negative count %d\t%d\n",haplo->ibsMatrix[i*pars->nInd+j],haplo->nonMis[i*pars->nInd+j]);
 
 	ibsMatrixAll[i*pars->nInd+j] += haplo->ibsMatrix[i*pars->nInd+j];
 	nonMisAll[i*pars->nInd+j] += haplo->nonMis[i*pars->nInd+j];
-	assert(nonMisAll[i*pars->nInd+j] >= 0  || ibsMatrixAll[i*pars->nInd+j] >= 0);
+	aio::doAssert(nonMisAll[i*pars->nInd+j] >= 0  || ibsMatrixAll[i*pars->nInd+j] >= 0,1,AT,"");
       }
     }
   }

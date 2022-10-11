@@ -1,4 +1,3 @@
-#include <cassert>
 #include <ctype.h>
 #include "shared.h"
 #include "analysisFunction.h"
@@ -52,7 +51,7 @@ void abcAncestry::clean(funkyPars *pars){
 
 
 void abcAncestry::print(funkyPars *pars){
-  assert(pars->anc!=NULL);
+	aio::doAssert(pars->anc!=NULL,1,AT,"");
   if(doAncestry==1){
   
   }

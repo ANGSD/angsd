@@ -28,13 +28,14 @@
 
 
 #include <cmath> //<- for log,exp
-#include <cassert>
 #include <cfloat>
 #include "shared.h"
 #include "analysisFunction.h"
 #include "abc.h"
 #include "abcMajorMinor.h"
 #include "abcFilter.h"
+#include "aio.h"
+
 static int isnaninf(double *d,int l){
   for(int i=0;i<l;i++)
     if(std::isnan(d[i])||std::isinf(d[i]))
@@ -278,7 +279,7 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
 	fprintf(stdout,"\t-> Something has gone wrong trying to infer major/minor from GLS at \'%s\' %d will discard site from analysis\n",header->target_name[pars->refId],pars->posi[s]+1);
 	pars->keepSites[s]=0;
       }
-      // assert(choiceMajor!=-1&&choiceMinor!=-1);
+      // aio::doAssert(choiceMajor!=-1&&choiceMinor!=-1);
       for(int i=0;i<pars->nInd;i++){
 	W0=exp(pars->likes[s][i*10+angsd::majorminor[choiceMajor][choiceMajor]])*0.25;
 	W1=exp(pars->likes[s][i*10+angsd::majorminor[choiceMajor][choiceMinor]])*0.5;
@@ -389,7 +390,7 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
 }
 
 void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *minor,int *keepSites,int doMajorMinor,char *ref,char *anc) {
-  assert(counts!=NULL);
+  aio::doAssert(counts!=NULL,1,AT,"");
 
   for(int s=0;s<nSites;s++){
     if(keepSites==0)
@@ -517,7 +518,7 @@ void abcMajorMinor::run(funkyPars *pars){
 	continue;
       int major = pars->major[s];
       int minor = pars->minor[s];
-      assert(major!=4&&minor!=4);
+      aio::doAssert(major!=4&&minor!=4,1,AT,"");
       
       lh3->hasAlloced[s]=1;
       lh3->lh3[s] = new double[3*pars->nInd];

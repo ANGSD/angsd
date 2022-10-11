@@ -1,4 +1,3 @@
-#include <cassert>
 #include <cmath>
 #include <cstdlib>   /* atoi */
 #include <cstring>
@@ -18,6 +17,7 @@
 #include "ancestral_likes.h"
 #include "analysisFunction.h"
 
+#include "aio.h"
 
 extern int refToInt[256];
 const int PRIMES = 3;
@@ -340,9 +340,9 @@ void anc_likes::gen_counts(const chunkyT *chk, count_mat *count_mat_sample,
 }
 
 void anc_likes::run(chunkyT *chk, double **lk, char *refs, char *ancs, int *keepSites, int trim){
-  assert(chk!=NULL);
+  aio::doAssert(chk!=NULL,1,AT,"");
   if(doRecal==1){
-    assert(myMuts!=NULL);
+    aio::doAssert(myMuts!=NULL,1,AT,"");
 
     if(refs==NULL){
       fprintf(stderr,"\t-> Must supply -ref (reference) for ancestral matrix generation\n");

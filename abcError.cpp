@@ -1,6 +1,5 @@
 #include <list>
 #include <cmath>
-#include <cassert>
 #include "bfgs.h"
 #include "analysisFunction.h"
 #include "abcError.h"
@@ -420,7 +419,7 @@ void abcError::clean(funkyPars *pars){
 void abcError::run(funkyPars *pars){
   if(doError==0)
     return;
-  assert(pars->counts!=NULL);
+  aio::doAssert(pars->counts!=NULL,1,AT,"");
     
 
   //  pars->opt->emIter=emIter;

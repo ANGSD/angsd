@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <ctype.h>
 #include <pthread.h>
-#include <cassert>
 #include <htslib/hts.h>
 #include <htslib/khash_str2int.h>
 #include "mUpPile.h"
@@ -64,7 +63,7 @@ typedef struct{
 
 template<typename T>
 T getmax(const T *ary,size_t len){
-  assert(len>0&&ary!=NULL);
+  aio::doAssert(len>0&&ary!=NULL,1,AT,"");
       
   T high = ary[0];
   for(size_t i=1;i<len;i++){
@@ -600,7 +599,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
     np->nds = new node[np->m];
   }
   np->l=0;
-  assert(regionLen-lastSecureIndex+4<=np->m);
+  aio::doAssert(regionLen-lastSecureIndex+4<=np->m,1,AT,"");
   for(int i=lastSecureIndex;i<regionLen;i++)
     np->nds[np->l++] = nds[i];
 
@@ -651,7 +650,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
     if(rghash!=NULL){
       uint8_t *rg = bam_aux_get(rd, "RG");
       if(rg)
-	assert(khash_str2int_get(rghash, (const char*)(rg+1), &thisrg)==0);
+	aio::doAssert(khash_str2int_get(rghash, (const char*)(rg+1), &thisrg)==0,1,AT,"");
     }
     
     if(rd->core.tid!=refID){
@@ -832,7 +831,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
     kroundup32(np->m);
     np->nds =(tNode**) realloc(np->nds,np->m*sizeof(tNode*));
   }
-  assert(regionLen-lastSecureIndex+4<=np->m);
+  aio::doAssert(regionLen-lastSecureIndex+4<=np->m,1,AT,"");
   //  fprintf(stderr,"np->m:%d\n",np->m)
   np->l=0;
   for(int i=lastSecureIndex;i<regionLen;i++)
@@ -962,7 +961,7 @@ chunkyT *mergeAllNodes_new(nodePoolT *dn,int nFiles) {
   get_span_all_samplesT(dn,nFiles,first,last);
 
   int rlen = last-first+1;
-  assert(rlen>=0);
+  aio::doAssert(rlen>=0,1,AT,"");
   if(rlen>BUG_THRES)
     return slow_mergeAllNodes_new(dn,nFiles);
 
@@ -1073,8 +1072,8 @@ chunky *slow_mergeAllNodes_old(nodePool *dn,int nFiles){
 chunky *mergeAllNodes_old(nodePool *dn,int nFiles) {
   int first,last;
   get_span_all_samples(dn,nFiles,first,last);
-  assert(first!=-1);
-  assert(last!=-1);
+  aio::doAssert(first!=-1,1,AT,"");
+  aio::doAssert(last!=-1,1,AT,"");
   int rlen = last-first+1; 
 
   if(rlen>BUG_THRES) 
@@ -1103,7 +1102,7 @@ chunky *mergeAllNodes_old(nodePool *dn,int nFiles) {
     for( i=0;((i<sm.l)&&(sm.nds[i].refPos <= std::min(sm.last,last) ));i++) {
       
       int posi = sm.nds[i].refPos-offs;
-      assert(posi>=0);
+      aio::doAssert(posi>=0,1,AT,"");
       if(depth[posi]==0){
 	super[posi] = new node[nFiles];
 	for(int ii=0;ii<nFiles;ii++){
@@ -1173,7 +1172,7 @@ int getSglStop5(readPool *sglp,int nFiles,int pickStop) {
       for(int i=0;i<nFiles;i++)
 	if(sglp[i].l>0&&(getmax(sglp[i].first,sglp[i].l)<lowestStart))
 	  lowestStart = getmax(sglp[i].first,sglp[i].l);
-      assert(lowestStart!=pickStop);
+      aio::doAssert(lowestStart!=pickStop,1,AT,"");
     }
 
   lowestStart--;
@@ -1218,7 +1217,7 @@ void getMaxMax2(readPool *sglp,int nFiles,nodePool *nps){
       if(nps[i].last>last_bp_in_chr)
 	last_bp_in_chr = nps[i].last;
     }
-    //  assert(last_bp_in_chr!=-1); This assertion should not be active, since it might be true if we don't have data for a whole chromosomes
+    //  aio::doAssert(last_bp_in_chr!=-1); This assertion should not be active, since it might be true if we don't have data for a whole chromosomes
     for(int i=0;i<nFiles;i++){
       sglp[i].lowestStart = last_bp_in_chr;
       sglp[i].readIDstop=sglp[i].l;
@@ -1243,7 +1242,7 @@ void getMaxMax2(readPool *sglp,int nFiles,nodePoolT *nps){
     if(nps[i].last>last_bp_in_chr)
       last_bp_in_chr = nps[i].last;
   }
-  //  assert(last_bp_in_chr!=-1); This assertion should not be active, since it might be true if we don't have data for a whole chromosomes
+  //  aio::doAssert(last_bp_in_chr!=-1); This assertion should not be active, since it might be true if we don't have data for a whole chromosomes
   for(int i=0;i<nFiles;i++){
     sglp[i].lowestStart = last_bp_in_chr;
     sglp[i].readIDstop=sglp[i].l;
@@ -1369,7 +1368,7 @@ void destroy_tnode_pool(){
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
 int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> &regions,abcGetFasta *gf) {
   
-  assert(nLines&&nFiles);
+  aio::doAssert(nLines&&nFiles,1,AT,"");
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);
   fflush(stderr);
   if(show!=1)
@@ -1464,7 +1463,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
     if(theRef==rd[0].hdr->n_targets)
       break;
-    assert(theRef>=0 && theRef<rd[0].hdr->n_targets);//ref should be inrange [0,#nref in header]
+    aio::doAssert(theRef>=0 && theRef<rd[0].hdr->n_targets,1,AT,"");//ref should be inrange [0,#nref in header]
 
     //load fasta for this ref if needed
     void waiter(int);
@@ -1599,7 +1598,7 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       if(show){
 	//merge the perFile upnodes.FIXME for large regions (with gaps) this will allocate to much...
 	chunky *chk =mergeAllNodes_old(dn,nFiles);
-	assert(chk->refPos[0]<=regStop);
+	aio::doAssert(chk->refPos[0]<=regStop,1,AT,"");
 	
 	chk->regStart = regStart;
 	chk->regStop = regStop;

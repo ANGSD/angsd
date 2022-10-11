@@ -9,9 +9,10 @@
 #include <stdint.h>
 #include <cstdlib>
 #include <cmath>
-#include <cassert>
 #include <ctype.h>
 #include "mUpPile.h"
+
+#include "aio.h"
 
 extern int refToInt[256];
 #define ERR_DEP 0.83f
@@ -290,7 +291,7 @@ void call_bam(chunkyT *chk,double **lk,int trim,int *keepSites){
       bam_likes_destroy();
     return;
   }
-  assert(mod!=NULL);
+  aio::doAssert(mod!=NULL,1,AT,"");
   for(int s=0;s<chk->nSites;s++){
     lk[s] = new double[10*chk->nSamples];
     if(keepSites[s]==0)

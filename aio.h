@@ -3,6 +3,11 @@
 #include <htslib/kstring.h>
 #include <htslib/hts.h>
 #include <zlib.h>
+
+#define STRINGIFY(x) #x
+#define ASSTR(x) STRINGIFY(x)
+#define AT __FILE__ ":" ASSTR(__LINE__)
+
 //angsd io
 namespace aio{
   size_t fsize(const char* fname);
@@ -15,4 +20,5 @@ namespace aio{
   int isNewer(const char *newer,const char *older);
   ssize_t bgzf_write(BGZF *fp, const void *data, size_t length);
   int tgets(gzFile gz,char**buf,int *l);
+  void doAssert(int EXIT, int EXIT_CODE, const char* error_location, const char* format,...);
 }

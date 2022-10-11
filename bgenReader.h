@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstring>
-#include <cassert>
 
+#include "aio.h"
 #include "argStruct.h"
 #include "analysisFunction.h"
 #include "shared.h"
@@ -61,11 +61,11 @@ public:
   bgenReader(char *fname, const aMap *revMap_a,  int intName_a,int &nInd_a){
 
     FILE *fp=fopen(fname,"rb");
-    assert(fp!=NULL);
+    aio::doAssert(fp!=NULL,1,AT,"");
 
     unsigned offset;
     //unsigned is 4 bytes
-    assert(fread(&offset,sizeof(unsigned),1,fp)==1);
+    aio::doAssert(fread(&offset,sizeof(unsigned),1,fp)==1,1,AT,"");
     
     //read header function
     hd = parseheader(fp);

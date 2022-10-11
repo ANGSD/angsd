@@ -15,7 +15,6 @@
 #include <sys/stat.h>//mkdir
 #include <sys/types.h>//mkdir
 #include <vector>
-#include <cassert>
 #include <limits> //<- for setting nan
 #include <ctype.h>
 #include <cstdlib>
@@ -359,8 +358,8 @@ void dump_count_mat(const char *fname,size_t *count_mat){
 
 
 void soap_likes::run(chunkyT *chk,double **lk,char *refs,int trim) {
-  assert(myMuts!=NULL);
-  assert(chk!=NULL);
+  aio::doAssert(myMuts!=NULL,1,AT,"");
+  aio::doAssert(chk!=NULL,1,AT,"");
 
   if(doRecal==0){
     for(int i=0;i<chk->nSamples  ;i++)
