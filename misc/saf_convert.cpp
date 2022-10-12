@@ -6,9 +6,7 @@
 
 #include "safcat.h"
 #include "header.h"
-
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+#include "misc.h"
 
 int main_text2safv4(int argc,char **argv){
   fprintf(stderr,"\t-> This will convert a banded text saf file into safv3 file\n");

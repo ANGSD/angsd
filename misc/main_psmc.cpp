@@ -6,10 +6,7 @@
 // parse a pattern like "4+5*3+4"
 // the returned array holds which parameters are linked together
 // number of parameters and number of free parameters will be also returned
-
-
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+#include "misc.h"
 
 int *psmc_parse_pattern(const char *pattern, int *n_free, int *n_pars)
 {

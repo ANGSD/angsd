@@ -22,11 +22,7 @@
 #include "safcat.h"
 #include "realSFS_args.h"
 #include <fstream>
-
-
-
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+#include "misc.h"
 
 std::vector<char*> getFilenames(const char * name,int nInd){
   fprintf(stderr,"\t-> Reading saf.idx from: %s\n",name);

@@ -4,12 +4,21 @@
 #include <htslib/hts.h>
 #include <zlib.h>
 
+
+/*
+ * Macro:[AT]
+ * Injects the file and line info as string
+ */
 #define STRINGIFY(x) #x
 #define ASSTR(x) STRINGIFY(x)
 #define AT __FILE__ ":" ASSTR(__LINE__)
 
-#define ASSERT(expr) \
-	if (!(expr)) aio::assertFailed(AT,#expr)
+/*
+ * Macro:[ASSERT]
+ * shortcut to evaluate an expression, works the same way as the C-macro assert
+ */
+#define ASSERT(expr) if (!(expr)) {fprintf(stderr,"\n\n*******\n[ERROR](%s:%d) %s\n*******\n",__FILE__,__LINE__,#expr);exit(1);}
+
 
 //angsd io
 namespace aio{
@@ -45,5 +54,5 @@ namespace aio{
   void doAssert(int exp_eval, const char* error_location, const char* exit_text,...);
   void doAssert(int exp_eval, const char* error_location);
   void doAssert(int exp_eval);
-  void assertFailed(const char* error_location, const char* error_expression);
+
 }

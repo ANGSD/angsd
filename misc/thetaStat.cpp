@@ -7,9 +7,8 @@
 #include <htslib/bgzf.h>
 #include <htslib/kstring.h>
 #include "stats.cpp"
+#include "misc.h"
 
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
 
 const char * BIN= ".bin";
 const char * IDX= ".idx";

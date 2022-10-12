@@ -5,8 +5,7 @@
 #include "realSFS_optim.h"
 extern int howOften;
 #include "multisafreader.hpp"
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+#include "misc.h"
 void readSFS(const char *fname, size_t hint, double *ret);
 
 size_t * foldremapper = NULL;

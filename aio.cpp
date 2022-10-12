@@ -119,8 +119,7 @@ neverUseGoto:
 
 
 void aio::doAssert(int exp_eval, int exit_code, const char* error_location, const char* exit_text,...){
-	// if( exp_eval || exp_eval!=NULL || exp_eval==1 || exp_eval==true){
-	if( exp_eval ){
+	if( exp_eval || exp_eval==1 || exp_eval==true){
 		return;
 	}else{
 		fprintf(stderr, "\n");
@@ -139,7 +138,7 @@ void aio::doAssert(int exp_eval, int exit_code, const char* error_location, cons
 
 // Function overload to avoid specifying exit code. If not specified exit 1
 void aio::doAssert(int exp_eval, const char* error_location, const char* exit_text,...){
-	if( (exp_eval) || exp_eval!=NULL || exp_eval==1 || exp_eval==true){
+	if( exp_eval || exp_eval==1 || exp_eval==true){
 		return;
 	}else{
 		fprintf(stderr, "\n");
@@ -156,9 +155,9 @@ void aio::doAssert(int exp_eval, const char* error_location, const char* exit_te
 }
 
 
-// Function overload to avoid specifying exit code. If not specified exit 1
+// Function overload to avoid specifying exit code and exit text. If not specified exit 1
 void aio::doAssert(int exp_eval, const char* error_location){
-	if( (exp_eval) || exp_eval!=NULL || exp_eval==1 || exp_eval==true){
+	if( exp_eval || exp_eval==1 || exp_eval==true){
 		return;
 	}else{
 		fprintf(stderr, "\n");
@@ -172,7 +171,7 @@ void aio::doAssert(int exp_eval, const char* error_location){
 
 // Function overload to avoid specifying anything, just evaluate and exit 1
 void aio::doAssert(int exp_eval){
-	if( (exp_eval) || exp_eval!=NULL || exp_eval==1 || exp_eval==true){
+	if( exp_eval || exp_eval==1 || exp_eval==true){
 		return;
 	}else{
 		fprintf(stderr, "\n");
@@ -183,11 +182,3 @@ void aio::doAssert(int exp_eval){
 	}
 }
 
-void aio::assertFailed(const char* error_location, const char* error_expression){
-	fprintf(stderr, "\n");
-	fprintf(stderr, "*******\n");
-	fprintf(stderr, "[ERROR](%s): %s\n",error_location,error_expression);
-	fprintf(stderr, "*******\n");
-	fprintf(stderr, "\n");
-	exit(1);
-}

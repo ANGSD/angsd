@@ -7,9 +7,8 @@
 #include <vector>
 #include <map>
 #include <libgen.h>
+#include "misc.h"
 
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
 
 typedef unsigned char uchar;
 

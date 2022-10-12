@@ -11,8 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+#include "misc.h"
 
 
 int block = 100;

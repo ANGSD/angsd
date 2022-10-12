@@ -34,8 +34,7 @@
 #include "realSFS_saf2.cpp"
 #define LENS 4096
 
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+#include "misc.h"
 
 const char*fname1 = NULL;
 const char*fname2 = NULL;//only used for 2dsfs

@@ -4,11 +4,10 @@
 #include "realSFS_dadi.h"
 #include "realSFS_shared.h"
 #include <htslib/faidx.h>
+#include "misc.h"
 extern int howOften;
 #include "multisafreader.hpp"
 
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
 
 faidx_t *fai_ref=NULL;
 faidx_t *fai_anc=NULL;

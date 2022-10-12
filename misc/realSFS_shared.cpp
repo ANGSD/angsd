@@ -1,8 +1,6 @@
 #include "realSFS_shared.h"
+#include "misc.h"
 int **posiG  = NULL;
-
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
 
 //unthreaded
 //this will populate the keep vector by

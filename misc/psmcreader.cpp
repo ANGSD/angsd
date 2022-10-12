@@ -5,11 +5,7 @@
 #include "header.h"
 #include "psmcreader.h"
 
-
-
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
-
+#include "misc.h"
 
 
 void destroy(myMap &mm){

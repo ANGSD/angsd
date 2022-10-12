@@ -18,9 +18,7 @@
 #include "../fet.c"
 #define LENS 4096
 
-
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+#include "misc.h"
 
 typedef struct{
   char allele1;

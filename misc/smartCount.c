@@ -7,9 +7,8 @@
 #include "kvec.h"
 #include <libgen.h>
 #define LENS  4096
+#include "misc.h"
 
-#define ASSERT(expr) \
-	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
 
 const char * BIN= ".counts.bin";
 const char * IDX= ".counts.idx";
