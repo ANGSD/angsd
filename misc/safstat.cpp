@@ -85,7 +85,7 @@ void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat,int whichFst){
 }
 
 void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres,int *remap,int *rescal){
-  assert(prior!=NULL);
+  if(prior==NULL) exit(1);
 
   double snyd1[gl1->y];
   double snyd2[gl2->y];

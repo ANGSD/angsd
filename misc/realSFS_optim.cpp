@@ -5,6 +5,7 @@
 #include "realSFS_optim.h"
 extern int howOften;
 #include "multisafreader.hpp"
+#include "misc.h"
 void readSFS(const char *fname, size_t hint, double *ret);
 
 size_t * foldremapper = NULL;
@@ -39,7 +40,7 @@ size_t sfs_linear_index (int *bin, int *nchr, int npop, bool rev);
 template <typename T>
 double lik(double *sfs, std::vector< Matrix<T> *> &gls, size_t from, size_t to)
 {
-  assert(from >= 0 && to >=0);
+  ASSERT(from >= 0 && to >=0);
   double r = 0;
   size_t ss, lind;
 
@@ -478,7 +479,7 @@ int main_opt(args *arg){
    
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
-    assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
+    ASSERT(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
   size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=calc_nsites(saf,arg);
@@ -669,7 +670,7 @@ int main_opt2(args *arg){
   
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
-    assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
+    ASSERT(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
   size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=calc_nsites(saf,arg);

@@ -2,6 +2,8 @@
 #include <htslib/bgzf.h>
 #include <zlib.h>
 #include "safreader.h"
+#include "misc.h"
+
 
 void destroy(myMap &mm)
 {
@@ -101,7 +103,7 @@ persaf * persaf_init(char *fname, int verbose)
   }
 
   char buf[8];
-  assert(fread(buf,1,8,fp)==8);
+  ASSERT(fread(buf,1,8,fp)==8);
   ret->version = safversion(fname);
   
   if(verbose)
@@ -120,7 +122,7 @@ persaf * persaf_init(char *fname, int verbose)
   while(fread(&clen,sizeof(size_t),1,fp))
   {
     char *chr = (char*)malloc(clen+1);
-    assert(clen==fread(chr,1,clen,fp));
+    ASSERT(clen==fread(chr,1,clen,fp));
     chr[clen] = '\0';
 
     datum d;
@@ -195,7 +197,7 @@ persaf * persaf_init(char *fname, int verbose)
     exit(0);
   }
 
-  //assert(ret->pos!=NULL&&ret->saf!=NULL);
+  //ASSERT(ret->pos!=NULL&&ret->saf!=NULL);
   free(tmp);
   free(tmp2);
 
@@ -210,7 +212,7 @@ myMap::iterator iter_init(persaf *pp, char *chr, int start, int stop)
 {
   //  fprintf(stderr,"kind:%d start:%d stop:%d dontread:%d\n",pp->kind,start,stop,pp->dontRead);
   pp->dontRead = 0;
-  assert(chr!=NULL);
+  ASSERT(chr!=NULL);
   myMap::iterator it = pp->mm.find(chr);
   if(it==pp->mm.end()){
     fprintf(stderr,"\t-> [%s] Problem finding chr: %s\n",__FUNCTION__,chr);
@@ -271,7 +273,7 @@ myMap::iterator iter_init(persaf *pp, char *chr, int start, int stop)
 template <typename T>
 size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos)
 {
-  assert(buffer);
+  ASSERT(buffer);
   
   int band[2];
   
@@ -290,7 +292,7 @@ size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos)
     ret = bgzf_read(saf->saf, band, 2*sizeof(int));
     if (ret==0)
       return ret;
-    assert(ret == 2*sizeof(int));
+    ASSERT(ret == 2*sizeof(int));
   }
   else
   {
@@ -301,7 +303,7 @@ size_t iter_read(persaf *saf, T *&data, T *buffer, int *pos)
   ret = saf->kind!=1 ? bgzf_read(saf->saf, buffer, band[1]*sizeof(T)) : band[1];
   if(ret==0)
     return ret;
-  assert(ret==band[1]*sizeof(T) && band[0]+band[1]<=saf->nChr+1);
+  ASSERT(ret==band[1]*sizeof(T) && band[0]+band[1]<=saf->nChr+1);
 
   saf->at++;
   //   fprintf(stdout,"saf->at:%d ret:%d\n",saf->at,ret);

@@ -10,7 +10,6 @@ osome if we have reached the last position from the keep list.
 Maybe there are some memleaks. This will have to be fixed later.
 */
 
-#include <cassert>
 #include <sys/stat.h>
 #include "shared.h"
 #include "abc.h"

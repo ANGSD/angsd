@@ -2,12 +2,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
-#include <cassert>
 #include <zlib.h>
 #include <sys/stat.h>
 #include <vector>
 #include <map>
 #include <libgen.h>
+#include "misc.h"
+
+
 typedef unsigned char uchar;
 
 typedef struct{

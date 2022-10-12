@@ -195,7 +195,7 @@ bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname,bam_sample
 	    fprintf(stderr,"\t-> [READGROUP info] Problems adding readgroup: %s for lib: %s\n",rgs_to_add[i],it2->first);
 	  else{
 	    int tmp;
-	    assert(khash_str2int_get(rghash,rgs_to_add[i],&tmp)==0);
+	    aio::doAssert(khash_str2int_get(rghash,rgs_to_add[i],&tmp)==0,1,AT,"");
 	    fprintf(stderr,"\t-> [READGROUP info] Added readgroup %s for lib: %s (check: %s) -> %d\n",rgs_to_add[i],it2->first,it->first,tmp);
 	    if(tmp>254){
 	      fprintf(stderr,"\t-> Readgroup representation is only valid for fewer than 255 different readgroups\n");

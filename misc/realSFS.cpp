@@ -24,7 +24,6 @@
 #include <cmath>
 #include <cfloat>
 #include <signal.h>
-#include <cassert>
 #include <pthread.h>
 #include <unistd.h>
 #include <zlib.h>
@@ -43,6 +42,7 @@ int howOften =5e6;//how often should we print out (just to make sure something i
 #include "../aio.h"
 int really_kill =3;
 int VERBOSE = 1;
+
 
 extern std::vector <char *> dumpedFiles;
 
@@ -350,7 +350,7 @@ int print_multi(args *arg)
   //fprintf(stderr,"[%s]\n",__FUNCTION__);
   std::vector<persaf *> &saf = arg->saf;
   for(int i=0;i<saf.size();i++)
-    assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
+    ASSERT(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
 
   size_t nSites = arg->nSites;
   if(nSites == 0) //if no -nSites is specified
@@ -556,7 +556,7 @@ int fst_index(int argc,char **argv){
   }
 
   std::vector<persaf *> &saf =arg->saf;
-  //assert(saf.size()==2);
+  //ASSERT(saf.size()==2);
   size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites = 100000;//<- set default to 100k sites, no need to load everything...
@@ -707,7 +707,7 @@ int fst_index(int argc,char **argv){
     fwrite(it->first,1,clen,fstfp);
     size_t nit=posi.size();
 
-    assert(1==fwrite(&nit,sizeof(size_t),1,fstfp));
+    ASSERT(1==fwrite(&nit,sizeof(size_t),1,fstfp));
     int64_t tell = bgzf_tell(fstbg);
     fwrite(&tell,sizeof(int64_t),1,fstfp);
     my_bgzf_write(fstbg,&posi[0],posi.size()*sizeof(int));
@@ -763,12 +763,12 @@ int fst(int argc,char**argv){
 // --- realSFS saf2theta --- //
 
 void writeAllThetas(BGZF *dat,FILE *idx,char *tmpChr,int64_t &offs,std::vector<int> &p,std::vector<float> *res,int nChr){
-  assert(dat!=NULL);
-  assert(idx!=NULL);
-  assert(p.size()==res[0].size());
+  ASSERT(dat!=NULL);
+  ASSERT(idx!=NULL);
+  ASSERT(p.size()==res[0].size());
   fprintf(stderr,"\t-> Writing %lu sites for chr:%s\n",p.size(),tmpChr);
   for(int i=1;i<5;i++)
-    assert(p.size()==res[i].size());//DRAGON, might be discarded during compilation
+    ASSERT(p.size()==res[i].size());//DRAGON, might be discarded during compilation
       
   if(p.size()!=0&&tmpChr!=NULL){
     //write clen and chromoname for both index and bgzf

@@ -1,6 +1,5 @@
 #include <cstdio>
 #include <cmath>
-#include <assert.h>
 #include <cfloat>
 #include <htslib/kstring.h>
 #include "abcFreq.h"
@@ -234,7 +233,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
     aio::bgzf_write(outfileSAF,buf,8);
     aio::bgzf_write(outfileSAFPOS,buf,8);
     fwrite(buf,1,8,outfileSAFIDX);
-    assert(bgzf_flush(outfileSAF)==0);assert(bgzf_flush(outfileSAFPOS)==0);
+    aio::doAssert(bgzf_flush(outfileSAF)==0);aio::doAssert(bgzf_flush(outfileSAFPOS)==0);
     offs[0] = bgzf_tell(outfileSAFPOS);
     offs[1] = bgzf_tell(outfileSAF);
     size_t tt = newDim-1;
@@ -500,7 +499,7 @@ int saf_sparsify_and_normalize (double* hj, int& lower, int& upper, const double
 // I would not trust the output of this method until this gets investigated.
 void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underFlowProtect, int *keepSites,realRes *r,int noTrans,int doSaf,char *major,char *minor,double *freq,double *indF,int newDim) {
   //  fprintf(stderr,"liks=%p anc=%p nsites=%d nInd=%d underflowprotect=%d fold=%d keepSites=%p r=%p\n",liks,anc,nsites,numInds,underFlowProtect,fold,keepSites,r);
-  assert(doSaf==2);
+  aio::doAssert(doSaf==2);
   int myCounter =0;
 
   if(anc==NULL||liks==NULL){
@@ -547,7 +546,7 @@ void filipe::algoJoint(double **liks,char *anc,int nsites,int numInds,int underF
 	continue;
     }
 
-    assert(ancB!=-1&&derB!=-1);
+    aio::doAssert(ancB!=-1&&derB!=-1);
     
     double totmax = 0.0;
     
@@ -1461,7 +1460,7 @@ void abcSaf::print(funkyPars *p)
 // NSP 3July2020
 // I left this alone when implementing score-limited algorithm. Not sure if it is even used anymore?
 void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites,int numInds,kstring_t *sfsfile,int underFlowProtect,int *posi,int *keepSites,double *pest) {
-  assert(pest!=NULL);
+  aio::doAssert(pest!=NULL);
   //void algGeno(aMap &asso,int numInds,FILE *sfsfile,int underFlowProtect, double *pest) {
   //  fprintf(stderr,"UNDERFLOWPROTECT: %d\n",underFlowProtect);
   double *postp = new double[3*numInds];
@@ -1789,7 +1788,7 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
       for(int i=0;i<3;i++)
 	res[i] =exp(res[i])/mySum;
       int best = angsd::whichMax(res,3);
-      assert(best!=-1);
+      aio::doAssert(best!=-1);
       //      fprintf(stderr,"best:%d\n",best);
       whichGeno[select] = best;
       whichProb[select] = res[best];
@@ -1821,9 +1820,9 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
 }
 
 void abcSaf::writeAll(){
-  assert(outfileSAF!=NULL);
-  assert(outfileSAFIDX!=NULL);
-  assert(outfileSAFPOS!=NULL);
+  aio::doAssert(outfileSAF!=NULL);
+  aio::doAssert(outfileSAFIDX!=NULL);
+  aio::doAssert(outfileSAFPOS!=NULL);
   //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
   if(nnnSites!=0&&tmpChr!=NULL){
     size_t clen = strlen(tmpChr);
@@ -1836,7 +1835,7 @@ void abcSaf::writeAll(){
   }//else
    // fprintf(stderr,"enpty chr\n");
   //reset
-  assert(bgzf_flush(outfileSAF)==0);assert(bgzf_flush(outfileSAFPOS)==0);
+  aio::doAssert(bgzf_flush(outfileSAF)==0);aio::doAssert(bgzf_flush(outfileSAFPOS)==0);
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
   nnnSites=0;

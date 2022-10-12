@@ -3,10 +3,10 @@
 #include <cstdlib>
 #include <htslib/bgzf.h>
 #include <htslib/kstring.h>
-#include <cassert>
 
 #include "safcat.h"
 #include "header.h"
+#include "misc.h"
 
 int main_text2safv4(int argc,char **argv){
   fprintf(stderr,"\t-> This will convert a banded text saf file into safv3 file\n");
@@ -41,7 +41,7 @@ int main_text2safv4(int argc,char **argv){
   
   BGZF *infilefp = NULL;
   infilefp = bgzf_open(infile,"rb");
-  assert(infilefp!=NULL);
+  ASSERT(infilefp!=NULL);
    
   BGZF *outfileSAF =  openFileBG(outnames,SAF);
   BGZF *outfileSAFPOS =  openFileBG(outnames,SAFPOS);
@@ -58,7 +58,7 @@ int main_text2safv4(int argc,char **argv){
   fwrite(buf,1,8,outfileSAFIDX);
   fwrite(&nchr,sizeof(size_t),1,outfileSAFIDX);
   int64_t offs[2];
-  assert(0==bgzf_flush(outfileSAFPOS));assert(0==bgzf_flush(outfileSAF));
+  ASSERT(0==bgzf_flush(outfileSAFPOS));ASSERT(0==bgzf_flush(outfileSAF));
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
 
@@ -90,10 +90,10 @@ int main_text2safv4(int argc,char **argv){
       sumband =0;
       free(chr);
       chr= strdup(tmpChr);
-      assert(bgzf_write(outfileSAFPOS, pos.data(), sizeof(int)*pos.size())==sizeof(int)*pos.size());
+      ASSERT(bgzf_write(outfileSAFPOS, pos.data(), sizeof(int)*pos.size())==sizeof(int)*pos.size());
       pos.clear();
-      assert(0==bgzf_flush(outfileSAF));
-      assert(0==bgzf_flush(outfileSAFPOS));
+      ASSERT(0==bgzf_flush(outfileSAF));
+      ASSERT(0==bgzf_flush(outfileSAFPOS));
       offs[0] = bgzf_tell(outfileSAFPOS);
       offs[1] = bgzf_tell(outfileSAF);
     }
@@ -121,8 +121,8 @@ int main_text2safv4(int argc,char **argv){
       flt[i] = atof(strtok(NULL,"\t\n "));
       //      fprintf(stderr,"flt[%d]: %f\n",i,flt[i]);
     }
-    assert(bgzf_write(outfileSAF, bin_len, sizeof(int)*2)==sizeof(int)*2);
-    assert(bgzf_write(outfileSAF, flt, sizeof(float)*bin_len[1])==sizeof(float)*bin_len[1]);
+    ASSERT(bgzf_write(outfileSAF, bin_len, sizeof(int)*2)==sizeof(int)*2);
+    ASSERT(bgzf_write(outfileSAF, flt, sizeof(float)*bin_len[1])==sizeof(float)*bin_len[1]);
   }
 
   if(sumband>0){
@@ -136,7 +136,7 @@ int main_text2safv4(int argc,char **argv){
     fwrite(&sumband,sizeof(size_t),1,outfileSAFIDX);
     fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
     //    fprintf(stderr,"nsites: %lu\n",pos.size());
-    assert(bgzf_write(outfileSAFPOS, pos.data(), sizeof(int)*pos.size())==sizeof(int)*pos.size());
+    ASSERT(bgzf_write(outfileSAFPOS, pos.data(), sizeof(int)*pos.size())==sizeof(int)*pos.size());
     sumband =0;
   }
   

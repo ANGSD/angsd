@@ -1,5 +1,4 @@
 
-#include <cassert>
 #include "analysisFunction.h"
 #include "beagleReader.h"
 #include "aio.h"
@@ -50,7 +49,7 @@ beagle_reader::beagle_reader(gzFile gz_a,const aMap *revMap_a,int intName_a,int 
 void parsepost(char *buffer,double *post,int nInd,const char *delims){
 	for(int i=0;i<nInd*3;i++){
 		char *tsk = strtok_r(NULL,delims,&buffer);
-		assert(tsk!=NULL);
+		aio::doAssert(tsk!=NULL,1,AT,"");
 		post[i] = atof(tsk);
 	}
 }

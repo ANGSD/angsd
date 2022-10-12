@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <cstdlib>
 #include <htslib/hts.h>
 #include <htslib/sam.h>

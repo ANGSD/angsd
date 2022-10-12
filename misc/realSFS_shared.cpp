@@ -1,4 +1,5 @@
 #include "realSFS_shared.h"
+#include "misc.h"
 int **posiG  = NULL;
 
 //unthreaded
@@ -39,7 +40,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   }
   fprintf(stderr,"\t-> hello Im the master merge part of realSFS. and I'll now do a tripple bypass to find intersect \n");
   fprintf(stderr,"\t-> 1) Will set iter according to chooseChr and start and stop, and possibly using -sites\n");
-  assert(chooseChr!=NULL);
+  ASSERT(chooseChr!=NULL);
   //check that chooseChr exists in all pops.
   for(int j=0;j<saf.size();j++){
     myMap::iterator it = saf[j]->mm.find(chooseChr);
@@ -71,7 +72,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     }
 
     //    fprintf(stderr,"ASDFASDF:%p\n",saf[i]->ppos);
-    //    assert(it!=saf[i]->mm.end());  
+    //    ASSERT(it!=saf[i]->mm.end());  
     if(it==saf[i]->mm.end()){
       killbreak =1;
       break;
@@ -81,7 +82,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
       return 0;
     }if(saf[i]->ppos[it->second.nSites-1] >= hit->m)
     realloc(hit,saf[i]->ppos[it->second.nSites-1]+1);
-    assert(hit->m>0);
+    ASSERT(hit->m>0);
     for(size_t j=saf[i]->toKeep->first;j<=saf[i]->toKeep->last;j++){
       if(j>saf[i]->toKeep->first&&saf[i]->ppos[j] <= saf[i]->ppos[j-1]){
         fprintf(stderr,"\t-> Potential big problem, ordering of positions indicates that sites has not been sorted ? \n");
@@ -126,7 +127,7 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
     fprintf(stderr,"\t-> Sites to keep[%s] from pop%d:\t%d\n",chooseChr,i,tsk[i]);
     hasdata +=tsk[i];
     if(i>0)
-      assert(tsk[i]==tsk[i-1]);
+      ASSERT(tsk[i]==tsk[i-1]);
 #if 0
     keep_info(saf[i]->toKeep,stderr,0,1);
     //print out overlapping positions for all pops
@@ -222,7 +223,7 @@ size_t fsizes(std::vector<persaf *> &pp, size_t nSites){
     return fsizes_v2<T>(pp,nSites);
   if(pp[0]->version==3)
     return fsizes_v3<T>(pp,nSites);
-  assert(0!=0);
+  ASSERT(0!=0);
   return 0;
 }
 

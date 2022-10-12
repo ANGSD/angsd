@@ -5,10 +5,10 @@
 
 #include <cmath>
 #include <cstdio>
-#include <cassert>
 #include "bambi_interface.h"
 #include "simple_likes.h"
 #include "analysisFunction.h"
+#include "aio.h"
 
 double **probs_simple = NULL;
 
@@ -73,7 +73,7 @@ void call_simple(suint **counts,int *keepSites,double **lk,int nSites,int nSampl
 
       int r = angsd::getRandomCount(counts[s],i,-1);
       //      fprintf(stdout,"ris\t%d\n",r);
-      assert(r>-1);
+      aio::doAssert(r>-1,1,AT,"");
       if(r==4)
 	continue;
       for(int j=0;j<10;j++){

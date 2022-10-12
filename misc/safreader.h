@@ -1,7 +1,6 @@
 #pragma once
 #include <cstring>
 #include <cstdlib>
-#include <cassert>
 #include <map>
 #include <htslib/bgzf.h>
 #include "keep.hpp"

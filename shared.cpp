@@ -3,7 +3,6 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <pthread.h>
-#include <cassert>
 #include <errno.h>
 #include "bambi_interface.h"
 #include "shared.h"

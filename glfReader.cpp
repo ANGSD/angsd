@@ -1,4 +1,3 @@
-#include <cassert>
 #include "glfReader.h"
 #include <cfloat>
 

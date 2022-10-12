@@ -1,5 +1,5 @@
-#include <cassert>
 #include "abc.h"
+#include "aio.h"
 #include "analysisFunction.h"
 #include "shared.h"
 #include "abcMcall.h"
@@ -22,7 +22,7 @@ void abcMcall::printArg(FILE *fp){
 }
 
 void offset2allele(int a,int &b,int &c){
-  assert(a>=0&&a<10);
+  aio::doAssert(a>=0&&a<10,1,AT,"");
   if(a==0){//AA
     b=0;
     c=0;
@@ -605,8 +605,8 @@ void abcMcall::run(funkyPars *pars) {
        int b2=refToInt[DAS_BEST[1]];
        //    fprintf(stderr,"offset2allele: which=%d a1=%d a2=%d DAS: b1=%d b2=%d lk: %f nd->l: %d\n",whichmax,a1,a2,b1,b2,gc_llh[i*10+whichmax],pars->chk->nd[s][i]?pars->chk->nd[s][i]->l:0);
        if(b2!=4){
-	 assert(a1==b1||a1==b2);
-	 assert(a2==b1||a2==b2);
+	 aio::doAssert(a1==b1||a1==b2);
+	 aio::doAssert(a2==b1||a2==b2);
        }
        dat->gcdat[s][i] = -1;
        if(pars->chk->nd[s][i]&&pars->chk->nd[s][i]->l>0){

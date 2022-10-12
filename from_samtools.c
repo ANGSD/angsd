@@ -1,6 +1,5 @@
 #include "from_samtools.h"
 #include <stdio.h>
-#include <assert.h>
 /*
   This file contains modified versions from SAMtools (1.5-1-g27b628e (using htslib 1.5-2-g2739558))
   thorfinn@binf.ku.dk 7aug 2017 cambridge
@@ -51,7 +50,7 @@ void* add_read_groups_file(char *fn)
 	fprintf(stderr,"\t-> [READGROUP info] Problems adding readgroup: %s\n",d);
       else{
 	int tmp;
-	assert(khash_str2int_get(retval,d,&tmp)==0);
+	if(khash_str2int_get(retval,d,&tmp)!=0) exit(1);
 	fprintf(stderr,"\t-> [READGROUP info] Added readgroup %s to id:%d\n",d,tmp);
 	if(tmp>254){
 	  fprintf(stderr,"\t-> Readgroup representation is only valid for fewer than 255 different readgroups\n");

@@ -1,4 +1,5 @@
 #include "makeReadPool.h"
+#include "aio.h"
 #define bam_dup(b) bam_copy1(bam_init1(), (b))
 readPool makePoolb(int l){
   readPool ret;
@@ -38,7 +39,7 @@ void realloc(readPool *ret,int l){
 void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
 
   //if should never be in this function if we shouldnt read from the file.
-  assert(rdObjRegionDone!=1 &&rdObjEof!=1 );
+  aio::doAssert(rdObjRegionDone!=1 &&rdObjEof!=1 ,1,AT,"");
   
   if((nReads+ret.l)>ret.m)
     realloc(&ret,nReads+ret.l);
@@ -132,7 +133,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
 void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
   // fprintf(stderr,"stop:%d nreads:%d reftoread:%d ret.m:%d ret.l:%d\n",stop,nReads,refToRead,ret.m,ret.l);
   //if should never be in this function if we shouldnt read from the file.
-  assert(rdObjRegionDone!=1 &&rdObjEof!=1 );
+  aio::doAssert(rdObjRegionDone!=1 &&rdObjEof!=1 ,1,AT,"");
   
 
   /*
@@ -192,7 +193,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
 #if 0
   fprintf(stderr,"\t->[%s] buffRefid=%d\trefToRead=%d\n",__FUNCTION__,ret.bufferedRead.refID,refToRead);
 #endif
-  assert(rdObjEof==0 && ret.bufferedRead ==NULL);
+  aio::doAssert(rdObjEof==0 && ret.bufferedRead ==NULL,1,AT,"");
  
   if((nReads+ret.l)>ret.m)
     realloc(&ret,nReads+ret.l);

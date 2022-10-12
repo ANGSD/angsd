@@ -1,13 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zlib.h>
-#include <assert.h>
 #include <sys/stat.h>
 #include "bgzf.h"
 #include "khash.h"
 #include "kvec.h"
 #include <libgen.h>
 #define LENS  4096
+#include "misc.h"
+
 
 const char * BIN= ".counts.bin";
 const char * IDX= ".counts.idx";
@@ -387,7 +388,7 @@ char sample(int a,int b,int c,int d){
 }
 
 int doAnal(perChr *pc,int nInd){
-  assert(nInd>1);
+  ASSERT(nInd>1);
   //  fprintf(stderr,"[%s] chr:%s\n",__FUNCTION__,pc[0].chr);
   //validate same reference lengths
   for(int i=1;i<nInd;i++)

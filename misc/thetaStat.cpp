@@ -7,7 +7,8 @@
 #include <htslib/bgzf.h>
 #include <htslib/kstring.h>
 #include "stats.cpp"
-#include <cassert>
+#include "misc.h"
+
 
 const char * BIN= ".bin";
 const char * IDX= ".idx";
@@ -36,7 +37,7 @@ typedef struct{
 typedef std::map<char*,datum,ltstr> myMap;
 //ssize_t bgzf_read(BGZF *fp, void *data, size_t length) HTS_RESULT_USED;
 void my_bgzf_read(BGZF *fp, void *data, size_t length){
-  assert(length==bgzf_read(fp,data,length));
+  ASSERT(length==bgzf_read(fp,data,length));
 }
 
 int isok(char *bgzf_name,char *fp_name){
@@ -47,7 +48,7 @@ int isok(char *bgzf_name,char *fp_name){
     return 0;
   }
   char buf[8];
-  assert(8==fread(buf,sizeof(char),8,fp));
+  ASSERT(8==fread(buf,sizeof(char),8,fp));
   if(strcmp(buf,"thetav2")!=0){
     fprintf(stderr,"\t-> It looks like input files have been generated with an older version of ANGSD. Either use older version of angsd <0.915 or rerun main angsd with later version of angsd >0.917 magicnr:\'%s\'\n",buf);
     return 0;
@@ -60,7 +61,7 @@ int isok(char *bgzf_name,char *fp_name){
     fprintf(stderr,"\t-> Problems opening file: \'%s\'\n",bgzf_name);
     return 0;
   }
-  assert(8==bgzf_read(bgzf,buf,8*sizeof(char)));
+  ASSERT(8==bgzf_read(bgzf,buf,8*sizeof(char)));
   if(strcmp(buf,"thetav2")!=0){
     fprintf(stderr,"\t-> It looks like input files have been generated with an older version of ANGSD. Either use older version of angsd <0.915 or rerun main angsd with later version of angsd >0.917 magicnr:\'%s\'\n",buf);
     return 0;
@@ -109,10 +110,10 @@ myMap getMap(const char *fname){
   }
   FILE *fp = fopen(fname,"r");
   char tmp[8];
-  assert(8==fread(tmp,1,8,fp));
+  ASSERT(8==fread(tmp,1,8,fp));
   while(fread(&clen,sizeof(size_t),1,fp)){
     char *chr = new char[clen+1];
-    assert(clen==fread(chr,1,clen,fp));
+    ASSERT(clen==fread(chr,1,clen,fp));
     chr[clen] = '\0';
 
     datum d;
@@ -408,7 +409,7 @@ int do_stat(int argc, char**argv){
       exit(0);
     }
     datum d = it->second;
-    assert(bgzf_seek(fp,d.fpos,SEEK_SET)==0);
+    ASSERT(bgzf_seek(fp,d.fpos,SEEK_SET)==0);
   }
   if(outnames==NULL)
     outnames = base;
@@ -498,7 +499,7 @@ int print(int argc, char**argv){
       exit(0);
     }
     datum d = it->second;
-    assert(0==bgzf_seek(fp,d.fpos,SEEK_SET));
+    ASSERT(0==bgzf_seek(fp,d.fpos,SEEK_SET));
   }
   fprintf(stdout,"#Chromo\tPos\tWatterson\tPairwise\tthetaSingleton\tthetaH\tthetaL\n");
   while(1){

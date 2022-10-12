@@ -5,7 +5,6 @@
 */
 
 #include <htslib/kstring.h>
-#include <cassert>
 #include "analysisFunction.h"
 #include "abc.h"
 #include "abcCounts.h"
@@ -476,7 +475,7 @@ void abcCounts::print(funkyPars *pars){
     countQs(pars->chk,qsDist,pars->keepSites,minQ);
   
   if(doDepth!=0){
-    assert(pars->counts!=NULL);
+	  aio::doAssert(pars->counts!=NULL,1,AT,"");
     for(int s=0;s<pars->numSites;s++) {
       if(pars->keepSites[s]==0)
 	continue; 
@@ -673,7 +672,7 @@ suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites,int mmin,int mmax
 void abcCounts::run(funkyPars *pars){
   if(doCounts==0)
     return;
-  assert(pars->chk!=NULL&&pars->counts==NULL);
+  aio::doAssert(pars->chk!=NULL&&pars->counts==NULL,1,AT,"");
   pars->counts = countNucs(pars->chk,pars->keepSites,setMinDepthInd,setMaxDepthInd);
   if(doebd){
     counts *cnts = new counts;

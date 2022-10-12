@@ -1,4 +1,3 @@
-#include <cassert>
 #include <libgen.h>//for checking if output dir exists 'dirname'
 #include <fstream>
 #include "version.h"
@@ -191,7 +190,7 @@ argStruct *setArgStruct(int argc,char **argv) {
   arguments->nReads = 50;
   arguments->sm=NULL;
   arguments->sm=bam_smpl_init();
-  assert(arguments->sm);
+  ASSERT(arguments->sm);
  
   arguments->usedArgs= new int[argc+1];//well here we allocate one more than needed, this is only used in the ./angsd -beagle version
   for(int i=0;i<argc;i++)
@@ -305,7 +304,7 @@ char* angsd::getArg(const char* argName, const char* type,argStruct *arguments){
     }
     argPos++;
   }
-  //assert(0==1);
+  //ASSERT(0==1);
   //  fprintf(stderr,"post %p\n",type);
   return NULL;
   

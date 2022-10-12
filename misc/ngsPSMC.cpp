@@ -19,7 +19,6 @@
 #include <cmath>
 #include <cfloat>
 #include <signal.h>
-#include <cassert>
 #include <pthread.h>
 #include <unistd.h>
 #include <zlib.h>

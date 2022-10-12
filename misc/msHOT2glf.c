@@ -5,12 +5,13 @@
 #include <math.h>
 #include <pthread.h>
 #include <sys/stat.h>
-#include <assert.h>
 #include <htslib/kstring.h>
 #include <htslib/bgzf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "misc.h"
 
 
 int block = 100;
@@ -204,12 +205,14 @@ double Poisson(double xm)
 }
 
 int gv(char c){
-  if(c== '0')
+  if(c== '0'){
     return 0;
-  else if(c=='1')
+  }else if(c=='1'){
     return 1;
-  assert(1==0);
-  return -1;
+  }else{
+	  //never
+	  exit(1);
+  }
 }
 
 
@@ -310,7 +313,7 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffil
 
   }
   if(glffile)
-    assert(sizeof(double)*10*bgzf_write(glffile,like,sizeof(double)*10));
+    ASSERT(sizeof(double)*10*bgzf_write(glffile,like,sizeof(double)*10));
   int noTrans =0;
   if(outfileSAF){
     // AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
@@ -389,7 +392,7 @@ void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZ
     }
     if(kpsmc.l>0&&kpsmc.s[kpsmc.l-1]!='\n')
       ksprintf(&kpsmc,"\n");
-    assert(kpsmc.l==bgzf_write(gzPsmc,kpsmc.s,kpsmc.l));
+    ASSERT(kpsmc.l==bgzf_write(gzPsmc,kpsmc.s,kpsmc.l));
     kpsmc.l=0;
   }
   free(kpsmc.s);
@@ -499,7 +502,7 @@ int main(int argc,char **argv){
     pch=tmppch;
   }
   ss=sscanf(pch,"msHOT-lite %d %d -t %d -r %d %d\n", &nsam, &howmany,&theta,&rho,&regLen);
-  assert(ss==5);
+  ASSERT(ss==5);
   fprintf(stderr,"\t-> Number of samples:%d (haploids)\n",nsam);
   fprintf(stderr,"\t-> Number of replications:%d\n",howmany);
   fprintf(stderr,"\t-> theta: %d rho: %d regLen:%d\n",theta,rho,regLen);
@@ -557,7 +560,7 @@ int main(int argc,char **argv){
 	break;
     }
     if(tree!=NULL & tree_kstring.l>4096){
-      assert(tree_kstring.l==bgzf_write(tree,tree_kstring.s,tree_kstring.l));
+      ASSERT(tree_kstring.l==bgzf_write(tree,tree_kstring.s,tree_kstring.l));
       tree_kstring.l=0;
     }
     fprintf(stderr,"\t-> Parsing replicate:%d which should have nseg: %d ",i,segsites);
@@ -569,7 +572,7 @@ int main(int argc,char **argv){
     }
     int newlen;
     int rv = sscanf(line,"%d\n",&newlen);
-    assert(rv==1&&newlen==regLen);
+    ASSERT(rv==1&&newlen==regLen);
     for(int n=0;n<segsites;n++){
       if( fgets( line, 1000, pfin) == NULL ){
 	fprintf(stderr,"\t-> Problem reading file\n");
@@ -581,7 +584,7 @@ int main(int argc,char **argv){
       }      
       int at;
       ss=sscanf(line,"%d ",&at);
-      assert(ss=1);
+      ASSERT(ss=1);
       positInt[at]=1;
     }
     
@@ -608,7 +611,7 @@ int main(int argc,char **argv){
   fprintf(aDepthFP,"%lu\n",adepth[i]);
   fclose(aDepthFP);
   if(tree){
-    assert(tree_kstring.l==bgzf_write(tree,tree_kstring.s,tree_kstring.l));
+    ASSERT(tree_kstring.l==bgzf_write(tree,tree_kstring.s,tree_kstring.l));
     bgzf_close(tree);
   }
    if(psmcfa)

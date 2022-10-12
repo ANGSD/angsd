@@ -31,6 +31,7 @@
 # Other files
 *.d
 angsd
+angsdput*
 misc/NGSadmix
 misc/contamination
 misc/contamination2

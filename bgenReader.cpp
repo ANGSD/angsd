@@ -2,13 +2,13 @@
 #include <vector>
 #include <cmath>
 #include <errno.h>
-#include <cassert>
 #include <cstdio>//fprintf etc
 #include <cstdlib>// calloc etc
 #include <zlib.h>// zlib
 #include <cstring> //memcpy
 #include "analysisFunction.h"
 #include "bgenReader.h"
+#include "aio.h"
 
 #ifdef __ZSTD__
 #include <zstd.h>// zstandard
@@ -51,24 +51,24 @@ header *bgenReader::parseheader(FILE *fp){
 
   header *hd = new header;
   //header block
-  assert(fread(&hd->LH,sizeof(unsigned),1,fp)==1);
-  assert(fread(&hd->M,sizeof(unsigned),1,fp)==1);
-  assert(fread(&hd->N,sizeof(unsigned),1,fp)==1);
+  aio::doAssert(fread(&hd->LH,sizeof(unsigned),1,fp)==1,1,AT,"");
+  aio::doAssert(fread(&hd->M,sizeof(unsigned),1,fp)==1,1,AT,"");
+  aio::doAssert(fread(&hd->N,sizeof(unsigned),1,fp)==1,1,AT,"");
   //in order to have space for terminating char
   char magic[5]={'\0','\0','\0','\0','\0'};
-  assert(fread(magic,sizeof(char),4,fp)==4);
-  //assert compare magic value
-  assert(strcmp(magic,"bgen") or strcmp(magic,"0000"));
+  aio::doAssert(fread(magic,sizeof(char),4,fp)==4,1,AT,"");
+  //aio::doAssert compare magic value
+  aio::doAssert(strcmp(magic,"bgen") or strcmp(magic,"0000"),1,AT,"");
 
   unsigned int fda_l = hd->LH-20;
   //always use calloc
   char *fda =(char*) calloc(fda_l,1);//free data area
-  assert(fread(fda,sizeof(char),fda_l,fp)==fda_l);
+  aio::doAssert(fread(fda,sizeof(char),fda_l,fp)==fda_l,1,AT,"");
   unsigned flags;
-  assert(fread(&flags,sizeof(unsigned),1,fp)==1);
+  aio::doAssert(fread(&flags,sizeof(unsigned),1,fp)==1,1,AT,"");
   //for getting the first 2 bits - and with 3, for getting 2 first bits (max value of first 2 bits)
   hd->compressed = flags & 3;
-  assert(hd->compressed>=0&&hd->compressed<3);
+  aio::doAssert(hd->compressed>=0&&hd->compressed<3,1,AT,"");
   //take the five first bits and move 2 to the right (2-5 bit)
   hd->layout = (flags>>2) & 15;
   //we only have implemented for layout 2, which is the recommended version
@@ -89,17 +89,17 @@ header *bgenReader::parseheader(FILE *fp){
   hd->si = flags>>31;
   if(hd->si==1){
     unsigned LSI;
-    assert(fread(&LSI,sizeof(unsigned),1,fp)==1);
+    aio::doAssert(fread(&LSI,sizeof(unsigned),1,fp)==1,1,AT,"");
     unsigned N2;
-    assert(fread(&N2,sizeof(unsigned),1,fp)==1);
-    assert(hd->N==N2);
+    aio::doAssert(fread(&N2,sizeof(unsigned),1,fp)==1,1,AT,"");
+    aio::doAssert(hd->N==N2,1,AT,"");
     hd->sampleids= new char*[hd->N];
     for(uint i=0;i<hd->N;i++){
       //short is 2 bytes
       unsigned short LSI_l;
-      assert(fread(&LSI_l,sizeof(unsigned short),1,fp)==1);
+      aio::doAssert(fread(&LSI_l,sizeof(unsigned short),1,fp)==1,1,AT,"");
       hd->sampleids[i] =(char*) calloc(LSI_l+1,sizeof(char));
-      assert(fread(hd->sampleids[i],sizeof(char),LSI_l,fp)==LSI_l);
+      aio::doAssert(fread(hd->sampleids[i],sizeof(char),LSI_l,fp)==LSI_l,1,AT,"");
     }
   }
 
@@ -125,41 +125,41 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
   unsigned short Lid_l;
   char *Lid;
   //read in how many variant ID is
-  assert(fread(&Lid_l,sizeof(unsigned short),1,fp)==1);
+  aio::doAssert(fread(&Lid_l,sizeof(unsigned short),1,fp)==1,1,AT,"");
   bgen->Lid =(char*) calloc(Lid_l+1,sizeof(char));
-  assert(fread(bgen->Lid,sizeof(char),Lid_l,fp)==Lid_l);
+  aio::doAssert(fread(bgen->Lid,sizeof(char),Lid_l,fp)==Lid_l,1,AT,"");
   
   unsigned short Lrsid_l;
-  assert(fread(&Lrsid_l,sizeof(unsigned short),1,fp)==1);
+  aio::doAssert(fread(&Lrsid_l,sizeof(unsigned short),1,fp)==1,1,AT,"");
   bgen->Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
-  assert(fread(bgen->Lrsid,sizeof(char),Lrsid_l,fp)==Lrsid_l);
+  aio::doAssert(fread(bgen->Lrsid,sizeof(char),Lrsid_l,fp)==Lrsid_l,1,AT,"");
 
   unsigned short Lchr_l;
-  assert(fread(&Lchr_l,sizeof(unsigned short),1,fp)==1);
+  aio::doAssert(fread(&Lchr_l,sizeof(unsigned short),1,fp)==1,1,AT,"");
   bgen->Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
-  assert(fread(bgen->Lchr,sizeof(char),Lchr_l,fp)==Lchr_l);
+  aio::doAssert(fread(bgen->Lchr,sizeof(char),Lchr_l,fp)==Lchr_l,1,AT,"");
 
-  assert(fread(&bgen->vpos,sizeof(unsigned),1,fp)==1);
-  assert(fread(&bgen->nal,sizeof(unsigned short),1,fp)==1);
+  aio::doAssert(fread(&bgen->vpos,sizeof(unsigned),1,fp)==1,1,AT,"");
+  aio::doAssert(fread(&bgen->nal,sizeof(unsigned short),1,fp)==1,1,AT,"");
   char *la1;
   char *la2;
-  assert(fread(&bgen->la_l1,sizeof(unsigned),1,fp)==1);
+  aio::doAssert(fread(&bgen->la_l1,sizeof(unsigned),1,fp)==1,1,AT,"");
 
   bgen->la1 =(char*) calloc(bgen->la_l1+1,sizeof(char));
-  assert(fread(bgen->la1,sizeof(char),bgen->la_l1,fp)==bgen->la_l1);
-  assert(fread(&bgen->la_l2,sizeof(unsigned),1,fp)==1);
+  aio::doAssert(fread(bgen->la1,sizeof(char),bgen->la_l1,fp)==bgen->la_l1,1,AT,"");
+  aio::doAssert(fread(&bgen->la_l2,sizeof(unsigned),1,fp)==1,1,AT,"");
   
   bgen->la2 =(char*) calloc(bgen->la_l2+1,sizeof(char));
-  assert(fread(bgen->la2,sizeof(char),bgen->la_l2,fp)==bgen->la_l2);
+  aio::doAssert(fread(bgen->la2,sizeof(char),bgen->la_l2,fp)==bgen->la_l2,1,AT,"");
         
   //done reading variant information;
   // uncompressed size of genotype probs
   unsigned C;
-  assert(fread(&C,sizeof(unsigned),1,fp)==1);
+  aio::doAssert(fread(&C,sizeof(unsigned),1,fp)==1,1,AT,"");
   // compressed size of genotype probs
   unsigned D;
   if(hd->compressed !=0)
-    assert(fread(&D,sizeof(unsigned),1,fp)==1);
+    aio::doAssert(fread(&D,sizeof(unsigned),1,fp)==1,1,AT,"");
   else
     D=C;
 
@@ -185,10 +185,10 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
   unsigned char *upds=(unsigned char*) calloc(C-4,sizeof(unsigned char));
   
   if(hd->compressed==0){
-    assert(fread(pds,sizeof(unsigned char),C,fp)==C);
+    aio::doAssert(fread(pds,sizeof(unsigned char),C,fp)==C,1,AT,"");
   } else if(hd->compressed==1){
     //added this as otherwise, does not read from current position in file
-    assert(fread(upds,sizeof(unsigned char),C-4,fp)==C-4);
+    aio::doAssert(fread(upds,sizeof(unsigned char),C-4,fp)==C-4,1,AT,"");
     //zlib https://gist.github.com/arq5x/5315739
     z_stream infstream;
     infstream.zalloc = Z_NULL;
@@ -217,10 +217,10 @@ bgenLine *bgenReader::parseline(FILE *fp,header *hd){
   //data is now in pds;//<- probability datastorage
   unsigned int N2;memcpy(&N2,pds,4);
 
-  assert(hd->N==N2); 
+  aio::doAssert(hd->N==N2,1,AT,""); 
 
   unsigned short nal2;memcpy(&nal2,pds+4,2);
-  assert(bgen->nal==nal2);
+  aio::doAssert(bgen->nal==nal2,1,AT,"");
   char pmin=pds[6];
   char pmax=pds[7];
   char pmis[hd->N];//missingness and ploidy

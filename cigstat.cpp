@@ -1,4 +1,3 @@
-#include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <htslib/hts.h>
@@ -55,7 +54,7 @@ int cum =0;
       int opCode = cigs[i]&BAM_CIGAR_MASK; //what to do
       int opLen = cigs[i]>>BAM_CIGAR_SHIFT; //length of what to do
 for(int s=0;s<opLen;s++){
-  assert(s+cum<1024);
+  aio::doAssert(s+cum<1024,1,AT,"");
 cig_counts[opCode][s+cum]++;
 }
 cum += opLen;
@@ -79,7 +78,7 @@ int cigstat_close(){
       ksprintf(ks,"\t%lu",cig_counts[ncig][p]);
   }
   ksprintf(ks,"\n");
-  assert(ks->l==bgzf_write(bg,ks->s,ks->l));
+  aio::doAssert(ks->l==bgzf_write(bg,ks->s,ks->l),1,AT,"");
   bgzf_close(bg);
   return 0;
 }

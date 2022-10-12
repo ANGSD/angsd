@@ -9,7 +9,6 @@
   Actually no need to mutex, except for the first chunk. Lets fix it at some point.
 */
 
-#include <cassert>
 
 #include "analysisFunction.h"
 #include "shared.h"
@@ -137,7 +136,7 @@ char *abcGetFasta::loadChr(perFasta *f, char*chrName,int chrId){
 
 char *abcGetFasta::magic(int refId,int *posi,int numSites,perFasta *f){
   pthread_mutex_lock(&f->aMut);
-  assert(refId!=-1);
+  aio::doAssert(refId!=-1,1,AT,"");
   //load new chr if different from last or if nothing has been loaded before
   if(f->curChr==-1||refId!=f->curChr){
     //    fprintf(stderr,"[%s] chaning to chr: %d\n",__FUNCTION__,refId);

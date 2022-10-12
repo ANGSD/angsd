@@ -5,13 +5,14 @@
   g++ prep_sites.cpp -D__WITH_MAIN__ bgzf.o knetfile.o -lz analysisFunction.o -ggdb
 */
 
+
+
 #ifdef __WITH_MAIN__
 #endif
 
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-#include <cassert>
 #define kv_roundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #include "prep_sites.h"
 #include "aio.h"
@@ -45,7 +46,7 @@ void dalloc(tary<T> *ta){
 
 //hint is the suggested newsize
 void filt_readSites(filt*fl,char *chr,size_t hint) {
-  assert(fl!=NULL);
+  aio::doAssert(fl!=NULL, 1, AT,"fl is null");
 
   std::map<char*,asdf_dats,ltstr> ::iterator it = fl->offs.find(chr);
   if(it==fl->offs.end()){
@@ -66,7 +67,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     return;
   }
 
-  assert(0==bgzf_seek(fl->bg,it->second.offs,SEEK_SET));
+  aio::doAssert(0==bgzf_seek(fl->bg,it->second.offs,SEEK_SET),1,AT,"0==bgzf_seek");
 
   size_t nsize = std::max(fl->curLen,hint);//this is not the number of elements, but the last position on the reference
   nsize = std::max(nsize,it->second.len)+1;//not sure if '+1' this is needed, but it doesnt hurt...
@@ -75,7 +76,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     fl->keeps=(char*) realloc(fl->keeps,nsize);
   memset(fl->keeps,0,nsize);
   //fprintf(stderr,"it->second.len:%lu fl->curLen:%lu fl->keeps:%p\n",it->second.len,fl->curLen,fl->keeps);
-  assert(it->second.len==bgzf_read(fl->bg,fl->keeps,it->second.len));
+  aio::doAssert(it->second.len==bgzf_read(fl->bg,fl->keeps,it->second.len),1,AT,"");
 
   if(fl->hasExtra>0){
     if(nsize>fl->curLen) {
@@ -84,8 +85,8 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
       memset(fl->major,0,nsize);
       memset(fl->minor,0,nsize);
     }
-    assert(it->second.len==bgzf_read(fl->bg,fl->major,it->second.len));
-    assert(it->second.len==bgzf_read(fl->bg,fl->minor,it->second.len));
+    aio::doAssert(it->second.len==bgzf_read(fl->bg,fl->major,it->second.len),1,AT,"");
+    aio::doAssert(it->second.len==bgzf_read(fl->bg,fl->minor,it->second.len),1,AT,"");
   }
   if(fl->hasExtra>1){
     if(nsize>fl->curLen) {
@@ -96,9 +97,9 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
       memset(fl->an,0,nsize*sizeof(int));
       memset(fl->ac,0,nsize*sizeof(int));
     }
-    assert(it->second.len*sizeof(float)==bgzf_read(fl->bg,fl->af,it->second.len*sizeof(float)));
-    assert(it->second.len*sizeof(int)==bgzf_read(fl->bg,fl->ac,it->second.len*sizeof(int)));
-    assert(it->second.len*sizeof(int)==bgzf_read(fl->bg,fl->an,it->second.len*sizeof(int)));
+    aio::doAssert(it->second.len*sizeof(float)==bgzf_read(fl->bg,fl->af,it->second.len*sizeof(float)),1,AT,"");
+    aio::doAssert(it->second.len*sizeof(int)==bgzf_read(fl->bg,fl->ac,it->second.len*sizeof(int)),1,AT,"");
+    aio::doAssert(it->second.len*sizeof(int)==bgzf_read(fl->bg,fl->an,it->second.len*sizeof(int)),1,AT,"");
   }
 
   fl->curNam=chr;
@@ -287,7 +288,7 @@ typedef std::map<char *,int,ltstr> mmap;
 
 //return zero if fine.
 int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *minor,BGZF *BFP,FILE *fp,int doCompl,tary<float> *af,tary<int> *ac,tary<int> *an){
-  assert(last!=NULL);
+  aio::doAssert(last!=NULL,1,AT,"last is null");
   if((major!=NULL) ^ (minor!=NULL)){
     fprintf(stderr,"major and minor should be the same\n");
     return 1;
@@ -304,7 +305,7 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
   }else
     mm[strdup(last)]=1;
   //write data and index stuff
-  assert(0==bgzf_flush(BFP));
+  aio::doAssert(0==bgzf_flush(BFP),1,AT,"bgzf_flush!=0");
   int64_t retVal =bgzf_tell(BFP);//now contains the offset to which we should point.
   
   //write chrname
@@ -442,15 +443,15 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
 	memset(minor->d,4,keep->m);
 	major->l=minor->l=0;
       }
-      if(hasExtra>1)
-	assert(1);
+      // if(hasExtra>1)
+
     }
     char *position_in_sites_file = parsed[1];
-    assert(atol(position_in_sites_file)>=0);
+    aio::doAssert(atol(position_in_sites_file)>=0,1,AT,"");
     size_t posS=atol(parsed[1]);
     if(posS<=0){
       fprintf(stderr,"\t-> Problem surrounding line: %d\n",atline);
-      assert(posS>0);
+      aio::doAssert(posS>0,1,AT,"posS>0");
     }
     posS--;
     posS += posi_off;

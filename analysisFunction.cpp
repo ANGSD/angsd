@@ -4,7 +4,6 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <list>
-#include <assert.h>
 #include <fstream>
 #include "analysisFunction.h"
 #include "aio.h"
@@ -163,7 +162,7 @@ angsd::Matrix<int> angsd::getMatrixInt(const char *name,int lens){
 }
 
 void angsd::deleteMatrixInt(Matrix<int> mat){
-  assert(mat.matrix!=NULL);
+  aio::doAssert(mat.matrix!=NULL);
   for(int i=0;i<mat.x;i++)
     delete [] mat.matrix[i];
   delete[] mat.matrix;
@@ -171,7 +170,7 @@ void angsd::deleteMatrixInt(Matrix<int> mat){
 }
 
 void angsd::deleteMatrix(Matrix<double> mat){
-  assert(mat.matrix!=NULL);
+  aio::doAssert(mat.matrix!=NULL);
   for(int i=0;i<mat.x;i++)
     delete [] mat.matrix[i];
   delete[] mat.matrix;
@@ -330,7 +329,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens, char* w
     
   }
 
-  assert(count==ncols);
+  aio::doAssert(count==ncols);
   
   //which column we are at
   int pheCols = 0;
@@ -395,7 +394,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens, char* w
 	  } else{	  
 	    pheRow.push_back(atof(tok));
 	  }	  
-	  assert(isBinary==0);
+	  aio::doAssert(isBinary==0);
 	  hasPheno = 1;
 	}
 	column++;
@@ -461,7 +460,7 @@ angsd::doubleTrouble<double> angsd::getSample(const char *name,int lens, char* w
 
 void angsd::deleteDoubleTrouble(doubleTrouble<double> dT){
   
-  assert(dT.matrix0!=NULL && dT.matrix1!=NULL);
+  aio::doAssert(dT.matrix0!=NULL && dT.matrix1!=NULL);
   for(int i=0;i<dT.x0;i++)
     delete [] dT.matrix0[i];
   delete[] dT.matrix0;
@@ -1169,7 +1168,7 @@ int ludcmp(double **a, int *indx, double &d,int n)
     if(big==0){
       //fprintf(stderr,"singular matrix in ludcmp");
       return(1);
-	//    assert(big!=0) ;
+	//    ASSERT(big!=0) ;
 
     }
     vv[i]=1/big;

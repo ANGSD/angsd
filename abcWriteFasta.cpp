@@ -1,7 +1,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <htslib/bgzf.h>
-#include <assert.h>
 #include <ctime>
 
 #include "analysisFunction.h"
@@ -236,7 +235,7 @@ void abcWriteFasta::run(funkyPars *pars){
   }
   //Do transitions removal
   if(rmTrans){
-    assert(pars->ref!=NULL);
+    aio::doAssert(pars->ref!=NULL);
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
 
       int ob = refToInt[myFasta[pars->posi[s]]];
