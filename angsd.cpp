@@ -221,8 +221,8 @@ int main(int argc, char** argv){
    parseArgStruct(args);
    
    //Below is main loop which will run until nomore data
-   aio::doAssert(args->hd==NULL,1,AT,"");
-   aio::doAssert(args->revMap==NULL,1,AT,"");
+   aio::doAssert(args->hd!=NULL,AT);
+   aio::doAssert(args->revMap!=NULL,AT);
 
    extern int cigstat;
    if(cigstat)

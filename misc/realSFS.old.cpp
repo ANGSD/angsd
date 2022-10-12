@@ -22,7 +22,6 @@
 #include <cmath>
 #include <cfloat>
 #include <signal.h>
-#include <cassert>
 #include <pthread.h>
 
 #ifdef __APPLE__
@@ -34,6 +33,9 @@
 #include "realSFS.h"
 #include "realSFS_saf2.cpp"
 #define LENS 4096
+
+#define ASSERT(expr) \
+	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
 
 const char*fname1 = NULL;
 const char*fname2 = NULL;//only used for 2dsfs
@@ -998,7 +1000,7 @@ int main_2dsfs(int argc,char **argv){
       readGL2(gz2,nSites,chr2,GL2);
     }
       
-    assert(GL1.x==GL2.x);
+    ASSERT(GL1.x==GL2.x);
     if(GL1.x==0)
       break;
     
@@ -1106,8 +1108,8 @@ int main_3dsfs(int argc,char **argv){
       readGL2(gz3,nSites,chr3,GL3);
     }
       
-    assert(GL1.x==GL2.x);
-    assert(GL1.x==GL3.x);
+    ASSERT(GL1.x==GL2.x);
+    ASSERT(GL1.x==GL3.x);
     if(GL1.x==0)
       break;
     

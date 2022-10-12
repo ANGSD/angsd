@@ -6,7 +6,6 @@
 #include <math.h>
 #include <pthread.h>
 #include <sys/stat.h>
-#include <assert.h>
 #include <htslib/kstring.h>
 int static z_rndu=137;
 
@@ -112,12 +111,13 @@ double Poisson(double xm)
 }
 
 int gv(char c){
-  if(c== '0')
+  if(c== '0'){
     return 0;
-  else if(c=='1')
+  }else if(c=='1'){
     return 1;
-  assert(1==0);
-  return -1;
+  }else{
+	  exit(1);
+  }
 }
 
 

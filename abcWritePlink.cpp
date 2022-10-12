@@ -2,7 +2,6 @@
   This is a class that dumps plink file output
 
  */
-#include <assert.h>
 
 #include "analysisFunction.h"
 #include "shared.h"
@@ -41,7 +40,7 @@ unsigned char recode(int i){
     return '\x00';
   else if(i==-1)
     return '\x01';
-  assert(0==1);  
+  aio::doAssert(0==1);  
   return 'x';//to remove compile warnings;
 }
 
@@ -167,7 +166,7 @@ void abcWritePlink::getOptions(argStruct *arguments){
     fprintf(stderr,"Must supply -doGeno  to write plink files (consider supplying negative value for suprresing .geno.gz output)\n");
     exit(0);
   }
-  assert(doPlink>=0 && doPlink<=2);
+  aio::doAssert(doPlink>=0 && doPlink<=2);
   if(doPlink==0)
     return;
   

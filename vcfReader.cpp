@@ -50,7 +50,7 @@ bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
 }
 
 void htsstuff_seek(htsstuff *hs,char *seek){
-  aio::doAssert(seek==NULL,1,AT,"");
+  aio::doAssert(seek!=NULL,AT);
   if(seek){
     fprintf(stderr,"\t-> Setting iterator to: %s\n",seek);fflush(stderr);
     if(hs->idx==NULL)
@@ -67,7 +67,7 @@ void htsstuff_seek(htsstuff *hs,char *seek){
     if(hs->iter)
       hts_itr_destroy(hs->iter);
     hs->iter=bcf_itr_querys(hs->idx,hs->hdr,seek);
-    aio::doAssert(hs->iter==NULL,1,AT,"");
+    aio::doAssert(hs->iter!=NULL,AT);
   }
 }
 
@@ -83,10 +83,10 @@ htsstuff *htsstuff_init(char *fname,char *seek){
   hs->iter=NULL;
   hs->nsamples = 0;
   hs->hts_file=hts_open(hs->fname,"r");
-  aio::doAssert(hs->hts_file==NULL,1,AT,"");
+  aio::doAssert(hs->hts_file!=NULL,AT);
   
   hs->hdr = bcf_hdr_read(hs->hts_file);
-  aio::doAssert(hs->hdr==NULL,1,AT,"");
+  aio::doAssert(hs->hdr!=NULL,AT);
 
   hs->nsamples = bcf_hdr_nsamples(hs->hdr);
   if(hs->seek)

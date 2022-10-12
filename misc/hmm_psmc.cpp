@@ -1,5 +1,4 @@
 #include <vector>
-#include <cassert>
 #include <cmath>
 #include "psmcreader.h"
 #include "main_psmc.h"

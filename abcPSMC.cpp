@@ -2,7 +2,6 @@
   This is a class that dumps psmc file output
 
  */
-#include <assert.h>
 
 #include "analysisFunction.h"
 #include "shared.h"
@@ -19,7 +18,7 @@ void abcPSMC::printArg(FILE *argFile){
 void abcPSMC::algoJoint(double **liks,int nsites,int *keepSites,psmcRes *r,int noTrans) {
   //  fprintf(stderr,"[%s]\n",__FUNCTION__);
   int myCounter =0;
-  assert(liks);
+  ASSERT(liks);
   for(int it=0; it<nsites; it++) {//loop over sites
     if(keepSites[it]==0)
       continue;
@@ -146,9 +145,9 @@ abcPSMC::abcPSMC(const char *outfiles,argStruct *arguments,int inputtype){
 }
 
 void abcPSMC::writeAll(){
-  assert(outfileSAF!=NULL);
-  assert(outfileSAFIDX!=NULL);
-  assert(outfileSAFPOS!=NULL);
+  aio::doAssert(outfileSAF!=NULL);
+  aio::doAssert(outfileSAFIDX!=NULL);
+  aio::doAssert(outfileSAFPOS!=NULL);
   //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
   if(nnnSites!=0&&tmpChr!=NULL){
     size_t clen = strlen(tmpChr);

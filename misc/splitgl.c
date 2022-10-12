@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <zlib.h>
 #include <stdlib.h>
-#include <assert.h>
 
 gzFile getGz(const char*fname,const char* mode){
   gzFile fp=Z_NULL;
@@ -39,7 +38,7 @@ int main(int argc,char**argv){
     if(br==0)
       break;
     nsites++;
-    assert(br==10*sizeof(double)*tot);
+    if(br!=10*sizeof(double)*tot) exit(1);
     int beg=10*first;
     int nDoubles=(last-first+1)*10;
     //   fprintf(stderr,"beg: %d nDoubles:%d\n",beg,nDoubles);return 0;

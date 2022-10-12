@@ -7,6 +7,9 @@
 extern int howOften;
 #include "multisafreader.hpp"
 
+#define ASSERT(expr) \
+	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+
 faidx_t *fai_ref=NULL;
 faidx_t *fai_anc=NULL;
 char *ref=NULL;
@@ -15,7 +18,7 @@ int ref_l=0;
 int anc_l=0;
 
 int whichmax(double *ary,int len){
-  assert(len>0);
+  ASSERT(len>0);
   int mmax = 0;
   for(int i=1;i<len;i++)
     if(ary[i]>ary[mmax])
@@ -95,7 +98,7 @@ int main_dadi(int argc, char** argv){
   if(saf.size()==1)
     saf[0]->kind = 2;
   for(int i=0;i<saf.size();i++)
-    assert(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
+    ASSERT(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
   if(saf.size()!=arg->sfsfname.size()){
     fprintf(stderr,"\t-> Must supply a perpopulation prior for each population\n");
     return 0;

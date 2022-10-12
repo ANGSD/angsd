@@ -30,7 +30,7 @@ tNode **parseNd(char *line,int nInd,const char *delims,int minQ,char ref){
   for(int i=0;i<nInd;i++) {
 
     char *tok = strtok_r(NULL,delims,&line);
-    aio::doAssert(tok==NULL,1,AT,"");
+    aio::doAssert(tok!=NULL,AT);
     int seqDepth = atoi(tok);
     ret[i] = initNodeT(seqDepth);
     ret[i]->l = seqDepth;

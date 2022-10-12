@@ -117,21 +117,77 @@ neverUseGoto:
 	return rlen;
 }
 
-//  Usage: aio::doAssert(something==NULL,1,AT,"");
-void aio::doAssert(int EXIT, int EXIT_CODE, const char* error_location, const char* format,...){
-	if(EXIT){
-		va_list args;
-		va_start (args, format);
+
+void aio::doAssert(int exp_eval, int exit_code, const char* error_location, const char* exit_text,...){
+	// if( exp_eval || exp_eval!=NULL || exp_eval==1 || exp_eval==true){
+	if( exp_eval ){
+		return;
+	}else{
 		fprintf(stderr, "\n");
 		fprintf(stderr, "*******\n");
+		va_list args;
+		va_start (args, exit_text);
 		fprintf(stderr, "[ERROR](%s)\n",error_location);
-		vfprintf (stderr, format, args);
+		vfprintf (stderr, exit_text, args);
 		va_end (args);
 		fprintf(stderr, "\n");
 		fprintf(stderr, "*******\n");
-		exit(EXIT_CODE);
-	}else{
-		return;
+		exit(exit_code);
 	}
 }
 
+
+// Function overload to avoid specifying exit code. If not specified exit 1
+void aio::doAssert(int exp_eval, const char* error_location, const char* exit_text,...){
+	if( (exp_eval) || exp_eval!=NULL || exp_eval==1 || exp_eval==true){
+		return;
+	}else{
+		fprintf(stderr, "\n");
+		fprintf(stderr, "*******\n");
+		va_list args;
+		va_start (args, exit_text);
+		fprintf(stderr, "[ERROR](%s)\n",error_location);
+		vfprintf (stderr, exit_text, args);
+		va_end (args);
+		fprintf(stderr, "\n");
+		fprintf(stderr, "*******\n");
+		exit(1);
+	}
+}
+
+
+// Function overload to avoid specifying exit code. If not specified exit 1
+void aio::doAssert(int exp_eval, const char* error_location){
+	if( (exp_eval) || exp_eval!=NULL || exp_eval==1 || exp_eval==true){
+		return;
+	}else{
+		fprintf(stderr, "\n");
+		fprintf(stderr, "*******\n");
+		fprintf(stderr, "[ERROR](%s)\n",error_location);
+		fprintf(stderr, "*******\n");
+		exit(1);
+	}
+}
+
+
+// Function overload to avoid specifying anything, just evaluate and exit 1
+void aio::doAssert(int exp_eval){
+	if( (exp_eval) || exp_eval!=NULL || exp_eval==1 || exp_eval==true){
+		return;
+	}else{
+		fprintf(stderr, "\n");
+		fprintf(stderr, "*******\n");
+		fprintf(stderr, "[ERROR]\n");
+		fprintf(stderr, "*******\n");
+		exit(1);
+	}
+}
+
+void aio::assertFailed(const char* error_location, const char* error_expression){
+	fprintf(stderr, "\n");
+	fprintf(stderr, "*******\n");
+	fprintf(stderr, "[ERROR](%s): %s\n",error_location,error_expression);
+	fprintf(stderr, "*******\n");
+	fprintf(stderr, "\n");
+	exit(1);
+}

@@ -144,7 +144,7 @@ void abcFreq::getOptions(argStruct *arguments){
   underflowprotect=angsd::getArg("-underFlowProtect",underflowprotect,arguments);
 
   minMaf=angsd::getArg("-minMaf",minMaf,arguments);
-  //  assert(minMaf<=1&&minMaf>=0);
+  //  ASSERT(minMaf<=1&&minMaf>=0);
 
   double tmp=-1;
   tmp=angsd::getArg("-SNP_pval",tmp,arguments);

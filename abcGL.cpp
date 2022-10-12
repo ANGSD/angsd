@@ -20,7 +20,6 @@
 */
 
 #include <cmath>
-#include <assert.h>
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "abc.h"
@@ -294,9 +293,9 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
 
 abcGL::~abcGL(){
   if(GL>0&&doGlf==5){
-      assert(outfileSAF!=NULL);
-    assert(outfileSAFIDX!=NULL);
-    assert(outfileSAFPOS!=NULL);
+      aio::doAssert(outfileSAF!=NULL,AT);
+    aio::doAssert(outfileSAFIDX!=NULL,AT);
+    aio::doAssert(outfileSAFPOS!=NULL,AT);
     //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
     if(nnnSites!=0&&tmpChr!=NULL){
       size_t clen = strlen(tmpChr);
@@ -368,11 +367,11 @@ void abcGL::print(funkyPars *pars){
 
 
 void abcGL::run(funkyPars *pars){
-  assert(pars!=NULL);
+  aio::doAssert(pars!=NULL,AT);
   
   if(GL==0)
     return;
-  //assert(pars->chk!=NULL);
+  //aio::doAssert(pars->chk!=NULL);
   double **likes = NULL;
   if(soap.doRecal!=1 || ancestral_lik.doRecal!=1)
     likes = new double*[pars->chk->nSites];
@@ -482,7 +481,7 @@ void abcGL::getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,do
 }
 
 void abcGL::printLike(funkyPars *pars) {
-  assert(pars->likes!=NULL);
+  aio::doAssert(pars->likes!=NULL,AT);
 
   
   if(doGlf==1){
@@ -498,7 +497,7 @@ void abcGL::printLike(funkyPars *pars) {
     bufstr.l = 0; //set tmpbuf beginning to zero
     for(int s=0;s<pars->numSites;s++) {
       lh3struct *lh3 = (lh3struct*) pars->extras[index+2];
-      assert(lh3);
+      aio::doAssert(lh3!=NULL,AT);
       if(pars->keepSites[s]==0||lh3->hasAlloced[s]==0)
 	continue;
       
@@ -512,7 +511,7 @@ void abcGL::printLike(funkyPars *pars) {
 
       int major = pars->major[s];
       int minor = pars->minor[s];
-      assert(major!=4&&minor!=4);
+      aio::doAssert(major!=4&&minor!=4,AT);
 
      
       for(int i=0;i<pars->nInd;i++) {
@@ -524,9 +523,9 @@ void abcGL::printLike(funkyPars *pars) {
 	ksprintf(&bufstr, "\t%f",val[0]);
 	ksprintf(&bufstr, "\t%f",val[1]);
 	ksprintf(&bufstr, "\t%f",val[2]);
-	assert(!std::isnan(val[0]));
-	assert(!std::isnan(val[1]));
-	assert(!std::isnan(val[2]));
+	aio::doAssert(!std::isnan(val[0]),AT);
+	aio::doAssert(!std::isnan(val[1]),AT);
+	aio::doAssert(!std::isnan(val[2]),AT);
       }
 
       if(bufstr.l!=0)
@@ -541,7 +540,7 @@ void abcGL::printLike(funkyPars *pars) {
 	continue;
       char major = pars->major[s];
       char minor = pars->minor[s] ;
-      assert(major!=4&&minor!=4);
+      aio::doAssert(major!=4&&minor!=4,AT);
 
       for(int i=0;i<pars->nInd;i++) {
 	double dump[3];
@@ -592,9 +591,9 @@ void abcGL::printLike(funkyPars *pars) {
 void abcGL::changeChr(int refId) {
   //  fprintf(stderr,"Charnge chr:%d\n",refId);
   if(GL>0&&doGlf==5){
-    assert(outfileSAF!=NULL);
-    assert(outfileSAFIDX!=NULL);
-    assert(outfileSAFPOS!=NULL);
+    aio::doAssert(outfileSAF!=NULL,AT);
+    aio::doAssert(outfileSAFIDX!=NULL,AT);
+    aio::doAssert(outfileSAFPOS!=NULL,AT);
     //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
     if(nnnSites!=0&&tmpChr!=NULL){
       size_t clen = strlen(tmpChr);

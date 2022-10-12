@@ -11,7 +11,6 @@
 #include <cmath>
 #include <cfloat>
 #include <signal.h>
-#include <cassert>
 #include <unistd.h>
 #include <zlib.h>
 #include <htslib/tbx.h>
@@ -24,6 +23,10 @@
 #include "realSFS_args.h"
 #include <fstream>
 
+
+
+#define ASSERT(expr) \
+	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
 
 std::vector<char*> getFilenames(const char * name,int nInd){
   fprintf(stderr,"\t-> Reading saf.idx from: %s\n",name);
@@ -125,7 +128,7 @@ int saf_cat(int argc,char **argv){
   my_bgzf_write(outfileSAFPOS,buf,8);
   fwrite(buf,1,8,outfileSAFIDX);
   int64_t offs[2];
-  assert(0==bgzf_flush(outfileSAFPOS));assert(0==bgzf_flush(outfileSAF));
+  ASSERT(0==bgzf_flush(outfileSAFPOS));ASSERT(0==bgzf_flush(outfileSAF));
   offs[0] = bgzf_tell(outfileSAFPOS);
   offs[1] = bgzf_tell(outfileSAF);
   
@@ -169,7 +172,7 @@ int saf_cat(int argc,char **argv){
       if(safversion==3)
 	fwrite(&it->second.sumBand,sizeof(size_t),1,outfileSAFIDX);
       fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
-      assert(0==bgzf_flush(outfileSAFPOS));assert(0==bgzf_flush(outfileSAF));
+      ASSERT(0==bgzf_flush(outfileSAFPOS));ASSERT(0==bgzf_flush(outfileSAF));
       offs[0] = bgzf_tell(outfileSAFPOS);
       offs[1] = bgzf_tell(outfileSAF);
     }
@@ -193,7 +196,7 @@ int saf_check(int argc,char **argv) {
   if(argc==0)
     return 0;
   args *pars = getArgs(argc,argv);
-  assert(pars->saf.size()==1);
+  ASSERT(pars->saf.size()==1);
   for(myMap::iterator it=pars->saf[0]->mm.begin();it!=pars->saf[0]->mm.end();++it){
     int *ppos = new int[it->second.nSites];
     my_bgzf_seek(pars->saf[0]->pos,it->second.pos,SEEK_SET);

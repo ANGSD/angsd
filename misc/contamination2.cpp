@@ -11,13 +11,15 @@
 #include <ctype.h>
 #include <vector>
 #include <map>
-#include <cassert>
 #include <ctype.h>
 #include <pthread.h>
 #include "kmath.h"
 
 #include "../fet.c"
 #define LENS 4096
+
+#define ASSERT(expr) \
+	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
 
 typedef struct{
   char allele1;
@@ -35,7 +37,7 @@ double sd(double *a,int l){
     ts += a[i];
 
   double u = ts/(1.0*l);
-  assert(u!=0);
+  ASSERT(u!=0);
   ts =0;
   for(int i=0;i<l;i++)
     ts += (a[i]-u)*(a[i]-u);
@@ -189,7 +191,7 @@ double jackMom(allPars *ap,int len){
   len=ap->len;
   if(len>0)
     len=std::min(ap->len,len);
-  assert(len>-1);
+  ASSERT(len>-1);
   int *seqDepth=ap->seqDepth;
   int *nonMajor=ap->nonMajor;
   double *freq =ap->freq;
@@ -219,7 +221,7 @@ void *slave(void *ptr){
   for(int i=tp->from;i<tp->to;i++){
     tp->skip=i;
     tp->val[i] = kmin_brent(myfun,1e-6,0.5,tp,1e-6,&tp->thetas[i]);
-    assert(tp->thetas[i]!=1e-6);
+    ASSERT(tp->thetas[i]!=1e-6);
   }
   pthread_exit(0);
 }
@@ -232,7 +234,7 @@ double jackML(allPars *ap,int nthreads,char *fname,int nJack) {
     nJack = ap->len;
   else
     nJack = std::min(ap->len,nJack);
-  assert(nJack>0);
+  ASSERT(nJack>0);
   double *thetas =new double[nJack];
   double *val = new double[nJack];
   if(nthreads>1){
@@ -587,7 +589,7 @@ dat count(aMap &myMap,std::vector<int> &ipos,std::vector<int*> &cnt){
 	  exit(0);
 	}
 	aMap::iterator it2=d.myMap.find(ipos[i]);
-	assert(it2==d.myMap.end());
+	ASSERT(it2==d.myMap.end());
 	d.myMap[it->first] = it->second;
 
       }
@@ -707,7 +709,7 @@ aMap readhap( char *fname,int minDist,double minMaf,int startPos,int stopPos,int
   //  fprintf(stderr,"[%s] We have read: %zu sites from hapfile (after filtering for start/stop pos):%s\n",__FUNCTION__,myMap.size(),fname);
   //fprintf(stderr,"[%s] will remove snp sites to close:\n",__FUNCTION__);
 
-  assert(myMap.size()>0);
+  ASSERT(myMap.size()>0);
   int *vec = new int[myMap.size() -1];
   aMap::iterator it = myMap.begin();
   for(int i=0;i<myMap.size()-1;i++){

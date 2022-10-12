@@ -2,7 +2,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <cassert>
 #include <cstring>
 
 template <typename T>
@@ -42,7 +41,7 @@ void realloc(keep<T> *k,size_t newlen){
   //  fprintf(stderr,"[%s] k:%p k->m:%lu newlen:%lu\n",__FUNCTION__,k,k->m,newlen);
   kroundup32(newlen);
   k->d = (T*) realloc(k->d,sizeof(T)*newlen);
-  assert(k->d!=NULL);
+  if(k->d==NULL) exit(1);
   memset(k->d+k->m,0,(newlen-k->m)*sizeof(T));
   k->m=newlen;
   //fprintf(stderr,"[%s] k:%p k->m:%lu newlen:%lu\n",__FUNCTION__,k,k->m,newlen);

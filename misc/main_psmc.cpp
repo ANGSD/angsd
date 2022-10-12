@@ -7,6 +7,10 @@
 // the returned array holds which parameters are linked together
 // number of parameters and number of free parameters will be also returned
 
+
+#define ASSERT(expr) \
+	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+
 int *psmc_parse_pattern(const char *pattern, int *n_free, int *n_pars)
 {
   fprintf(stderr,"parsing pattern :\"%s\"\n",pattern);
@@ -16,14 +20,14 @@ int *psmc_parse_pattern(const char *pattern, int *n_free, int *n_pars)
 	p = q = tmp = strdup(pattern);
 	k = 1;
 	while (1) {
-		assert(isdigit(*p) || *p == '*' || *p == '+' || *p == '\0'); // allowed characters
+		ASSERT(isdigit(*p) || *p == '*' || *p == '+' || *p == '\0'); // allowed characters
 		if (*p == '+' || *p == '\0') {
 			int is_end = (*p == 0)? 1 : 0;
 			*p++ = '\0';
 			l = atoi(q); q = p;
 			for (i = 0; i < k; ++i) {
 				stack[top++] = l;
-				assert(top <= 0xff);
+				ASSERT(top <= 0xff);
 			}
 			k = 1;
 			if (is_end) break;
@@ -55,7 +59,7 @@ void setpars( char *fname,psmc_par *pp) {
   }
   char *buf = new char[fsize(fname)+10];
   memset(buf,0,fsize(fname)+10);
-  assert(fsize(fname)==fread(buf,sizeof(char),fsize(fname),fp));
+  ASSERT(fsize(fname)==fread(buf,sizeof(char),fsize(fname),fp));
   fclose(fp);
   char *slashslash[100];
   
@@ -105,14 +109,14 @@ void setpars( char *fname,psmc_par *pp) {
   pp->pattern=strdup(tok);
 
   pp->par_map= psmc_parse_pattern(pp->pattern,&pp->n_free,&pp->n);
-  assert(RS.size()-1==pp->n);
+  ASSERT(RS.size()-1==pp->n);
   pp->params = new double[RS.size()];
   pp->times = new double[RS.size()];
 
   for(int i=0;i<RS.size();i++){
     int val;
     sscanf(RS[i],"RS\t%d\t%lf\t%lf\t",&val,&pp->times[i],&pp->params[i]);
-    assert(val==i);
+    ASSERT(val==i);
   }
   fprintf(stderr,"\t-> Done reading parameters from file: \'%s\'\n",fname);
 }

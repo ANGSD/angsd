@@ -1,6 +1,5 @@
 #include <cmath>
 #include <ctype.h>
-#include <assert.h>
 #include "abc.h"
 #include "analysisFunction.h"
 #include "shared.h"
@@ -116,7 +115,7 @@ double em3(double *x,double **liks,int seqdepth,int maxIter,double tole,int &itr
       break;
       exit(0);
     }
-    assert(newlike>=likev);
+    aio::doAssert(newlike>=likev);
     //fprintf(stderr,"lik=%f newlike=%f\n",likev,newlike);
 
     likev=newlike;
@@ -163,7 +162,7 @@ void abcHetPlas::doNew(funkyPars *pars){
 	//¯	fprintf(stderr,"lik=%f\n",like(par,liks,seqdepth));
 	em3(par,liks,seqdepth,maxIter,1e-6,rs->nItr[s][i],rs->diff[s][i]);
 	int maxBase=angsd::whichMax(par,4);
-	//assert(maxBase!=-1);//<- if vals are equal...
+	//aio::doAssert(maxBase!=-1);//<- if vals are equal...
 	if(maxBase==-1){
 	  fprintf(stderr,"CHECK SITE: %d  par=(%f,%f,%f,%f) seqdepth=%d\n",pars->posi[s]+1,par[0],par[1],par[2],par[3],seqdepth);
 	  pars->keepSites[s] =0;
@@ -204,8 +203,8 @@ void abcHetPlas::run(funkyPars *pars){
     fprintf(stderr,"skipping due to nos sites\n");
     return;
   }
-  assert(pars->numSites>0);
-  assert(pars->chk!=NULL);
+  aio::doAssert(pars->numSites>0);
+  aio::doAssert(pars->chk!=NULL);
   if(doHetPlas){
     //exit(0);
     doNew(pars);

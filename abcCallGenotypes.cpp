@@ -3,7 +3,6 @@
   class to call genotypes
 */
 
-#include <assert.h>
 #include <htslib/kstring.h>
 #include "shared.h"
 
@@ -189,7 +188,7 @@ void abcCallGenotypes::getGeno(funkyPars *pars){
 
 void abcCallGenotypes::printGeno(funkyPars *pars){
   genoCalls *geno =(genoCalls *) pars->extras[index];
-  assert(pars->keepSites!=NULL);
+  aio::doAssert(pars->keepSites!=NULL,1,AT,"");
   bufstr.l=0;
   int doGenoInner = abs(doGeno);
   for(int s=0;s<pars->numSites;s++) {

@@ -7,6 +7,11 @@
 
 
 
+#define ASSERT(expr) \
+	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+
+
+
 void destroy(myMap &mm){
   for(myMap::iterator it=mm.begin();it!=mm.end();++it)
     free(it->first);
@@ -81,7 +86,7 @@ perpsmc * perpsmc_init(char *fname){
     exit(0);
   }
   char buf[8];
-  assert(fread(buf,1,8,fp)==8);
+  ASSERT(fread(buf,1,8,fp)==8);
   ret->version = psmcversion(fname);
   fprintf(stderr,"\t-> Version of fname: \'%s\' is:%d\n",fname,ret->version);
   if(ret->version!=1){
@@ -91,7 +96,7 @@ perpsmc * perpsmc_init(char *fname){
   ret->nSites =0;
   while(fread(&clen,sizeof(size_t),1,fp)){
     char *chr = (char*)malloc(clen+1);
-    assert(clen==fread(chr,1,clen,fp));
+    ASSERT(clen==fread(chr,1,clen,fp));
     chr[clen] = '\0';
     
     datum d;
@@ -142,7 +147,7 @@ perpsmc * perpsmc_init(char *fname){
     fprintf(stderr,"Problem with mismatch of version of %s vs %s\n",fname,tmp2);
     exit(0);
   }
-  //assert(ret->pos!=NULL&&ret->saf!=NULL);
+  //ASSERT(ret->pos!=NULL&&ret->saf!=NULL);
   free(tmp);free(tmp2);
   
  return ret;
@@ -150,7 +155,7 @@ perpsmc * perpsmc_init(char *fname){
 
  //chr start stop is given from commandine
  myMap::iterator iter_init(perpsmc *pp,char *chr,int start,int stop){
-   assert(chr!=NULL);
+   ASSERT(chr!=NULL);
    myMap::iterator it = pp->mm.find(chr);
    if(it==pp->mm.end()){
      fprintf(stderr,"\t-> [%s] Problem finding chr: %s\n",__FUNCTION__,chr);

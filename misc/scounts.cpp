@@ -2,12 +2,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
-#include <cassert>
 #include <zlib.h>
 #include <sys/stat.h>
 #include <vector>
 #include <map>
 #include <libgen.h>
+
+#define ASSERT(expr) \
+	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+
 typedef unsigned char uchar;
 
 typedef struct{

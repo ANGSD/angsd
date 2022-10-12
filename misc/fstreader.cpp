@@ -3,6 +3,11 @@
 #include "fstreader.h"
 
 
+
+#define ASSERT(expr) \
+	if (!(expr)) {fprintf(stderr,"[ERROR](%s:%d) %s",__FILE__,__LINE__,#expr);exit(1);}
+
+
 int fstversion(const char *fname){
   gzFile gz=Z_NULL;
   gz = gzopen(fname,"r");
@@ -69,25 +74,25 @@ perfst * perfst_init(char *fname){
     exit(0);
   }
   char buf[8];
-  assert(fread(buf,1,8,fp)==8);
+  ASSERT(fread(buf,1,8,fp)==8);
   ret->version=fstversion(fname);
   //read names
   size_t nit=0;
-  assert(fread(&nit,sizeof(size_t),1,fp)==1);
+  ASSERT(fread(&nit,sizeof(size_t),1,fp)==1);
   //fprintf(stderr,"nit:%lu\n",nit);
   for(int i=0;i<nit;i++){
     size_t clen;
-    assert(fread(&clen,sizeof(size_t),1,fp)==1);
+    ASSERT(fread(&clen,sizeof(size_t),1,fp)==1);
     //fprintf(stderr,"clen:%lu\n",clen);
     char *nam =(char*) calloc(clen+1,1);
-    assert(fread(nam,sizeof(char),clen,fp)==clen);
+    ASSERT(fread(nam,sizeof(char),clen,fp)==clen);
     ret->names.push_back(nam);
   }
 #if 1  
   while(fread(&clen,sizeof(size_t),1,fp)){
     char *chr = (char*)calloc(clen+1,1);
     unsigned a =(unsigned) fread(chr,1,clen,fp);
-    assert(clen==a);    
+    ASSERT(clen==a);    
     dat d;
     if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);

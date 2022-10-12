@@ -2,7 +2,6 @@
   This is a class that dumps BCF output. Its mainly a wrapper around other classes here in angsd. Maybe this should be streamlined abit
 */
 
-#include <assert.h>
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
 #include <htslib/kstring.h>
@@ -103,7 +102,7 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##FORMAT=<ID=EBD,Number=4,Type=Float,Description=\"The effective basedepth\">");
   //fprintf(stderr,"samples from sm:%d\n",args->sm->n);
   buf.l =0;
-  assert(args);
+  ASSERT(args);
   ksprintf(&buf, "##angsdVersion=%s",args->version);
   bcf_hdr_append(hdr, buf.s);
   
@@ -128,7 +127,7 @@ void abcWriteBcf::clean(funkyPars *pars){
 }
 
 void abcWriteBcf::print(funkyPars *pars){
-  assert(bcf_hdr_nsamples(hdr)>0);
+  aio::doAssert(bcf_hdr_nsamples(hdr)>0);
   if(doBcf==0)
     return;
  
@@ -172,14 +171,14 @@ void abcWriteBcf::print(funkyPars *pars){
     bcf_update_filter(hdr, rec, &tmpi, 1);
     // .. INFO
     tmpi = pars->keepSites[s];
-    assert(bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1)==0);
+    aio::doAssert(bcf_update_info_int32(hdr, rec, "NS", &tmpi, 1)==0);
     if(mcall){
 
       float *tmp = mcall->QS+5*s;
       //      for(int i=0;i<5;i++)	fprintf(stderr,"qs[%d]: %f\n",i,tmp[i]);
-      assert(bcf_update_info_float(hdr, rec, "QS_angsd", tmp, 5)==0);
+      aio::doAssert(bcf_update_info_float(hdr, rec, "QS_angsd", tmp, 5)==0);
       tmp = mcall->quals+2*s;
-      assert(bcf_update_info_float(hdr, rec, "Quals_angsd", tmp, 2)==0);
+      aio::doAssert(bcf_update_info_float(hdr, rec, "Quals_angsd", tmp, 2)==0);
       if(mcall->isvar[s]>0)
 	rec->qual = tmp[0];
       else
@@ -192,15 +191,15 @@ void abcWriteBcf::print(funkyPars *pars){
       for(int i=0; i<4*pars->nInd; i++)
 	depth += pars->counts[s][i];
       tmpi = depth;
-      assert(bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1)==0);
+      aio::doAssert(bcf_update_info_int32(hdr, rec, "DP", &tmpi, 1)==0);
     }
     if(freq){
       float tmpf = freq->freq[s];
-      assert(bcf_update_info_float(hdr, rec, "AF", &tmpf, 1)==0);
+      aio::doAssert(bcf_update_info_float(hdr, rec, "AF", &tmpf, 1)==0);
     }
     
     // .. FORMAT
-    // assert(geno);
+    // aio::doAssert(geno);
     //    fprintf(stderr,"bcf_hdr_nsamples(hdr): %d\n",bcf_hdr_nsamples(hdr));
     if(geno&&mcall==NULL){
       int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
@@ -226,7 +225,7 @@ void abcWriteBcf::print(funkyPars *pars){
       int32_t *tmpia = (int*)malloc(bcf_hdr_nsamples(hdr)*2*sizeof(int32_t));
       for(int i=0; i<pars->nInd;i++){
 	if(mcall->gcdat[s][2*i]==-1)
-	  assert(mcall->gcdat[s][2*i]==mcall->gcdat[s][2*i+1]);
+	  aio::doAssert(mcall->gcdat[s][2*i]==mcall->gcdat[s][2*i+1]);
 
 	if(mcall->gcdat[s][2*i]==-1){
 	  tmpia[2*i+0] = bcf_gt_missing;
@@ -253,7 +252,7 @@ void abcWriteBcf::print(funkyPars *pars){
 
       int major = pars->major[s];
       int minor = pars->minor[s];
-      assert(major!=4&&minor!=4);
+      aio::doAssert(major!=4&&minor!=4);
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++){
 	double val[3];
 	val[0] = pars->likes[s][i*10+angsd::majorminor[major][major]];

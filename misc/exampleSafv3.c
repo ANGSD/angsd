@@ -21,7 +21,6 @@ cat small.txt|./a.out
 #include <zlib.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 
 #define NMAX 96 
 
@@ -51,7 +50,7 @@ int main(){
     }
     if(nbin==-1)
       nbin=at;
-    assert(at==nbin);
+    if(at!=nbin) exit(1);
     bgzf_write(saf,data,sizeof(float)*nbin);
     nsites++;
   }

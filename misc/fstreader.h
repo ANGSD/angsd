@@ -1,7 +1,6 @@
 #pragma once
 #include <cstring>
 #include <cstdlib>
-#include <cassert>
 #include <map>
 #include <vector>
 #include <htslib/bgzf.h>

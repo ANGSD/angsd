@@ -2,7 +2,6 @@
   This is a class that dumps plink file output
 
  */
-#include <assert.h>
 
 #include "analysisFunction.h"
 #include "shared.h"
