@@ -57,7 +57,7 @@ endif
 
 
 #modied from htslib makefile
-FLAGS = -O3
+FLAGS = -O3 -D__STDC_FORMAT_MACROS
 CPPFLAGS := $(filter-out -DNDEBUG,$(CPPFLAGS))
 FLAGS2 = $(CPPFLAGS) $(FLAGS) $(LDFLAGS)
 
