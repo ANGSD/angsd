@@ -1102,9 +1102,9 @@ void abcSaf::algoJointMajorMinor(double **liks,
       else mx = p[0];
       tmx += mx;
 
-      p[0] = mx < MINLIKE ? 0. : exp(p[0] - mx);
-      p[1] = mx < MINLIKE ? 0. : exp(p[1] - mx);
-      p[2] = mx < MINLIKE ? 0. : exp(p[2] - mx);
+      p[0] = mx < MINLIKE ? 1. : exp(p[0] - mx);
+      p[1] = mx < MINLIKE ? 1. : exp(p[1] - mx);
+      p[2] = mx < MINLIKE ? 1. : exp(p[2] - mx);
 
       //check for underflow error, this should only occur once in a blue moon
       if(std::isnan(p[0])||std::isnan(p[1])||std::isnan(p[2]))
@@ -1212,8 +1212,8 @@ void abcSaf::algoJointMajorMinorHap(double **liks,
       double mx = p[1] > p[0] ? p[1] : p[0];
       tmx += mx;
 
-      p[0] = mx < MINLIKE ? 0. : exp(p[0] - mx);
-      p[1] = mx < MINLIKE ? 0. : exp(p[1] - mx);
+      p[0] = mx < MINLIKE ? 1. : exp(p[0] - mx);
+      p[1] = mx < MINLIKE ? 1. : exp(p[1] - mx);
 
       //check for underflow error, this should only occur once in a blue moon
       if(std::isnan(p[0])||std::isnan(p[1]))
