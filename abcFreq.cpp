@@ -592,11 +592,11 @@ void abcFreq::run(funkyPars *pars) {
 	pars->keepSites[s]=0;
       else if(freq->freq[s] > 1 - minMaf)
 	pars->keepSites[s]=0;
-      if(rmSNPs) // keep non poly instead of removal
+      if(rmSNPs){ // keep non poly instead of removal
 	if(doSNP && (freq->lrt[s] > SNP_pval))
 	  pars->keepSites[s]=0;
-      else
-	if(doSNP && (freq->lrt[s] < SNP_pval))
+      }
+      else if(doSNP && (freq->lrt[s] < SNP_pval))
 	  pars->keepSites[s]=0;
       if(rmTriallelic && (freq->lrt_tri[s] > SNP_pval_tri))
       	pars->keepSites[s]=0;
