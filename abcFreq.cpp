@@ -78,6 +78,7 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"Filters:\n");
   fprintf(argFile,"\t-minMaf  \t%f\t(Remove sites with MAF below)\n",minMaf);
   fprintf(argFile,"\t-SNP_pval\t%f\t(Remove sites with a pvalue larger)\n",angsd::to_pval(chisq1,SNP_pval));
+  fprintf(argFile,"\t-rmSNPs \t%d\t(Remove infered SNPs instead of keeping them (pval > SNP_pval)\n",rmSNPs);
   fprintf(argFile,"\t-rmTriallelic\t%f\t(Remove sites with a pvalue lower)\n",rmTriallelic);
   fprintf(argFile,"\t-forceMaf\t%d\t(Write .mafs file when running -doAsso (by default does not output .mafs file with -doAsso))\n",forceMaf);
   fprintf(argFile,"\t-skipMissing\t%d\t(Set post to 0.33 if missing (do not use freq as prior))\n",skipMissing);
@@ -104,6 +105,7 @@ void abcFreq::getOptions(argStruct *arguments){
   skipMissing=angsd::getArg("-skipMissing",skipMissing,arguments);
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
   doPost=angsd::getArg("-doPost",doPost,arguments);
+  rmSNPs=angsd::getArg("-rmSNPs",rmSNPs,arguments);
 
   if(doMaf==0 && doPost ==0)
     return;
@@ -148,6 +150,10 @@ void abcFreq::getOptions(argStruct *arguments){
 
   double tmp=-1;
   tmp=angsd::getArg("-SNP_pval",tmp,arguments);
+  if(tmp!=-1 && tmp<0){
+    fprintf(stderr,"\t-> (-SNP_pval) p-values must be positive\n");
+    exit(0);
+  } 
  
   if(tmp!=-1){ 
     SNP_pval = tmp;
@@ -273,6 +279,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
   rmTriallelic=0;
   GL=0;
   doSNP=0;
+  rmSNPs=0;
   doPost=0;
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
   //emIter=EM_NITER; //these are static see top of this file
@@ -585,9 +592,12 @@ void abcFreq::run(funkyPars *pars) {
 	pars->keepSites[s]=0;
       else if(freq->freq[s] > 1 - minMaf)
 	pars->keepSites[s]=0;
-     
-      if(doSNP && (freq->lrt[s] < SNP_pval))
-      	pars->keepSites[s]=0;
+      if(rmSNPs) // keep non poly instead of removal
+	if(doSNP && (freq->lrt[s] > SNP_pval))
+	  pars->keepSites[s]=0;
+      else
+	if(doSNP && (freq->lrt[s] < SNP_pval))
+	  pars->keepSites[s]=0;
       if(rmTriallelic && (freq->lrt_tri[s] > SNP_pval_tri))
       	pars->keepSites[s]=0;
       if(minInd>0&&pars->keepSites[s]<minInd)

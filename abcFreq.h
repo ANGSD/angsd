@@ -36,6 +36,7 @@ private:
   BGZF *outfileZ2;
 
   int doMaf;
+
   double rmTriallelic;
 
 
@@ -56,6 +57,7 @@ private:
   int minInd;
   int inputIsBeagle;
   int skipMissing;
+  int rmSNPs;
 public:
   int algoGeno(double *liks,int major_offset,int minor_offset,int numInds,int underFlowProtect,double *pest,double *postp);
   static double *indF;
