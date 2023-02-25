@@ -47,7 +47,7 @@
   
  */
 double findmax_bfgs(int numpars, double *invec,const void*dats, double (*fun)(const double x[],const void*),
-		    void (*dfun)(const double x[], double y[]),
+		    void (*dfun)(const double x[], double y[],const void *),
 		    double *lowbound, double *upbound,
 		    int *nbd, int noisy);
 /*

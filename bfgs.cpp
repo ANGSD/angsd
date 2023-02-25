@@ -81,7 +81,7 @@ typedef int logical;
 //dfun is derivative function or send NULL to use numerical derivative
 //(getgradient function above)
 double findmax_bfgs(int numpars, double *invec,const void*dats, double (*fun)(const double x[],const void*),
-		    void (*dfun)(const double x[], double y[]),
+		    void (*dfun)(const double x[], double y[],const void*),
 		    double *lowbound, double *upbound, int *nbd, int noisy) {
   int i, m, isave[44], *iwa;
   double *grad, *wa, factr, pgtol, dsave[29], like;
@@ -107,7 +107,7 @@ double findmax_bfgs(int numpars, double *invec,const void*dats, double (*fun)(co
   for (i=5; i<60; i++) task[i]=' ';
   like = (*fun)(invec,dats);
   if(dfun!=NULL)
-    dfun(invec, grad);
+    dfun(invec, grad,dats);
   else
     getgradient(numpars,invec,grad,dats,fun,lowbound,upbound); 
   while (1) {
@@ -116,7 +116,7 @@ double findmax_bfgs(int numpars, double *invec,const void*dats, double (*fun)(co
       //printf("\t");
       like = fun(invec,dats);
       if(dfun!=NULL)
-	dfun(invec, grad);
+	dfun(invec, grad,dats);
       else
 	getgradient(numpars,invec,grad,dats,fun,lowbound,upbound); 
       if (noisy > 1) printf("like=%f\n", like);
