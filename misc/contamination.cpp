@@ -233,7 +233,9 @@ double jackML(allPars *ap,int nthreads,char *fname,int nJack) {
     nJack = ap->len;
   else
     nJack = std::min(ap->len,nJack);
-  ASSERT(nJack>0);
+  if(nJack<1){
+    return -1;
+  }
   double *thetas =new double[nJack];
   double *val = new double[nJack];
   if(nthreads>1){
