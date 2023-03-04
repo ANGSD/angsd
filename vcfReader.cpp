@@ -238,10 +238,25 @@ int isindel(const bcf_hdr_t *h, const bcf1_t *v){
 /// As of VCF 4.2, '*' is used to represent a spanning deletion if
 /// there are other alleles present at site. This function checks if
 /// any allele is a deletion.
+/// 
+/// Also checks for symbolic alternate alleles "<*>" as these could
+/// also be deletions. These should already have been filtered
+/// out with isindel() but checking it in case header does not have
+/// INDEL tag.
 int hasDelAlt(const bcf1_t *rec){
+  if(rec->d.allele==NULL){
+    return 0;
+  }
   for(int i=0;i<rec->n_allele;i++){
-    if(strcmp(rec->d.allele[i],"*")==0){
-        return 1;
+    if(strncmp(rec->d.allele[i],"*",1)==0){
+        // fprintf(stderr,"\n[INFO:VERBOSE]\t-> Skipping site at position %d. Reason: Found spanning deletion (%s).\n", (int)rec->pos+1, rec->d.allele[i]);
+      return 1;
+    }
+    // check for symbolic alternate alleles "<*>".
+    // these should already have been filtered out with isindel() but just in case
+    if(strncmp(rec->d.allele[i],"<*>",3)==0){
+      // fprintf(stderr,"\n[INFO:VERBOSE]\t-> Skipping site at position %d. Reason: Found symbolic alternate allele (%s).\n", (int)rec->pos+1, rec->d.allele[i]);
+      return 1;
     }
   }
   return 0;
@@ -254,16 +269,12 @@ int hasDelAlt(const bcf1_t *rec){
 int dumpcounterverbose[2] = {0,0};
 int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type){
 
-  if(hasDelAlt(rec)!=0)
-  {
+  ASSERT(type>=0&&type<=2);
+
+  if((isindel(hs->hdr,rec)!=0) || (hasDelAlt(rec) != 0)){
     return 0;
   }
 
-  ASSERT(type>=0&&type<=2);
-  if(isindel(hs->hdr,rec)!=0)
-    return 0;
-
-  int n;
 
   r->major[balcon] = refToChar[rec->d.allele[0][0]];
   r->minor[balcon] = refToChar[rec->d.allele[1][0]];
@@ -288,6 +299,7 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     for(int i=0;i<3*hs->nsamples;i++)
       dupergp[i] = 1;
   }
+  int n;
   if(type==2) {
     n = bcf_get_format_float(hs->hdr, rec, "GP", &farr, &mfarr);
     if(n>=ln_gl_m){
@@ -526,7 +538,7 @@ funkyPars *vcfReader::fetch(int chunkSize) {
     
     n++;
     //skip nonsnips
-    if((isindel(hs->hdr,rec)) || (hasDelAlt(rec) != 0)){
+    if((isindel(hs->hdr,rec)!=0) || (hasDelAlt(rec) != 0)){
       if(onlyprint>0){
 	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",(int)rec->pos+1);
 	onlyprint--;

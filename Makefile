@@ -3,6 +3,7 @@ CXX ?= g++
 
 LIBS = -lz -lm -lbz2 -llzma -lpthread -lcurl
 
+# try to detect if libcrypto is available to link
 CRYPTO_TRY=$(shell echo 'int main(){}'|$(CXX) -x c++ - -lcrypto 2>/dev/null -o /dev/null; echo $$?)
 ifeq "$(CRYPTO_TRY)" "0"
 $(info Crypto library is available to link; adding -lcrypto to LIBS)
@@ -11,6 +12,12 @@ else
 $(info Crypto library is not available to link; will not use -lcrypto)
 endif
 
+
+# <make debug> debugging mode: compile with debugging-related flags
+debug: $(info [make debug] Debugging mode: ON)
+debug: CXXFLAGS += -DDEBUG -Wall -g
+debug: CCFLAGS += -DDEBUG -Wall -g
+debug: angsd
 
 #if htslib source is defined
 ifdef HTSSRC
@@ -126,15 +133,18 @@ angsd: version.h $(OBJ)
 testclean:
 	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
 
+# <make clean> remove all files created by <make>
 clean: testclean
 	rm  -f *.o *.d $(PROGRAMS) version.h *~
 	$(MAKE) -C misc clean
 
+# <make test> run the test suite
 test:
 	echo "Only subset of analyses is being tested"
 	cd test;./testAll.sh ../angsd $(BDIR)
 force:
 
+# <make install> install the program in $(bindir)
 install: all
 	$(INSTALL_DIR) $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) $(PROGRAMS) $(DESTDIR)$(bindir)
