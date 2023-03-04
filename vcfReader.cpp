@@ -230,16 +230,40 @@ int isindel(const bcf_hdr_t *h, const bcf1_t *v){
 }
 
 
+
+/// @brief hasDelAlt - check if any allele at site is a deletion '*'
+/// @param rec - bcf1_t record for one VCF line
+/// @return  1 : if any allele is deletion, 0 otherwise
+/// @details
+/// As of VCF 4.2, '*' is used to represent a spanning deletion if
+/// there are other alleles present at site. This function checks if
+/// any allele is a deletion.
+int hasDelAlt(const bcf1_t *rec){
+  for(int i=0;i<rec->n_allele;i++){
+    if(strcmp(rec->d.allele[i],"*")==0){
+        return 1;
+    }
+  }
+  return 0;
+}
+
 //type=0 -> PL
 //type=1 -> GL
 //type=2 -> GP
 
 int dumpcounterverbose[2] = {0,0};
 int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type){
-  aio::doAssert(type>=0&&type<=2,1,AT,"");
-  int n;
+
+  if(hasDelAlt(rec)!=0)
+  {
+    return 0;
+  }
+
+  ASSERT(type>=0&&type<=2);
   if(isindel(hs->hdr,rec)!=0)
     return 0;
+
+  int n;
 
   r->major[balcon] = refToChar[rec->d.allele[0][0]];
   r->minor[balcon] = refToChar[rec->d.allele[1][0]];
@@ -502,7 +526,7 @@ funkyPars *vcfReader::fetch(int chunkSize) {
     
     n++;
     //skip nonsnips
-    if(isindel(hs->hdr,rec)){
+    if((isindel(hs->hdr,rec)) || (hasDelAlt(rec) != 0)){
       if(onlyprint>0){
 	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",(int)rec->pos+1);
 	onlyprint--;
