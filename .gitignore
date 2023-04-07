@@ -48,3 +48,7 @@ misc/splitgl
 misc/supersim
 misc/thetaStat
 version.h
+
+# Development-related files
+vgcore*
+commit_message.txt
