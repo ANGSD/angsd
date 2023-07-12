@@ -71,6 +71,12 @@ void init(void *arg){
   }
   nQueueSize = angsd::getArg("-nQueueSize",nQueueSize,arguments);
   howOften = angsd::getArg("-howOften",howOften,arguments);
+
+  if(howOften<0){
+	  fprintf(stderr,"\n\nError: -howOften is set to %d. This is not allowed. Acceptable values are:\n\t-howOften 0\tDisable the program progress printing\n\t-howOften <positive_integer>\tDefine how often the program should show the progress\n\n\n");
+	  exit(1);
+  }
+
   if(!isatty(fileno(arguments->argumentFile)))
     fprintf(arguments->argumentFile,"--------------------\n[%s:%s()]\n\t-nThreads\t%d\tNumber of threads to use\n\t-nQueueSize\t%d\tMaximum number of queud elements\n\t-howOften\t%d\tHow often should the program show progress\n",__FILE__,__FUNCTION__,maxThreads,nQueueSize,howOften);
   //  fprintf(stderr,"nQueue=%d howOften=%d\n",nQueueSize,howOften);
@@ -465,11 +471,13 @@ size_t total_number_of_sites_filtered =0;
 void printFunky(funkyPars *p){
   //  fprintf(stderr,"printFunky killsig=%d nsites=%d refid:%d\n",p->killSig,p->numSites,p->refId);
   if(p->killSig==0) {//don't print the empty killSig chunk
-    if((p->chunkNumber%howOften)==0){
-      if(isAtty)
+
+    if( (howOften>0) && ((p->chunkNumber%howOften)==0) ){
+      if(isAtty){
 	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
-      else
+	  }else{
 	fprintf(stderr,"\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites\n",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
+	  }
     }if(p->numSites!=0){
       total_number_of_sites_unfiltred += p->numSites;
       for(int i=0;i<p->numSites;i++)
