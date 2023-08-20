@@ -105,7 +105,7 @@ version.h:
 
 .PHONY: all clean install install-all install-misc misc test
 
-misc: analysisFunction.o bfgs.o prep_sites.o
+misc: analysisFunction.o bfgs.o prep_sites.o aio.o chisquare.o .WAIT
 	$(MAKE) -C misc HTSSRC="$(realpath $(HTSSRC))"
 
 -include $(OBJ:.o=.d)
@@ -119,7 +119,7 @@ misc: analysisFunction.o bfgs.o prep_sites.o
 	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
 
-angsd: version.h $(OBJ)
+angsd: version.h .WAIT $(OBJ)
 	$(CXX) $(FLAGS) -o angsd *.o $(LIBS)
 
 
