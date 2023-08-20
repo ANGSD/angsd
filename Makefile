@@ -118,8 +118,9 @@ misc: analysisFunction.o bfgs.o prep_sites.o
 	$(CXX) -c  $(CXXFLAGS) $*.cpp
 	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
+$(OBJ): version.h
 
-angsd: version.h $(OBJ)
+angsd: $(OBJ)
 	$(CXX) $(FLAGS) -o angsd *.o $(LIBS)
 
 
