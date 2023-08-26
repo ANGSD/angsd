@@ -23,6 +23,8 @@ typedef struct{
   int hasExtra;// 0=only sites,1=majorminor,2=also an ac af
   size_t curLen;//<-length of the char arrays;NOT the last position filtersite
   char *curNam;
+
+  char* upstream;
 }filt;
 
 

@@ -287,6 +287,7 @@ void printReg(FILE *fp,std::vector<regs> &regions){
 
 extern abc **allMethods;
 abcGetFasta *gf=NULL;
+abcFilter *filter=NULL;
 
 void init_bamreaders(argStruct *args){
 
@@ -295,9 +296,10 @@ void init_bamreaders(argStruct *args){
 
 
 int bammer_main(argStruct *args){
+  filter=(abcFilter *) allMethods[0];
   gf=(abcGetFasta *) allMethods[1];
   extern int maxThreads;
-  uppile(args->show,maxThreads,args->rd,args->nReads,args->nams.size(),args->regions,gf);
+  uppile(args->show,maxThreads,args->rd,args->nReads,args->nams.size(),args->regions,filter,gf);
 
   //cleanup stuff
   for(unsigned i=0;i<args->nams.size();i++)

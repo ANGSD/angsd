@@ -1366,7 +1366,7 @@ void destroy_tnode_pool(){
 
 //f Typenames with T are the ones for the callback, in main angsd
 //Most likely this can be written more beautifull by using templated types. But to lazy now.
-int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> &regions,abcGetFasta *gf) {
+int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector<regs> &regions,abcFilter* filter, abcGetFasta *gf) {
   
   aio::doAssert(nLines&&nFiles,1,AT,"");
   fprintf(stderr,"\t-> Parsing %d number of samples \n",nFiles);
@@ -1522,9 +1522,9 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
       int pickStop=MAX_SEQ_LEN;
       
 #ifndef __NEW__
-      int doFlush =  (collect_reads(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
+      int doFlush =  (collect_reads(rd,nFiles,notDone,sglp,nLines,theRef,pickStop,filter)==nFiles)?1:0 ;
 #else
-      int doFlush = (collect_reads2(rd,nFiles,notDone,sglp,nLines,theRef,pickStop)==nFiles)?1:0 ;
+      int doFlush = (collect_reads2(rd,nFiles,notDone,sglp,nLines,theRef,pickStop,filter)==nFiles)?1:0 ;
 #endif
 #if 0
       for(int i=0;i<nFiles;i++)

@@ -24,3 +24,7 @@ void dalloc (readPool *ret);
 
 int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop);
 int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop);
+
+
+int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop, abcFilter* filter);
+int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop, abcFilter* filter);

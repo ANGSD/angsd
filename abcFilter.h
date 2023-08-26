@@ -1,3 +1,6 @@
+#ifndef __ABCFILTER__
+#define __ABCFILTER__
+
 #include "prep_sites.h"
 class abcFilter : public abc{
   int strict;
@@ -24,3 +27,5 @@ public:
   void printArg(FILE *argFile);
   ~abcFilter();
 };
+
+#endif

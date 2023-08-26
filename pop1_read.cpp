@@ -86,7 +86,8 @@ int restuff(bam1_t *b){
 }
 extern int cigstat;
 
-int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
+
+int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr, abcFilter *filter) {
   int r;
  bam_iter_reread:
   
@@ -96,6 +97,20 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     r = sam_itr_next(fp, itr, b);
   
   if(r!=-1) {
+
+
+
+	  ASSERT(filter!=NULL);
+	  if(NULL!=filter->fl){
+
+		  if(NULL!=filter->fl->upstream){
+			  if(0==filter->fl->upstream[b->core.pos]){
+				  goto bam_iter_reread;
+			  }
+		  }
+
+	}
+
 
     //pathologial case with no data in CIGAAR. I dont see how this can happen, but we have observed this is some data.
     //previously it was only one insertion, but in new data it has been a combination of softclip and insertion

@@ -6,10 +6,13 @@
 #include <htslib/hts.h>
 #include "makeReadPool.h"
 #include "abcGetFasta.h"
+// #include "abcFilter.h"
 
 
 int uppile(int show,int nThreads,bufReader *rd,int NLINES,int nFiles,std::vector<regs> &regions,abcGetFasta *gf);
 tNode *initNodeT(int l);
+
+int uppile(int show,int nThreads,bufReader *rd,int NLINES,int nFiles,std::vector<regs> &regions,abcFilter* filter, abcGetFasta *gf);
 
 
 //typedef struct{

@@ -36,7 +36,7 @@ void realloc(readPool *ret,int l){
   ret->last =(int*) realloc(ret->last,sizeof(int)*ret->m);
 }
 
-void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
+void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr, abcFilter* filter) {
 
   //if should never be in this function if we shouldnt read from the file.
   aio::doAssert(rdObjRegionDone!=1 &&rdObjEof!=1 ,1,AT,"");
@@ -53,7 +53,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
     bam1_t *b = ret.reads[0];
     int tmp;
 
-    if((tmp=pop1_read(fp,itr,b,hdr))<0){//FIXME
+    if((tmp=pop1_read(fp,itr,b,hdr,filter))<0){//FIXME
       if(tmp==-1){
 	rdObjEof =1;
 	//	ret.isEOF =1;
@@ -95,7 +95,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
     }
     
     bam1_t *b = ret.reads[i+ret.l];
-    if((tmp=pop1_read(fp,itr,b,hdr))<0) {
+    if((tmp=pop1_read(fp,itr,b,hdr,filter))<0) {
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -130,7 +130,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
 }
 
 
-void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
+void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int stop,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr, abcFilter* filter) {
   // fprintf(stderr,"stop:%d nreads:%d reftoread:%d ret.m:%d ret.l:%d\n",stop,nReads,refToRead,ret.m,ret.l);
   //if should never be in this function if we shouldnt read from the file.
   aio::doAssert(rdObjRegionDone!=1 &&rdObjEof!=1 ,1,AT,"");
@@ -153,7 +153,7 @@ void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,ht
     }
     //fprintf(stderr,"ret.l:%d,i:%d\n",ret.l,i);
     bam1_t *b = ret.reads[i+ret.l];
-    if((tmp=pop1_read(fp,itr,b,hdr))<0) {
+    if((tmp=pop1_read(fp,itr,b,hdr,filter))<0) {
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -189,7 +189,7 @@ void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,ht
 
 
 //nothing with buffered here
-void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr) {
+void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,hts_itr_t *itr,int &rdObjEof,int &rdObjRegionDone,bam_hdr_t *hdr,abcFilter* filter) {
 #if 0
   fprintf(stderr,"\t->[%s] buffRefid=%d\trefToRead=%d\n",__FUNCTION__,ret.bufferedRead.refID,refToRead);
 #endif
@@ -204,7 +204,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
   while(ret.l==0){
     bam1_t *b = ret.reads[0];
     int tmp;
-    if((tmp=pop1_read(fp,itr,b,hdr))<0){//FIXME
+    if((tmp=pop1_read(fp,itr,b,hdr,filter))<0){//FIXME
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -241,7 +241,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
   for( i=0;i<nReads;i++){
     bam1_t *b = ret.reads[i+ret.l];
 
-    if((tmp=pop1_read(fp,itr,b,hdr))<0){
+    if((tmp=pop1_read(fp,itr,b,hdr,filter))<0){
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -272,9 +272,8 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
 }
 
 
-
 //function will read data from all bamfiles, return value is the number of 'done' files
-int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop) {
+int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop, abcFilter* filter){
   int usedPicker=-1;
   for(int ii=0;ii<nFiles;ii++) {
     extern int *bamSortedIds;
@@ -286,7 +285,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readN
     
     int pre=ret[i].l;//number of elements before
     //function reads readNlines reads, from rd[i].fp and modifies isEOF and regionDone
-    read_reads_noStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+    read_reads_noStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,rd[i].isEOF,rd[i].regionDone,rd[i].hdr,filter);
     //first check if reading caused and end of region event to occur
     if(rd[i].regionDone||rd[i].isEOF) 
       rd[i].regionDone = 1;
@@ -308,7 +307,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readN
     
     if(ret[i].l>0&&ret[i].first[ret[i].l-1]>pickStop)
       continue;
-    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr,filter);
   } 
   int nDone =0;
   for(int i=0;i<nFiles;i++)
@@ -319,7 +318,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readN
 
 }
 
-int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop) {
+int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop, abcFilter* filter){
   int usedPicker=-1;
   for(int ii=0;ii<nFiles;ii++) {
     //    fprintf(stderr,"read reads[%d]\n",ii);
@@ -335,7 +334,8 @@ int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &read
     if(ret[i].l>0)
       pickStop += ret[i].first[ret[i].l-1];
     // fprintf(stderr,"reading until:%d\n",pickStop);
-    read_reads(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+    // read_reads(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+    read_reads(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr, filter);
     //first check if reading caused and end of region event to occur
     if(rd[i].regionDone||rd[i].isEOF) 
       rd[i].regionDone = 1;
@@ -358,7 +358,8 @@ int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &read
     
     if(ret[i].l>0&&ret[i].first[ret[i].l-1]>pickStop)
       continue;
-    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+    // read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr);
+    read_reads_usingStop(rd[i].fp,readNlines,notDone,ret[i],ref,rd[i].itr,pickStop,rd[i].isEOF,rd[i].regionDone,rd[i].hdr, filter);
   } 
   int nDone =0;
   for(int i=0;i<nFiles;i++)
@@ -368,4 +369,3 @@ int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &read
   return nDone;
 
 }
-

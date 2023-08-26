@@ -46,10 +46,12 @@ void dalloc(tary<T> *ta){
 
 //hint is the suggested newsize
 void filt_readSites(filt*fl,char *chr,size_t hint) {
-  aio::doAssert(fl!=NULL, 1, AT,"fl is null");
+
+	ASSERT(fl!=NULL);
 
   std::map<char*,asdf_dats,ltstr> ::iterator it = fl->offs.find(chr);
   if(it==fl->offs.end()){
+
     fprintf(stderr,"\n\t-> Potential problem: The filereading has reached a chromsome: \'%s\', which is not included in your \'-sites\' file.\n\t-> Please consider limiting your analysis to the chromsomes of interest \n",chr);
     fprintf(stderr,"\t-> see \'http://www.popgen.dk/angsd/index.php/Sites\' for more information\n");
     fprintf(stderr,"\t-> Program will continue reading this chromosome... \n");
@@ -60,10 +62,15 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     free(fl->an);
     free(fl->ac);
     free(fl->af);
+	free(fl->upstream);
+	
     fl->keeps=fl->minor=fl->major=NULL;
     fl->af=NULL;
     fl->an=fl->ac=NULL;
     fl->curLen =0;
+
+
+	fl->upstream=NULL;
     return;
   }
 
@@ -102,8 +109,28 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     aio::doAssert(it->second.len*sizeof(int)==bgzf_read(fl->bg,fl->an,it->second.len*sizeof(int)),1,AT,"");
   }
 
+	if(NULL!=fl->upstream){
+		free(fl->upstream);
+	}
+
+	ASSERT(fl!=NULL);
+	ASSERT(fl->keeps!=NULL);
+
   fl->curNam=chr;
   fl->curLen = nsize;
+
+	ASSERT(fl->curLen>0);
+	if(fl->curLen > 0){
+		fl->upstream=(char*)calloc(fl->curLen,1);
+		for(int i=0;i<fl->curLen;++i){
+			if(fl->keeps[i]){
+				for(int j=i;(j>0) && (i-j > 500); --j){
+					fl->upstream[j]=1;
+
+				}
+			}
+		}
+	}
 }
 
 template <typename T>
@@ -367,6 +394,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   int hasExtra=0;
   int l = 128;
   char *buf =(char *) calloc(l,sizeof(char));
+  char* upstream = NULL;
 
   extern int SIG_COND;
   const char *delims="\t \n";
