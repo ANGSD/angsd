@@ -49,6 +49,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
 
 	ASSERT(fl!=NULL);
 
+
   std::map<char*,asdf_dats,ltstr> ::iterator it = fl->offs.find(chr);
   if(it==fl->offs.end()){
 
@@ -63,6 +64,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     free(fl->ac);
     free(fl->af);
 	free(fl->upstream);
+	fl->upstream=NULL;
 	
     fl->keeps=fl->minor=fl->major=NULL;
     fl->af=NULL;
@@ -70,7 +72,6 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
     fl->curLen =0;
 
 
-	fl->upstream=NULL;
     return;
   }
 
@@ -120,14 +121,12 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
   fl->curLen = nsize;
 
 	ASSERT(fl->curLen>0);
-	if(fl->curLen > 0){
-		fl->upstream=(char*)calloc(fl->curLen,1);
-		for(int i=0;i<fl->curLen;++i){
-			if(fl->keeps[i]){
-				for(int j=i;(j>0) && (i-j > 500); --j){
-					fl->upstream[j]=1;
+	fl->upstream=(char*)calloc(fl->curLen,1);
+	for(size_t i=0;i<fl->curLen;++i){
+		if(fl->keeps[i]){
+			for(size_t j=i;(j>0) && (i-j < 500); --j){
+				fl->upstream[j]=1;
 
-				}
 			}
 		}
 	}

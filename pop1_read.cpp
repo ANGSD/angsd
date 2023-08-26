@@ -101,15 +101,16 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr, abcFilter *f
 
 
 	  ASSERT(filter!=NULL);
-	  if(NULL!=filter->fl){
+	  ASSERT(NULL!=filter->fl);
 
-		  if(NULL!=filter->fl->upstream){
+		if(filter->fl->curLen>0){
+		  ASSERT(NULL!=filter->fl->upstream);
+
 			  if(0==filter->fl->upstream[b->core.pos]){
 				  goto bam_iter_reread;
 			  }
-		  }
 
-	}
+		}
 
 
     //pathologial case with no data in CIGAAR. I dont see how this can happen, but we have observed this is some data.
