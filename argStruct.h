@@ -8,23 +8,23 @@
 
 #include "sample.h"
 
-enum{INPUT_BAM,INPUT_GLF,INPUT_GLF3,INPUT_BEAGLE,INPUT_PILEUP,INPUT_VCF_GL,INPUT_VCF_GP,INPUT_GLF10_TEXT,INPUT_BGEN};
+enum { INPUT_BAM, INPUT_GLF, INPUT_GLF3, INPUT_BEAGLE, INPUT_PILEUP, INPUT_VCF_GL, INPUT_VCF_GP, INPUT_BCF, INPUT_GLF10_TEXT, INPUT_BGEN };
 
 //little struct for keeping information of regions to extract
-typedef struct{
+typedef struct {
   int refID;
   int start;
   int stop;
 }regs;
 
-typedef struct{
-  htsFile *fp;
-  char *fn;
-  bam_hdr_t *hdr;
+typedef struct {
+  htsFile* fp;
+  char* fn;
+  bam_hdr_t* hdr;
   int isEOF;
   int regionDone;
-  hts_idx_t *idx;
-  hts_itr_t *itr;
+  hts_idx_t* idx;
+  hts_itr_t* itr;
   regs regions;
 }bufReader;
 
@@ -36,46 +36,46 @@ struct ltstr
   }
 };
 
-typedef std::map<const char *,int,ltstr> aMap;
+typedef std::map<const char*, int, ltstr> aMap;
 
 
-typedef struct{
+typedef struct {
   int nInd;//number of inds inferred from filelists
   int argc;
-  char **argv;
+  char** argv;
   int inputtype;//
-  int *usedArgs; //array of ints telling if args been used
-  FILE *argumentFile; //logfile
-  char *outfiles; //prefix output
-  bam_hdr_t *hd;
+  int* usedArgs; //array of ints telling if args been used
+  FILE* argumentFile; //logfile
+  char* outfiles; //prefix output
+  bam_hdr_t* hd;
   // const aHead *hd;
-  const aMap *revMap;
-  char *infile;//contains, the -bam fname,-glf fname, -pileup fname
-  std::vector<char *> nams;//contains either the above or the contents of -bam;
+  const aMap* revMap;
+  char* infile;//contains, the -bam fname,-glf fname, -pileup fname
+  std::vector<char*> nams;//contains either the above or the contents of -bam;
   std::vector<regs> regions;//regions to use -r/-rf when using seqdata bcf/vcf bam/cram
   int nLines;//nLines;
   int nReads;//number of reads to pop from each BAM/CRAM
   int show;
-  char *fai;
-  bam_sample_t *sm;//for dealing with readgroups
-  char *ref;
-  char *anc;
-  char *cmdline;
-  char *version;
-  bufReader *rd;
-  char *datetime;
+  char* fai;
+  bam_sample_t* sm;//for dealing with readgroups
+  char* ref;
+  char* anc;
+  char* cmdline;
+  char* version;
+  bufReader* rd;
+  char* datetime;
 }argStruct;
 
-void destroy_argStruct(argStruct *arg);
-argStruct *setArgStruct(int argc,char **argv);
+void destroy_argStruct(argStruct* arg);
+argStruct* setArgStruct(int argc, char** argv);
 
 namespace angsd {
-  int getArg(const char* argName,int type,argStruct *arguments);
-  float getArg(const char* argName,float type,argStruct *arguments);
-  char* getArg(const char* argName,char* type,argStruct *arguments);
-  char* getArg(const char* argName,const char* type,argStruct *arguments);
-  double getArg(const char* argName,double type,argStruct *arguments);
-  std::vector<char*> getFilenames(const char * name,int nInd);
+  int getArg(const char* argName, int type, argStruct* arguments);
+  float getArg(const char* argName, float type, argStruct* arguments);
+  char* getArg(const char* argName, char* type, argStruct* arguments);
+  char* getArg(const char* argName, const char* type, argStruct* arguments);
+  double getArg(const char* argName, double type, argStruct* arguments);
+  std::vector<char*> getFilenames(const char* name, int nInd);
 }
 
 void whatIsTheInput(int type);

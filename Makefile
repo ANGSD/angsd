@@ -124,7 +124,8 @@ angsd: version.h $(OBJ)
 
 
 testclean:
-	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt
+	rm -rf test/sfstest/output test/tajima/output test/*.log version.h test/temp.txt test/fst_folded/output test/saf_beagle/output test/tmp.arg test/tmp.lrt0.gz test/temp.arg test/fst_folded/input/msout test/sfstest/input/ test/testHaploCall.sh.dir/ test/sfstest/input/ test/fst/output test/smallBam.filelist test/tajima/input/msout test/testVcf.sh.dir/ test/fst/input/msout test/sites/run* test/sites/s*.bin test/sites/s*.idx
+
 
 clean: testclean
 	rm  -f *.o *.d $(PROGRAMS) version.h *~

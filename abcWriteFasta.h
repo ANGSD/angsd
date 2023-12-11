@@ -1,28 +1,29 @@
 
-class abcWriteFasta:public abc{
+class abcWriteFasta :public abc {
 private:
   kstring_t bufstr;
   int currentChr;
   int NbasesPerLine;
   double lphred[256];//these are log phread scores log(10^(1:255)/(-10))
-  char *myFasta;//contains the new fastasequence for the currrent chr
+  char* myFasta;//contains the new fastasequence for the currrent chr
   int hasData;
   int rmTrans;
   double iupacRatio;
-  char *ref;
+  char* ref;
   int seed;
+  int clean_bcf_counts = 0;
 public:
   int doFasta;
-  BGZF *outfileZ;
+  BGZF* outfileZ;
   int doCount;
   int explode;
-  abcWriteFasta(const char *outfiles,argStruct *arguments,int inputtype);
+  abcWriteFasta(const char* outfiles, argStruct* arguments, int inputtype);
   ~abcWriteFasta();
   void changeChr(int refId);
-  void getOptions(argStruct *arguments);
-  void run(funkyPars  *pars);
-  void print(funkyPars *pars){};
-  void clean(funkyPars *pars){};
-  void printArg(FILE *argFile);
+  void getOptions(argStruct* arguments);
+  void run(funkyPars* pars);
+  void print(funkyPars* pars) {};
+  void clean(funkyPars* pars);
+  void printArg(FILE* argFile);
 
 };

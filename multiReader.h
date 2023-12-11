@@ -2,6 +2,7 @@
 #include <map>
 #include "glfReader.h"
 #include "vcfReader.h"
+#include "bcfReader.h"
 #include "beagleReader.h"
 #include "bgenReader.h"
 #include "argStruct.h"
@@ -15,6 +16,7 @@ private:
   glfReader *myglf;
   glfReader_text *myglf_text;
   vcfReader *myvcf;
+  bcfReader *mybcf;
   beagle_reader *bglObj;
   bgenReader *bgenObj;
   mpileup *mpil;
@@ -31,6 +33,7 @@ private:
   argStruct *args;
   aMap *revMap;
   int pl_or_gl; // <-pl: pl_or_gl=0,gl:pl_or_gl=1
+  uint32_t bcf_tags_to_use;
 public:
   multiReader(argStruct *arg);
   funkyPars *fetch();

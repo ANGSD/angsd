@@ -52,3 +52,4 @@ version.h
 # Development-related files
 vgcore*
 commit_message.txt
+.vscode/
