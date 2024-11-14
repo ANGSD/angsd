@@ -105,8 +105,7 @@ void abcFreq::getOptions(argStruct *arguments){
   skipMissing=angsd::getArg("-skipMissing",skipMissing,arguments);
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
   doPost=angsd::getArg("-doPost",doPost,arguments);
-  rmSNPs=angsd::getArg("-rmSNPs",rmSNPs,arguments);
-
+  
   if(doMaf==0 && doPost ==0)
     return;
   
@@ -165,9 +164,21 @@ void abcFreq::getOptions(argStruct *arguments){
       if(abs(doMaf) ==1)
 	SNP_pval = chisq1->invcdf(1-SNP_pval);
     }
+    if( nInd <2 ){
+      fprintf(stderr,"\t-> Problem: You need more than one individual to call SNPs \n");
+      exit(0);
+    } 
+  
     doSNP =1 ;
     fprintf(stderr,"\t-> SNP-filter using a pvalue: %e correspond to %f likelihood units\n",pre,SNP_pval);
   }
+
+  rmSNPs=angsd::getArg("-rmSNPs",rmSNPs,arguments);
+  if( rmSNPs>0 && doSNP==0 ){
+    fprintf(stderr,"\t-> Problem: You are required to choose a pvalue threshold for SNP calling (e.g. -SNP_pval 1e-6 ) with -rmSNP 1\n");
+    exit(0);
+  } 
+
   if(rmTriallelic)
     SNP_pval_tri = chisq2->invcdf(1-rmTriallelic);
   refName = angsd::getArg("-ref",refName,arguments);
