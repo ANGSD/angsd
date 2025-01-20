@@ -151,7 +151,8 @@ Second iteration of the theta files now contains one raw bgzf compressed data fi
 \subsubsection{Theta definitions}
 Let $\eta$ be the site frequency spectra. Then $\eta_i$ is the posterior probablity of being in frequency $i$. 
 \begin{itemize}
-\item[Watterson] $\sum_{i=1}^{n-1}\eta_i/a^{-1}, a=\sum_{i=1}^{n-1}i$
+\item[Watterson] $\sum_{i=1}^{n-1}\eta_i / a_1$,
+        $a_1=\sum_{i=1}^{n-1} 1/i$
 \item[$\pi$] $ {{n}\choose{2}}^{-1}\sum_{i=1}^{n-1}i(n-i)\eta_i$
 \item[FuLi] $\eta_1$
 \item[FayH] $ {{n}\choose{2}}^{-1}\sum_{i=1}^{n-1}i^2\eta_i$ 
