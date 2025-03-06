@@ -24,6 +24,8 @@ void abcIBS::printArg(FILE *argFile){
   fprintf(argFile,"Optional\n");
   fprintf(argFile,"\t-minMinor\t%d\tMinimum observed minor alleles\n",minMinor);
   fprintf(argFile,"\t-minFreq\t%.3f\tMinimum minor allele frequency\n",minFreq);
+  fprintf(argFile,"\t-maxMinor\t%d\tMaximum observed minor alleles\n",maxMinor);
+  fprintf(argFile,"\t-maxFreq\t%.3f\tMaximum minor allele frequency\n",maxFreq);
   fprintf(argFile,"\t-output01\t%d\toutput 0 and 1s instead of bases\n",output01);
   fprintf(argFile,"\t-maxMis\t\t%d\tMaximum missing bases (per site)\n",maxMis);
   fprintf(argFile,"\t-doMajorMinor\t%d\tuse input files or data to select major and minor alleles\n",majorminor);
@@ -43,6 +45,9 @@ void abcIBS::getOptions(argStruct *arguments){
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   minMinor=angsd::getArg("-minMinor",minMinor,arguments);
   minFreq=angsd::getArg("-minFreq",minFreq,arguments);
+  maxMinor=angsd::getArg("-maxMinor",maxMinor,arguments);
+  maxFreq=angsd::getArg("-maxFreq",maxFreq,arguments);
+
   maxMis=angsd::getArg("-maxMis",maxMis,arguments);
   majorminor=angsd::getArg("-doMajorMinor",majorminor,arguments);
   output01=angsd::getArg("-output01",majorminor,arguments);
@@ -71,6 +76,8 @@ abcIBS::abcIBS(const char *outfiles,argStruct *arguments,int inputtype){
   maxMis=-1;
   minMinor=0;
   minFreq=0;
+  maxMinor=-1;
+  maxFreq=1.1;
   doCount=0;
   majorminor=0;
   output01=0;
@@ -350,8 +357,9 @@ void abcIBS::getHaplo(funkyPars *pars){
     if( minMinor > 0 && minMinor > NnonMis - siteCounts[whichMax] )
       pars->keepSites[s] = 0;
     
-    //remove low freq (freq = major/total)
-    if( minFreq  >  siteCounts[whichMax] * 1.0/NnonMis || 1-minFreq < siteCounts[whichMax] * 1.0/NnonMis )
+    //remove low or highfreq (freq = major/total)
+	  
+    if( minFreq  >  siteCounts[whichMax] * 1.0/NnonMis || 1-minFreq < siteCounts[whichMax] * 1.0/NnonMis || maxFreq > siteCounts[whichMax]  * 1.0/NnonMis )
       pars->keepSites[s] = 0;
      
 
@@ -362,11 +370,13 @@ void abcIBS::getHaplo(funkyPars *pars){
 
       // freq = major/(major + minor)
       double freq = siteCounts[haplo->minor[s]] * 1.0/(siteCounts[haplo->major[s]] + siteCounts[haplo->minor[s]]);
-      if( minFreq  >  freq || 1-minFreq < freq )
+      if( minFreq  >  freq || 1-minFreq < freq || maxFreq  <  freq || (1-maxFreq) > freq )
 	pars->keepSites[s] = 0;
   
 
       if( minMinor > 0 && ( siteCounts[haplo->minor[s]] < minMinor || siteCounts[haplo->major[s]] < minMinor ) )
+	pars->keepSites[s] = 0;
+      if( maxMinor > 0 && ( siteCounts[haplo->minor[s]] > maxMinor || siteCounts[haplo->major[s]] > maxMinor ) )
 	pars->keepSites[s] = 0;
      
  
