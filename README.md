@@ -5,7 +5,7 @@
 =====
 Program for analysing NGS data. 
 
-http://www.popgen.dk/angsd
+https://www.popgen.dk/angsd
  
 Installation:
 =====
