@@ -24,6 +24,8 @@ private:
   int maxMis;
   int minMinor;
   double minFreq;
+  int maxMinor;
+  double maxFreq;
   int makeMatrix;
   int *ibsMatrixAll;
   int *nonMisAll;
