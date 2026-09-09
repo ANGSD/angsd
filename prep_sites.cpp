@@ -216,8 +216,9 @@ filt *filt_read(const char *fname){
     exit(0);
   }
   if(aio::isNewer(fname,bin_name)||aio::isNewer(fname,idx_name)){ 
-    fprintf(stderr,"\t-> Warning: File: \'%s\' looks newer than files: \'%s\',\'%s\'\n\t-> Please delete %s/%s files and rerun.\n",fname,bin_name,idx_name,bin_name,idx_name);
-    //exit(0);
+    fprintf(stderr,"\t-> Error: File: \'%s\' is newer than files: \'%s\',\'%s\'\n\t-> Please delete %s/%s files and rerun.\n",fname,bin_name,idx_name,bin_name,idx_name);
+    fprintf(stderr,"\t-> Refusing to continue with stale site indexes.\n");
+    exit(EXIT_FAILURE);
   }
 
   ret->fp= fopen(idx_name,"r");
@@ -623,5 +624,3 @@ int main(int argc,char**argv){
 }
 
 #endif
-
-
