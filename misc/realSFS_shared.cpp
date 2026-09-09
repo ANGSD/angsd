@@ -266,7 +266,7 @@ void readSFS(const char*fname,size_t hint,double *ret){
     fprintf(stderr,"\t-> Pxroblem with size of dimension of prior %lu vs %lu\n",hint,res.size());
     for(size_t i=0;0&&i<res.size();i++)
       fprintf(stderr,"%zu=%f\n",i,res[i]);
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   for(size_t i=0;i<res.size();i++){
       ret[i] = res[i];
@@ -277,5 +277,3 @@ void readSFS(const char*fname,size_t hint,double *ret){
     ret[i] = log(ret[i]);
   fclose(fp);
 }
-
-
