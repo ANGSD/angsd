@@ -168,7 +168,9 @@ void abcCallGenotypes::getGeno(funkyPars *pars){
 	int geno_Depth = pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3];
 	int mm_Depth = pars->counts[s][i*4+pars->major[s]] + pars->counts[s][i*4+pars->minor[s]];
 
-	if(mm_Depth * 1.0 / geno_Depth < geno_minMM)
+	// A zero-depth genotype has no allele-balance evidence and must remain
+	// missing rather than producing a NaN through division by zero.
+	if(geno_Depth == 0 || mm_Depth * 1.0 / geno_Depth < geno_minMM)
 	  maxGeno=-1;
 
 
