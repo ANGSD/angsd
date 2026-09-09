@@ -69,23 +69,23 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
   doCounts = angsd::getArg("-doCounts",doCounts,arguments);
   if((geno_minDepth!=-1 || geno_maxDepth!=-1 || geno_minMM!=-1 ) &&doCounts==0){
     fprintf(stderr,"Must supply -doCounts to use a minimum depth for GC calling\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   if(geno_maxDepth!=-1&&doCounts==0){
     fprintf(stderr,"Must supply -doCounts to use a maximum depth for GC calling\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   
 
   if(arguments->inputtype!=INPUT_BEAGLE&&doPost==0&&arguments->inputtype!=INPUT_VCF_GP){
     fprintf(stderr,"\n\t-> You need -doPost to call genotypes \n");
-    exit(0);
+    exit(EXIT_FAILURE);
 
   }
 
   if(doPost==1&&doMaf==0){
     fprintf(stderr,"\n\t-> You need -doMaf inorder to get posterior probabilities when using freq as prior\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   minInd=angsd::getArg("-minInd",minInd,arguments);
 
@@ -103,7 +103,7 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doGeno")){
       printArg(stdout);
-      exit(0);
+      exit(EXIT_FAILURE);
     }else
       return;
   }
@@ -280,4 +280,3 @@ void abcCallGenotypes::run(funkyPars *pars){
 
   getGeno(pars);
 }
-
