@@ -713,7 +713,7 @@ void abcSaf::algoJointPost(double **post,
       if(liks[i] < 0.0)
       {
         fprintf(stderr, "Negative genotype probability in %s will exit (site=%d,ind=%d,lik=%f)\n", __FUNCTION__, s, i, liks[i]);
-        exit(0);
+        exit(EXIT_FAILURE);
       }
     }
     memcpy(hj, liks, 3*sizeof(double));
@@ -1775,8 +1775,8 @@ void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites
 	shouldBeOne = exp(res[0]-log(denominator))+exp(res[1]-log(denominator))+exp(res[2]-log(denominator));
       //fprintf(stderr,"this should be one: %f\n",shouldBeOne);
       if((fabs(shouldBeOne-1)>0.000001)){
-	fprintf(stderr,"this should be one: %f at position:(%s,%d)\n",shouldBeOne,header->target_name[refId],posi[it+1]);
-	exit(0);
+        fprintf(stderr,"this should be one: %f at position:(%s,%d)\n",shouldBeOne,header->target_name[refId],posi[it+1]);
+	exit(EXIT_FAILURE);
       }
       
 
