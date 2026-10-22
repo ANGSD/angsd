@@ -5,6 +5,8 @@
 =====
 Program for analysing NGS data. 
 
+Documentation: https://github.com/ANGSD/angsd/wiki
+
 https://www.popgen.dk/angsd
  
 Installation:
