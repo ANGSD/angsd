@@ -1,13 +1,11 @@
 ## [![Build Status](https://github.com/ANGSD/angsd/actions/workflows/build-tests.yml/badge.svg)](https://github.com/ANGSD/angsd/actions/workflows/build-tests.yml) 
 
 
-
+Program for analysing NGS data.
 =====
-Program for analysing NGS data. 
+ 
 
 Documentation: https://github.com/ANGSD/angsd/wiki
-
-https://www.popgen.dk/angsd
  
 Installation:
 =====
