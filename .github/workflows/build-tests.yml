@@ -21,7 +21,7 @@ jobs:
         compiler: [ clang, gcc ]
   
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Install dependencies    
       run: |
         sudo apt-get update;sudo apt-get install -y libbz2-dev liblzma-dev libcurl4-openssl-dev
@@ -43,7 +43,7 @@ jobs:
         git ls-files --others -z -- test | xargs -0 -r cp --parents -t test-output/
     - name: Upload test output
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: test-output-${{ matrix.os }}-${{ matrix.compiler }}
         path: test-output/
