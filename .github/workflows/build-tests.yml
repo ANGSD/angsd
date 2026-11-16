@@ -16,8 +16,9 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-latest ]
+        os: [ ubuntu-22.04, ubuntu-latest ]
         compiler: [ clang, gcc ]
   
     steps:
@@ -36,3 +37,16 @@ jobs:
     - name: Run Unit tests
       run: |
         make test BAMDIR=./smallBam/
+    - name: Collect test output
+      if: always()
+      run: |
+        mkdir -p test-output
+        git ls-files --others -z -- test | xargs -0 -r cp --parents -t test-output/
+    - name: Upload test output
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-output-${{ matrix.os }}-${{ matrix.compiler }}
+        path: test-output/
+        if-no-files-found: warn
+        retention-days: 30
