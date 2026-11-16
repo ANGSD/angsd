@@ -2,7 +2,6 @@ name: build-tests
 
 on:
   push:
-    branches: [ master, develop ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
@@ -16,12 +15,13 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-latest ]
+        os: [ ubuntu-22.04, ubuntu-latest ]
         compiler: [ clang, gcc ]
   
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Install dependencies    
       run: |
         sudo apt-get update;sudo apt-get install -y libbz2-dev liblzma-dev libcurl4-openssl-dev
@@ -36,3 +36,16 @@ jobs:
     - name: Run Unit tests
       run: |
         make test BAMDIR=./smallBam/
+    - name: Collect test output
+      if: always()
+      run: |
+        mkdir -p test-output
+        git ls-files --others -z -- test | xargs -0 -r cp --parents -t test-output/
+    - name: Upload test output
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: test-output-${{ matrix.os }}-${{ matrix.compiler }}
+        path: test-output/
+        if-no-files-found: warn
+        retention-days: 30
