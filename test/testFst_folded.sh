@@ -81,6 +81,10 @@ ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.fold.fst.idx >${ODIR}/pop1.pop2
 ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop3.fold.fst.idx >${ODIR}/pop1.pop3.fst.idx.res.fold 2>>${LOG}
 ${WDIR}/misc/realSFS fst stats ${ODIR}/pop2.pop3.fold.fst.idx >${ODIR}/pop2.pop3.fst.idx.res.fold 2>>${LOG}
 ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.pop3.fold.fst.idx >${ODIR}/pop1.pop2.pop3.fst.idx.res.fold 2>>${LOG}
+echo "Printing per-site fst as text (compared instead of the binary .fst.gz)" >>${LOG} 2>&1
+for IDX in ${ODIR}*.fst.idx; do
+    ${WDIR}/misc/realSFS fst print ${IDX} >${IDX%.idx}.print 2>>${LOG}
+done
 
 
 
