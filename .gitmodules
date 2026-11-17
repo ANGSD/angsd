@@ -1,3 +1,4 @@
 [submodule "htslib"]
 	path = htslib
 	url = https://github.com/samtools/htslib.git
+	branch = develop

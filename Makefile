@@ -50,8 +50,11 @@ endif
 
 .PHONY: .activate_module 
 
+#always build against the newest htslib develop commit (see .gitmodules);
+#htslib's own submodules stay at the commits htslib pins
 .activate_module:
-	git submodule update --init --recursive
+	git submodule update --init --remote htslib
+	git -C htslib submodule update --init --recursive
 	$(MAKE) -C $(HTSSRC)
 
 
