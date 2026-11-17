@@ -56,5 +56,12 @@ echo "You should eyeball the above and see if they are comparable column (1-5,9)
 ##when generated the results:
 ##md5sum tajima/output/*pestPG tajima/output/*.ml tajima/output/*.saf tajima/output/*.gz  >tajima/md5/pestPG.md5sum
 #${MD5}  -c tajima/md5/pestPG.md5sum >>${LOG} 2>&1 || exit 1
+#binary inputs are identical on every platform, so check them exactly
 ${MD5}  -c tajima/md5/pestPG4.md5sum >>${LOG} 2>&1 || exit 1
+
+#the estimates can differ in the last printed digit between platforms,
+#so compare them with the reference values within a small tolerance
+for f in norm.saf.em.ml fold2.saf.em.ml norm.thetaFromSaf.thetas.idx.pestPG fold.thetaFromSaf.thetas.idx.pestPG norm.thetaFromSaf.thetas.idx.win.pestPG fold.thetaFromSaf.thetas.idx.win.pestPG; do
+    ./numcmp.sh tajima/ref/${f} ${ODIR}/${f} >>${LOG} 2>&1 || exit 1
+done
  

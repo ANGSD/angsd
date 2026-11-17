@@ -66,3 +66,9 @@ done
 ##md5sum tajima/output/*pestPG tajima/output/*.ml tajima/output/*.saf tajima/output/*.gz  >tajima/md5/pestPG.md5sum
 #ls fst/output/*|grep -v arg|xargs -n1 md5sum >fst/md5/fst3.md5sum 
 ${MD5}  -c fst/md5/fst3.md5sum >>${LOG} 2>&1 || exit 1
+
+#the sfs estimates and per-site fst differ slightly between platforms, so
+#compare them with fst/ref within a small tolerance. realSFS stops after
+#100 iterations here, so the sfs (.ml) can differ by up to ~2e-7
+#relative; allow 1e-6 for those
+./cmpref.sh fst/ref ${ODIR} 1e-6 >>${LOG} 2>&1 || exit 1
