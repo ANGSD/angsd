@@ -93,3 +93,9 @@ done
 #md5sum fst_folded/output/*|grep -v -P "arg$" >fst_folded/md5/fst.md5sum
 #ls fst_folded/output/*|grep -v arg |xargs -n1 md5sum >fst_folded/md5/fst3.md5sum
 ${MD5}  -c fst_folded/md5/fst3.md5sum >>${LOG} 2>&1 || exit 1
+
+#the sfs estimates and per-site fst differ slightly between platforms, so
+#compare them with fst_folded/ref within a small tolerance. realSFS stops
+#after 100 iterations here, so the sfs (.ml, .ml.fold) can differ by up
+#to ~2e-7 relative; allow 1e-6 for those
+./cmpref.sh fst_folded/ref ${ODIR} 1e-6 >>${LOG} 2>&1 || exit 1
