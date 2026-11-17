@@ -15,7 +15,7 @@ fi
 
 LOG=${0}.log
 rm -rf saf_beagle/output ${LOG}
-echo "Cleaning old output dir saf_beagle" &>>${LOG}
+echo "Cleaning old output dir saf_beagle" >>${LOG} 2>&1
 mkdir -p saf_beagle/output
 ODIR=saf_beagle/output/
 
@@ -27,7 +27,7 @@ TRUTH=saf_beagle/input/true.saf.print
 if [[ ! -d saf_beagle/input ]]; then
   mkdir -p saf_beagle/input
   
-  echo "Generating beagle input" &>>${LOG}
+  echo "Generating beagle input" >>${LOG} 2>&1
   printf "marker allele1 allele2 Ind0 Ind0 Ind0 Ind1 Ind1 Ind1 Ind2 Ind2 Ind2\n" >${BEAG}
   #should all make symmetric SAF centered around mid-freq bin, with different 'peakiness'
   printf "chr1_1 0 1 0.1 0.8 0.1 0.1 0.8 0.1 0.1 0.8 0.1\n" >>${BEAG}
@@ -41,7 +41,7 @@ if [[ ! -d saf_beagle/input ]]; then
   printf "chr1_7 0 1 0.8 0.1 0.1 0.8 0.1 0.1 0.8 0.1 0.1\n" >>${BEAG}
   printf "chr1_8 0 1 0.1 0.1 0.8 0.1 0.1 0.8 0.1 0.1 0.8\n" >>${BEAG}
 
-  echo "Generating true SAF" &>>${LOG}
+  echo "Generating true SAF" >>${LOG} 2>&1
   #symmetric SAF centered around mid-freq bin, with different 'peakiness'
   printf "chr1\t1\t-5.345201\t-3.265759\t-1.405563\t0.000000\t-1.405563\t-3.265759\t-5.345201\n" >${TRUTH}
   printf "chr1\t2\t-1.963610\t-0.851204\t-0.851204\t0.000000\t-0.851204\t-0.851204\t-1.963610\n" >>${TRUTH}
@@ -53,12 +53,12 @@ if [[ ! -d saf_beagle/input ]]; then
   #may need to `touch ${REF}.fai`
 fi
 
-echo "Generating reference fasta" &>>${LOG}
+echo "Generating reference fasta" >>${LOG} 2>&1
 printf ">chr1\nAAAAAAAAAAAAAAA\n" >${REF}
 sleep 2 && printf "chr1\t15\t6\t15\t16\n" >${REF}.fai
 
-echo "Generating saf likelihoods" &>>${LOG}
-$WDIR/angsd -beagle ${BEAG} -ref ${REF} -anc ${REF} -fai ${REF}.fai -out ${ODIR}/out -dosaf 4 &>>${LOG}
+echo "Generating saf likelihoods" >>${LOG} 2>&1
+$WDIR/angsd -beagle ${BEAG} -ref ${REF} -anc ${REF} -fai ${REF}.fai -out ${ODIR}/out -dosaf 4 >>${LOG} 2>&1
 $WDIR/misc/realSFS print ${ODIR}/out.saf.idx 1>${ODIR}/out.saf.print 2>>${LOG}
 
-cmp ${TRUTH} ${ODIR}/out.saf.print >>${LOG} >&1 || exit 1
+cmp ${TRUTH} ${ODIR}/out.saf.print >>${LOG} 2>&1 || exit 1

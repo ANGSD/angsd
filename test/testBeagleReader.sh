@@ -12,17 +12,17 @@ LOG=${0}.log
 rm -f ${LOG}
 
 function f(){
-	cut -f2 --complement $1|sed 1d
+	cut -f1,3- $1|sed 1d
 }
 
 function fz(){
-	gunzip -c $1 | cut -f2 --complement |sed 1d
+	gunzip -c $1 | cut -f1,3- |sed 1d
 }
 
 
 #handle delimiters
 function fzd(){
-	gunzip -c $1 | cut -f2 --complement |sed 1d| cut -d_ -f${2}
+	gunzip -c $1 | cut -f1,3- |sed 1d| cut -d_ -f${2}
 }
 
 
