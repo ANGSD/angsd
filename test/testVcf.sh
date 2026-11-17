@@ -6,6 +6,11 @@ exit
 fi
 
 LOG=${0}.log
+
+MD5=md5sum
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    MD5="$(cd "$(dirname "$0")" && pwd)/md5osx.sh"
+fi
 rm -f ${LOG}
 
 ANGSD=$1
@@ -27,4 +32,4 @@ $ANGSD -vcf-pl ${VCF} -domajorminor 1 -domaf 1 -out ${ODIR}/syv -r 7:14096608-14
 
 $ANGSD -vcf-pl ${VCF} -domajorminor 1 -domaf 1 -out ${ODIR}/otte -rf sites.rf >>${LOG} 2>&1
 
-md5sum  -c ${0}.md5 >>${LOG} 2>&1 || exit 1
+${MD5}  -c ${0}.md5 >>${LOG} 2>&1 || exit 1

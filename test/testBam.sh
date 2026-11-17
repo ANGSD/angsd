@@ -6,6 +6,10 @@ exit
 fi
 
 LOG=${0}.log
+
+md5hash(){
+    if [[ "$OSTYPE" == "darwin"* ]]; then md5 -q; else md5sum | cut -f1 -d" "; fi
+}
 rm -f ${LOG}
 
 ANGSD=$1
@@ -21,7 +25,7 @@ ls $BDIR/*.bam >smallBam.filelist
 #${SAM} mpileup -b smallBam.filelist -r 1:14000000-14030000 -q 0 -Q 0 -Bx 2>>temp.txt |cut -f3 --complement >oldResults/mpile
 #md5=`md5sum oldResults/mpile|cut -f1 -d" "`
 md5=7af69295d04e8b76ebc2073a0d836884
-md5new=`$ANGSD -out temp -bam smallBam.filelist -show 1 -r 1:14000000-14030000 -minMapQ 0 -minQ 0 2>>${LOG}|md5sum |cut -f1 -d" "`
+md5new=`$ANGSD -out temp -bam smallBam.filelist -show 1 -r 1:14000000-14030000 -minMapQ 0 -minQ 0 2>>${LOG}|md5hash`
 RVAL=0
 if [ ! "$md5" = "$md5new"  ] ;then
     echo "--------------"
@@ -37,7 +41,7 @@ fi
 #md5=`md5sum oldResults/mpile30q|cut -f1 -d" "`
 md5=a1cd980300100064e0116bc4a470f787
 
-md5new=`$ANGSD -out temp -bam smallBam.filelist -minMapQ 30 -show 1 -r 1:14000000-14030000 2>>${LOG}|md5sum|cut -f1 -d" "` 
+md5new=`$ANGSD -out temp -bam smallBam.filelist -minMapQ 30 -show 1 -r 1:14000000-14030000 2>>${LOG}|md5hash` 
 
 if [ ! "$md5" = "$md5new"  ] ;then
     echo "--------------"

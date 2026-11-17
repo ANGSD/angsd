@@ -12,53 +12,53 @@ WDIR=$1
 ASSODIR=assotest
 
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso2new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso2new=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso4new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso4new=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso5new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso5new=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yQuant ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso6new=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso6new=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso2binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso2binnew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso4binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso4binnew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso5binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso5binnew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai  -yBin ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso6binnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso6binnew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -bgen ${ASSODIR}/testB13zlib.bgen -fai hg19.fa.fai  -sampleFile ${ASSODIR}/test.sample -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso2binbgennew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso2binbgennew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -bgen ${ASSODIR}/testB13zlib.bgen -fai hg19.fa.fai  -sampleFile ${ASSODIR}/test.sample -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso4binbgennew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso4binbgennew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -bgen ${ASSODIR}/testB13zlib.bgen -fai hg19.fa.fai  -sampleFile ${ASSODIR}/test.sample -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso5binbgennew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso5binbgennew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -bgen ${ASSODIR}/testB13zlib.bgen -fai hg19.fa.fai  -sampleFile ${ASSODIR}/test.sample -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso6binbgennew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso6binbgennew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 
 tmp=`$WDIR/angsd -doMaf 4 -vcf-gp ${ASSODIR}/test.vcf -yQuant ${ASSODIR}/test.phe -doAsso 2 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso2vcfnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso2vcfnew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -vcf-gp ${ASSODIR}/test.vcf -yQuant ${ASSODIR}/test.phe -doAsso 4 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso4vcfnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso4vcfnew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -vcf-gp ${ASSODIR}/test.vcf -yQuant ${ASSODIR}/test.phe -doAsso 5 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso5vcfnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso5vcfnew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 tmp=`$WDIR/angsd -doMaf 4 -vcf-gp ${ASSODIR}/test.vcf -yQuant ${ASSODIR}/test.phe -doAsso 6 -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}`
-asso6vcfnew=`zcat tmp.lrt0.gz | tail -n +2 | cut -f7`
+asso6vcfnew=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
 
 ## check results LRT and beta for each of the 12 analyses give back RVAL which one that fails
 

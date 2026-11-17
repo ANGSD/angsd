@@ -6,6 +6,11 @@ exit
 fi
 
 LOG=${0}.log
+
+MD5=md5sum
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    MD5="$(cd "$(dirname "$0")" && pwd)/md5osx.sh"
+fi
 rm -f ${LOG}
 
 ANGSD=$1
@@ -35,5 +40,5 @@ $ANGSD -out sites/run6 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 
 
 
 cd sites
-md5sum  -c md5orig.orig &>>../${LOG}||exit 8
+${MD5}  -c md5orig.orig >>../${LOG} 2>&1||exit 8
 
