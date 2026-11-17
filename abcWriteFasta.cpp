@@ -102,9 +102,9 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
     return;
   }
   if(seed)
-    srand(seed);
+    srand48(seed);
   else
-    srand(time(0));
+    srand48(time(0));
 
   
   printArg(arguments->argumentFile);

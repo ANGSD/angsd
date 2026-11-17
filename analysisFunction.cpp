@@ -830,7 +830,7 @@ int angsd::getRandomCount(suint *counts, int i,int depth){
   if(depth==0)
     return 4;
 
-  int j = std::rand() % depth;
+  int j = (int)(drand48() * depth);
   int cumSum=0;
   int res=4;
 
@@ -872,7 +872,7 @@ int angsd::getMaxCount(suint *counts,int i, int depth){
 
   if(nMax>1){ // in case of ties
     int j=0;
-    int r = std::rand() % nMax;
+    int r = (int)(drand48() * nMax);
     for(int b=1;b<4;b++){
       if(counts[b+4*i]==counts[whichMax+4*i]){
 	if(r==j){
@@ -992,7 +992,7 @@ int angsd::getRandomCountTotal(suint *counts, int nInd){
   if(depth==0)
     return 4;
 
-  size_t j = std::rand() % depth;
+  size_t j = (size_t)(drand48() * depth);
   size_t cumSum=0;
   int res=4;
 
@@ -1038,7 +1038,7 @@ int angsd::getMaxCountTotal(suint *counts,int nInd){
 
   if(nMax>1){ // in case of ties
     int j=0;
-    int r = std::rand() % nMax;
+    int r = (int)(drand48() * nMax);
      for(int b=1;b<4;b++){
        if( totalCounts[b] == totalCounts[whichMax] ){
 	 if(r==j){

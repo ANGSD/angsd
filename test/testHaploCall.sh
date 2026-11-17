@@ -21,6 +21,6 @@ ODIR=${0}.dir
 mkdir -p ${ODIR}
 
 
-$ANGSD -b smallBam.filelist -docounts 1 -dohaplocall 1 -out ${ODIR}/haplo -nind 2  >>${LOG} 2>&1
+$ANGSD -b smallBam.filelist -docounts 1 -dohaplocall 1 -out ${ODIR}/haplo -nind 2 -seed 1  >>${LOG} 2>&1
 
 ${MD5}  -c ${0}.md5>>${LOG} 2>&1 || exit 1
