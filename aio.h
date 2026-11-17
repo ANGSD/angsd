@@ -1,3 +1,5 @@
+#pragma once
+#include <cstdio>
 #include <vector>
 #include <htslib/bgzf.h>
 #include <htslib/kstring.h>
@@ -17,20 +19,24 @@
  * Macro:[ASSERT]
  * shortcut to evaluate an expression, works the same way as the C-macro assert
  */
-#define ASSERT(expr) if (!((expr))) {fprintf(stderr,"\n\n*******\n[ERROR](%s:%d) %s\n*******\n",__FILE__,__LINE__,#expr);exit(1);}
+#define ASSERT(expr) do { if (!((expr))) {fprintf(stderr,"\n\n*******\n[ERROR](%s:%d) %s\n*******\n",__FILE__,__LINE__,#expr);exit(1);} } while(0)
 
 
 //angsd io
 namespace aio{
-  size_t fsize(const char* fname);
-  int fexists(const char* str);//{///@param str Filename given as a string.
+  size_t fsize(const char* fname);//0 if the file can't be stat'ed
+  int fexists(const char* str);//1 if the file exists
+  //the openFile* functions open prefix+postfix for writing and exit(1) on failure
   FILE *openFile(const char* a,const char* b);
-  FILE *getFILE(const char*fname,const char* mode);
+  FILE *getFILE(const char*fname,const char* mode);//exit(1) on failure
   BGZF *openFileBG(const char* a,const char* b);
   htsFile *openFileHts(const char * a, const char*b);
   htsFile *openFileHtsBcf(const char * a, const char*b);
+  //1 if newer was modified after older; 0 if not, or if either can't be stat'ed
   int isNewer(const char *newer,const char *older);
   ssize_t bgzf_write(BGZF *fp, const void *data, size_t length);
+  //read a whole line into *buf (capacity *l, grown as needed); returns its
+  //length, 0 at end of file; exit(1) on a read error
   int tgets(gzFile gz,char**buf,int *l);
 
 
@@ -51,7 +57,6 @@ namespace aio{
  */
 
   void doAssert(int exp_eval, int exit_code, const char* error_location, const char* exit_text,...);
-  void doAssert(int exp_eval, const char* error_location, const char* exit_text,...);
   void doAssert(int exp_eval, const char* error_location);
   void doAssert(int exp_eval);
 
