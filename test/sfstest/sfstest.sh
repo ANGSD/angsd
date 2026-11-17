@@ -5,7 +5,8 @@ WDIR=$1
 
 GLFINPUT=input/sfstest.glf.gz
 
-LOG=../../testSFS.sh.log
+#absolute path, since the script cd's into input/ and output/ while logging
+LOG="$(cd "$(dirname "$0")/.." && pwd)/testSFS.sh.log"
 
 MD5=md5sum
 if [[ "$OSTYPE" == "darwin"* ]]; then
