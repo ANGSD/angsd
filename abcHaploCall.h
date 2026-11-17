@@ -14,6 +14,7 @@ private:
   //optional arguments
   int maxMis;
   int minMinor;
+  int seed;
 
   //out file
   BGZF* outfileZ;

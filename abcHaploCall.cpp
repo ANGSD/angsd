@@ -9,6 +9,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "abcHaploCall.h"
@@ -25,6 +26,7 @@ void abcHaploCall::printArg(FILE *argFile){
   fprintf(argFile,"Optional\n");
   fprintf(argFile,"\t-minMinor\t%d\tMinimum observed minor alleles\n",minMinor);
   fprintf(argFile,"\t-maxMis\t%d\tMaximum missing bases (per site)\n",maxMis);
+  fprintf(argFile,"\t-seed\t%d\tSeed for the random base (0: seed from the clock)\n",seed);
 
  }
 
@@ -41,6 +43,7 @@ void abcHaploCall::getOptions(argStruct *arguments){
   doCount=angsd::getArg("-doCounts",doCount,arguments);
   minMinor=angsd::getArg("-minMinor",minMinor,arguments);
   maxMis=angsd::getArg("-maxMis",maxMis,arguments);
+  seed=angsd::getArg("-seed",seed,arguments);
 
 
 
@@ -61,6 +64,7 @@ abcHaploCall::abcHaploCall(const char *outfiles,argStruct *arguments,int inputty
   maxMis=-1;
   minMinor=0;
   doCount=0;
+  seed=0;
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doHaploCall")){
@@ -77,7 +81,11 @@ abcHaploCall::abcHaploCall(const char *outfiles,argStruct *arguments,int inputty
     shouldRun[index] =0;
     return;
   }
-  printArg(arguments->argumentFile);  
+  //without -seed, pick a new random base every run
+  if(seed==0)
+    seed=time(NULL);
+  srand48(seed);
+  printArg(arguments->argumentFile);
   //for kputs output
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
 
