@@ -28,7 +28,6 @@
 #include "abcSmartCounts.h"
 #include "abcTemplate.h"
 #include "abcRAD.h"
-#include "abcAncestry.h"
 #include "abcIBS.h"
 #include "abcWriteVcf.h" //<- dump plink files.
 #include "abcPSMC.h"
