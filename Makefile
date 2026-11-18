@@ -34,7 +34,7 @@ endif
 #if htssrc not defined
 else
 
-$(info HTSSRC not defined; using htslib submodule)
+$(info HTSSRC not defined; using ./htslib (newest htslib develop, fetched by make))
 $(info Use `make HTSSRC=/path/to/htslib` to build angsd using a local htslib installation)
 $(info Use `make HTSSRC=systemwide` to build angsd using the systemwide htslib installation)
 
@@ -43,18 +43,29 @@ HTSSRC := $(CURDIR)/htslib
 CPPFLAGS += -I$(HTSSRC)
 LIBHTS := $(HTSSRC)/libhts.a
 LIBS := $(LIBHTS) $(LIBS)
-
-all: .activate_module
+HTSLIB_DEP := .htslib
 
 endif
 
-.PHONY: .activate_module 
+HTSLIB_URL    = https://github.com/samtools/htslib.git
+HTSLIB_BRANCH = develop
 
-#always build against the newest htslib develop commit (see .gitmodules);
-#htslib's own submodules stay at the commits htslib pins
-.activate_module:
-	git submodule update --init --remote htslib
-	git -C htslib submodule update --init --recursive
+.PHONY: .htslib
+
+#always build against the newest htslib develop commit (full clone, so htslib reports its own version correctly):
+# - no ./htslib: clone it
+# - ./htslib is a git checkout: move it to the newest develop (keep the old one if offline)
+# - ./htslib without .git (release tarball): build it as shipped
+.htslib:
+	@if [ ! -e htslib/Makefile ]; then \
+	  git clone --branch $(HTSLIB_BRANCH) --recurse-submodules $(HTSLIB_URL) htslib || exit 1; \
+	elif [ -e htslib/.git ]; then \
+	  if git -C htslib fetch -q --tags $(HTSLIB_URL) $(HTSLIB_BRANCH); then \
+	    git -C htslib checkout -q FETCH_HEAD && git -C htslib submodule update -q --init --recursive || exit 1; \
+	  else \
+	    echo "Warning: could not fetch htslib $(HTSLIB_BRANCH); building with the existing ./htslib"; \
+	  fi; \
+	fi
 	$(MAKE) -C $(HTSSRC)
 
 
@@ -96,12 +107,20 @@ all: $(PROGRAMS) misc
 BAMDIR=""
 BDIR=$(realpath $(BAMDIR))
 
-PACKAGE_VERSION  = 0.941
-
+#version, first one found of:
+# 1) git checkout: git describe, e.g. 0.942 on a tag, 0.942-3-gabc1234(-dirty) after it
+# 2) source tarball: the VERSION file, which git archive fills in (see .gitattributes)
+# 3) unknown
 ifneq "$(wildcard .git)" ""
-PACKAGE_VERSION := $(shell git describe --always --dirty)
-version.h: $(if $(wildcard version.h),$(if $(findstring "$(PACKAGE_VERSION)",$(shell cat version.h)),,force))
+PACKAGE_VERSION := $(shell git describe --tags --match '[0-9]*' --always --dirty 2>/dev/null)
 endif
+ifeq "$(PACKAGE_VERSION)" ""
+PACKAGE_VERSION := $(shell sed -n 's/^\([0-9][^ ]*\).*/\1/p' VERSION 2>/dev/null)
+endif
+ifeq "$(PACKAGE_VERSION)" ""
+PACKAGE_VERSION := unknown
+endif
+version.h: $(if $(wildcard version.h),$(if $(findstring "$(PACKAGE_VERSION)",$(shell cat version.h)),,force))
 
 version.h:
 	echo '#define ANGSD_VERSION "$(PACKAGE_VERSION)"' > $@
@@ -113,6 +132,9 @@ misc: analysisFunction.o bfgs.o prep_sites.o aio.o chisquare.o
 
 -include $(OBJ:.o=.d)
 
+#objects include htslib headers, so ./htslib must be in place first (also with make -j)
+$(OBJ): | $(HTSLIB_DEP)
+
 %.o: %.c
 	$(CC) -c  $(CFLAGS) $*.c
 	$(CC) -MM $(CFLAGS) $*.c >$*.d
@@ -122,7 +144,12 @@ misc: analysisFunction.o bfgs.o prep_sites.o aio.o chisquare.o
 	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
 
-angsd: version.h $(OBJ)
+#relink when htslib was rebuilt (e.g. make moved ./htslib to a newer develop commit)
+ifneq "$(LIBHTS)" ""
+$(LIBHTS): | $(HTSLIB_DEP) ;
+endif
+
+angsd: version.h $(OBJ) $(LIBHTS)
 	$(CXX) $(FLAGS) -o angsd *.o $(LIBS)
 
 

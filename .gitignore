@@ -52,3 +52,6 @@ version.h
 # Development-related files
 vgcore*
 commit_message.txt
+
+# htslib is cloned (newest develop) by make, not tracked
+/htslib/

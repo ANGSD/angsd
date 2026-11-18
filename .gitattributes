@@ -1,0 +1,7 @@
+# git archive (and GitHub's source tarballs) write the version into VERSION,
+# which the Makefile reads when there is no .git
+VERSION export-subst
+
+# not needed to build or test angsd
+.github    export-ignore
+.gitignore export-ignore
