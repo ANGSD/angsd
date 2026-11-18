@@ -1,0 +1,85 @@
+name: release
+
+# Push a version tag on master to make a release:
+#   git tag -a 0.942 -m "angsd 0.942" && git push origin 0.942
+# Tags with a '-' (e.g. 0.942-test1) make a draft release only, for trying this out.
+# Run it by hand (Actions -> release -> Run workflow; GitHub only offers this once the
+# file is on master, but you can then pick any branch) for a dry run: it builds and
+# tests the tarball and uploads it as an artifact, without a release.
+
+on:
+  push:
+    tags: ['[0-9]*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0   # git describe needs the history and tags
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update; sudo apt-get install -y libbz2-dev liblzma-dev libcurl4-openssl-dev
+
+    - name: Version
+      id: v
+      run: |
+        v=$(git describe --tags --match '[0-9]*' --always)
+        if [ "$GITHUB_EVENT_NAME" = push ] && [ "$v" != "$GITHUB_REF_NAME" ]; then
+          echo "::error::git describe says '$v' but the pushed tag is '$GITHUB_REF_NAME' (another tag on the same commit?)"
+          exit 1
+        fi
+        echo "version=$v" >> "$GITHUB_OUTPUT"
+
+    - name: Make source tarball (angsd + the newest htslib develop)
+      run: |
+        v=${{ steps.v.outputs.version }}
+        mkdir dist
+        # git archive fills in VERSION (see .gitattributes), so the tarball knows its version without .git
+        git archive --prefix=angsd-$v/ HEAD | tar -x -C dist
+        test "$(cat dist/angsd-$v/VERSION)" = "$v"
+        # htslib's own "make distdir" exports a buildable snapshot without .git (it writes
+        # htscodecs' version.h); we pin its version text to the exact develop commit
+        git clone -q --branch develop --recurse-submodules https://github.com/samtools/htslib.git htslib-src
+        hv=$(git -C htslib-src describe --always --match '[0-9].[0-9]*')
+        echo "$hv" > dist/htslib-version
+        mkdir dist/angsd-$v/htslib
+        make -C htslib-src distdir distdir=$PWD/dist/angsd-$v/htslib
+        sed -i "s/^VERSION=.*/VERSION=$hv/" dist/angsd-$v/htslib/version.sh
+        tar -C dist -czf dist/angsd-$v.tar.gz angsd-$v
+        rm -rf dist/angsd-$v
+
+    - name: Build and test from the tarball (no .git, like conda and users)
+      run: |
+        v=${{ steps.v.outputs.version }}
+        mkdir build && tar -C build -xzf dist/angsd-$v.tar.gz
+        cd build/angsd-$v
+        make -j4
+        ./angsd 2>&1 | grep -F "angsd version: $v "
+        git clone -q --depth=1 https://github.com/ANGSD/smallBam.git
+        make test BAMDIR=./smallBam/
+
+    - name: Publish release
+      if: github.event_name == 'push'
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        v=${{ steps.v.outputs.version }}
+        draft=""; case "$v" in *-*) draft="--draft" ;; esac
+        gh release create "$v" dist/angsd-$v.tar.gz $draft \
+          --title "angsd $v" \
+          --notes "Source tarball includes htslib develop $(cat dist/htslib-version). Build with \`make\`." \
+          --generate-notes
+
+    - name: Upload tarball (dry run)
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v7
+      with:
+        name: angsd-${{ steps.v.outputs.version }}
+        path: dist/angsd-${{ steps.v.outputs.version }}.tar.gz
