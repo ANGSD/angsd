@@ -1,7 +1,21 @@
 
+#include <climits>
+#include <cstdarg>
 #include "analysisFunction.h"
 #include "beagleReader.h"
 #include "aio.h"
+
+static const char *delims = "\t \r\n";
+
+static void lineError(int lineNo,const char *fmt,...){
+	fprintf(stderr,"\t-> Problem in beagle file at line %d: ",lineNo);
+	va_list ap;
+	va_start(ap,fmt);
+	vfprintf(stderr,fmt,ap);
+	va_end(ap);
+	fprintf(stderr,". Will exit\n");
+	exit(1);
+}
 
 beagle_reader::~beagle_reader(){
 	free(buffer);
@@ -12,223 +26,137 @@ beagle_reader::~beagle_reader(){
 beagle_reader::beagle_reader(gzFile gz_a,const aMap *revMap_a,int intName_a,int &nInd_a){
 	gz=gz_a;
 	revMap=revMap_a;
-	l=128;
 	intName = intName_a;
+	lineNo=0;
+	positions=0;
+	changed=0;
 
-	original=buffer=(char *) calloc(l,sizeof(char));
-	buf=(char *) calloc(l,sizeof(char));
-
-
-	const char *delims = "\t \n";
-
-	int nCol=1;
-
-	int presize=l;
-	aio::tgets(gz,&buffer,&l);
-	if(buffer!=original)
-		original=buffer;
-
-
-	//buf must hold any line that fits in buffer, so give it buffer's
-	//capacity l, not the length of this line
-	if(l>presize){
-		buf=(char*)realloc(buf,l);
-		presize=l;
+	l=128;
+	buffer=(char *) calloc(l,sizeof(char));
+	if(aio::tgets(gz,&buffer,&l)==0){
+		fprintf(stderr,"\t-> Beagle file is empty. Will exit\n");
+		exit(1);
 	}
+	lineNo++;
+	bufSize=l;
+	buf=(char *) malloc(bufSize);
+	strcpy(buf,buffer);
 
-	strtok_r(buffer,delims,&buffer);
-	while(strtok_r(NULL,delims,&buffer))
+	//header: marker allele1 allele2 and three columns per individual
+	int nCol=0;
+	char *save=NULL;
+	for(char *tok=strtok_r(buf,delims,&save);tok;tok=strtok_r(NULL,delims,&save))
 		nCol++;
-	if(nCol % 3 ){
-		fprintf(stderr,"\t-> Number of columns should be a multiple of 3, nCol=%d\n",nCol);
-		exit(0);
-	} 
+	if(nCol<6||nCol % 3){
+		fprintf(stderr,"\t-> Beagle header should have marker, allele1, allele2 and three columns per individual, found %d columns. Will exit\n",nCol);
+		exit(1);
+	}
 	nInd_a=nCol/3-1;
 	nInd = nInd_a;
 }
 
 
-void parsepost(char *buffer,double *post,int nInd,const char *delims){
+//parse the line in buffer. Returns 0 for an empty line.
+//With intName the marker is chr_pos, where chr can contain '_': chr_A_B_123 -> chr: chr_A_B ; pos: 123
+int beagle_reader::parseLine(int *refId,int *posi,char *major,char *minor,double *post){
+	//tokenize a copy, buffer is kept for when the line starts a new chromosome
+	if(bufSize<l){
+		buf=(char*)realloc(buf,l);
+		bufSize=l;
+	}
+	strcpy(buf,buffer);
+
+	char *save=NULL;
+	char *marker=strtok_r(buf,delims,&save);
+	if(marker==NULL)
+		return 0;
+	char *allele1=strtok_r(NULL,delims,&save);
+	char *allele2=strtok_r(NULL,delims,&save);
+	if(allele2==NULL)
+		lineError(lineNo,"expected marker, allele1, allele2 and %d genotype probabilities",3*nInd);
+
+	if(intName){
+		char *us=strrchr(marker,'_');
+		if(us==NULL)
+			lineError(lineNo,"marker \'%s\' is not of the form chr_pos (use -intName 0 for other marker names)",marker);
+		*us='\0';
+		char *end=NULL;
+		long p=strtol(us+1,&end,10);
+		if(end==us+1||*end!='\0'||p<1||p>INT_MAX)
+			lineError(lineNo,"invalid position \'%s\' in marker",us+1);
+		aMap::const_iterator it = revMap->find(marker);
+		if(it==revMap->end())
+			lineError(lineNo,"chromosome \'%s\' is not in the fai file",marker);
+		*refId=it->second;
+		*posi=p-1;
+	}
+
+	*major=refToChar[(unsigned char)allele1[0]];
+	*minor=refToChar[(unsigned char)allele2[0]];
+
 	for(int i=0;i<nInd*3;i++){
-		char *tsk = strtok_r(NULL,delims,&buffer);
-		aio::doAssert(tsk!=NULL,1,AT,"");
-		post[i] = atof(tsk);
+		char *tok=strtok_r(NULL,delims,&save);
+		if(tok==NULL)
+			lineError(lineNo,"found %d genotype probabilities, expected %d",i,3*nInd);
+		char *end=NULL;
+		post[i]=strtod(tok,&end);
+		if(end==tok||*end!='\0')
+			lineError(lineNo,"genotype probability \'%s\' is not a number",tok);
 	}
-}
-
-
-//parse beagle fields
-//
-//chr_A_B_C -> chr: chr_A_B ; pos: C
-//bpost = to give parsepost
-//bufpos = position info
-//buf = contig id
-//bufmaj = major
-//bufmin = minor
-void parse_beagle_fields(char *buffer, char **buf, char **bufpos, char **bufmaj, char **bufmin, char **bpost,const char *delims){
-
-	
-	// copy buffer to working buffer buf
-	// we need to keep buffer as it is 
-	// size of buf is reallocated together with buffer
-	// buff is cleaned together with buffer
-	strcpy(*buf,buffer);
-
-	char *a;
-	
-	//line= chr_a_b_123 g c 0.05 0.05 0.05
-	//point to the first delim
-	//a=chr_a_b_123
-	a = strtok_r(*buf,delims,bpost);
-
-	//bpost is now after first delim
-	//bpost=g c 0.05 0.05 0.05
-	// fprintf(stderr,"\n\nbpost=%s\n",*bpost);
-	if ((a=strrchr(a,'_'))!=NULL){
-		//a= _123
-		//a+1= 123
-
-		*bufpos=a+1;
-		//bufpos now stores the position info=123
-	}
-
-	//here buf=chr_a_b_123
-	
-	//terminate after contig id
-	//write \0 to the start of position info
-	*strrchr(*buf,'_')='\0';
-
-	//here buf now contains contig id=chr_a_b
-	//extract major and minor from bpost
-	*bufmaj=&refToChar[strtok_r(*bpost,delims,bpost)[0]];
-	*bufmin=&refToChar[strtok_r(NULL,delims,bpost)[0]];
-
+	if(strtok_r(NULL,delims,&save)!=NULL)
+		lineError(lineNo,"more than the %d genotype probabilities given by the header",3*nInd);
+	return 1;
 }
 
 
 funkyPars *beagle_reader::fetch(int chunksize){
-
-	static const char *delims = "\t \n";
-	double **post = new double*[chunksize];
-
-	// double **postbuf = new double*[chunksize];
-
-	char *bufpos;
-	char *bufmaj;
-	char *bufmin;
-	char *bpost;
-
 	funkyPars * myfunky =funkyPars_init();
 	myfunky->posi = new int[chunksize];
 	myfunky->major = new char[chunksize];
 	myfunky->minor = new char[chunksize];
-
-
-	for(int s=0;s<chunksize;s++){
+	double **post = new double*[chunksize];
+	for(int s=0;s<chunksize;s++)
 		post[s] = new double[nInd*3];
-	}
 
 	int nSites=0;
-	static int positions =0;//every site is a new position across different chunks
-	static int lastRefId =-1;
-	static int changed =0;
-READAGAIN:
-	if(changed){
-		//parse an entire site:
-		// fprintf(stdout,"nSites %d\n",nSites);
-		myfunky->refId = lastRefId;
+	//buffer still holds a line from the previous call that started a new chromosome,
+	//so parse it before reading more
+	int haveLine = changed;
+	changed=0;
+	while(haveLine||aio::tgets(gz,&buffer,&l)){
+		if(!haveLine)
+			lineNo++;
+		haveLine=0;
 
-		parse_beagle_fields(buffer,&buf,&bufpos,&bufmaj,&bufmin,&bpost,delims);
-
-		myfunky->posi[nSites] = atoi(bufpos)-1;
-
-		myfunky->major[nSites] = *bufmaj;
-		myfunky->minor[nSites] = *bufmin;
-
-		parsepost(bpost,post[nSites],nInd,delims);    
-
-		nSites++;
-		changed =0;
-	}
-	buffer=original;
-
-
-	int presize=l;
-
-	while(aio::tgets(gz,&buffer,&l)) {
-
-
-		//keep buf as large as buffer (see the constructor)
-		if(l>presize){
-			buf=(char*)realloc(buf,l);
-			presize=l;
-		}
-
-		if(buffer!=original)
-			original=buffer;
-
-
+		int refId=0;
+		int posi=0;
+		if(!parseLine(&refId,&posi,&myfunky->major[nSites],&myfunky->minor[nSites],post[nSites]))
+			continue;//empty line
 		if(intName){
-
-			//identifier is chr_pos or snp name
-
-			parse_beagle_fields(buffer,&buf,&bufpos,&bufmaj,&bufmin,&bpost,delims);
-
-			//buf now contains contig id
-			aMap ::const_iterator it = revMap->find(buf);
-
-			if(it==revMap->end()){
-				fprintf(stderr,"\t-> Problem finding chr:%s from faifile\n",buf);
-				exit(0);
-			}
-			if(lastRefId==-1){
-				lastRefId = it->second;
-			}
-			if(lastRefId!=it->second){
-				changed =1;
-				lastRefId = it->second;
-				if(nSites==0){// if chromosome if finish then read next one
-					goto READAGAIN; 
-				}
+			if(nSites>0&&refId!=myfunky->refId){
+				//new chromosome: keep the line in buffer for the next call
+				changed=1;
 				break;
 			}
-			lastRefId = it->second;
-			myfunky->refId = lastRefId;
-			myfunky->posi[nSites] = atoi(bufpos)-1;
-		}
-
-		else{
-
-		parse_beagle_fields(buffer,&buf,&bufpos,&bufmaj,&bufmin,&bpost,delims);
-			myfunky->refId = 0;
-			myfunky->posi[nSites] = positions++;
-		}
-
-
-		myfunky->major[nSites] = *bufmaj;
-		myfunky->minor[nSites] = *bufmin;
-
-		parsepost(bpost,post[nSites],nInd,delims);
-		buffer=original;
-
+		}else
+			posi=positions++;
+		myfunky->refId=refId;
+		myfunky->posi[nSites]=posi;
 		nSites++;
 		if(nSites>=chunksize)
 			break;
 	}
 
-	if(nSites<chunksize){
-		for(int s=nSites;s<chunksize;s++)
-			delete[] post[s];
-	}
+	for(int s=nSites;s<chunksize;s++)
+		delete[] post[s];
 	myfunky->nInd=nInd;
 	myfunky->post=post;
 	myfunky->numSites = nSites;
 
-	if(nSites==0 & changed==0){
-		fprintf(stdout,"Done reading beagle\n");
+	if(nSites==0){
+		fprintf(stderr,"\t-> Done reading beagle\n");
 		funkyPars_destroy(myfunky);
 		return(NULL);
-
 	}
 	return(myfunky);
 }
