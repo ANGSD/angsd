@@ -87,7 +87,7 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   char *sites = NULL;
   sites = angsd::getArg("-sites",sites,arguments);
   if(sites==NULL&&doMajorMinor==3){
-    fprintf(stderr,"\t-> You need to supply -sites for -domajorminor 3 to work. These has to have either 4 og 6 columns\n");
+    fprintf(stderr,"\t-> You need to supply -sites for -domajorminor 3 to work. These have to have either 4 or 7 columns\n");
     exit(0);
   }
   free(sites);

@@ -383,6 +383,10 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
 
     char *tok=NULL;
     while(((tok=strtok(NULL,delims)))){
+      if(nRead==7){
+	fprintf(stderr,"\t-> Problem with number of columns in file at line %d. Should be 2,3,4 or 7 columns\n",atline);
+	SIG_COND=0;goto cleanup;
+      }
       parsed[nRead++]=tok;
     }
     //it is now tokenized int int parsed
@@ -418,7 +422,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
 	
       }
     }else if(nCols!=nRead){
-      fprintf(stderr,"\t-> Problem with number of columns in file. Should be 2,3,4 for entire file (%d vs %d)\n",nCols,nRead);
+      fprintf(stderr,"\t-> Problem with number of columns in file. Should be 2,3,4 or 7 for entire file (%d vs %d)\n",nCols,nRead);
       SIG_COND=0;goto cleanup;
     }
     
