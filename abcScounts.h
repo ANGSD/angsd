@@ -5,8 +5,9 @@ class abcScounts:public abc{
 private:
   int doScounts;
   BGZF *outfile;
-char *vcfname;
-aMap am;
+  char *vcfname;
+  aMap am;
+  size_t nSkippedDepth;//sites skipped because a base had depth>3
 public:
   void run(funkyPars  *pars);
   void clean(funkyPars *pars);  
