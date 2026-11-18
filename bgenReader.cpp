@@ -1,460 +1,284 @@
-#include <stdio.h>
-#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <cmath>
-#include <errno.h>
-#include <cstdio>//fprintf etc
-#include <cstdlib>// calloc etc
-#include <zlib.h>// zlib
-#include <cstring> //memcpy
+#include <cstdint>
+#include <cstdarg>
+#include <zlib.h>
 #include "analysisFunction.h"
 #include "bgenReader.h"
-#include "aio.h"
 
 #ifdef __ZSTD__
-#include <zstd.h>// zstandard
+#include <zstd.h>
 #endif
 
-//returns 0 if not indel higher values indicates indel
-int isindel(bgenLine *bgen){
-  
-  int isindel = 0;
-  
-  //we should stop if it is not a SNP
-  if(bgen->la_l1 > 1 | bgen->la_l2 > 1){
-    isindel = 1;
-  }
-  
-  return isindel;
-  
+static void bgenError(const char *fname,const char *fmt,...) __attribute__((format(printf,2,3)));
+static void bgenError(const char *fname,const char *fmt,...){
+	fprintf(stderr,"\t-> Problem with bgen file \'%s\': ",fname);
+	va_list ap;
+	va_start(ap,fmt);
+	vfprintf(stderr,fmt,ap);
+	va_end(ap);
+	fprintf(stderr,". Will exit\n");
+	exit(1);
 }
 
-//returns chr
-int getChr(bgenLine *bgen){
-
-  //see if string is empty - meaning there is no line to read in
-  if(bgen->Lchr[0]=='\0'){
-    return -9;
-  }
-  
-  //convering it to chr if not valid number throws error
-  int chr = atoi(bgen->Lchr);    
-  if(chr==0){
-    fprintf(stderr,"\t-> Chromosome is not a valid number! Chromosome is: \'%s\'\n",bgen->Lchr);
-    exit(0);
-  }
-
-  return chr;
-  
+void bgenReader::readBytes(void *dst,size_t size,const char *what){
+	if(size>0&&fread(dst,1,size,fp)!=size)
+		bgenError(fname,"file ends while reading %s of variant %u",what,sitesRead+1);
 }
 
-header *bgenReader::parseheader(FILE *fp){
-
-  header *hd = new header;
-  //header block
-  aio::doAssert(fread(&hd->LH,sizeof(unsigned),1,fp)==1,1,AT,"");
-  aio::doAssert(fread(&hd->M,sizeof(unsigned),1,fp)==1,1,AT,"");
-  aio::doAssert(fread(&hd->N,sizeof(unsigned),1,fp)==1,1,AT,"");
-  //in order to have space for terminating char
-  char magic[5]={'\0','\0','\0','\0','\0'};
-  aio::doAssert(fread(magic,sizeof(char),4,fp)==4,1,AT,"");
-  //aio::doAssert compare magic value
-  aio::doAssert(strcmp(magic,"bgen") or strcmp(magic,"0000"),1,AT,"");
-
-  unsigned int fda_l = hd->LH-20;
-  //always use calloc
-  char *fda =(char*) calloc(fda_l,1);//free data area
-  aio::doAssert(fread(fda,sizeof(char),fda_l,fp)==fda_l,1,AT,"");
-  unsigned flags;
-  aio::doAssert(fread(&flags,sizeof(unsigned),1,fp)==1,1,AT,"");
-  //for getting the first 2 bits - and with 3, for getting 2 first bits (max value of first 2 bits)
-  hd->compressed = flags & 3;
-  aio::doAssert(hd->compressed>=0&&hd->compressed<3,1,AT,"");
-  //take the five first bits and move 2 to the right (2-5 bit)
-  hd->layout = (flags>>2) & 15;
-  //we only have implemented for layout 2, which is the recommended version
-  if(hd->layout==0){
-    fprintf(stderr,"file has unsupported layout: 0\n");
-    exit(0);
-  } else if(hd->layout==1){
-    fprintf(stderr,"file has layout 1 which is currently unsupported in ANGSD\n");
-    exit(0);
-  } else if(hd->layout==2){
-    //fprintf(stderr,"file has supported layout\n");
-  } else{
-    fprintf(stderr,"file has unsupported layout: %i\n",hd->layout);
-    exit(0);
-  }
-
-  //move them 31 places to the right (leftmost bit) - could also have used &
-  hd->si = flags>>31;
-  if(hd->si==1){
-    unsigned LSI;
-    aio::doAssert(fread(&LSI,sizeof(unsigned),1,fp)==1,1,AT,"");
-    unsigned N2;
-    aio::doAssert(fread(&N2,sizeof(unsigned),1,fp)==1,1,AT,"");
-    aio::doAssert(hd->N==N2,1,AT,"");
-    hd->sampleids= new char*[hd->N];
-    for(uint i=0;i<hd->N;i++){
-      //short is 2 bytes
-      unsigned short LSI_l;
-      aio::doAssert(fread(&LSI_l,sizeof(unsigned short),1,fp)==1,1,AT,"");
-      hd->sampleids[i] =(char*) calloc(LSI_l+1,sizeof(char));
-      aio::doAssert(fread(hd->sampleids[i],sizeof(char),LSI_l,fp)==LSI_l,1,AT,"");
-    }
-  }
-
-  return hd;
+//string prefixed by its length stored in lenBytes (2 or 4) bytes
+std::string bgenReader::readString(int lenBytes,const char *what){
+	uint32_t len=0;
+	if(lenBytes==2){
+		uint16_t l16;
+		readBytes(&l16,2,what);
+		len=l16;
+	}else
+		readBytes(&len,4,what);
+	std::string s(len,'\0');
+	if(len>0)
+		readBytes(&s[0],len,what);
+	return s;
 }
 
-void cleanBgen(bgenLine *bgen){
+void bgenReader::readHeader(){
+	uint32_t offset,LH,M,N,flags;
+	if(fread(&offset,4,1,fp)!=1||fread(&LH,4,1,fp)!=1||fread(&M,4,1,fp)!=1||fread(&N,4,1,fp)!=1)
+		bgenError(fname,"file is too short to contain a header");
+	char magic[4];
+	if(fread(magic,1,4,fp)!=4)
+		bgenError(fname,"file is too short to contain a header");
+	if(memcmp(magic,"bgen",4)&&memcmp(magic,"\0\0\0\0",4))
+		bgenError(fname,"not a bgen file (magic number is not \'bgen\')");
+	if(LH<20||LH>offset)
+		bgenError(fname,"invalid header length %u (offset is %u)",LH,offset);
+	if(fseek(fp,LH-20,SEEK_CUR)!=0||fread(&flags,4,1,fp)!=1)//skip the free data area
+		bgenError(fname,"file is too short to contain a header");
 
-  free(bgen->Lchr);
-  free(bgen->Lrsid);
-  free(bgen->Lid);
-  free(bgen->la1);
-  free(bgen->la2);
-  
-}
-
-//implement this for .bgen simply parse a line and store it
-// reads stuff into funkyPars *r
-bgenLine *bgenReader::parseline(FILE *fp,header *hd){
-
-  bgen->indis = hd->N;
-
-  unsigned short Lid_l;
-  char *Lid;
-  //read in how many variant ID is
-  aio::doAssert(fread(&Lid_l,sizeof(unsigned short),1,fp)==1,1,AT,"");
-  bgen->Lid =(char*) calloc(Lid_l+1,sizeof(char));
-  aio::doAssert(fread(bgen->Lid,sizeof(char),Lid_l,fp)==Lid_l,1,AT,"");
-  
-  unsigned short Lrsid_l;
-  aio::doAssert(fread(&Lrsid_l,sizeof(unsigned short),1,fp)==1,1,AT,"");
-  bgen->Lrsid =(char*) calloc(Lrsid_l+1,sizeof(char));
-  aio::doAssert(fread(bgen->Lrsid,sizeof(char),Lrsid_l,fp)==Lrsid_l,1,AT,"");
-
-  unsigned short Lchr_l;
-  aio::doAssert(fread(&Lchr_l,sizeof(unsigned short),1,fp)==1,1,AT,"");
-  bgen->Lchr =(char*) calloc(Lchr_l+1,sizeof(char));
-  aio::doAssert(fread(bgen->Lchr,sizeof(char),Lchr_l,fp)==Lchr_l,1,AT,"");
-
-  aio::doAssert(fread(&bgen->vpos,sizeof(unsigned),1,fp)==1,1,AT,"");
-  aio::doAssert(fread(&bgen->nal,sizeof(unsigned short),1,fp)==1,1,AT,"");
-  char *la1;
-  char *la2;
-  aio::doAssert(fread(&bgen->la_l1,sizeof(unsigned),1,fp)==1,1,AT,"");
-
-  bgen->la1 =(char*) calloc(bgen->la_l1+1,sizeof(char));
-  aio::doAssert(fread(bgen->la1,sizeof(char),bgen->la_l1,fp)==bgen->la_l1,1,AT,"");
-  aio::doAssert(fread(&bgen->la_l2,sizeof(unsigned),1,fp)==1,1,AT,"");
-  
-  bgen->la2 =(char*) calloc(bgen->la_l2+1,sizeof(char));
-  aio::doAssert(fread(bgen->la2,sizeof(char),bgen->la_l2,fp)==bgen->la_l2,1,AT,"");
-        
-  //done reading variant information;
-  // uncompressed size of genotype probs
-  unsigned C;
-  aio::doAssert(fread(&C,sizeof(unsigned),1,fp)==1,1,AT,"");
-  // compressed size of genotype probs
-  unsigned D;
-  if(hd->compressed !=0)
-    aio::doAssert(fread(&D,sizeof(unsigned),1,fp)==1,1,AT,"");
-  else
-    D=C;
-
-  int zstdOK = 0;
-  
-  //to check that ZSTD is avaiable if a ZSTD file is supplied
-#ifdef __ZSTD__
-  zstdOK = 1;  
+	compressed = flags & 3;
+	int layout = (flags>>2) & 15;
+	if(layout!=2)
+		bgenError(fname,"layout %d is not supported, only layout 2 is",layout);
+	if(compressed==3)
+		bgenError(fname,"unknown compression type 3");
+#ifndef __ZSTD__
+	if(compressed==2)
+		bgenError(fname,"it is zstd compressed, but angsd is compiled without zstd (compile with WITH_ZSTD=1)");
 #endif
-  
-  if(!zstdOK && hd->compressed==2){
-    fprintf(stderr,"file has ZSTD compression, however it has not been compiled with the ZSTD library!\n");
-    exit(0);    
-  }
-  
-  //now do magic decompression
-  // probability data storage,
-  // we round up to nearst 32 bit
-  // division removes everyhting after "." - same as ceiling function
-  // we allocate 10 extra bytes, so that when we read in 8 bytes, we will not go into unallocated memory
-  unsigned char *pds=(unsigned char*) calloc(4*(D/4+10),sizeof(unsigned char));
-  
-  unsigned char *upds=(unsigned char*) calloc(C-4,sizeof(unsigned char));
-  
-  if(hd->compressed==0){
-    aio::doAssert(fread(pds,sizeof(unsigned char),C,fp)==C,1,AT,"");
-  } else if(hd->compressed==1){
-    //added this as otherwise, does not read from current position in file
-    aio::doAssert(fread(upds,sizeof(unsigned char),C-4,fp)==C-4,1,AT,"");
-    //zlib https://gist.github.com/arq5x/5315739
-    z_stream infstream;
-    infstream.zalloc = Z_NULL;
-    infstream.zfree = Z_NULL;
-    infstream.opaque = Z_NULL;
+	if(N==0||N>INT32_MAX/3)
+		bgenError(fname,"invalid number of samples %u",N);
+	nInd = N;
+	nVariants = M;
 
-    // setup "b" as the input and "c" as the compressed output    
-    infstream.avail_in = C-4;
-    infstream.next_in = (Bytef *)upds; // input char array
-    infstream.avail_out = D; // size of output
-    infstream.next_out = (Bytef *)pds; // output char array
-    
-    // the actual DE-compression work.
-    inflateInit(&infstream);
-    inflate(&infstream, Z_NO_FLUSH);
-    inflateEnd(&infstream);
-  } 
+	//sample identifiers (flags>>31) are not used, the variant data starts after offset+4 bytes
+	if(fseek(fp,(long)offset+4,SEEK_SET)!=0)
+		bgenError(fname,"cannot seek to the first variant");
+}
+
+bgenReader::bgenReader(char *fname_a,const aMap *revMap_a,int intName_a,int &nInd_a){
+	fprintf(stderr,"\t-> NB -bgen input is experimental and only lightly tested. Only biallelic, unphased, diploid SNPs are used\n");
+	fprintf(stderr,"\t-> NB Please report anything that looks strange at https://github.com/ANGSD/angsd/issues\n");
+	fname = fname_a;
+	revMap = revMap_a;
+	fp = fopen(fname,"rb");
+	if(fp==NULL){
+		fprintf(stderr,"\t-> Problem opening bgen file: \'%s\'. Will exit\n",fname);
+		exit(1);
+	}
+	readHeader();
+	nInd_a = nInd;//number of samples comes from the file
+	sitesRead = 0;
+	probs = new double[3*nInd];
+	refId = -1;
+	pos = -1;
+	major = minor = 4;
+	changed = 0;
+	nSkipWarn = 0;
+	nPloidyWarn = 0;
+}
+
+bgenReader::~bgenReader(){
+	fclose(fp);
+	delete [] probs;
+}
+
+//decode the genotype probabilities in pds into probs.
+//returns 1 if they are used, 0 if the site should be skipped
+int bgenReader::decodeProbs(){
+	size_t D = pds.size();
+	if(D<10+(size_t)nInd)
+		bgenError(fname,"genotype data of variant %u is too short",sitesRead);
+	const unsigned char *p = &pds[0];
+	uint32_t N2;memcpy(&N2,p,4);
+	uint16_t K2;memcpy(&K2,p+4,2);
+	if(N2!=(uint32_t)nInd)
+		bgenError(fname,"variant %u has %u samples, the header says %d",sitesRead,N2,nInd);
+	if(K2!=alleles.size())
+		bgenError(fname,"variant %u has %u alleles in the genotype data and %zu in the variant data",sitesRead,K2,alleles.size());
+	const unsigned char *pmis = p+8;//per sample: missing in the top bit, ploidy in the lower 6
+	int phased = p[8+nInd];
+	int B = p[9+nInd];
+	if(B<1||B>32)
+		bgenError(fname,"variant %u uses %d bits per probability, must be 1 to 32",sitesRead,B);
+	if(phased){
+		if(nSkipWarn++<10)
+			fprintf(stderr,"\t-> Skipping phased site %s:%d (this message is printed at most 10 times)\n",chr.c_str(),pos+1);
+		return 0;
+	}
+
+	//unphased biallelic: a sample with ploidy k has k stored values
+	size_t nBits = 0;
+	for(int i=0;i<nInd;i++)
+		nBits += (size_t)(pmis[i]&63)*B;
+	if(D<10+(size_t)nInd+(nBits+7)/8)
+		bgenError(fname,"genotype data of variant %u is too short",sitesRead);
+
+	const unsigned char *X = p+10+nInd;
+	double scal = pow(2,B)-1;
+	uint64_t mask = (B==32)?0xffffffffULL:((1ULL<<B)-1);
+	size_t bit = 0;
+	for(int i=0;i<nInd;i++){
+		int ploidy = pmis[i]&63;
+		int missing = pmis[i]>>7;
+		uint32_t v[2]={0,0};
+		for(int j=0;j<ploidy;j++){
+			//read B bits starting at bit, they span at most 5 bytes
+			uint64_t val=0;
+			size_t byte=bit/8;
+			size_t nBytes=(bit%8+B+7)/8;
+			for(size_t b=0;b<nBytes;b++)
+				val |= (uint64_t)X[byte+b]<<(8*b);
+			if(j<2)
+				v[j] = (uint32_t)((val>>(bit%8))&mask);
+			bit += B;
+		}
+		double *pr = probs+3*i;
+		if(missing||ploidy!=2){
+			if(ploidy!=2&&!missing&&nPloidyWarn++<10)
+				fprintf(stderr,"\t-> Sample %d has ploidy %d at %s:%d, it is treated as missing (this message is printed at most 10 times)\n",i,ploidy,chr.c_str(),pos+1);
+			pr[0]=pr[1]=pr[2]=1.0/3.0;
+			continue;
+		}
+		pr[0] = (1.0*v[0])/scal;
+		pr[1] = (1.0*v[1])/scal;
+		pr[2] = 1-(1.0*v[0])/scal-(1.0*v[1])/scal;
+		if(pr[2]<0)//rounding
+			pr[2] = 0;
+		double sum = pr[0]+pr[1]+pr[2];
+		pr[0] /= sum;
+		pr[1] /= sum;
+		pr[2] /= sum;
+	}
+	return 1;
+}
+
+//read the next variant. Returns 1 if it is a site that is used, 0 if it is skipped
+int bgenReader::readVariant(){
+	sitesRead++;
+	readString(2,"the variant id");
+	readString(2,"the rsid");
+	chr = readString(2,"the chromosome");
+	uint32_t vpos;
+	uint16_t K;
+	readBytes(&vpos,4,"the position");
+	readBytes(&K,2,"the number of alleles");
+	alleles.resize(K);
+	for(int k=0;k<K;k++)
+		alleles[k] = readString(4,"the alleles");
+
+	uint32_t C,D;
+	readBytes(&C,4,"the genotype data length");
+	if(compressed){
+		if(C<4)
+			bgenError(fname,"invalid genotype data length %u for variant %u",C,sitesRead);
+		readBytes(&D,4,"the genotype data length");
+		C -= 4;
+	}else
+		D = C;
+	raw.resize(C);
+	readBytes(C?&raw[0]:NULL,C,"the genotype data");
+
+	aMap::const_iterator it = revMap->find(chr.c_str());
+	if(it==revMap->end())
+		bgenError(fname,"chromosome \'%s\' of variant %u is not in the fai file",chr.c_str(),sitesRead);
+	if(vpos<1||vpos>INT32_MAX)
+		bgenError(fname,"invalid position %u for variant %u",vpos,sitesRead);
+	refId = it->second;
+	pos = vpos-1;
+
+	if(K!=2||alleles[0].size()!=1||alleles[1].size()!=1){
+		if(nSkipWarn++<10)
+			fprintf(stderr,"\t-> Skipping site %s:%d, only biallelic SNPs are used (this message is printed at most 10 times)\n",chr.c_str(),pos+1);
+		return 0;
+	}
+	major = refToChar[(unsigned char)alleles[0][0]];
+	minor = refToChar[(unsigned char)alleles[1][0]];
+
+	if(compressed==0)
+		pds.swap(raw);
+	else{
+		pds.resize(D);
+		if(compressed==1){
+			uLongf destLen = D;
+			int ret = uncompress(D?&pds[0]:NULL,&destLen,C?&raw[0]:NULL,C);
+			if(ret!=Z_OK||destLen!=D)
+				bgenError(fname,"cannot decompress the genotype data of variant %u (zlib error %d)",sitesRead,ret);
+		}
 #ifdef __ZSTD__
-  else if(hd->compressed==2) {
-    //zstd
-    fread(upds,sizeof(unsigned char),C-4,fp);
-    ZSTD_decompress(pds,D,upds,C-4);
-  }
-#endif  
-
-  //data is now in pds;//<- probability datastorage
-  unsigned int N2;memcpy(&N2,pds,4);
-
-  aio::doAssert(hd->N==N2,1,AT,""); 
-
-  unsigned short nal2;memcpy(&nal2,pds+4,2);
-  aio::doAssert(bgen->nal==nal2,1,AT,"");
-  char pmin=pds[6];
-  char pmax=pds[7];
-  char pmis[hd->N];//missingness and ploidy
-  memcpy(pmis,pds+8,hd->N);
-  for(uint ii=0;ii<hd->N;ii++){
-    //extract MSB - if this indi has missing
-    int missing = pmis[ii]>>7;
-    // extract first 6 bits ploidy of this individual
-    int ploidy = pmis[ii] & 63;
-  }
-  
-  //jump 8+N bytes in pds array, and copy to phased variable
-  unsigned char phased;memcpy(&phased,pds+8+hd->N,1);
-  //number of bits used for each genotype prob - copied like phased variable
-  // can be from 1 to 32 bits
-  unsigned char B;memcpy(&B,pds+8+hd->N+1,1);
-  
-  // where genotype probs start
-  unsigned char *X=pds+10+hd->N;  
-  double scal = pow(2,B)-1;  
-  uint to_vals[2];
-  int at=0;
-  unsigned int mask = pow(2,B)-1;
-
-  for(int ii=0;ii<2*hd->N;ii++){
-    
-    // which bits are we reading in, for which indi (ii goes through 2*indis)
-    // point dingdong points to closest byte (before the bit)
-    size_t *dingdong =(size_t *) (X +ii*B/8);//<- parantheses are important
-    size_t dingdong_val = *dingdong; //copy value not pointer.
-    
-    //now we work with dingdong_val
-    int shift = ii*B-8*(ii*B/8);//shift is how much we need to shift such that our data stats at bit0. NB paranthesis is important
-    //fprintf(stderr,"shift_how_much[%d]:%d\n",ii,shift);
-    dingdong_val = dingdong_val >> shift ; //<- notice that shift right >>means shifting towards the least signifcant bit
-    
-    uint tmptmp = 0;
-    memcpy(&tmptmp,&dingdong_val,4);//only copy 32bits
-    tmptmp = tmptmp &mask ;
-    to_vals[ii %2 ] = tmptmp;
-    
-    //below should be the same
-    if( ii %2 ){
-
-      uint p11 = to_vals[0];
-      // genotype prob HE allele 1 - genotype is 4 bits or 0.5 bytes
-      uint p12 = to_vals[1];
-
-      bgen->probs[at] = (1.0*p11)/scal;
-      bgen->probs[at+1] = (1.0*p12)/scal;
-      bgen->probs[at+2] = 1-(1.0*p11)/scal-(1.0*p12)/scal;
-      
-      if(bgen->probs[at+2]<0) //<-needed?
-	bgen->probs[at+2] = 0;
-      
-      double sum = bgen->probs[at]+bgen->probs[at+1]+bgen->probs[at+2];
-      
-      bgen->probs[at] = bgen->probs[at] / sum;
-      bgen->probs[at+1] = bgen->probs[at+1] / sum;
-      bgen->probs[at+2] = bgen->probs[at+2] / sum;
-
-      at+=3;
-      
-    }
-        
-  }
-
-  free(pds);
-  free(upds);
-
-  return bgen;
-  
+		else{
+			size_t ret = ZSTD_decompress(D?&pds[0]:NULL,D,C?&raw[0]:NULL,C);
+			if(ZSTD_isError(ret)||ret!=D)
+				bgenError(fname,"cannot decompress the genotype data of variant %u (zstd)",sitesRead);
+		}
+#endif
+	}
+	return decodeProbs();
 }
 
-
-void bgenReader::funkyCopy(bgenLine *bgen, funkyPars *r, int &balcon){    
-
-
-  aMap ::const_iterator it = revMap->find(bgen->Lchr);
-  if(it==revMap->end()){
-    fprintf(stderr,"\t-> Problem finding chr:%s from faifile\n",bgen->Lchr);
-    exit(0);
-  }
-  r->refId = it->second;
-
-  //because it is assumed to be 0-indexed in ANGSD
-  r->posi[balcon] = bgen->vpos-1;
-  //we do not know which one is major and minor, but probaly like beagle files
-  //TO DO check which one is major and minor
-  r->major[balcon] = refToChar[bgen->la1[0]];
-  r->minor[balcon] = refToChar[bgen->la2[0]];
-  //so that site is analysed - apparently also how many individuals are included in abcFreq
-  r->keepSites[balcon] = bgen->indis;
-
-  for(int at=0;at<3*bgen->indis;at+=3){
-    //jumps 3 at a time
-    r->post[balcon][at] = bgen->probs[at];
-    r->post[balcon][at+1] = bgen->probs[at+1];
-    r->post[balcon][at+2] = bgen->probs[at+2];
-  }
-
-  balcon++;
-  
+void bgenReader::copySite(funkyPars *r,int s){
+	r->posi[s] = pos;
+	r->major[s] = major;
+	r->minor[s] = minor;
+	r->keepSites[s] = nInd;
+	memcpy(r->post[s],probs,3*nInd*sizeof(double));
 }
-
 
 funkyPars *bgenReader::fetch(int chunksize){
+	funkyPars *r = funkyPars_init();
+	r->posi = new int[chunksize];
+	r->post = new double*[chunksize];
+	r->major = new char[chunksize];
+	r->minor = new char[chunksize];
+	r->keepSites = new int[chunksize];
+	r->nInd = nInd;
+	for(int s=0;s<chunksize;s++)
+		r->post[s] = new double[nInd*3];
 
-  funkyPars *r = funkyPars_init();
-  
-  //using refId for chr
-  //TO DO add chr field in funkyPars struct
-  //r->refId=new int[chunkSize];
-  r->posi=new int[chunksize];
-  
-  r->post=new double*[chunksize];
-  r->major = new char[chunksize];
-  r->minor = new char[chunksize];
-  r->keepSites = new int[chunksize];
-  r->refId = 0;
+	int nSites = 0;
+	if(changed){//first site of this chromosome was read by the previous call
+		r->refId = refId;
+		copySite(r,nSites++);
+		changed = 0;
+	}
+	while(nSites<chunksize&&sitesRead<nVariants){
+		if(!readVariant())
+			continue;
+		if(nSites>0&&refId!=r->refId){
+			changed = 1;
+			break;
+		}
+		r->refId = refId;
+		copySite(r,nSites++);
+	}
 
-  r->post = new double*[chunksize];
-  r->nInd = nInd;
-  
-  for(int s=0;s<chunksize;s++)
-    r->post[s] = new double[nInd*3];
-  
-  //keeps track of which site we are at (we might skip some non diallelic sites)
-  int balcon=0;
-
-  int n    = 0;  // total number of records in file
-  int nsnp = 0;  // number of SNP records in file
-  
-  //go to statement
- never_ever: //haha
-  
-  //if acpy not null - read read that has survived
-  //member variable of vcfReader class 
-  if(readAgain){
-    
-    //read stored line of file    
-    //bgen = parseline(bgenFile,hd);
-    //curChr=getChr(bgen);
-        
-    funkyCopy(bgen,r,balcon);
-
-    cleanBgen(bgen);
-    
-    readAgain = 0;
-
-    //after read line we have update prevChr - current chr will be updated at the beginning of the loop
-    prevChr=curChr;
-        
-  }
-
-  //TO DO what if fewer sites than one chunck??
-  //balcon how many ok sites
-  while(balcon<chunksize && balcon<sites && sitesRead<sites) {
-
-    bgen = parseline(bgenFile,hd);
-
-    // to get chr
-    curChr=getChr(bgen);
-
-    //keep track of how many sites read in total
-    sitesRead++;    
-    
-    //meaning there is no more data to be read no chr to read..
-    if(curChr==-9){
-      break;
-    }
-    
-    if(prevChr==-1){
-      prevChr=curChr;
-    }
-      
-    n++;
-        
-    //skip nonsnips - gives back 0 if indel
-    //reads first X bytes of line to see if a SNP, then jumps back X bytes
-    if(isindel(bgen)){
-      prevChr=curChr;
-      if(onlyPrint>0){
-	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",r->posi[0]+1);//<-should it be pos[?]?
-	onlyPrint--;
-      }      
-      continue;
-    }
-        
-    nsnp++;
-
-    //if we are changing chromosomes
-    if(prevChr!=curChr){
-
-      readAgain=1;
-  
-      //I do not think I have to take a copy I can just
-      if(balcon==0){
-	goto never_ever;
-      }
-      //acpy=bgen_dup(rec);
-      break;
-    }
-
-    //copy data from line into funkyPars
-    funkyCopy(bgen,r,balcon);
-
-    cleanBgen(bgen);
-    
-    prevChr=curChr;
-
-  }
-
-  //to delete sites, if we do not have a whole chunck, but we have allocated a whole chunck
-  if(balcon<chunksize){    
-    for(int s=balcon;s<chunksize;s++){
-      delete [] r->post[s];
-    }
-  }
-  
-  // to catch when no more data for this chr and chunk is over
-  //if(balcon==0&&bcf_retval==0)
-  //  goto never_ever;
-
-  //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
-  
-  r->numSites=balcon;
-  if(r->numSites==0){    
-    funkyPars_destroy(r);
-    r=NULL;
-  }
-
-  return r;
- 
+	for(int s=nSites;s<chunksize;s++)
+		delete [] r->post[s];
+	r->numSites = nSites;
+	if(nSites==0){
+		funkyPars_destroy(r);
+		return NULL;
+	}
+	return r;
 }
-
-
