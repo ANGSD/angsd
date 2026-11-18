@@ -120,13 +120,13 @@ void abcFreq::getOptions(argStruct *arguments){
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
   //  fprintf(stderr,"%d %d\n",inputtype,INPUT_VCF_GL);
   if((doPost||doMaf) &&doMajorMinor==0 &&inputtype!=INPUT_VCF_GL){
-    if(doMaf!=4){
+    if(abs(doMaf)!=4){
       fprintf(stderr,"\t-> Potential problem: You are required to choose a major/minor estimator (-doMajorMinor)\n");
       exit(0);
     }
   } 
-  if(doPost==1 &&doMaf==0){
-    fprintf(stderr,"\t-> Potential problem: You are required to choose a maf estimator (-doMaf) with -doPost 1\n");
+  if((doPost==1||doPost==4) &&doMaf==0){
+    fprintf(stderr,"\t-> Potential problem: You are required to choose a maf estimator (-doMaf) with -doPost %d\n",doPost);
     exit(0);
   } 
 
@@ -158,12 +158,9 @@ void abcFreq::getOptions(argStruct *arguments){
     SNP_pval = tmp;
     double pre = SNP_pval;
     //    fprintf(stderr,"ind:%f :%p: \t",SNP_pval,chisq3);
-    if(SNP_pval <=1){
-      if(abs(doMaf) ==2)
-	SNP_pval = chisq1->invcdf(1-SNP_pval);
-      if(abs(doMaf) ==1)
-	SNP_pval = chisq1->invcdf(1-SNP_pval);
-    }
+    //LRT for both knownEM (doMaf&1) and unknownEM (doMaf&2) is chisq(1)
+    if(SNP_pval <=1 && (abs(doMaf) & 3))
+      SNP_pval = chisq1->invcdf(1-SNP_pval);
     if( nInd <2 ){
       fprintf(stderr,"\t-> Problem: You need more than one individual to call SNPs \n");
       exit(0);
@@ -230,15 +227,15 @@ void abcFreq::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> Only \'-doMaf 4\' can be performed on posterior input\n");
     exit(0);
   }
-  if(doMaf & 4){
-    
+  if(abs(doMaf) & 4){
+
     if(inputtype!=INPUT_BEAGLE && inputtype!=INPUT_BGEN && inputtype!=INPUT_VCF_GP ){
       fprintf(stderr,"\t-> \'-doMaf 4\' can only be performed on genotype probabilities -dopost, -vcf-gp, -beagle \n");
       exit(0);
     }
   }
 
-  if((inputtype==INPUT_BAM || inputtype==INPUT_PILEUP )&& GL==0 &&doMaf!=8){
+  if((inputtype==INPUT_BAM || inputtype==INPUT_PILEUP )&& GL==0 &&abs(doMaf)!=8){
     fprintf(stderr,"Error: For sequence data (BAM,pileups) likehoods (-GL) must be specified for frequency estimation\n");
     exit(0);
   }
@@ -328,13 +325,12 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
     // does not write file if doing asso - unless forceMaf flag
     if(!ifDoAsso || forceMaf){
       outfileZ = aio::openFileBG(outfiles,postfix);
-    }    
-    if(beagleProb){
-      postfix=".beagle.gprobs.gz";
-      outfileZ2 = aio::openFileBG(outfiles,postfix);
     }
   }else
     doMaf=abs(doMaf);
+  //beagle gprobs is requested explicitly, so write it even when .mafs dumping is suppressed
+  if(beagleProb)
+    outfileZ2 = aio::openFileBG(outfiles,".beagle.gprobs.gz");
 
   //print header  
   kputs("chromo\tposition\tmajor\tminor\t",&bufstr);
@@ -360,10 +356,9 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
       kputs("pu-EM\t",&bufstr);
   }
   kputs("nInd\n",&bufstr);
-  if(outfileZ!=NULL){
+  if(outfileZ!=NULL)
     aio::bgzf_write(outfileZ,bufstr.s,bufstr.l);
-    bufstr.l=0;
-  }
+  bufstr.l=0;//discard the .mafs header if it is not written, so it doesn't end up in .beagle.gprobs.gz
   if(beagleProb){
     kputs("marker\tallele1\tallele2",&bufstr);
     for(int i=0;i<arguments->nInd;i++){
@@ -406,7 +401,7 @@ void abcFreq::print(funkyPars *pars) {
 
   freqStruct *freq =(freqStruct *) pars->extras[index];
 
-  for(int s=0;s<pars->numSites;s++) {
+  for(int s=0;outfileZ!=NULL && s<pars->numSites;s++) {
     if(pars->keepSites[s]==0)
       continue;
     //plugin chr,pos,major,minor
@@ -621,7 +616,7 @@ void abcFreq::run(funkyPars *pars) {
     double **post = new double*[pars->numSites];
     double **like=angsd::get3likes(pars);
     for(int s=0;s<pars->numSites;s++){
-      post[s] = new double [3*pars->nInd];
+      post[s] = new double [3*pars->nInd]();//zeroed: rows for dropped sites are never filled
 
       if(pars->keepSites[s]==0){
 	delete [] like[s];
@@ -655,13 +650,12 @@ void abcFreq::run(funkyPars *pars) {
 	  double aac = fl->ac[pars->posi[s]];
 	  double aan = fl->an[pars->posi[s]];
 	  double af = (aac+exp_obs_allels_in_ngs)/(1.0*(aan+pars->keepSites[s]));
-	  fprintf(stderr,"aac:%f aan:%f nal_in_ngs:%f af:%f\n",aac,aan,exp_obs_allels_in_ngs,af);
 	  make_post(like[s],post[s],af,pars->nInd,skipMissing);
 	}
 
       }
       else{
-	fprintf(stderr,"[%s] doPost must be 1 or 2 \n",__FUNCTION__);
+	fprintf(stderr,"[%s] doPost must be 1, 2, 3 or 4\n",__FUNCTION__);
 	exit(0);
       
       }
@@ -792,11 +786,12 @@ void abcFreq::likeFreq(funkyPars *pars,freqStruct *freq){//method=1: bfgs_known 
     freq->freq = freq->freq_EM;
   
   //thorfinn april 16 2012
+  //same priority as freq->freq above (knownEM before unknownEM) so maf and lrt come from the same model
   for(int s=0;s<pars->numSites;s++){
-    if((doMaf &2) && doSNP )
-      freq->lrt[s]=freq->lrt_EM_unknown[s];
-    else if((doMaf &1) && doSNP)
+    if((doMaf &1) && doSNP)
       freq->lrt[s]=freq->lrt_EM[s];
+    else if((doMaf &2) && doSNP )
+      freq->lrt[s]=freq->lrt_EM_unknown[s];
   }
 
 }
@@ -824,11 +819,16 @@ double abcFreq::emFrequencyNoFixed_F(double *loglike,int numInds, int iter,doubl
   loglikeGeno =new double*[3];
   
   for(int j=0;j<3;j++){
-    loglikeGeno[j] = new double[numInds*3]; 
+    loglikeGeno[j] = new double[numInds*3];
+    //only kept individuals, packed, so likeFixedMinor(...,keepInd) sees exactly those
+    int k=0;
     for(int i=0;i<numInds;i++){
-      loglikeGeno[j][i*3+0]=loglike[i*10+angsd::majorminor[major][major]];
-      loglikeGeno[j][i*3+1]=loglike[i*10+angsd::majorminor[major][iMinor[j]]];
-      loglikeGeno[j][i*3+2]=loglike[i*10+angsd::majorminor[iMinor[j]][iMinor[j]]];
+      if(keep!=NULL && keep[i]==0)
+	continue;
+      loglikeGeno[j][k*3+0]=loglike[i*10+angsd::majorminor[major][major]];
+      loglikeGeno[j][k*3+1]=loglike[i*10+angsd::majorminor[major][iMinor[j]]];
+      loglikeGeno[j][k*3+2]=loglike[i*10+angsd::majorminor[iMinor[j]][iMinor[j]]];
+      k++;
     }
   }
   
@@ -857,7 +857,7 @@ double abcFreq::emFrequencyNoFixed_F(double *loglike,int numInds, int iter,doubl
     sum=0;
     correctInd=keepInd;
     for(int i=0;i<numInds;i++){
-      if(keep[i]==0)
+      if(keep!=NULL && keep[i]==0)
         continue;
       for(int j=0;j<3;j++){
 	W0[j]=exp(loglike[i*10+angsd::majorminor[major][major]]) * (pow(1-p,2) + (1-p)*p*indF[i]);
@@ -865,6 +865,7 @@ double abcFreq::emFrequencyNoFixed_F(double *loglike,int numInds, int iter,doubl
 	W2[j]=exp(loglike[i*10+angsd::majorminor[iMinor[j]][iMinor[j]]]) * (pow(p,2) + (1-p)*p*indF[i]);
 	if(W0[j]+W1[j]+W2[j]<0.0000001)
 	  continue;
+	sum+=(W1[j]+2*W2[j])/(2*(W0[j]+W1[j]+W2[j]))*normWeight[j];
       }
     }
     
@@ -882,7 +883,7 @@ double abcFreq::emFrequencyNoFixed_F(double *loglike,int numInds, int iter,doubl
 
       for(int i=0;i<numInds;i++){
 	for(int j=0;j<10;j++){
-	  if(keep[i]==0)
+	  if(keep!=NULL && keep[i]==0)
 	    continue;
 	  fprintf(stderr,"%f\t",loglike[i*10+j]);
 	}
@@ -918,11 +919,16 @@ double abcFreq::emFrequencyNoFixed(double *loglike,int numInds, int iter,double 
   loglikeGeno =new double*[3];
 
   for(int j=0;j<3;j++){
-    loglikeGeno[j] = new double[numInds*3]; 
+    loglikeGeno[j] = new double[numInds*3];
+    //only kept individuals, packed, so likeFixedMinor(...,keepInd) sees exactly those
+    int k=0;
     for(int i=0;i<numInds;i++){
-      loglikeGeno[j][i*3+0]=loglike[i*10+angsd::majorminor[major][major]];
-      loglikeGeno[j][i*3+1]=loglike[i*10+angsd::majorminor[major][iMinor[j]]];
-      loglikeGeno[j][i*3+2]=loglike[i*10+angsd::majorminor[iMinor[j]][iMinor[j]]];
+      if(keep!=NULL && keep[i]==0)
+	continue;
+      loglikeGeno[j][k*3+0]=loglike[i*10+angsd::majorminor[major][major]];
+      loglikeGeno[j][k*3+1]=loglike[i*10+angsd::majorminor[major][iMinor[j]]];
+      loglikeGeno[j][k*3+2]=loglike[i*10+angsd::majorminor[iMinor[j]][iMinor[j]]];
+      k++;
     }
   }
 
@@ -977,7 +983,7 @@ double abcFreq::emFrequencyNoFixed(double *loglike,int numInds, int iter,double 
 
       for(int i=0;i<numInds;i++){
 	for(int j=0;j<10;j++){
-	  if(keep[i]==0)
+	  if(keep!=NULL && keep[i]==0)
 	    continue;
 	  fprintf(stderr,"%f\t",loglike[i*10+j]);
 	}
@@ -1150,9 +1156,11 @@ double abcFreq::likeFixedMinor(double p,double *logLikes,int numInds){
 
 
 
+//used by abcAsso on case/control subsets of the individuals. indF is indexed by the
+//full sample, so it cannot be applied here; the score is likeFixedMinor (HWE) anyway.
 double abcFreq::emFrequency_ext(double *loglike,int numInds,int *keep,int keepInd){
 
-  return (emFrequency(loglike,numInds,emIter,EM_start,keep,keepInd));
+  return (emFrequencyHWE(loglike,numInds,emIter,EM_start,keep,keepInd));
 }
 
 
@@ -1239,10 +1247,17 @@ double abcFreq::emFrequency(double *loglike,int numInds, int iter,double start,i
 
   if(keepInd == 0)
     return 0.0;
-  
+
   if(indF!=NULL)
     return emFrequency_F(loglike,numInds,iter,start,keep,keepInd);
-    
+  return emFrequencyHWE(loglike,numInds,iter,start,keep,keepInd);
+}
+
+double abcFreq::emFrequencyHWE(double *loglike,int numInds, int iter,double start,int *keep,int keepInd){
+
+  if(keepInd == 0)
+    return 0.0;
+
   float W0;
   float W1;
   float W2;
@@ -1353,7 +1368,7 @@ int abcFreq::algoGeno(double *liks,int major_offset,int minor_offset,int numInds
     
     
     //check for underflow error, this should only occur once in a blue moon
-    if(std::isnan(Paa)||std::isnan(PAa)||std::isnan(Paa)){
+    if(std::isnan(PAA)||std::isnan(PAa)||std::isnan(Paa)){
       printf("PAA=%f\tPAa=%f\tPaa=%f\n",PAA,PAa,Paa);
     }
     
@@ -1451,7 +1466,7 @@ int abcFreq::algoGeno(double *liks,int major_offset,int minor_offset,int numInds
 
 
 	//check for underflow error, this should only occur once in a blue moon
-	if(std::isnan(Paa)||std::isnan(PAa)||std::isnan(Paa)){
+	if(std::isnan(PAA)||std::isnan(PAa)||std::isnan(Paa)){
 	  fprintf(stderr,"PAA=%f\tPAa=%f\tPaa=%f\n",PAA,PAa,Paa);
 	}
 	
@@ -1603,6 +1618,7 @@ int abcFreq::algoGeno(double *liks,int major_offset,int minor_offset,int numInds
 	shouldBeOne = exp(res[0]-log(denominator))+exp(res[1]-log(denominator))+exp(res[2]-log(denominator));
       //fprintf(stderr,"this should be one: %f\n",shouldBeOne);
       if((fabs(shouldBeOne-1)>0.000001)){
+	delete [] hj;
 	return 1;
       }
       
