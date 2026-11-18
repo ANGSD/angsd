@@ -29,8 +29,10 @@ beagle_reader::beagle_reader(gzFile gz_a,const aMap *revMap_a,int intName_a,int 
 		original=buffer;
 
 
+	//buf must hold any line that fits in buffer, so give it buffer's
+	//capacity l, not the length of this line
 	if(l>presize){
-		buf=(char*)realloc(buf,strlen(buffer)+1);
+		buf=(char*)realloc(buf,l);
 		presize=l;
 	}
 
@@ -156,8 +158,9 @@ READAGAIN:
 	while(aio::tgets(gz,&buffer,&l)) {
 
 
+		//keep buf as large as buffer (see the constructor)
 		if(l>presize){
-			buf=(char*)realloc(buf,strlen(buffer)+1);
+			buf=(char*)realloc(buf,l);
 			presize=l;
 		}
 
