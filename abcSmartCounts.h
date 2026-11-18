@@ -9,6 +9,8 @@ private:
   BGZF *fbin;
   int curChr;
   int len;
+  unsigned char **counts;//per chromosome counts of A,C,G,T, capped at 255
+  void writeChr();
 public:
   abcSmartCounts(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcSmartCounts();
@@ -19,4 +21,3 @@ public:
   void printArg(FILE *argFile);
   void changeChr(int refId);
 };
-
