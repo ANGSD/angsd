@@ -125,6 +125,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing bgen reader"
+time ./testBgen.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with bgen reader exit code: $?"
+    RVAL=1
+fi
+
 
 exit ${RVAL}
 
