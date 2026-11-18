@@ -78,6 +78,7 @@ public:
   static double likeNoFixedMinor(double p,double *logLikes,int numInds,int major);
   static double emFrequency_F(double *loglike,int numInds, int iter,double start,int *keep,int keepInd);
   static double emFrequency(double *loglike,int numInds, int iter,double start,int *keep,int keepInd);
+  static double emFrequencyHWE(double *loglike,int numInds, int iter,double start,int *keep,int keepInd);
   static double emFrequency_ext(double *loglike,int numInds,int *keep,int keepInd);
   static double likeFixedMinor(double p,double *logLikes,int numInds);
   static double isMultiAllelic(double *loglike,int numInds, int iter,double start,int *keep,int keepInd,int major,int posi);
