@@ -26,13 +26,10 @@ jobs:
       run: |
         sudo apt-get update;sudo apt-get install -y libbz2-dev liblzma-dev libcurl4-openssl-dev
         git clone --depth=1 https://github.com/ANGSD/smallBam.git
-        git clone --depth=1 --recursive https://github.com/samtools/htslib
-    - name: Compile dependencies (htslib)
+    - name: Compile htslib, angsd and misc/* (plain make, as users do; make fetches htslib)
       run: |
-        cd htslib;make    
-    - name: Compile main program (angsd and misc/*)
-      run: |
-        make HTSSRC=htslib/
+        make CC=${{ matrix.compiler }} CXX=${{ matrix.compiler == 'clang' && 'clang++' || 'g++' }}
+        ./angsd 2>&1 | grep "angsd version"
     - name: Run Unit tests
       run: |
         make test BAMDIR=./smallBam/

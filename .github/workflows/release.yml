@@ -1,9 +1,9 @@
-name: release
+name: Generate Release
 
 # Push a version tag on master to make a release:
 #   git tag -a 0.942 -m "angsd 0.942" && git push origin 0.942
 # Tags with a '-' (e.g. 0.942-test1) make a draft release only, for trying this out.
-# Run it by hand (Actions -> release -> Run workflow; GitHub only offers this once the
+# Run it by hand (Actions -> Generate Release -> Run workflow; GitHub only offers this once the
 # file is on master, but you can then pick any branch) for a dry run: it builds and
 # tests the tarball and uploads it as an artifact, without a release.
 

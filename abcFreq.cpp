@@ -4,9 +4,6 @@
 
   gnu license, mit, bsd whatever free license
 
-  BUGS:
-  phat doesn't put data into freq->freq. Maybe this should be fixed, in either case, nobody is using the phat estimator
-
 */
 
 #include <cmath>

@@ -1,11 +1,10 @@
-Program now requires htslib. You compile the program using Make.
+See README.md (section "Installation") for how to build angsd.
 
-You have two options 1) Link against a local directory containing htslib 2) Link against a systemwide installation
+Short version:
+  git clone https://github.com/angsd/angsd.git
+  cd angsd
+  make            # fetches and builds the newest htslib develop into ./htslib
 
-1)
-Make HTSSRC=../htsdir
-
-2)
-Make
-
-thorfinn@binf.ku.dk 14Nov2015
+To use an htslib you already have instead:
+  make HTSSRC=/path/to/htslib
+  make HTSSRC=systemwide
