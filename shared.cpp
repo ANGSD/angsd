@@ -65,15 +65,16 @@ void init(void *arg){
   }
   maxThreads=angsd::getArg("-nThreads",maxThreads,arguments);
   maxThreads=angsd::getArg("-P",maxThreads,arguments);
-  if(maxThreads>10){
-    fprintf(stderr,"\t-> You have choosen to supply a very high number of threads. The number of threads will be capped at 8\n");
-    maxThreads = 8;
+  const int maxAllowedThreads = 8;
+  if(maxThreads>maxAllowedThreads){
+    fprintf(stderr,"\t-> You have choosen to supply a very high number of threads. The number of threads will be capped at %d\n",maxAllowedThreads);
+    maxThreads = maxAllowedThreads;
   }
   nQueueSize = angsd::getArg("-nQueueSize",nQueueSize,arguments);
   howOften = angsd::getArg("-howOften",howOften,arguments);
 
   if(howOften<0){
-	  fprintf(stderr,"\n\nError: -howOften is set to %d. This is not allowed. Acceptable values are:\n\t-howOften 0\tDisable the program progress printing\n\t-howOften <positive_integer>\tDefine how often the program should show the progress\n\n\n");
+	  fprintf(stderr,"\n\nError: -howOften is set to %d. This is not allowed. Acceptable values are:\n\t-howOften 0\tDisable the program progress printing\n\t-howOften <positive_integer>\tDefine how often the program should show the progress\n\n\n",howOften);
 	  exit(1);
   }
 
@@ -95,8 +96,11 @@ void init(void *arg){
 }
 
 
+void join_slave2();
+
 void destroy_shared(){
   //  fprintf(stderr,"\t-> Calling destroy\n");
+  join_slave2();//-nThreads 2 worker is not counted in curRunning
   while(1){
     pthread_mutex_lock(&counterMut);
     if(curRunning==0&&printer.contains()==0)
@@ -240,24 +244,40 @@ void *slave(void *ptr){
 }
 
 
+//-nThreads 2: one worker thread analyses and prints a chunk while the main thread reads the next.
+//The main thread joins the previous worker before starting a new one, which keeps chunks in order.
+//slave2Thread and slave2Running are only touched by the main thread.
+pthread_t slave2Thread;
+int slave2Running = 0;
+
 void *slave2(void *ptr){
   funkyPars *p = (funkyPars *) ptr;
   if(p->killSig==0)
     main_analysis(p);
   printFunky(p);
-  pthread_mutex_unlock( &counterMut );
-  pthread_exit(NULL);
+  return NULL;
+}
+
+//wait for the -nThreads 2 worker, if any, to finish its chunk
+void join_slave2(){
+  if(slave2Running==0)
+    return;
+  int ret = pthread_join(slave2Thread,NULL);
+  if(ret!=0){
+    fprintf(stderr,"[%s] Problem joining thread: %s\n",__FUNCTION__,strerror(ret));
+    exit(1);
+  }
+  slave2Running = 0;
 }
 
 void master2(funkyPars *p){
-  //  fprintf(stderr,"[%s] Number of threads running=%d\n",__FUNCTION__,curRunning);
-  pthread_mutex_lock( &counterMut );
-  if(pthread_create( &thread1, NULL, slave2, (void*) p)){
-    fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(errno),p->chunkNumber);
-    exit(0);
+  join_slave2();
+  int ret = pthread_create( &slave2Thread, NULL, slave2, (void*) p);
+  if(ret!=0){
+    fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(ret),p->chunkNumber);
+    exit(1);
   }
-  
-  pthread_detach(thread1);
+  slave2Running = 1;
 }
 
 
@@ -300,6 +320,7 @@ void changeChr(int refId){
 
 
 void waiter(int refId){
+  join_slave2();//-nThreads 2 worker is not counted in curRunning
   //fprintf(stderr,"_%s_\n",__FUNCTION__);fflush(stderr);
 
   //change of chr detected wait untill all threads are done
