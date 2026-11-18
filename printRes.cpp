@@ -1,89 +1,52 @@
 #include <pthread.h>
-#include <iostream>
 #include "printRes.h"
 
 
-void printRes::popPars(funkyPars *fp){
-  /*
-  if(fp->killSig)
-    fprintf(stderr,"received killsig in [%s]\n",__FUNCTION__);
-  else
-    fprintf(stderr,"\t->printing chunkNumber:%d current number of chunks waiting to be printed: %lu\n",fp->chunkNumber,myMap.size());
-  */
-
-  // fflush(stderr);
-  lastChunk++;
-
-  //unlock the mutex while printing and allowing new data to be added
-      /*
-#ifdef USE_SPINLOCK  
-  pthread_spin_unlock(&printMut);
-#else
-  pthread_mutex_unlock(&printMut);
-#endif
-    */
-
-  printFunky(fp);//fp doesn't exists anymore from this point
-  
-  //lock again to avoid strange things happening. (actually this migth not be nescessary)
-     /*
-#ifdef USE_SPINLOCK  
-  pthread_spin_lock(&printMut);
-#else
-  pthread_mutex_lock(&printMut);
-#endif
-     */
-  //fprintf(stderr,"")
-
-}
-
+//print all chunks that are next in order, must be called with printMut held
 void printRes::loopyLoop(){
-  if(!myMap.empty()){
+  while(!myMap.empty()){
     std::map<int,funkyPars*>::iterator it=myMap.begin();
-    if(it->first<lastChunk){
+    if(it->first<=lastChunk){
       fprintf(stderr,"Error, corruption in chunkordering in the printout function:\n");
-      fprintf(stderr,"Last chunk=%d\t, smallest chunk now:%d\n",lastChunk,it->first);      
+      fprintf(stderr,"Last chunk=%d\t, smallest chunk now:%d\n",lastChunk,it->first);
       fflush(stderr);
-      exit(0);
+      exit(1);
     }
-    if(it->first==(lastChunk+1)){
-      if(it->first!=it->second->chunkNumber){
-	fprintf(stderr,"Error, corruption in chunkordering in the printout function:\n");
-	fprintf(stderr,"[%s] first=%d second->chunkNumber=%d\n",__FUNCTION__,it->first,it->second->chunkNumber);
-	fflush(stderr);
-	exit(0);
-      }
-      popPars(it->second);
-      myMap.erase(it);
-      loopyLoop();
+    if(it->first!=lastChunk+1)
+      break;//the next chunk in order is still being computed
+    if(it->first!=it->second->chunkNumber){
+      fprintf(stderr,"Error, corruption in chunkordering in the printout function:\n");
+      fprintf(stderr,"[%s] first=%d second->chunkNumber=%d\n",__FUNCTION__,it->first,it->second->chunkNumber);
+      fflush(stderr);
+      exit(1);
     }
-    
+    funkyPars *fp = it->second;
+    myMap.erase(it);
+    lastChunk++;
+    printFunky(fp);//fp doesn't exists anymore from this point
   }
 }
 
 
-void printRes::prop(funkyPars *fp){
-  //  fprintf(stderr,"[%s]. propping chunking number:%d\n",__FUNCTION__,fp->chunkNumber);
-#ifdef USE_SPINLOCK  
-  pthread_spin_lock(&printMut);
-#else
+//myMap is modified by worker threads in prop() under printMut,
+//so reading its size must also hold printMut
+size_t printRes::contains(){
   pthread_mutex_lock(&printMut);
-#endif
-  //  fprintf(stderr,"after lock\n");
-  // fflush(stderr);
-  // contains();
-  // if(fp->chunkNumber-1==lastChunk){
-  // popPars(fp);
-    //}else{
-    //  fprintf(stderr,"inserting :%d\n",fp->chunkNumber);
-    //    fflush(stderr);
-    myMap.insert(std::pair<int,funkyPars *>(fp->chunkNumber,fp));
-    //}
-  loopyLoop();
-#ifdef USE_SPINLOCK  
-  pthread_spin_unlock(&printMut);
-#else
+  size_t n = myMap.size();
   pthread_mutex_unlock(&printMut);
-#endif
+  return n;
 }
 
+//called by the worker threads when a chunk is done.
+//printing is kept under printMut so output is written by one thread at a time and in order
+void printRes::prop(funkyPars *fp){
+  pthread_mutex_lock(&printMut);
+  if(!myMap.insert(std::pair<int,funkyPars *>(fp->chunkNumber,fp)).second){
+    fprintf(stderr,"Error, corruption in chunkordering in the printout function:\n");
+    fprintf(stderr,"[%s] chunkNumber=%d was received twice\n",__FUNCTION__,fp->chunkNumber);
+    fflush(stderr);
+    exit(1);
+  }
+  loopyLoop();
+  pthread_mutex_unlock(&printMut);
+}
