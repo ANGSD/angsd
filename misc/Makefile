@@ -32,7 +32,7 @@ bindir      = $(exec_prefix)/bin
 
 INSTALL = install
 INSTALL_DIR = $(INSTALL) -dm0755
-INSTALL_PROGRAM = $(INSTALL) -Dm0755
+INSTALL_PROGRAM = $(INSTALL) -m0755
 
 PROGRAMS = thetaStat realSFS
 
