@@ -150,7 +150,7 @@ $(LIBHTS): | $(HTSLIB_DEP) ;
 endif
 
 angsd: version.h $(OBJ) $(LIBHTS)
-	$(CXX) $(FLAGS) -o angsd *.o $(LIBS)
+	$(CXX) $(FLAGS) $(LDFLAGS) -o angsd *.o $(LIBS)
 
 
 testclean:
