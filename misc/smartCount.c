@@ -650,6 +650,7 @@ int treemixer(int argc,char **argv){
 
 
 int main(int argc,char **argv){
+  fprintf(stderr,"\t-> NOTE: smartCount is deprecated and will be removed in a future version of ANGSD\n");
   if(argc==1){
     fprintf(stderr,"./smartCount [stats print extract treemixer]\n");
     return 1;

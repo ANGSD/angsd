@@ -3,10 +3,9 @@
 
  */
 #include <cmath>
+#include <climits>
 #include "abcSmartCounts.h"
 #include "aio.h"
-
-unsigned char **counts = NULL;
 
 
 void abcSmartCounts::printArg(FILE *argFile){
@@ -23,37 +22,57 @@ void abcSmartCounts::getOptions(argStruct *arguments){
   tmp=angsd::getArg("-doCounts",tmp,arguments);
   if(tmp==0&&doSmartCounts>0){
     fprintf(stderr,"\t-> SmartCounts require -doCounts\n");
-    exit(0);
+    exit(1);
+  }
+  //only the counts of the first sample are stored, so refuse multi-sample input
+  if(doSmartCounts>0&&arguments->nInd!=1){
+    fprintf(stderr,"\t-> -doSmartCounts only supports a single sample (one bam file), but %d were given\n",arguments->nInd);
+    exit(1);
   }
 
   if(doSmartCounts==0){
     shouldRun[index]=0;
     return;
   }  
+  fprintf(stderr,"\t-> NOTE: -doSmartCounts is deprecated and will be removed in a future version of ANGSD\n");
+}
+
+//write counts for the current chromosome to the .bin file and its offset to the .idx file
+void abcSmartCounts::writeChr(){
+  if(curChr==-1)//no data seen yet
+    return;
+  int64_t retVal =bgzf_tell(fbin);
+  int clen = strlen(header->target_name[curChr]);
+  if(aio::bgzf_write(fbin,&clen,sizeof(int))!=(ssize_t)sizeof(int)||
+     aio::bgzf_write(fbin,header->target_name[curChr],clen)!=clen||
+     aio::bgzf_write(fbin,&len,sizeof(int))!=(ssize_t)sizeof(int)){
+    fprintf(stderr,"\t-> Problem writing smartcounts binfile for chr: %s\n",header->target_name[curChr]);
+    exit(1);
+  }
+  for(int i=0;i<4;i++)
+    if(aio::bgzf_write(fbin,counts[i],len)!=len){
+      fprintf(stderr,"\t-> Problem writing smartcounts binfile for chr: %s\n",header->target_name[curChr]);
+      exit(1);
+    }
+
+  if(fwrite(&clen,sizeof(int),1,fidx)!=1||
+     fwrite(header->target_name[curChr],sizeof(char),clen,fidx)!=(size_t)clen||
+     fwrite(&len,sizeof(int),1,fidx)!=1||
+     fwrite(&retVal,sizeof(int64_t),1,fidx)!=1){
+    fprintf(stderr,"\t-> Problem writing smartcounts indexfile for chr: %s\n",header->target_name[curChr]);
+    exit(1);
+  }
 }
 
 void abcSmartCounts::changeChr(int newRefId){
-  // fprintf(stderr,"cur:%d new:%d smartcounts: %d\n",curChr,newRefId,doSmartCounts);
   if(doSmartCounts==0)
     return;
-  fprintf(stderr,"cur:%d new:%d\n",curChr,newRefId);
-  if(curChr!=-1){
-    int64_t retVal =bgzf_tell(fbin); 
-    int clen = strlen(header->target_name[curChr]);
-    aio::bgzf_write(fbin,&clen,sizeof(int));
-    aio::bgzf_write(fbin,header->target_name[curChr],clen);
-    aio::bgzf_write(fbin,&len,sizeof(int));
-    for(int i=0;i<4;i++)
-      aio::bgzf_write(fbin,counts[i],len);//write len of chr
-    
-    //write index stuff
-    fprintf(stderr,"Writing index for chr: %s\n",header->target_name[curChr]);
-    fwrite(&clen,sizeof(int),1,fidx);
-    fwrite(header->target_name[curChr] ,sizeof(char),clen,fidx);
-    fwrite(&len,sizeof(int),1,fidx);
-    fwrite(&retVal,sizeof(int64_t),1,fidx);
-  }
+  writeChr();
   curChr = newRefId;
+  if(header->target_len[curChr]>INT_MAX){
+    fprintf(stderr,"\t-> Chromosome '%s' is longer than %d bp, which -doSmartCounts does not support\n",header->target_name[curChr],INT_MAX);
+    exit(1);
+  }
   len = header->target_len[curChr];
   for(int i=0;i<4;i++){
     delete [] counts[i];
@@ -69,6 +88,7 @@ abcSmartCounts::abcSmartCounts(const char *outfiles,argStruct *arguments,int inp
   doSmartCounts =0;
   fidx=NULL;
   fbin=NULL;
+  counts=NULL;
   curChr=-1;
   len =-1;
   if(arguments->argc==2){
@@ -102,27 +122,16 @@ abcSmartCounts::~abcSmartCounts(){
   if(doSmartCounts==0)
     return;
 
-  int64_t retVal =bgzf_tell(fbin); 
-  int clen = strlen(header->target_name[curChr]);
-  aio::bgzf_write(fbin,&clen,sizeof(int));
-  aio::bgzf_write(fbin,header->target_name[curChr],clen);
-  aio::bgzf_write(fbin,&len,sizeof(int));
-  for(int i=0;i<4;i++)
-    aio::bgzf_write(fbin,counts[i],len);//write len of chr
-  
-  //write index stuff
-  fwrite(&clen,sizeof(int),1,fidx);
-  fwrite(header->target_name[curChr],sizeof(char),clen,fidx);
-  fwrite(&len,sizeof(int),1,fidx);
-  fwrite(&retVal,sizeof(int64_t),1,fidx);
-
+  writeChr();
   
   for(int i=0;i<4;i++)
     delete [] counts[i];
   delete [] counts;
 
-  fclose(fidx);
-  bgzf_close(fbin);
+  if(fclose(fidx)!=0||bgzf_close(fbin)!=0){
+    fprintf(stderr,"\t-> Problem closing smartcounts output files\n");
+    exit(1);
+  }
 
 }
 
@@ -141,7 +150,6 @@ void abcSmartCounts::print(funkyPars *pars){
 
 
 void abcSmartCounts::run(funkyPars *pars){
-  fprintf(stderr,"ASDFASDFASDFASD: %d\n",doSmartCounts);
   if(doSmartCounts==0)
     return;
   
