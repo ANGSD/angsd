@@ -43,26 +43,36 @@ bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
   return ret;
 }
 
+//set hs->iter to the region 'seek'. hs->iter is NULL if the region has no data in the index.
 void htsstuff_seek(htsstuff *hs,char *seek){
   aio::doAssert(seek!=NULL,AT);
-  if(seek){
-    fprintf(stderr,"\t-> Setting iterator to: %s\n",seek);fflush(stderr);
+  fprintf(stderr,"\t-> Setting iterator to: %s\n",seek);fflush(stderr);
+  if(hs->iter)
+    hts_itr_destroy(hs->iter);
+  hs->iter=NULL;
+  const htsFormat *fmt = hts_get_format(hs->hts_file);
+  if(fmt->format==bcf){
     if(hs->idx==NULL)
       hs->idx=bcf_index_load(hs->fname);
     if(hs->idx==NULL){
-      fprintf(stderr,"\t-> Problem opening index file of file: \'%s\'\n",hs->fname);
-      exit(0);
+      fprintf(stderr,"\t-> Problem opening index file of file: \'%s\' (bcf files need a .csi index, e.g. from \'bcftools index\')\n",hs->fname);
+      exit(1);
     }
-    if(hs->hts_file->format.format!=bcf){
-      fprintf(stderr,"\t-> File are required to be vcf for using region specification\n");
-      exit(0);
-      
-    }
-    if(hs->iter)
-      hts_itr_destroy(hs->iter);
     hs->iter=bcf_itr_querys(hs->idx,hs->hdr,seek);
-    aio::doAssert(hs->iter!=NULL,AT);
+  }else if(fmt->format==vcf&&fmt->compression==bgzf){
+    if(hs->tbx==NULL)
+      hs->tbx=tbx_index_load3(hs->fname,NULL,0);
+    if(hs->tbx==NULL){
+      fprintf(stderr,"\t-> Problem opening index file of file: \'%s\' (vcf.gz files need a .tbi or .csi index, e.g. from \'tabix -p vcf\')\n",hs->fname);
+      exit(1);
+    }
+    hs->iter=tbx_itr_querys(hs->tbx,seek);
+  }else{
+    fprintf(stderr,"\t-> Region specification requires a bgzipped and indexed vcf.gz or an indexed bcf file: \'%s\'\n",hs->fname);
+    exit(1);
   }
+  if(hs->iter==NULL)
+    fprintf(stderr,"\t-> No data for region: %s\n",seek);
 }
 
 htsstuff *htsstuff_init(char *fname,char *seek){
@@ -74,6 +84,8 @@ htsstuff *htsstuff_init(char *fname,char *seek){
   hs->hts_file=NULL;
   hs->hdr=NULL;
   hs->idx=NULL;
+  hs->tbx=NULL;
+  hs->line.s=NULL;hs->line.l=hs->line.m=0;
   hs->iter=NULL;
   hs->nsamples = 0;
   hs->hts_file=hts_open(hs->fname,"r");
@@ -101,7 +113,10 @@ void htsstuff_destroy(htsstuff *hs){
     hts_itr_destroy(hs->iter);
   if(hs->idx)
     hts_idx_destroy(hs->idx);
-  
+  if(hs->tbx)
+    tbx_destroy(hs->tbx);
+  free(hs->line.s);
+
 
   delete hs;
 }
@@ -199,10 +214,11 @@ int whichisindel(const bcf_hdr_t *h){
 }
 
 //returns 0 if not indel higher values indicates indel
-int isindel(const bcf_hdr_t *h, const bcf1_t *v){
-  bcf_unpack((bcf1_t*)v, BCF_UN_ALL);
-  static int hit = whichisindel(h);//only calculated once
-  //  aio::doAssert(hit!=-1);//we assume INDEL exists in INFO field
+int vcfReader::isindel(const bcf1_t *v){
+  const bcf_hdr_t *h = hs->hdr;
+  int hit = indelTag;
+  //alleles and INFO are needed here, FORMAT is unpacked by bcf_get_format_*
+  bcf_unpack((bcf1_t*)v, BCF_UN_STR|BCF_UN_INFO);
   if(hit==-1)
     return 0;
   int returnvalue = 0;
@@ -262,13 +278,17 @@ int hasSpanningDeletion(const bcf1_t *rec){
 //type=1 -> GL
 //type=2 -> GP
 
-int dumpcounterverbose[3] = {0,0,0};
+//rate limit for repeated warnings, which=0..4
+int vcfReader::warnOnce(int which){
+  return nWarn[which]++ < 10;
+}
+
 int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type){
   aio::doAssert(type>=0&&type<=2,1,AT,"");
   int n;
-  if(isindel(hs->hdr,rec)!=0 || hasSpanningDeletion(rec)!=0 || hasNonSnpAllele(rec)){
-    return 0;
-  }
+  //indels and other non-snps are already skipped in fetch().
+  //rec can be a bcf_dup() copy (acpy), which is not unpacked, so unpack the alleles here.
+  bcf_unpack(rec, BCF_UN_STR);
   if(rec->n_allele<2)//only REF (ALT is '.'), there is no minor allele and no likelihoods for it
     return 0;
 
@@ -305,13 +325,15 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     if(n<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
-      fprintf(stderr, "BAD SITE %s:%" PRId64 " return code:%d" "while fetching GP tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
+      if(warnOnce(3))
+	fprintf(stderr, "BAD SITE %s:%" PRId64 " return code:%d while fetching GP tag rec->rid:%d, this msg is printed %d times more\n", bcf_seqname(hs->hdr,rec), rec->pos+1, n,rec->rid,10-nWarn[3]);
+      delete [] dupergp;
       return 0;
     }
     if(n!=3*hs->nsamples){
       //GP is only used for biallelic sites, where the three values are in the same order as major/minor (REF/ALT1)
-      if(dumpcounterverbose[2]++ <10)
-	fprintf(stderr,"\t-> Skipping site %s:%" PRId64 " with %d GP values for %d samples, only biallelic sites (3 values per sample) are supported. This msg is printed %d times more\n",bcf_seqname(hs->hdr,rec),rec->pos+1,n,hs->nsamples,10-dumpcounterverbose[2]);
+      if(warnOnce(2))
+	fprintf(stderr,"\t-> Skipping site %s:%" PRId64 " with %d GP values for %d samples, only biallelic sites (3 values per sample) are supported. This msg is printed %d times more\n",bcf_seqname(hs->hdr,rec),rec->pos+1,n,hs->nsamples,10-nWarn[2]);
       delete [] dupergp;
       return 0;
     }{
@@ -319,12 +341,12 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 
       for(int nsample = 0 ;nsample < r->nInd; nsample++){
 	if (bcf_float_is_missing(farr[nsample*3])){
-	  if(dumpcounterverbose[0]++ <10)
-	    fprintf(stderr,"[bcf_float_is_missing error], this might be an error or missing data, this msg is printed %d times more \n",10-dumpcounterverbose[0]);
+	  if(warnOnce(0))
+	    fprintf(stderr,"[bcf_float_is_missing error], this might be an error or missing data, this msg is printed %d times more \n",10-nWarn[0]);
 	}else if ( bcf_float_is_vector_end(farr[nsample*3]) || bcf_float_is_vector_end(farr[nsample*3+1]) || bcf_float_is_vector_end(farr[nsample*3+2]) ){
 	  //e.g. a haploid sample, treated as missing data
-	  if(dumpcounterverbose[1]++ <10)
-	    fprintf(stderr,"[bcf_float_vector_end], sample is treated as missing data, this msg is printed %d times more\n",10-dumpcounterverbose[1]);
+	  if(warnOnce(1))
+	    fprintf(stderr,"[bcf_float_vector_end], sample is treated as missing data, this msg is printed %d times more\n",10-nWarn[1]);
 	} else{
 	  dupergp[nsample*3] = farr[nsample*3];
 	  dupergp[nsample*3+1] = farr[nsample*3+1];
@@ -343,7 +365,8 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     if(n<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
-      fprintf(stderr, "BAD SITE %s:%" PRId64 ". return code:%d while fetching PL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
+      if(warnOnce(3))
+	fprintf(stderr, "BAD SITE %s:%" PRId64 " return code:%d while fetching PL tag rec->rid:%d, this msg is printed %d times more\n", bcf_seqname(hs->hdr,rec), rec->pos+1, n,rec->rid,10-nWarn[3]);
       delete [] dupergl;
       return 0;
     }else{
@@ -371,7 +394,9 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
     if(n<0){
       // return codes: https://github.com/samtools/htslib/blob/bcf9bff178f81c9c1cf3a052aeb6cbe32fe5fdcc/htslib/vcf.h#L667
       // no PL tag is available
-      fprintf(stderr, "BAD SITE %s:%d. return code:%d while fetching GL tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec),(int) rec->pos, n,rec->rid);
+      if(warnOnce(3))
+	fprintf(stderr, "BAD SITE %s:%" PRId64 " return code:%d while fetching GL tag rec->rid:%d, this msg is printed %d times more\n", bcf_seqname(hs->hdr,rec), rec->pos+1, n,rec->rid,10-nWarn[3]);
+      delete [] dupergl;
       return 0;
     }{
       // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
@@ -466,8 +491,6 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 //stupid little function to wrap the iter part. This could be done much more cleverly
 int vcfReader::vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec){
   int ret;
-  static int whichRegion =-1;
-  static int hasSeeked =0;
   if(regions->size()==0){
     ret  = bcf_read(hts->hts_file,hts->hdr,rec);
     if(ret<-1){
@@ -478,7 +501,7 @@ int vcfReader::vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec){
   }else{
     if(hasSeeked==0){
       whichRegion++;
-      if(whichRegion>=regions->size())
+      if(whichRegion>=(int)regions->size())
 	return -1;
       itrname.l =0;
       int start=regions->at(whichRegion).start;
@@ -490,7 +513,18 @@ int vcfReader::vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec){
       hasSeeked =1;
       return vcfReaderwrap_reader(hts,rec);//calling again now that things has been seeked.
     }
-    ret=bcf_itr_next(hts->hts_file,hts->iter, rec);
+    if(hts->iter==NULL){//region has no data
+      hasSeeked = 0;
+      return vcfReaderwrap_reader(hts,rec);
+    }
+    if(hts->tbx){
+      ret=tbx_itr_next(hts->hts_file,hts->tbx,hts->iter,&hts->line);
+      if(ret>=0&&vcf_parse(&hts->line,hts->hdr,rec)<0){
+	fprintf(stderr,"\t-> Problem parsing line in \'%s\': %s\n",hts->fname,hts->line.s);
+	exit(1);
+      }
+    }else
+      ret=bcf_itr_next(hts->hts_file,hts->iter, rec);
     if(ret<-1){
       fprintf(stderr,"\t-> Problem reading '%s' in region '%s' (error code %d), file truncated or corrupt?\n",hts->fname,itrname.s,ret);
       exit(1);
@@ -504,7 +538,6 @@ int vcfReader::vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec){
 }
 //
 
-int onlyprint = 10;
 funkyPars *vcfReader::fetch(int chunkSize) {
   funkyPars *r = funkyPars_init();
   r->nInd = hs->nsamples;
@@ -515,13 +548,10 @@ funkyPars *vcfReader::fetch(int chunkSize) {
   r->keepSites = new int[chunkSize];
   r->major = new char[chunkSize];
   r->minor = new char[chunkSize];  
-  for(int i=0;i<chunkSize;i++){
-    if(pl_gl_gp==0||pl_gl_gp==1){
-      memset(r->likes,0,chunkSize*sizeof(double*));
-    } else if(pl_gl_gp==2){
-      memset(r->post,0,chunkSize*sizeof(double*));
-    }
-  }
+  if(pl_gl_gp==0||pl_gl_gp==1)
+    memset(r->likes,0,chunkSize*sizeof(double*));
+  else if(pl_gl_gp==2)
+    memset(r->post,0,chunkSize*sizeof(double*));
   
   r->posi=new int[chunkSize];
   
@@ -553,11 +583,9 @@ funkyPars *vcfReader::fetch(int chunkSize) {
       exit(1);
     }
     //skip nonsnips
-    if(isindel(hs->hdr,rec)!=0 || hasSpanningDeletion(rec) || hasNonSnpAllele(rec)){
-      if(onlyprint>0){
+    if(isindel(rec)!=0 || hasSpanningDeletion(rec) || hasNonSnpAllele(rec)){
+      if(warnOnce(4))
 	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",(int)rec->pos+1);
-	onlyprint--;
-      }
       continue;
     }
 
@@ -610,5 +638,10 @@ vcfReader::vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *re
     pl2ln[i] = log(pow(10.0,-0.1*i));
   curChr=-1;
   pl=NULL;
+  whichRegion=-1;
+  hasSeeked=0;
+  indelTag=whichisindel(hs->hdr);
+  for(int i=0;i<5;i++)
+    nWarn[i]=0;
 }
 
