@@ -9,42 +9,36 @@
 #include "vcfReader.h"
 #include "aio.h"
 
+//build a bam style header from the contigs in the vcf/bcf header.
+//bcf1_t.rid indexes hdr->id[BCF_DT_CTG], so the bam header uses the same order.
 bam_hdr_t *bcf_hdr_2_bam_hdr_t (htsstuff *hs){
   bam_hdr_t *ret = bam_hdr_init();
   ret->l_text = 0;
   ret->text =NULL;
 
-  int nseq=0;
-
-  for (int i=0; i<hs->hdr->nhrec; i++){
-    bcf_hrec_t *hrec=hs->hdr->hrec[i];
-    if(strcmp(hrec->key,"contig")==0)
-      nseq++;
+  int nseq = hs->hdr->n[BCF_DT_CTG];
+  if(nseq==0){
+    fprintf(stderr,"\t-> No ##contig lines in the header of '%s'. Please add them, e.g. with 'bcftools reheader --fai ref.fa.fai'\n",hs->fname);
+    exit(1);
   }
-  
   ret->n_targets = nseq;
   ret->target_len = (uint32_t*) malloc(sizeof(uint32_t)*nseq);
   ret->target_name = (char**) malloc(sizeof(char*)*nseq);
-  int at=0;
-  for (int i=0; i<hs->hdr->nhrec; i++){
-    bcf_hrec_t *hrec=hs->hdr->hrec[i];
-    if(strcmp(hrec->key,"contig")==0){
-      //      fprintf(stderr,"%d) hrec->value:%s key:%s\n",i,hrec->value,hrec->key);
-      int newlen =-1;
-      char *chrnam=NULL;
-      for(int j=0;j<hrec->nkeys;j++){
-	if(strcmp("ID",hrec->keys[j])==0)
-	  chrnam = strdup(hrec->vals[j]);
-	if(strcmp("length",hrec->keys[j])==0)
-	  newlen = atoi(hrec->vals[j]);
-	//fprintf(stderr,"i:%d j:%d keys:%s vals:%s\n",i,j,hrec->keys[j],hrec->vals[j]);
-      }
-      //fprintf(stderr,"at: %d ID:%s len:%d\n",at,chrnam,newlen);
-      ret->target_len[at] = newlen;
-      ret->target_name[at] = chrnam;
-      at++;
+  int nolength =0;
+  for(int i=0;i<nseq;i++){
+    bcf_idpair_t *ctg = &hs->hdr->id[BCF_DT_CTG][i];
+    ret->target_name[i] = strdup(ctg->key);
+    uint64_t len = ctg->val?ctg->val->info[0]:0;
+    if(len==0)
+      nolength++;
+    if(len>UINT32_MAX){
+      fprintf(stderr,"\t-> Contig '%s' is longer than %u bp, which is not supported\n",ctg->key,UINT32_MAX);
+      exit(1);
     }
+    ret->target_len[i] = len;
   }
+  if(nolength>0)
+    fprintf(stderr,"\t-> %d ##contig lines in the header of '%s' have no length, their length is set to 0\n",nolength,hs->fname);
 
   return ret;
 }
@@ -230,6 +224,20 @@ int isindel(const bcf_hdr_t *h, const bcf1_t *v){
 }
 
 
+//returns 1 if any allele is not a single base, e.g. an indel, MNP or symbolic allele.
+//This catches indels in vcf files that lack the INFO/INDEL tag (anything not from bcftools mpileup).
+//The unobserved allele '<*>' (or '<X>') and the spanning deletion '*' are handled elsewhere.
+int hasNonSnpAllele(const bcf1_t *rec){
+  for(int i=0;i<rec->n_allele;i++){
+    const char *a = rec->d.allele[i];
+    if(strcmp(a,wildcar)==0||strcmp(a,"<X>")==0||strcmp(a,"*")==0)
+      continue;
+    if(strlen(a)!=1)
+      return 1;
+  }
+  return 0;
+}
+
 /// @brief check if any allele is spanning deletion
 /// @param rec - bcf1_t record for one VCF line
 /// @return  1 : if any allele is deletion, 0 otherwise
@@ -254,13 +262,15 @@ int hasSpanningDeletion(const bcf1_t *rec){
 //type=1 -> GL
 //type=2 -> GP
 
-int dumpcounterverbose[2] = {0,0};
+int dumpcounterverbose[3] = {0,0,0};
 int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int type){
   aio::doAssert(type>=0&&type<=2,1,AT,"");
   int n;
-  if(isindel(hs->hdr,rec)!=0 || hasSpanningDeletion(rec)!=0){
+  if(isindel(hs->hdr,rec)!=0 || hasSpanningDeletion(rec)!=0 || hasNonSnpAllele(rec)){
     return 0;
   }
+  if(rec->n_allele<2)//only REF (ALT is '.'), there is no minor allele and no likelihoods for it
+    return 0;
 
   r->major[balcon] = refToChar[rec->d.allele[0][0]];
   r->minor[balcon] = refToChar[rec->d.allele[1][0]];
@@ -297,6 +307,13 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
       // no PL tag is available
       fprintf(stderr, "BAD SITE %s:%" PRId64 " return code:%d" "while fetching GP tag rec->rid:%d\n", bcf_seqname(hs->hdr,rec), rec->pos, n,rec->rid);
       return 0;
+    }
+    if(n!=3*hs->nsamples){
+      //GP is only used for biallelic sites, where the three values are in the same order as major/minor (REF/ALT1)
+      if(dumpcounterverbose[2]++ <10)
+	fprintf(stderr,"\t-> Skipping site %s:%" PRId64 " with %d GP values for %d samples, only biallelic sites (3 values per sample) are supported. This msg is printed %d times more\n",bcf_seqname(hs->hdr,rec),rec->pos+1,n,hs->nsamples,10-dumpcounterverbose[2]);
+      delete [] dupergp;
+      return 0;
     }{
       // https://github.com/samtools/bcftools/blob/e9c08eb38d1dcb2b2d95a8241933daa1dd3204e5/plugins/tag2tag.c#L151
 
@@ -304,10 +321,10 @@ int vcfReader::parseline(bcf1_t *rec,htsstuff *hs,funkyPars *r,int &balcon,int t
 	if (bcf_float_is_missing(farr[nsample*3])){
 	  if(dumpcounterverbose[0]++ <10)
 	    fprintf(stderr,"[bcf_float_is_missing error], this might be an error or missing data, this msg is printed %d times more \n",10-dumpcounterverbose[0]);
-	}else if ( farr[nsample*3]==bcf_float_vector_end ){
+	}else if ( bcf_float_is_vector_end(farr[nsample*3]) || bcf_float_is_vector_end(farr[nsample*3+1]) || bcf_float_is_vector_end(farr[nsample*3+2]) ){
+	  //e.g. a haploid sample, treated as missing data
 	  if(dumpcounterverbose[1]++ <10)
-	    fprintf(stderr,"[bcf_float_vector_end], this might be an error or missing data, this msg is printed %d times more\n",10-dumpcounterverbose[1]);
-	  exit(0);
+	    fprintf(stderr,"[bcf_float_vector_end], sample is treated as missing data, this msg is printed %d times more\n",10-dumpcounterverbose[1]);
 	} else{
 	  dupergp[nsample*3] = farr[nsample*3];
 	  dupergp[nsample*3+1] = farr[nsample*3+1];
@@ -453,6 +470,10 @@ int vcfReader::vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec){
   static int hasSeeked =0;
   if(regions->size()==0){
     ret  = bcf_read(hts->hts_file,hts->hdr,rec);
+    if(ret<-1){
+      fprintf(stderr,"\t-> Problem reading '%s' (error code %d), file truncated or corrupt?\n",hts->fname,ret);
+      exit(1);
+    }
     return ret;
   }else{
     if(hasSeeked==0){
@@ -470,6 +491,10 @@ int vcfReader::vcfReaderwrap_reader(htsstuff *hts,bcf1_t *rec){
       return vcfReaderwrap_reader(hts,rec);//calling again now that things has been seeked.
     }
     ret=bcf_itr_next(hts->hts_file,hts->iter, rec);
+    if(ret<-1){
+      fprintf(stderr,"\t-> Problem reading '%s' in region '%s' (error code %d), file truncated or corrupt?\n",hts->fname,itrname.s,ret);
+      exit(1);
+    }
     if(ret<0){
       hasSeeked = 0;
       return vcfReaderwrap_reader(hts,rec);
@@ -518,12 +543,17 @@ funkyPars *vcfReader::fetch(int chunkSize) {
   }
   while(balcon<chunkSize) {
     //either parse a read with region or nextread
-    if(((bcf_retval=vcfReaderwrap_reader(hs,rec)))!=0)
+    if(((bcf_retval=vcfReaderwrap_reader(hs,rec)))<0)//-1 is end of data, errors exit in vcfReaderwrap_reader
       break;
     
     n++;
+    //contigs that are not in the header are added by htslib while reading, but are not in bamhdr
+    if(rec->rid<0||rec->rid>=bamhdr->n_targets){
+      fprintf(stderr,"\t-> Contig '%s' at position %" PRId64 " is not defined by a ##contig line in the header of '%s'. Please add it, e.g. with 'bcftools reheader --fai ref.fa.fai'\n",bcf_seqname(hs->hdr,rec),rec->pos+1,hs->fname);
+      exit(1);
+    }
     //skip nonsnips
-    if(isindel(hs->hdr,rec)!=0 || hasSpanningDeletion(rec)){
+    if(isindel(hs->hdr,rec)!=0 || hasSpanningDeletion(rec) || hasNonSnpAllele(rec)){
       if(onlyprint>0){
 	fprintf(stderr,"\t Skipping due to non snp pos:%d (this message will be silenced after 10 sites)\n",(int)rec->pos+1);
 	onlyprint--;
@@ -546,7 +576,7 @@ funkyPars *vcfReader::fetch(int chunkSize) {
     //regular case
     parseline(rec,hs,r,balcon,pl_gl_gp);
   }
-  if(balcon==0&&bcf_retval==0)
+  if(balcon==0&&bcf_retval>=0)
     goto never;
 
   //  fprintf(stderr, "\t-> [file=\'%s\'][chr=\'%s\'] Read %i records %i of which were SNPs number of sites with data:%lu\n",fname,seek, n, nsnp,mygl.size()); 
