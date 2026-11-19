@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Estimates the error rates for angsd -GL 7 (ancestral_likes.cpp)
+# Author: Kristian Hanghoej
 import sys
 import numpy as np
 import scipy.optimize as optim

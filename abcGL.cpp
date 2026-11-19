@@ -246,6 +246,15 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   }else if(GL==7){
     ancestral_lik.init(arguments->nInd, angsd_tmpdir);
     if(ancestral_lik.doRecal){
+      char *ref = NULL, *anc = NULL;
+      ref = angsd::getArg("-ref",ref,arguments);
+      anc = angsd::getArg("-anc",anc,arguments);
+      if(ref==NULL||anc==NULL){
+	fprintf(stderr,"\t-> -GL 7 needs -ref and -anc to calculate the counts file in -tmpdir %s\n",angsd_tmpdir);
+	exit(1);
+      }
+      free(ref);
+      free(anc);
       fprintf(stderr, "\t-> [%s] Will generate the counts file, please do not run other analyses\n", __FILE__);
     } else {
       fprintf(stderr, "\t-> [%s] Will use error matrix already estimated with python script on the counts matrix generated in the previous run\n", __FILE__);

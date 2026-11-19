@@ -1,3 +1,11 @@
+/*
+  -GL 7: genotype likelihoods with error rates estimated against an
+  outgroup/ancestral sequence (-anc). Without <tmpdir>/anc_likes.errors.est
+  the counts are written to <tmpdir>/anc_likes.errors, and
+  misc/est_ancestral_errors.py estimates the error rates from them.
+
+  Author: Kristian Hanghoej
+*/
 #include <cmath>
 #include <cstdlib>   /* atoi */
 #include <cstring>
@@ -11,6 +19,8 @@
 #include <stdlib.h>     
 #include <sys/stat.h>//mkdir
 #include <sys/types.h>//mkdir
+#include <unistd.h>//access
+#include <cerrno>
 #include <vector>
 
 #include "bambi_interface.h"
@@ -83,11 +93,27 @@ void anc_likes::load_error_mat(const int & nInd, const int & readpos, const int 
   std::string line;
   int sample, pos, prime, strand, qual, ancbase, errorbase;
   double errorrate;
+  int lineno = 0;
   while ( getline(error_fh, line) ){
+      lineno++;
+      if(line.find_first_not_of(" \t\r")==std::string::npos)
+        continue;
       std::istringstream ss (line);
-      ss >> sample >> pos >> prime >> strand >>
-        qual >> ancbase >> errorbase >> errorrate;
-      
+      std::string rest;
+      if(!(ss >> sample >> pos >> prime >> strand >>
+           qual >> ancbase >> errorbase >> errorrate) || (ss >> rest)){
+        fprintf(stderr,"\t-> %s line %d: expected 7 integers and an error rate\n",error_filename.c_str(),lineno);
+        fprintf(stderr,"\t-> Delete %s and rerun misc/est_ancestral_errors.py\n",error_filename.c_str());
+        exit(1);
+      }
+      if(sample<0||sample>=nInd||pos<0||pos>readpos||prime<0||prime>=PRIMES||
+         strand<0||strand>=STRANDS||qual<0||qual>=quals||
+         ancbase<0||ancbase>=NUCLEOTIDES||errorbase<0||errorbase>=NUCLEOTIDES){
+        fprintf(stderr,"\t-> %s line %d: index out of range (%d samples, positions 0-%d, %d quality bins)\n",
+                error_filename.c_str(),lineno,nInd,readpos,quals);
+        fprintf(stderr,"\t-> Was it made for another set of bam files? Delete it and the counts file and rerun the calibration\n");
+        exit(1);
+      }
       errorrates[sample][pos][prime]
             [strand][qual]
             [ancbase][errorbase] = errorrate;
@@ -108,23 +134,23 @@ void anc_likes::load_error_mat(const int & nInd, const int & readpos, const int 
                   error2 = errorrates[sample][p][pr][strand][qu]
                                       [allele2][obsallele];
 
-                  if(error1 > 1 || error1<0){
+                  if(!(error1 >= 0 && error1 <= 1)){
                     fprintf(stderr,
                             "\nERROR: Sample: %d; readposition: %d; prime: %d; strand: "
                             "%d; qualitybin: %d; allele: %d; obsallele: %d "
-                            "\n\terror2: %f; Values <0 and >1 are not possible. Check the error estimates",
+                            "\n\terror rate: %f; Values <0 and >1 are not possible. Check the error estimates\n",
                             sample, p, pr, strand, qu, allele1,
                             obsallele, error1);
-                    exit(0);
+                    exit(1);
                   }
-                  if(error2 > 1 || error2<0){
+                  if(!(error2 >= 0 && error2 <= 1)){
                     fprintf(stderr,
                             "\nERROR: Sample: %d; readposition: %d; prime: %d; strand: "
                             "%d; qualitybin: %d; allele: %d; obsallele: %d "
-                            "\n\terror2: %f; Values <0 and >1 are not possible. Check the error estimates",
+                            "\n\terror rate: %f; Values <0 and >1 are not possible. Check the error estimates\n",
                             sample, p, pr, strand, qu, allele2,
                             obsallele, error2);
-                    exit(0);
+                    exit(1);
                   }
                   if(error1<1e-9){
                     // fprintf(stderr, "these are all the double zeros\n");
@@ -175,6 +201,11 @@ std::vector<int> anc_likes::parse_qual_bins(const std::string &row,
 void anc_likes::setreadpos(const int & val){
   readpos = val;
   readpos_0based = val - 1;
+}
+
+//quality bin of a quality score, scores of 100 and above are in the last bin
+int anc_likes::qualBin(int qs) const{
+  return qs<(int)qual_converter.size() ? qual_converter[qs] : quals_vector.size();
 }
 
 void anc_likes::setfilenames(){
@@ -243,8 +274,16 @@ void anc_likes::init_count_mat(const int & nInd, const int & readpos, const int 
 }
 
 void anc_likes::init(int nInd_a, const char *wdir){
-  tmpdir = strdup(wdir);
-  mkdir(tmpdir.c_str(), 0777);
+  tmpdir = wdir;
+  if(mkdir(tmpdir.c_str(), 0777)!=0 && errno!=EEXIST){
+    fprintf(stderr,"\t-> Problem creating -tmpdir %s: %s\n",tmpdir.c_str(),strerror(errno));
+    exit(1);
+  }
+  struct stat st;
+  if(stat(tmpdir.c_str(),&st)!=0 || !S_ISDIR(st.st_mode)){
+    fprintf(stderr,"\t-> -tmpdir %s is not a directory\n",tmpdir.c_str());
+    exit(1);
+  }
   setfilenames(); 
   nInd = nInd_a;
 
@@ -262,23 +301,26 @@ void anc_likes::init(int nInd_a, const char *wdir){
   if(! check_filename_exists(error_filename) ){
     if ( check_filename_exists(mat_filename)){
       fprintf(stderr,
-              "\t %s is already created. Run 'python "
-              "${ANGSD}/misc/est_ancestral_errors.py  %s ${cores}'. It will "
-              "generate %s, now rerun this ANGSD command. This "
-              "ANGSD process should be killed!!!",
+              "\t-> %s is already created. Run 'python "
+              "${ANGSD}/misc/est_ancestral_errors.py %s ${cores}'. It will "
+              "generate %s, then rerun this ANGSD command.\n",
               mat_filename.c_str(), mat_filename.c_str(),
               error_filename.c_str());
-      fprintf(stderr, "[%s] EXITING", __FILE__);
-      exit(0);
+      exit(1);
     }
-    
+    if(access(tmpdir.c_str(),W_OK)!=0){
+      fprintf(stderr,"\t-> Can't write the counts file to -tmpdir %s\n",tmpdir.c_str());
+      exit(1);
+    }
+
     doRecal =1;
     init_count_mat(nInd, readpos, quals_vector.size()+1);
 
     myMuts = new pthread_mutex_t[nInd];
     for(int i=0;i<nInd;i++){
       if(pthread_mutex_init(myMuts+i,NULL)){
-        fprintf(stderr,"problems initializing mutex\n");
+        fprintf(stderr,"\t-> Problem initializing mutex\n");
+        exit(1);
       }
     }
   } else {
@@ -312,7 +354,7 @@ void anc_likes::gen_counts(const chunkyT *chk, count_mat *count_mat_sample,
         continue;
       }
       
-      qual = qual_converter[qs];  // 0:0-19, 1:20-29, 2:30-99
+      qual = qualBin(qs);  // 0:0-19, 1:20-29, 2:30-
       strand = isupper(nd->seq[j])==0; // true (1) if negative strand else false (0)
       if( strand ){
         // negative strand
@@ -346,12 +388,12 @@ void anc_likes::run(chunkyT *chk, double **lk, char *refs, char *ancs, int *keep
 
     if(refs==NULL){
       fprintf(stderr,"\t-> Must supply -ref (reference) for ancestral matrix generation\n");
-      exit(0);
+      exit(1);
     }
     
     if(ancs==NULL){
       fprintf(stderr,"\t-> Must supply -anc (ancestral) for ancestral matrix generation\n");
-      exit(0);
+      exit(1);
     }
     for(int i=0;i<chk->nSamples;i++){
       pthread_mutex_lock(myMuts+i);//do persample lock maybe not nescearry due to atomic operations
@@ -359,7 +401,7 @@ void anc_likes::run(chunkyT *chk, double **lk, char *refs, char *ancs, int *keep
       pthread_mutex_unlock(myMuts+i);
     }
   } else
-    geno_ancestral(chk,lk,trim);
+    geno_ancestral(chk,lk,keepSites,trim);
 }
 
 anc_likes::~anc_likes() {
@@ -401,24 +443,23 @@ anc_likes::~anc_likes() {
     } // do recall ends
 
     if (myMuts != NULL) {
+      for(int i=0;i<nInd;i++)
+        pthread_mutex_destroy(myMuts+i);
       delete[] myMuts;
     }
     // in cpp you dont have to collect when quitting if you dont use new
     errorrates.clear(); 
 }
 
-void anc_likes::geno_ancestral(chunkyT *chk,double **lk,int trim){
-  // std::vector< std::vector < std::vector < double > > >  * t;
+void anc_likes::geno_ancestral(chunkyT *chk,double **lk,int *keepSites,int trim){
   int qual, sample, strand, readpos, termini, dist_5p, dist_3p;
   for(int s=0;s<chk->nSites;s++){  // this is the number of sites in the chunk
+    lk[s] = new double[10*chk->nSamples];  // lk[s] is per site and  10*numberofsamples
+    for(int ii=0;ii<10*chk->nSamples;ii++)
+      lk[s][ii] = -0.0;//set default values
+    if(keepSites[s]==0)
+      continue;
     for(int i=0;i<chk->nSamples;i++){  // this is also number of individuals
-      //allocate for all samples, for first sample
-      if(i==0){
-	lk[s] = new double[10*chk->nSamples];  // lk[s] is per site and  10*numberofsamples
-	for(int ii=0;ii<10*chk->nSamples;ii++)
-	  lk[s][ii] = -0.0;//set default values
-      }
-      
       tNode *nd = chk->nd[s][i];  // this is tNode at sites s for a single individual i
       if(nd==NULL)
 	continue;
@@ -433,7 +474,7 @@ void anc_likes::geno_ancestral(chunkyT *chk,double **lk,int trim){
 	  continue;
 	}
 
-        qual = qual_converter[qs];  // 0, 1, 2 
+        qual = qualBin(qs);  // 0, 1, 2
         strand = isupper(nd->seq[j])==0; // true (1) if negative strand else false (0)
         sample = i; // see major loop
         if( strand ){

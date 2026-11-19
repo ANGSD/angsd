@@ -1,6 +1,9 @@
+//-GL 7, see ancestral_likes.cpp. Author: Kristian Hanghoej
+#pragma once
 #include <string>
 #include <vector>
 #include <pthread.h>
+#include "bambi_interface.h"
 
 
 
@@ -71,7 +74,8 @@ private:
   void gen_counts(const chunkyT *chk, count_mat *count_mat_sample,
                   const int &whichsample, char *refs, char *ancs, int *keepSites,
                   const int &trim);
-  void geno_ancestral(chunkyT *chk,double **lk,int trim);
+  void geno_ancestral(chunkyT *chk,double **lk,int *keepSites,int trim);
+  int qualBin(int qs) const;
 public:
 
   std::string quals;
