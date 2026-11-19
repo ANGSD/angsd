@@ -38,7 +38,7 @@ void readError(double **errors,const char *fname){
   FILE *fp=NULL;
   if(NULL==(fp=fopen(fname,"r"))){
     fprintf(stderr,"Error opening file: %s\n",fname);
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   
   char buf[LENS];
@@ -47,10 +47,22 @@ void readError(double **errors,const char *fname){
 
   int nLines =0;
   while(fgets(buf,LENS,fp)){
-    res[0] += atof(strtok(buf," \t\n"));
-    for(int i=1;i<16;i++)
-      res[i] += atof(strtok(NULL," \t\n"));
+    char *token = strtok(buf," \t\n");
+    for(int i=0;i<16;i++) {
+      if(token == NULL) {
+        fprintf(stderr,"Error parsing error matrix %s on line %d: expected 16 numeric fields.\n", fname, nLines + 1);
+        fclose(fp);
+        exit(EXIT_FAILURE);
+      }
+      res[i] += atof(token);
+      token = strtok(NULL," \t\n");
+    }
     nLines ++;
+  }
+  if(nLines == 0) {
+    fprintf(stderr,"Error parsing error matrix %s: file is empty.\n", fname);
+    fclose(fp);
+    exit(EXIT_FAILURE);
   }
   for(int j=0;j<16;j++)
     fprintf(stderr,"%f\t",res[j]);
