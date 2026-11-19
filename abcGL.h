@@ -19,8 +19,9 @@ private:
   double ****errorProbs;
   //below is used for output
   kstring_t bufstr;
-  //gatk and soap methods are implemented as classes
+  //gatk, simple and soap methods are implemented as classes
   gatk_likes gatk;
+  simple_likes simple;
   soap_likes soap;
   // ancestral method is implemented as a class
   anc_likes ancestral_lik;
@@ -36,6 +37,7 @@ private:
   int GL;
   int doGlf;
   int minInd;
+  int seed;//for -GL 6
   char *tmpChr;
   int nnnSites;
   void getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,double ****errorProbs,int *keepSites,double **loglikes);

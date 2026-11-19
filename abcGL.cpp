@@ -20,6 +20,7 @@
 */
 
 #include <cmath>
+#include <ctime>
 #include <htslib/kstring.h>
 #include "analysisFunction.h"
 #include "abc.h"
@@ -72,12 +73,13 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t3: SOAPsnp (uses the first 255 bases of each read)\n");
   fprintf(argFile,"\t4: SYK\n");
   fprintf(argFile,"\t5: phys (deprecated, will be removed in a future version)\n");
-  fprintf(argFile,"\t6: Super simple sample an allele type GL. (1.0,0.5,0.0)\n");
+  fprintf(argFile,"\t6: Sample one base per individual, GLs 1/0.5/0 (for testing, needs -doCounts 1)\n");
   fprintf(argFile,"\t7: outgroup gls\n");
   fprintf(argFile,"\t-trim\t\t%d\t\t(zero means no trimming)\n",trim);
   fprintf(argFile,"\t-tmpdir\t\t%s/\t(used by SOAPsnp)\n",angsd_tmpdir);
   fprintf(argFile,"\t-errors\t\t%s\t\t(used by SYK)\n",errorFname);
   fprintf(argFile,"\t-minInd\t\t%d\t\t(0 indicates no filtering)\n",minInd);
+  fprintf(argFile,"\t-seed\t\t%d\t\t(used by -GL 6, 0: seed from the clock. Only reproducible with -nThreads 1)\n",seed);
   fprintf(argFile,"\n");
   fprintf(argFile,"Filedumping:\n");
   fprintf(argFile,"\t-doGlf\t%d\n",doGlf);
@@ -103,6 +105,7 @@ void abcGL::getOptions(argStruct *arguments){
   doGlf=angsd::getArg("-doGlf",doGlf,arguments);
   errorFname = angsd::getArg("-errors",errorFname,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
+  seed = angsd::getArg("-seed",seed,arguments);
 
   // should parse a list of quals e.g. 0,20,30. Meaning three bins: 0-19; 20-29; 30+
 
@@ -143,6 +146,9 @@ void abcGL::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> Must supply -doCounts 1 for -gl 6\n");
     exit(0);
   }
+  //without -seed, sample new bases every run
+  if(GL==6&&seed==0)
+    seed=time(NULL);
   /*
   if(doGlf==2){
     fprintf(stderr,"\t-> BEAGLE format 3.0 is deprecated\n\t-> Consider using -doVCF 1\n");
@@ -187,6 +193,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   errorProbs = NULL;
   GL=0;
   minInd=0;
+  seed=0;
   angsd_tmpdir = strdup("angsd_tmpdir");
   
   if(arguments->argc==2){
@@ -238,7 +245,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   }else if(GL==5){
       phys_init(arguments->nams);
   }else if(GL==6){
-    simple_init();
+    srand48(seed);
   }else if(GL==7){
     ancestral_lik.init(arguments->nInd, angsd_tmpdir);
     if(ancestral_lik.doRecal){
@@ -327,8 +334,6 @@ abcGL::~abcGL(){
     abcError::killGlobalErrorProbs(errorProbs);
   else if(GL==5)
     phys_destroy();
-  else if(GL==6)
-    simple_destroy();
 
   if(doGlf)    bgzf_close(gzoutfile);
     
@@ -394,7 +399,7 @@ void abcGL::run(funkyPars *pars){
   else if(GL==5)
     call_phys(pars->chk,likes,trim);
   else if(GL==6){
-    call_simple(pars->counts,pars->keepSites,likes,pars->numSites,pars->nInd);
+    simple.run(pars->counts,pars->keepSites,likes,pars->numSites,pars->nInd);
   }else if(GL==7){
     ancestral_lik.run(pars->chk, likes, pars->ref, pars->anc, pars->keepSites, trim);
     if(ancestral_lik.doRecal==1){
