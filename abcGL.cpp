@@ -38,7 +38,7 @@ void readError(double **errors,const char *fname){
   FILE *fp=NULL;
   if(NULL==(fp=fopen(fname,"r"))){
     fprintf(stderr,"Error opening file: %s\n",fname);
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   
   char buf[LENS];
@@ -112,13 +112,13 @@ void abcGL::getOptions(argStruct *arguments){
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
   if(GL!=0 && (arguments->inputtype==INPUT_GLF || arguments->inputtype==INPUT_GLF3 || arguments->inputtype==INPUT_VCF_GL)){
     fprintf(stderr,"Can't calculate genotype likelihoods from -glf/-glf3/VCF files\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   if(arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_VCF_GL||arguments->inputtype==INPUT_GLF10_TEXT)
     return;
   if(doGlf&&GL==0){
     fprintf(stderr,"\t-> You need to choose a genotype likelihood model -GL for dumping genotype likelihoods\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   if(GL==0&&doGlf==0){
     shouldRun[index] =0;
@@ -133,15 +133,15 @@ void abcGL::getOptions(argStruct *arguments){
   
   if(( GL<0||GL>7 )) {
     fprintf(stderr,"\t-> You've choosen a GL model=%d, only 1,2,3,4,5,6,7 are implemented\n",GL);
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   if(GL==4&&(doCounts==0)){
     fprintf(stderr,"\t-> Must supply -doCounts 1 for SYK model\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   if(GL==6&&(doCounts==0)){
     fprintf(stderr,"\t-> Must supply -doCounts 1 for -gl 6\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   /*
   if(doGlf==2){
@@ -155,16 +155,16 @@ void abcGL::getOptions(argStruct *arguments){
   */
   if((doGlf==2||doGlf==3) && doMajorMinor==0){
     fprintf(stderr,"\t-> For dumping beaglestyle output you need to estimate major/minor: -doMajorMinor\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   if(arguments->inputtype==INPUT_BEAGLE&&doGlf){
     fprintf(stderr,"\t-> cannot output likelihoods (doGlf) when input is beagle\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
  
   if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
     fprintf(stderr,"Error: Likelihoods can only be estimated based on BAM input and uppile input\n");
-    exit(0);
+    exit(EXIT_FAILURE);
   }
 
 
@@ -192,7 +192,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-GL")){
       printArg(stdout);
-      exit(0);
+      exit(EXIT_FAILURE);
     }else
       return;
   }
