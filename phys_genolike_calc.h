@@ -1,75 +1,38 @@
 // Dear emacs, this is -*- c++ -*-
+/*
+  Genotype likelihoods for -GL 5 (phys), with a per sample model of
+  sequencing errors and ancient DNA damage. DEPRECATED: will be removed
+  in a future version.
+
+  Each bam file needs a coefficient file <bam>.phys with two lines:
+    QscoreCorrections c0 c1 ... (1 to 61 values, one per quality score)
+    ModelParameters p0 ... p17  (18 values)
+  p0-p11 are the off diagonal relative error rates (true base -> observed
+  base) for reads on the forward strand, reverse strand reads use the
+  complemented matrix. p12-p14 and p15-p17 are a*exp(-b*dist)+c for the
+  C->T and G->A transitions as a function of the distance to the nearest
+  read end.
+*/
 #ifndef PHYS_GENOLIKE_CALC_H
 #define PHYS_GENOLIKE_CALC_H
 
-//Angsd includes
+#include <vector>
 #include "bambi_interface.h"
 
-// C++ includes
-#include <cstdio>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <algorithm>
-
-#include <math.h>
-
-using namespace std;
-
-extern int refToInt[256];
 class phys_genolike_calc {
+ private:
+  struct physPars{
+    float qscore_corr[61];//correction factor per quality score
+    float parlist[18];
+    float pararray[2][4][4];//[strand][true base][observed base]
+  };
+  std::vector<physPars> pars;//one per sample
 
- private : 
-  
-  // Information stored in chunkyT
-  
-  
+  void update_pbase(int depth,const physPars &p,tNode *nd,float *base_prob);
 
-  bool debug;
-
-  // Use thie to store probabilties for the resulting genotypes
-  // implemented with double precision in angsd
-  // double geno_likes[10];
-  
-  // Probability matrix that a base is from a given geno-type
-  //float m_base_geno[4][10];
-  std::vector<float**> m_base_geno_vec;
-
-  // Contains q score corrections
-  //float qscore_corr[61];
-  std::vector<float*> qscore_corr_vec;  
-  // model parameters
-  //float parlist[18];
-  std::vector<float*> parlist_vec;
-  //  float pararray[2][2][4][4];
-
-  void init_p_base();
-
- public : 
-
-  // Use this to store the probabilities for the individual bases
-  float base_prob[4];
- 
-  // Default constructor
-  //phys_genolike_calc( char *parspath );
-
-  // Default destructor
-  ~phys_genolike_calc();
-
-  // 
-  void update_pbase( int depth,float *qscore_cor,float *parlist, tNode *nd );
-
-  void get_genolikes( int site, int sample, chunkyT *chk, double *return_likes );
-
-  // Helper functions to get results
-  void get_base_prob_str( char *results_str );
-  void get_genolikes_str( char *results_str );
-
-  void set_debug( bool db );
-  void read_coef(char *);
-
+ public:
+  void read_coef(const char *parspath);
+  void get_genolikes(int site,int sample,chunkyT *chk,int trim,double *return_likes);
 };
 
 #endif
