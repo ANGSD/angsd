@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <ctype.h>
+#include <stdlib.h>
 #include "mUpPile.h"
 
 #include "aio.h"
@@ -269,45 +270,64 @@ int errmod_cal(const errmod_t *em, int n, int m, uint16_t *bases, float *q)
   return 0;
 }
 #endif
-//this is global this is nasty
+//this is global this is nasty. It is only read after bam_likes_init,
+//so the threads can share it
 errmod_t *mod = NULL;
+
+//htslib's errmod_cal only uses 255 bases, above that it picks 255 at
+//random with its own unseeded random number generator, shared by all
+//threads. We pick them here instead, so that never happens
+#define MAXDEPTH 255
 
 //err_dep = 0.83
 void bam_likes_init(){
   mod = errmod_init(1-ERR_DEP);
+  if(mod==NULL){
+    fprintf(stderr,"\t-> Problem initializing the error model for -GL 1\n");
+    exit(1);
+  }
 }
 
 void bam_likes_destroy(){
   //  fprintf(stderr,"bam_likes_destroy\n");
   if(mod!=NULL)
     errmod_destroy(mod);    
+  mod = NULL;
+}
+
+//random number state for a sample at a site, so the bases picked do not
+//depend on the threads or on the order the sites are done in
+static void site_rng(unsigned short xs[3],int seed,int refId,int pos,int sample){
+  uint64_t x = ((uint64_t)(uint32_t)seed<<32) ^ ((uint64_t)(uint32_t)refId<<20) ^ (uint64_t)(uint32_t)pos ^ ((uint64_t)(uint32_t)sample<<48);
+  //splitmix64
+  x += 0x9e3779b97f4a7c15ULL;
+  x = (x ^ (x>>30)) * 0xbf58476d1ce4e5b9ULL;
+  x = (x ^ (x>>27)) * 0x94d049bb133111ebULL;
+  x ^= x>>31;
+  xs[0] = x; xs[1] = x>>16; xs[2] = x>>32;
 }
 
 
-void call_bam(chunkyT *chk,double **lk,int trim,int *keepSites){
+void call_bam(chunkyT *chk,double **lk,int trim,int *keepSites,int seed){
   //  fprintf(stderr,"trim=%d\n",trim);
-  if(chk==NULL){
-    if(mod!=NULL)
-      bam_likes_destroy();
-    return;
-  }
   aio::doAssert(mod!=NULL,1,AT,"");
   for(int s=0;s<chk->nSites;s++){
     lk[s] = new double[10*chk->nSamples];
+    for(int ii=0;ii<10*chk->nSamples;ii++)
+      lk[s][ii] = -0.0;
     if(keepSites[s]==0)
       continue;
     //fprintf(stderr,"posi=%d\n",chk->nd[s][0].refPos);
    
-    for(int ii=0;ii<10*chk->nSamples;ii++)
-      lk[s][ii] = -0.0;
     //fprintf(stderr,"chr=%s minbaseq=%d\n",chk->refName,minQ);
     for(int i=0;i<chk->nSamples;i++){
 
       tNode *nd = chk->nd[s][i];
       if(nd==NULL)
 	continue;
-      uint16_t bases[nd->l];
-      int numItems =0;
+      uint16_t bases[MAXDEPTH];
+      int nKept =0;
+      unsigned short xs[3];
       for(int j=0;j<nd->l;j++) {
 	//	fprintf(stderr,"posi=%d isop=%d +=%d\n",nd->posi[j],nd->isop[j],nd->posi[j]+nd->isop[j]);
 	int q=nd->qs[j];
@@ -339,9 +359,21 @@ void call_bam(chunkyT *chk,double **lk,int trim,int *keepSites){
 	//	bca->bases[n++] = q<<5 | (int)bam1_strand(p->b)<<4 | b;
 	int isLower = islower(nd->seq[j])>0;
 	//fprintf(stderr,"strandstuff=%d\tshiftstrandstuff=%d\n",isLower, isLower<<4 );
-	bases[numItems++] = q<<5 | isLower<<4 | refToInt[nd->seq[j]];
+	uint16_t b = q<<5 | isLower<<4 | refToInt[nd->seq[j]];
+	//reservoir sampling, every base has the same chance to be used
+	if(nKept<MAXDEPTH)
+	  bases[nKept] = b;
+	else{
+	  if(nKept==MAXDEPTH)
+	    site_rng(xs,seed,chk->refId,chk->refPos[s],i);
+	  int r = (int)(erand48(xs)*(nKept+1));
+	  if(r<MAXDEPTH)
+	    bases[r] = b;
+	}
+	nKept++;
 	//	fprintf(stderr,"bases[%d]=%d\n",j,bases[numItems-1]);
       }
+      int numItems = nKept<MAXDEPTH?nKept:MAXDEPTH;
       float likes[25];
       for(int j=0;0&&j<25;j++) 
 	likes[j]=0;
