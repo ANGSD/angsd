@@ -172,9 +172,6 @@ void abcGL::getOptions(argStruct *arguments){
     fprintf(stderr,"Error: Likelihoods can only be estimated based on BAM input and uppile input\n");
     exit(0);
   }
-
-
-  printArg(arguments->argumentFile);
 }
 
 abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
