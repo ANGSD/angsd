@@ -69,7 +69,7 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t-GL=%d: \n",GL);
   fprintf(argFile,"\t1: SAMtools\n");
   fprintf(argFile,"\t2: GATK\n");
-  fprintf(argFile,"\t3: SOAPsnp\n");
+  fprintf(argFile,"\t3: SOAPsnp (uses the first 255 bases of each read)\n");
   fprintf(argFile,"\t4: SYK\n");
   fprintf(argFile,"\t5: phys (deprecated, will be removed in a future version)\n");
   fprintf(argFile,"\t6: Super simple sample an allele type GL. (1.0,0.5,0.0)\n");
@@ -208,9 +208,16 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
     gatk_init();
   else if(GL==3){
     soap.init(arguments->nInd,angsd_tmpdir);
-    if(soap.doRecal)
+    if(soap.doRecal){
+      char *ref = NULL;
+      ref = angsd::getArg("-ref",ref,arguments);
+      if(ref==NULL){
+	fprintf(stderr,"\t-> -GL 3 needs -ref to calculate the calibration matrices in -tmpdir %s\n",angsd_tmpdir);
+	exit(1);
+      }
+      free(ref);
       fprintf(stderr,"[%s] Will calculate recalibration matrices, please don't do any other analysis\n",__FILE__);
-    else
+    }else
       fprintf(stderr,"[%s] Will use precalculated calibration matrices\n",__FILE__);
 
   }else if(GL==4) {
@@ -373,7 +380,8 @@ void abcGL::run(funkyPars *pars){
     return;
   //aio::doAssert(pars->chk!=NULL);
   double **likes = NULL;
-  if(soap.doRecal!=1 || ancestral_lik.doRecal!=1)
+  //no likelihoods when -GL 3 or -GL 7 only calculate their calibration
+  if(!(GL==3&&soap.doRecal==1) && !(GL==7&&ancestral_lik.doRecal==1))
     likes = new double*[pars->chk->nSites];
   if(GL==1)
     call_bam(pars->chk,likes,trim,pars->keepSites);

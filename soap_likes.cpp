@@ -7,13 +7,16 @@
   
   it will dump the countsmatrix and the calibration matrix
 
+  Only bases at most SOAP_MAXPOS from the 5' end of the read are used.
  */
 #include <map>
 #include <cmath>
 #include <fstream>
-#include <libgen.h>//basename
+#include <string>
 #include <sys/stat.h>//mkdir
 #include <sys/types.h>//mkdir
+#include <unistd.h>//access
+#include <cerrno>
 #include <vector>
 #include <limits> //<- for setting nan
 #include <ctype.h>
@@ -25,7 +28,7 @@
 #include "soap_likes.h"
 #include "analysisFunction.h"
 #include "aio.h"
-//calc_offset into an array of dim 256 256 4 4
+//calc_offset into an array of dim 256 256 4 4, b must be at most 255
 int co(int a, int b, int c, int d){
   return (a<<12 | b<<4 | c<<2|d );
 }
@@ -36,9 +39,24 @@ int conv[4] = {0,1,3,2};
 
 extern int refToInt[256];
 
+//position of a base from the 5' end of its read
+static inline int pos5(const tNode *nd,int j){
+  return isupper(nd->seq[j])?nd->posi[j]:nd->isop[j];
+}
+
+//returns 1 if the base is too far from the 5' end, and warns the first time
+static int tooFar(const tNode *nd,int j){
+  static int warned = 0;
+  if(pos5(nd,j)<=SOAP_MAXPOS)
+    return 0;
+  if(__sync_bool_compare_and_swap(&warned,0,1))
+    fprintf(stderr,"\t-> [%s] Reads longer than %d bases: -GL 3 only uses the first %d bases of each read\n",__FILE__,SOAP_MAXPOS+1,SOAP_MAXPOS+1);
+  return 1;
+}
+
 typedef struct{
-  char qs;
-  char pos;
+  int qs;
+  int pos;
   int isUpper;
 }tmpStruct;
 
@@ -99,20 +117,14 @@ for(int j=0;nd&&j<nd->l;j++) {
       if(aMap.size()>=0xFF)
 	break;
       tmpStruct t;
-      if(nd->qs[j]<0){
-	fprintf(stderr,"Meaningless low quality\n");
-	continue;
-      }
       if(nd->posi[j]<trim||nd->isop[j]<trim|| refToInt[nd->seq[j]]==4 ){
 	continue;
       }
-
+      if(tooFar(nd,j))
+	continue;
 
       t.qs=nd->qs[j];
-      if(1&&isupper(nd->seq[j]))
-	t.pos= nd->posi[j];
-      else
-	t.pos= nd->isop[j];
+      t.pos= pos5(nd,j);
       t.isUpper = isupper(nd->seq[j]);
       aMap.insert(std::pair<tmpStruct,int>(t,j));
     }
@@ -137,12 +149,7 @@ for(int j=0;nd&&j<nd->l;j++) {
       
       if(q_adjusted < 1)
 	q_adjusted = 1;
-      //      fprintf(stderr,"qadj=%d\n",q_adjusted);
-      int coord;
-      if(isupper(nd->seq[j]))
-	coord = nd->posi[j];
-      else
-	coord = nd->isop[j];
+      int coord = pos5(nd,j);
       //      fprintf(stderr,"coord=%d\n",coord);
       for(int allele1 = 0;allele1 != 4;allele1++ ) {
 	for(int allele2 = allele1; allele2 != 4; allele2++) {
@@ -172,9 +179,6 @@ for(int j=0;nd&&j<nd->l;j++) {
 
     for(int i=0;i<10;i++)//swap to normal log
       tmpLk[i] *= log(10.0);
-
-    double mmax = tmpLk[0];//rescale to most likely
-
   }
   return 1;
 }
@@ -283,8 +287,11 @@ void count_qual(size_t *count_matrix,const char*fname) {
   }
   if(1) {
     std::fstream fp;
-    //    fprintf(stderr,"[%s] dumping file:%s\n",__FUNCTION__,fname);
     fp.open(fname,std::fstream::out);
+    if(!fp.is_open()){
+      fprintf(stderr,"\t-> Problem writing calibration file: %s\n",fname);
+      exit(1);
+    }
     for(int qc = 0;qc<=255;qc++) {
       for(int i=0;i<255;i++) {
 	fp<< qc << '\t' << i;
@@ -295,40 +302,28 @@ void count_qual(size_t *count_matrix,const char*fname) {
       }
     }
     fp.close();
+    if(fp.fail()){
+      fprintf(stderr,"\t-> Problem writing calibration file: %s\n",fname);
+      exit(1);
+    }
   }
   delete [] p_matrix;
 }
 
 
-int actuallyrun =0;
 void soap_likes::gen_counts(chunkyT *chk,size_t *count_matrix,int whichSample,char *refs) {
-  //qs,seqpos,ref,nuc
-  int printOrder[4] = {0,1,3,2};
-
-
-  actuallyrun += chk->nSites;
-
   for(int s=0;s<chk->nSites;s++) {
-    //    fprintf(stderr,"%c\n",refs[s]);
     if(refs[s]==4)
       continue;
-    
-    for(int l=0;chk->nd[s][whichSample]&&l<chk->nd[s][whichSample]->l;l++){
-      char nuc = chk->nd[s][whichSample]->seq[l];
+    tNode *nd = chk->nd[s][whichSample];
+    for(int l=0;nd&&l<nd->l;l++){
+      char nuc = nd->seq[l];
       if(nuc =='n' || nuc=='N')
         continue;
-      /*
-        increment:
-        [qs][position in read][reference][nucleotide]
-      */
-      int funkyOffset =0;
-      if(isupper(nuc))//qs not +33 anymore
-	funkyOffset = co(chk->nd[s][whichSample]->qs[l], chk->nd[s][whichSample]->posi[l],refs[s],refToInt[chk->nd[s][whichSample]->seq[l]]);
-      else
-	funkyOffset = co(chk->nd[s][whichSample]->qs[l], chk->nd[s][whichSample]->isop[l],refs[s],refToInt[chk->nd[s][whichSample]->seq[l]]);
-      
-      count_matrix[funkyOffset]++;//increment the correct offset.
-	
+      if(tooFar(nd,l))
+	continue;
+      //increment [qs][position from 5' end][reference][nucleotide]
+      count_matrix[co(nd->qs[l],pos5(nd,l),refs[s],refToInt[nuc])]++;
     }
   }
 }
@@ -339,10 +334,12 @@ void soap_likes::gen_counts(chunkyT *chk,size_t *count_matrix,int whichSample,ch
 
 
 void dump_count_mat(const char *fname,size_t *count_mat){
-  //  fprintf(stderr,"[%s] dumping file:%s\n",__FUNCTION__,fname);
   int printOrder[4] = {0,1,3,2};
-  FILE *fpp =NULL;
-  fpp = fopen(fname,"w");
+  FILE *fpp = fopen(fname,"w");
+  if(fpp==NULL){
+    fprintf(stderr,"\t-> Problem writing counts file: %s\n",fname);
+    exit(1);
+  }
     for(int i=0;i<255;i++) {
       for(int n=0;n<255;n++){
 	fprintf(fpp,"%d\t%d\t",i, n);
@@ -352,8 +349,10 @@ void dump_count_mat(const char *fname,size_t *count_mat){
 	fprintf(fpp,"\n");
       }
     }
-    if(fpp) fclose(fpp);
-    
+    if(fclose(fpp)!=0){
+      fprintf(stderr,"\t-> Problem writing counts file: %s\n",fname);
+      exit(1);
+    }
 }
 
 
@@ -367,7 +366,7 @@ void soap_likes::run(chunkyT *chk,double **lk,char *refs,int trim) {
   }else{
     if(refs==NULL){
       fprintf(stderr,"\t-> Must supply reference for SOAPsnp calibration\n");
-      exit(0);
+      exit(1);
     }
     for(int i=0;i<chk->nSamples;i++){
       pthread_mutex_lock(myMuts+i);//do persample lock maybe not nescearry due to atomic operations
@@ -379,21 +378,11 @@ void soap_likes::run(chunkyT *chk,double **lk,char *refs,int trim) {
 
 
 void soap_likes::setCaliNames(int nInd){
-  //  fprintf(stderr,"setcalinames\n");
-  for(size_t i=0;i<nInd;i++){
-    char *ret1 = new char[128];
-    char *ret2 = new char[128];
-    snprintf(ret1,128,"%s/%zu.qual%zu",tmpdir,i,i);
-    snprintf(ret2,128,"%s/%zu.counts%zu",tmpdir,i,i);
-    if(strlen(ret1)>100||strlen(ret1)>100){
-      fprintf(stderr,"Might be problems with to long filenames\n");
-      fprintf(stderr,"Please check/modify this function: %s in file:%s\n",__FUNCTION__,__FILE__);
-    }
-    //    fprintf(stderr,"ret1=%s ret2=%s\n",ret1,ret2);
-    p_mat_names.push_back(ret1);
-    count_mat_names.push_back(ret2);
+  for(int i=0;i<nInd;i++){
+    std::string base = std::string(tmpdir)+"/"+std::to_string(i);
+    p_mat_names.push_back(strdup((base+".qual"+std::to_string(i)).c_str()));
+    count_mat_names.push_back(strdup((base+".counts"+std::to_string(i)).c_str()));
   }
-  
 }
 
 int soap_likes::p_mat_exists(){
@@ -406,32 +395,60 @@ int soap_likes::p_mat_exists(){
   return 1;
 }
 
-//simple filereader of a precalculated calibration matrix
-double *get_p_matrix(const char*fname){
-  //  fprintf(stderr,"[%s] reading file: %s\n",__FUNCTION__,fname);
+static void bad_p_matrix(const char *fname,int line,const char *what){
+  fprintf(stderr,"\t-> Calibration file %s line %d: %s\n",fname,line,what);
+  fprintf(stderr,"\t-> Delete the calibration files in the -tmpdir and rerun the calibration\n");
+  exit(1);
+}
 
+//reads a calibration matrix written by count_qual: one line per quality
+//score 0-255 and position 0-254 with 16 probabilities
+double *get_p_matrix(const char*fname){
   double *p_matrix = new double [256*256*4*4];
   for(size_t i=0;i<256*256*4*4;i++)
-    p_matrix[i] = 0.0;//maybe set to nan?
+    p_matrix[i] = 0.0;
 
-  //now plug in values
-  FILE *fp = NULL;
-  fp=fopen(fname,"r");
-  char buf[LENSS];
-
-  
-  while(fgets(buf,LENSS,fp)){
-    //size to to avoid typecasting when bitshitting... maybe not nescarry
-    size_t qc = atoi(strtok(buf,"\t\n "));
-    size_t rlen = atoi(strtok(NULL,"\t\n "));
-    //    fprintf(stderr,"qc=%lu rlen=%lu shifted=%lu\n",qc,rlen,(qc<<12) | (rlen<<4) |16);
-    for(int al2=0;al2<16;al2++)
-      p_matrix[(qc<<12) | (rlen<<4) |al2   ] = atof(strtok(NULL,"\t \n"));
-
-    //	p_matrix[i][j][al2/4][al2 %4] = atof(strtok(NULL,"\t \n"));
-
+  FILE *fp = fopen(fname,"r");
+  if(fp==NULL){
+    fprintf(stderr,"\t-> Problem opening calibration file: %s\n",fname);
+    exit(1);
   }
-  if(fp) fclose(fp);
+  std::vector<char> seen(256*256,0);
+  int nLines = 0;
+  char buf[LENSS];
+  while(fgets(buf,LENSS,fp)){
+    nLines++;
+    char *tok = strtok(buf,"\t\n ");
+    if(tok==NULL)
+      bad_p_matrix(fname,nLines,"empty line");
+    char *end = NULL;
+    long qc = strtol(tok,&end,10);
+    if(*end!='\0'||qc<0||qc>255)
+      bad_p_matrix(fname,nLines,"quality score must be 0-255");
+    tok = strtok(NULL,"\t\n ");
+    long rlen = tok?strtol(tok,&end,10):-1;
+    if(tok==NULL||*end!='\0'||rlen<0||rlen>SOAP_MAXPOS)
+      bad_p_matrix(fname,nLines,"position must be 0-254");
+    if(seen[qc*256+rlen])
+      bad_p_matrix(fname,nLines,"quality score and position seen twice");
+    seen[qc*256+rlen] = 1;
+    for(int al2=0;al2<16;al2++){
+      tok = strtok(NULL,"\t\n ");
+      if(tok==NULL)
+	bad_p_matrix(fname,nLines,"less than 16 probabilities");
+      p_matrix[(qc<<12) | (rlen<<4) |al2 ] = strtod(tok,&end);
+      if(*end!='\0')
+	bad_p_matrix(fname,nLines,"not a number");
+    }
+    if(strtok(NULL,"\t\n ")!=NULL)
+      bad_p_matrix(fname,nLines,"more than 16 probabilities");
+  }
+  fclose(fp);
+  if(nLines!=256*(SOAP_MAXPOS+1)){
+    fprintf(stderr,"\t-> Calibration file %s has %d lines, expected %d\n",fname,nLines,256*(SOAP_MAXPOS+1));
+    fprintf(stderr,"\t-> Delete the calibration files in the -tmpdir and rerun the calibration\n");
+    exit(1);
+  }
   return p_matrix;
 }
 
@@ -439,11 +456,22 @@ double *get_p_matrix(const char*fname){
 void soap_likes::init(int nInd_a,const char*wdir){
   tmpdir = strdup(wdir);
   nInd = nInd_a;
-  mkdir(tmpdir,0777);
+  if(mkdir(tmpdir,0777)!=0&&errno!=EEXIST){
+    fprintf(stderr,"\t-> Problem creating -tmpdir %s: %s\n",tmpdir,strerror(errno));
+    exit(1);
+  }
+  struct stat st;
+  if(stat(tmpdir,&st)!=0||!S_ISDIR(st.st_mode)){
+    fprintf(stderr,"\t-> -tmpdir %s is not a directory\n",tmpdir);
+    exit(1);
+  }
 
   setCaliNames(nInd);
   if(p_mat_exists()==0){
-    //    fprintf(stderr,"Calibration matrix doesn't exist now allocating important stuff\n");
+    if(access(tmpdir,W_OK)!=0){
+      fprintf(stderr,"\t-> Can't write the calibration files to -tmpdir %s\n",tmpdir);
+      exit(1);
+    }
     doRecal =1;
     count_mat = new size_t*[nInd];
     for(int i=0;i<nInd;i++){
@@ -460,15 +488,13 @@ void soap_likes::init(int nInd_a,const char*wdir){
 
   myMuts = new pthread_mutex_t[nInd];
   for(int i=0;i<nInd;i++)
-    if(pthread_mutex_init(myMuts+i,NULL))
-      fprintf(stderr,"problems initializing mutex\n");
-  
-  //  fprintf(stderr,"doRecal=%d\n",doRecal);
+    if(pthread_mutex_init(myMuts+i,NULL)){
+      fprintf(stderr,"\t-> Problem initializing mutex\n");
+      exit(1);
+    }
 }
 
 soap_likes::~soap_likes(){
-  //  fprintf(stderr,"soaplikes destructor\n");
-  
   if(doRecal){
     for(int i=0;i<nInd;i++){//dumpcount and qual
       dump_count_mat(count_mat_names[i],count_mat[i]);
@@ -481,10 +507,19 @@ soap_likes::~soap_likes(){
       delete [] p_matrix[i];
     delete [] p_matrix;
   }
+  if(count_mat!=NULL){
+    for(int i=0;i<nInd;i++)
+      delete [] count_mat[i];
+    delete [] count_mat;
+  }
   for(size_t i=0;i<count_mat_names.size();i++){
-    delete [] count_mat_names[i];
-    delete [] p_mat_names[i];
+    free(count_mat_names[i]);
+    free(p_mat_names[i]);
   }
   free(tmpdir);
-  delete [] myMuts;
+  if(myMuts!=NULL){
+    for(int i=0;i<nInd;i++)
+      pthread_mutex_destroy(myMuts+i);
+    delete [] myMuts;
+  }
 }
