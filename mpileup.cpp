@@ -1,10 +1,22 @@
 #include <ctype.h>
+#include <climits>
+#include <cstdarg>
 #include "pooled_alloc.h"
 #include "mpileup.h"
 #include "mUpPile.h"
 #include "aio.h"
 
 extern tpool_alloc_t *tnodes;
+
+static void lineError(int lineNo,const char *fmt,...){
+  fprintf(stderr,"\t-> Problem in pileup file at line %d: ",lineNo);
+  va_list ap;
+  va_start(ap,fmt);
+  vfprintf(stderr,fmt,ap);
+  va_end(ap);
+  fprintf(stderr,". Will exit\n");
+  exit(1);
+}
 
 mpileup::mpileup(int nInd_a,gzFile gz_a,const aMap* revMap_a,int minQ_a){
   fprintf(stderr,"\t-> You are using -pileup, this means:\n");
@@ -14,102 +26,127 @@ mpileup::mpileup(int nInd_a,gzFile gz_a,const aMap* revMap_a,int minQ_a){
 
   nInd = nInd_a;
   gz = gz_a;
-  l = 8;
   revMap = revMap_a;
   minQ = minQ_a;
-  buffer=original = (char*) calloc(l,sizeof(char));
+  lineNo = 0;
+  changed = 0;
+  nIndelWarn = 0;
+  l = 128;
+  buffer = (char*) calloc(l,sizeof(char));
+  bufSize = l;
+  buf = (char*) calloc(bufSize,sizeof(char));
 }
+
 mpileup::~mpileup(){
-  free(original);
+  free(buffer);
+  free(buf);
 }
 
-tNode **parseNd(char *line,int nInd,const char *delims,int minQ,char ref){
+//split a copy of buffer into fields. Fields are separated by tabs (empty fields are kept),
+//or by spaces if the line has no tabs. Returns the number of fields, 0 for an empty line.
+int mpileup::splitLine(){
+  if(bufSize<l){
+    buf=(char*)realloc(buf,l);
+    bufSize=l;
+  }
+  strcpy(buf,buffer);
+  size_t len=strlen(buf);
+  while(len>0&&(buf[len-1]=='\n'||buf[len-1]=='\r'))
+    buf[--len]='\0';
 
+  fields.clear();
+  if(strchr(buf,'\t')){
+    char *p=buf;
+    fields.push_back(p);
+    while((p=strchr(p,'\t'))){
+      *p++='\0';
+      fields.push_back(p);
+    }
+  }else{
+    char *save=NULL;
+    for(char *tok=strtok_r(buf," ",&save);tok;tok=strtok_r(NULL," ",&save))
+      fields.push_back(tok);
+  }
+  if(fields.size()==1&&fields[0][0]=='\0')
+    fields.clear();
+  return fields.size();
+}
+
+//parse depth, bases and quals for each individual, fields start at index 3
+tNode **mpileup::parseNd(char ref){
   tNode **ret =(tNode**) calloc(nInd,sizeof(tNode*));
 
   for(int i=0;i<nInd;i++) {
-
-    char *tok = strtok_r(NULL,delims,&line);
-    aio::doAssert(tok!=NULL,AT);
-    int seqDepth = atoi(tok);
-    ret[i] = initNodeT(seqDepth);
-    ret[i]->l = seqDepth;
-    if(line[0]=='\t')
+    char *depthStr = fields[3+3*i];
+    char *bases = fields[4+3*i];
+    char *quals = fields[5+3*i];
+    char *end=NULL;
+    long depth = strtol(depthStr,&end,10);
+    if(end==depthStr||*end!='\0'||depth<0||depth>INT_MAX)
+      lineError(lineNo,"invalid depth \'%s\' for individual %d",depthStr,i);
+    ret[i] = initNodeT(depth);
+    ret[i]->l = depth;
+    if(depth==0)//bases and quals are '*' or empty
       continue;
-    if(ret[i]->l==0){
-      strtok_r(NULL,delims,&line);
-      strtok_r(NULL,delims,&line);
-    }else{
-      char *tok = strtok_r(NULL,delims,&line);
-      int at =0;
-      unsigned inner =0;
-      while(inner<strlen(tok)){
-	//	fprintf(stderr,"inner:%u len:%zu rest:%s\n",inner,strlen(tok),tok+inner);
-	if(tok[inner]=='$')
-	  inner++;
-	else if (tok[inner]=='^'){
-	  inner+=2;
-	}else if(isalpha(tok[inner])){
-	  ret[i]->seq[at] =tok[inner];
-	  at++;inner++;
-	}else if(tok[inner]=='-'||tok[inner]=='+'){
-	  static int show =1;
-	  if(show-->0){
-	    fprintf(stderr,"\t-> Problem with indels in -pileup: please use raw binary for bam files and NOT pileup files for inserts:%s\n",tok);
-	    fprintf(stderr,"\t-> Parsing will only use non-indel information. This msg will appear only once\n");
-	  }
-	  int opLen=0;
-	  char *bb = new char[strlen(tok)];
-	  sscanf(tok+inner+1,"%d%s",&opLen,bb);
-	  //fprintf(stderr,"opLen:%d\n",opLen);
-	  if(opLen<10)
-	    inner +=2+opLen;
-	  else if(opLen<100)
-	    inner +=3+opLen;
-	  delete [] bb;
-	}else if(tok[inner]=='*'){
-	  ret[i]->seq[at++]='N';
-	  inner++;
-	}
-	else if(tok[inner]=='.' ){
-	  ret[i]->seq[at++]=ref;
-	  inner++;
-	}
-	else if(tok[inner]==','){
-	  //  fprintf(stderr,"This wil...:%s sub:%c\n",tok,ref);
-	  ret[i]->seq[at++]=ref;
-	  inner++;
-	}
-	else{
-	  fprintf(stderr,"This will never happen, ever...:%s sub:%s\n",tok,tok+inner);
-	  exit(0);
-	}
 
+    //one entry in bases (and one quality) per read
+    int at=0;
+    for(char *b=bases;*b;){
+      if(*b=='$'){//end of read
+	b++;
+	continue;
       }
-#if 0
-      for(int ii=0;ii<ret[i].l;ii++)
-	fprintf(stderr,"ii:%d %c\n",ii,ret[i].seq[ii]);
-#endif
-      tok =strtok_r(NULL,delims,&line);
-      for(unsigned inner=0;inner<strlen(tok);inner++){
-	ret[i]->qs[inner] = tok[inner]-33;
-	ret[i]->posi[inner] = 255;
-	ret[i]->isop[inner] = 255;
-	ret[i]->mapQ[inner] = 30;
-	//	fprintf(stderr,"qs[%d]:%d\n",inner,ret[i].qs[inner]);
-	if(ret[i]->qs[inner]<minQ)
-	  ret[i]->seq[inner] = 'n';
+      if(*b=='^'){//start of read, followed by its mapping quality
+	if(b[1]=='\0')
+	  lineError(lineNo,"'^' at the end of the bases for individual %d",i);
+	b+=2;
+	continue;
       }
-
+      if(*b=='+'||*b=='-'){//indel: +3ACG or -3ACG, belongs to the previous base
+	if(nIndelWarn++==0){
+	  fprintf(stderr,"\t-> Problem with indels in -pileup: please use raw binary for bam files and NOT pileup files for inserts:%s\n",bases);
+	  fprintf(stderr,"\t-> Parsing will only use non-indel information. This msg will appear only once\n");
+	}
+	char *e=NULL;
+	long opLen=strtol(b+1,&e,10);
+	if(e==b+1||opLen<0||(long)strlen(e)<opLen)
+	  lineError(lineNo,"malformed indel in the bases for individual %d",i);
+	b=e+opLen;
+	continue;
+      }
+      char base;
+      if(isalpha(*b))
+	base=*b;
+      else if(*b=='.'||*b==',')
+	base=ref;
+      else if(*b=='*'||*b=='#'||*b=='>'||*b=='<')//deletion or reference skip
+	base='N';
+      else{
+	lineError(lineNo,"unexpected character \'%c\' in the bases for individual %d",*b,i);
+	return NULL;//not reached
+      }
+      if(at>=depth)
+	lineError(lineNo,"more bases than the depth %ld for individual %d",depth,i);
+      ret[i]->seq[at++]=base;
+      b++;
     }
-
+    if(at!=depth)
+      lineError(lineNo,"found %d bases, expected the depth %ld for individual %d",at,depth,i);
+    if((long)strlen(quals)!=depth)
+      lineError(lineNo,"found %zu base qualities, expected the depth %ld for individual %d",strlen(quals),depth,i);
+    for(int j=0;j<depth;j++){
+      ret[i]->qs[j] = quals[j]-33;
+      ret[i]->posi[j] = 255;
+      ret[i]->isop[j] = 255;
+      ret[i]->mapQ[j] = 30;
+      if(ret[i]->qs[j]<minQ)
+	ret[i]->seq[j] = 'n';
+    }
   }
   return ret;
 }
 
 funkyPars *mpileup::fetch(int chunksize){
-  static const char *delims = "\t \n";
-  
   funkyPars * myfunky =funkyPars_init();
   myfunky->posi = new int[chunksize];
   myfunky->ref = new char[chunksize];
@@ -117,60 +154,51 @@ funkyPars *mpileup::fetch(int chunksize){
   myfunky->chk->nd = new tNode **[chunksize];
   myfunky->chk->refPos = NULL;
   int nSites=0;
-  static int lastRefId =-1;
-  static int changed =0;
-  aMap ::const_iterator it;
-  
-  if(changed){
-    //parse an entire site:
-    myfunky->refId = lastRefId;
-    myfunky->posi[nSites] = atoi(strtok_r(NULL,delims,&buffer))-1;
-    myfunky->ref[nSites] = refToInt[strtok_r(NULL,delims,&buffer)[0]];
-    myfunky->chk->nd[nSites] = parseNd(buffer,nInd,delims,minQ,myfunky->ref[nSites]);
-    nSites++;
-    changed =0;
-  }
-  buffer=original;
-  while(aio::tgets(gz,&buffer,&l)) {
-    if(buffer!=original) 
-      original=buffer;
-    char *tok = strtok_r(buffer,delims,&buffer);
-    it=revMap->find(tok);
-    if(it==revMap->end()){
-      fprintf(stderr,"\t-> Problems finding reference \'%s\' in fai file\n",tok);
-      exit(0);
-    }
-    if(lastRefId==-1)
-      lastRefId = it->second;
-    if(lastRefId!=it->second){
-      changed =1;
-      lastRefId = it->second; 
-      myfunky->refId = lastRefId;
+
+  //buffer still holds a line from the previous call that started a new chromosome,
+  //so parse it before reading more
+  int haveLine = changed;
+  changed=0;
+  while(haveLine||aio::tgets(gz,&buffer,&l)){
+    if(!haveLine)
+      lineNo++;
+    haveLine=0;
+
+    int nFields = splitLine();
+    if(nFields==0)
+      continue;//empty line
+    if(nFields!=3+3*nInd)
+      lineError(lineNo,"found %d columns, expected chr, pos, ref and depth, bases, quals for each of the %d individuals (%d columns), check -nInd",nFields,nInd,3+3*nInd);
+
+    aMap::const_iterator it=revMap->find(fields[0]);
+    if(it==revMap->end())
+      lineError(lineNo,"chromosome \'%s\' is not in the fai file",fields[0]);
+    if(nSites>0&&it->second!=myfunky->refId){
+      //new chromosome: keep the line in buffer for the next call
+      changed=1;
       break;
     }
-    lastRefId = it->second;
-    myfunky->refId = lastRefId;
+    myfunky->refId = it->second;
 
-    myfunky->posi[nSites] = atoi(strtok_r(NULL,delims,&buffer))-1;
-    char ref = strtok_r(NULL,delims,&buffer)[0];
-    myfunky->ref[nSites] = refToInt[ref];
+    char *end=NULL;
+    long pos=strtol(fields[1],&end,10);
+    if(end==fields[1]||*end!='\0'||pos<1||pos>INT_MAX)
+      lineError(lineNo,"invalid position \'%s\'",fields[1]);
+    if(fields[2][0]=='\0')
+      lineError(lineNo,"empty reference base");
+    char ref = fields[2][0];
 
-    myfunky->chk->nd[nSites++] = parseNd(buffer,nInd,delims,minQ,ref);
-    
-    buffer=original;
+    myfunky->posi[nSites] = pos-1;
+    myfunky->ref[nSites] = refToInt[(unsigned char)ref];
+    myfunky->chk->nd[nSites++] = parseNd(ref);
     if(nSites>=chunksize)
       break;
   }
-  //  fprintf(stderr,"afterloop\n");
   myfunky->nInd=myfunky->chk->nSamples= nInd;
   myfunky->numSites = myfunky->chk->nSites=nSites;
-  //fprintf(stderr,"\nchange2 %d\tnSites %d\tlastRefId\t%d %d %d\n",lastRefId,nSites,lastRefId,myfunky->refId,it->second);
-  //  fflush(stderr);
-  if(nSites==0 && changed == 0){
+  if(nSites==0){
     funkyPars_destroy(myfunky);
     return(NULL);
-
   }
- return(myfunky);
-
+  return(myfunky);
 }
