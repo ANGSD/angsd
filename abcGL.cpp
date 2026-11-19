@@ -68,7 +68,7 @@ void abcGL::printArg(FILE *argFile){
 
   fprintf(argFile,"\t-GL=%d: \n",GL);
   fprintf(argFile,"\t1: SAMtools\n");
-  fprintf(argFile,"\t2: GATK\n");
+  fprintf(argFile,"\t2: GATK (the model from the original GATK paper)\n");
   fprintf(argFile,"\t3: SOAPsnp (uses the first 255 bases of each read)\n");
   fprintf(argFile,"\t4: SYK\n");
   fprintf(argFile,"\t5: phys (deprecated, will be removed in a future version)\n");
@@ -386,7 +386,7 @@ void abcGL::run(funkyPars *pars){
   if(GL==1)
     call_bam(pars->chk,likes,trim,pars->keepSites);
   else if(GL==2)
-    call_gatk(pars->chk,likes,trim);
+    call_gatk(pars->chk,likes,trim,pars->keepSites);
   else if(GL==3){
     soap.run(pars->chk,likes,pars->ref,trim);
     //we dont estimate GL but make a calibration matrix
