@@ -1,84 +1,46 @@
 /*
- 
+  -GL 6, a very simple model meant for testing.
+
+  For every individual and site one base is sampled from the counts
+  (-doCounts 1), and the genotype likelihoods are 1 for the homozygote of
+  that base, 0.5 for the three heterozygotes with it and 0 for the other
+  six genotypes. The sampling uses drand48, which abcGL seeds from -seed
+  or the clock. With -nThreads above 1 the threads share drand48, so the
+  same seed only gives the same result with -nThreads 1.
  */
 
-
 #include <cmath>
-#include <cstdio>
 #include "bambi_interface.h"
 #include "simple_likes.h"
 #include "analysisFunction.h"
-#include "aio.h"
-
-double **probs_simple = NULL;
 
 // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 //AA,AC,AG,AT,CC,CG,CT,GG,GT,TT
-double **genLikes_simple(){
-  double **ret = new double*[4];
+simple_likes::simple_likes(){
   for(int b=0;b<4;b++){
-    ret[b]=new double[10];
-    ret[b][angsd::majorminor[b][b]] = log(1.0);
-    //    fprintf(stderr,"offss:%d\n",angsd::majorminor[b][b]);
-    for(int i=0;i<4;i++){
-      if(b!=i){
-	ret[b][angsd::majorminor[b][i]] = log(0.5);
-	//	fprintf(stderr,"offss2:%d\n",angsd::majorminor[b][i]);
-      }
-    }
     for(int i=0;i<4;i++)
-      for(int ii=i;ii<4;ii++){
-	if(i!=b&&ii!=b){
-	  ret[b][angsd::majorminor[i][ii]] = log(0.0);
-	  //fprintf(stderr,"offss3:%d\n",angsd::majorminor[i][ii]);
-	}
-      }
-    //exit(0);
-  }
-  
-  return ret;
-}
-
-
-void simple_init(){
-  probs_simple = genLikes_simple();
-  for(int b=0;0&&b<4;b++){
-    fprintf(stderr,"%d) ",b);
-    for(int i=0;i<10;i++)
-      fprintf(stderr,"%f ",probs_simple[b][i]);
-    fprintf(stderr,"\n");
+      for(int ii=i;ii<4;ii++)
+	probs[b][angsd::majorminor[i][ii]] = -INFINITY;//genotypes without b
+    for(int i=0;i<4;i++)
+      probs[b][angsd::majorminor[b][i]] = log(0.5);//heterozygotes with b
+    probs[b][angsd::majorminor[b][b]] = 0.0;//homozygote for b, log(1)
   }
 }
 
-void simple_destroy(){
-  for(int i=0;i<3;i++)
-    delete [] probs_simple[i];
-  delete [] probs_simple;
-  probs_simple=NULL;
-}
-
-
-void call_simple(suint **counts,int *keepSites,double **lk,int nSites,int nSamples){
-  
+void simple_likes::run(suint **counts,int *keepSites,double **lk,int nSites,int nSamples) const{
   for(int s=0;s<nSites;s++){
-    for(int i=0;i<nSamples;i++){
-      //allocate for all samples, for first sample
-      if(i==0){
-	lk[s] = new double[10*nSamples];
-	for(int ii=0;ii<10*nSamples;ii++)
-	  lk[s][ii] = -0.0;//set default values
-      }
-      if(keepSites[s]==0)
-	continue;
+    lk[s] = new double[10*nSamples];
+    for(int ii=0;ii<10*nSamples;ii++)
+      lk[s][ii] = -0.0;//set default values
+    if(keepSites[s]==0)
+      continue;
 
+    for(int i=0;i<nSamples;i++){
       int r = angsd::getRandomCount(counts[s],i,-1);
-      //      fprintf(stdout,"ris\t%d\n",r);
-      aio::doAssert(r>-1,1,AT,"");
-      if(r==4)
+      if(r==4)//no data for this individual
 	continue;
-      for(int j=0;j<10;j++){
-	lk[s][i*10+j]=probs_simple[r][j];
-      }
+      for(int j=0;j<10;j++)
+	lk[s][i*10+j]=probs[r][j];
     }
   }
 }
