@@ -141,6 +141,10 @@ void abcWriteBcf::print(funkyPars *pars){
     if(pars->keepSites[s]==0)
       continue;
     rec->rid = bcf_hdr_name2id(hdr,header->target_name[pars->refId]);
+    if(rec->rid < 0){
+      fprintf(stderr,"Unable to find contig '%s' in the BCF header\n",header->target_name[pars->refId]);
+      exit(EXIT_FAILURE);
+    }
     rec->pos = pars->posi[s];//<- maybe one index?
     //    bcf_update_id(hdr, rec, "rs6054257");
     if(domcall>0&&mcall!=NULL){
