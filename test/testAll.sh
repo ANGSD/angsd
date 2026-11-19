@@ -139,6 +139,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing -GL 1"
+time ./testBamLikes.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -GL 1 exit code: $?"
+    RVAL=1
+fi
+
 
 exit ${RVAL}
 

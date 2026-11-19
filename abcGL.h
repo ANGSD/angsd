@@ -19,7 +19,8 @@ private:
   double ****errorProbs;
   //below is used for output
   kstring_t bufstr;
-  //gatk, simple and soap methods are implemented as classes
+  //bam, gatk, simple and soap methods are implemented as classes
+  bam_likes *bam;//only allocated with -GL 1, its tables are 32MB
   gatk_likes gatk;
   simple_likes simple;
   soap_likes soap;

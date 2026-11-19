@@ -79,7 +79,7 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t-tmpdir\t\t%s/\t(used by SOAPsnp)\n",angsd_tmpdir);
   fprintf(argFile,"\t-errors\t\t%s\t\t(used by SYK)\n",errorFname);
   fprintf(argFile,"\t-minInd\t\t%d\t\t(0 indicates no filtering)\n",minInd);
-  fprintf(argFile,"\t-seed\t\t%d\t\t(used by -GL 6, 0: seed from the clock. Only reproducible with -nThreads 1)\n",seed);
+  fprintf(argFile,"\t-seed\t\t%d\t\t(used by -GL 1 above depth 255 and -GL 6, 0: seed from the clock. -GL 6 is only reproducible with -nThreads 1)\n",seed);
   fprintf(argFile,"\n");
   fprintf(argFile,"Filedumping:\n");
   fprintf(argFile,"\t-doGlf\t%d\n",doGlf);
@@ -147,7 +147,7 @@ void abcGL::getOptions(argStruct *arguments){
     exit(0);
   }
   //without -seed, sample new bases every run
-  if(GL==6&&seed==0)
+  if((GL==1||GL==6)&&seed==0)
     seed=time(NULL);
   /*
   if(doGlf==2){
@@ -180,6 +180,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   outfileSAFPOS = NULL;
   outfileSAFIDX = NULL;
   errors = NULL;
+  bam = NULL;
   postfix = ".glf.gz";
   beaglepostfix = ".beagle.gz";
   tmpChr = NULL;
@@ -207,7 +208,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   //  if(GL==0) //why?
   //  return;
   if(GL==1)
-    bam_likes_init();
+    bam = new bam_likes();
   else if(GL==3){
     soap.init(arguments->nInd,angsd_tmpdir);
     if(soap.doRecal){
@@ -335,7 +336,7 @@ abcGL::~abcGL(){
   if(GL==0&&doGlf==0)
     return;
   else if(GL==1)
-    bam_likes_destroy();
+    delete bam;
   else if(GL==4)
     abcError::killGlobalErrorProbs(errorProbs);
   else if(GL==5)
@@ -391,7 +392,7 @@ void abcGL::run(funkyPars *pars){
   if(!(GL==3&&soap.doRecal==1) && !(GL==7&&ancestral_lik.doRecal==1))
     likes = new double*[pars->chk->nSites];
   if(GL==1)
-    call_bam(pars->chk,likes,trim,pars->keepSites);
+    bam->run(pars->chk,likes,trim,pars->keepSites,seed);
   else if(GL==2)
     gatk.run(pars->chk,likes,trim,pars->keepSites);
   else if(GL==3){
