@@ -6,23 +6,45 @@
 #include "sample.h"
 #include "aio.h"
 
+//returns NULL if the fai file is malformed
 bam_hdr_t *getHeadFromFai(const char *fname){
   std::vector<char *> chrs;
-  std::vector<int> lengths;
+  std::vector<uint32_t> lengths;
   FILE *fp = aio::getFILE(fname,"r");
-  char buf[1024];
-  while(fgets(buf,1024,fp)){ 
-    char *tok = strtok(buf,"\t \n");
-    //fprintf(stderr,"tok: %s\n",tok);
-    chrs.push_back(strdup(tok));//<-strdup so don't clean here
-    tok = strtok(NULL,"\t \n");
-    if(!tok){
-      fprintf(stderr,"\t-> fai file looks malformed? last reference: %s\n",chrs.back());
-      fclose(fp);
-      return NULL;
+  char *buf = NULL;
+  size_t bufLen = 0;
+  int lineNo = 0;
+  int bad = 0;
+  while(getline(&buf,&bufLen,fp)!=-1){
+    lineNo++;
+    char *tok = strtok(buf,"\t \r\n");
+    if(!tok)//skip empty lines
+      continue;
+    char *name = tok;
+    tok = strtok(NULL,"\t \r\n");
+    char *end = NULL;
+    unsigned long len = tok?strtoul(tok,&end,10):0;
+    if(!tok||end==tok||*end!='\0'||len>UINT32_MAX){
+      if(len>UINT32_MAX)
+	fprintf(stderr,"\t-> fai file: \'%s\' line %d: reference \'%s\' is longer than %u bp, which is not supported\n",fname,lineNo,name,UINT32_MAX);
+      else
+	fprintf(stderr,"\t-> fai file: \'%s\' looks malformed at line %d (reference: \'%s\'), expected <name><TAB><length>\n",fname,lineNo,name);
+      bad = 1;
+      break;
     }
-    // fprintf(stderr,"tok: %s\n",tok);
-    lengths.push_back(atoi(tok));
+    chrs.push_back(strdup(name));
+    lengths.push_back((uint32_t) len);
+  }
+  free(buf);
+  fclose(fp);
+  if(!bad&&chrs.size()==0){
+    fprintf(stderr,"\t-> fai file: \'%s\' contains no references\n",fname);
+    bad = 1;
+  }
+  if(bad){
+    for(size_t i=0;i<chrs.size();i++)
+      free(chrs[i]);
+    return NULL;
   }
   bam_hdr_t *ret = bam_hdr_init();
   ret->l_text = strlen(fname);
@@ -33,12 +55,8 @@ bam_hdr_t *getHeadFromFai(const char *fname){
   ret->target_name = (char**) malloc(sizeof(char*)*chrs.size());
   for(size_t i=0;i<chrs.size();i++){
     ret->target_len[i] = lengths[i];
-    ret->target_name[i] =strdup(chrs[i]);
+    ret->target_name[i] = chrs[i];//header takes ownership
   }
- 
-  for(uint i=0;i<chrs.size();i++)
-    free(chrs[i]);
-  fclose(fp);
   return ret;
 }
 
@@ -46,10 +64,12 @@ aMap *buildRevTable(const bam_hdr_t *hd){
   aio::doAssert(hd!=NULL,AT);
   aMap *ret = new aMap;
   for(int i=0;i<hd->n_targets;i++){
-    ret->insert(std::pair<char *,int>(strdup(hd->target_name[i]),i));
+    char *name = strdup(hd->target_name[i]);
+    if(!ret->insert(std::pair<char *,int>(name,i)).second){
+      fprintf(stderr,"\t-> Reference name: \'%s\' occurs more than once in the header/fai file. Will exit\n",name);
+      exit(1);
+    }
   }
-  for(aMap::iterator it= ret->begin();0&&it!=ret->end();++it)
-    fprintf(stderr,"%s %d\n",it->first,it->second);
   return ret;
 }
 
@@ -61,17 +81,16 @@ void multiReader::printArg(FILE *argFile,argStruct *args){
   fprintf(argFile,"\t-bgen\t%s\t(Bgen Filename)\n",fname);
   fprintf(argFile,"\t-vcf-GL\t%s\t(vcf Filename (can be bcf compressed or uncompressed))\n",fname);
   fprintf(argFile,"\t-vcf-PL\t%s\t(vcf Filename (can be bcf compressed or uncompressed))\n",fname);
-  fprintf(argFile,"\t-vcf-GP\t%s\t(vcf Filename (can be bcf compressed or uncompressed))(*not used)\n",fname);
+  fprintf(argFile,"\t-vcf-GP\t%s\t(vcf Filename (can be bcf compressed or uncompressed))\n",fname);
   fprintf(argFile,"\t-glf\t%s\t(glf Filename (can be .gz))\n",fname);
+  fprintf(argFile,"\t-glf3\t%s\t(glf3 Filename (can be .gz))\n",fname);
+  fprintf(argFile,"\t-glf10_text\t%s\t(text glf Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-pileup\t%s\t(pileup Filename (can be .gz))\n",fname);
   fprintf(argFile,"\t-intName %d\t(Assume First column is chr_position)\n",intName);
   fprintf(argFile,"\t-isSim\t%d\t(Simulated data assumes ancestral is A)\n",isSim);
   fprintf(argFile,"\t-nInd\t%d\t\t(Number of individuals)\n",nInd);
   fprintf(argFile,"\t-minQ\t%d\t(minimum base quality; only used in pileupreader)\n",minQ);
   fprintf(argFile,"\t-fai\t%s\t(fai file)\n",args->fai);
-  fprintf(argFile,"\t-minQ\t%d\t(minimum base quality; only used in pileupreader)\n",minQ);
-
-  
   fprintf(argFile,"----------------\n%s:\n",__FILE__); 
 }
 
@@ -108,7 +127,9 @@ void multiReader::getOptions(argStruct *arguments){
 
 multiReader::multiReader(argStruct *args_arg){
   gz=Z_NULL;
-  myglf=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;bgenObj=NULL;
+  myglf=NULL;myglf_text=NULL;myvcf=NULL;mpil=NULL;bglObj=NULL;bgenObj=NULL;
+  revMap=NULL;
+  pl_or_gl=-1;
   
   nLines=50;
   
@@ -172,39 +193,36 @@ multiReader::multiReader(argStruct *args_arg){
       }
     if(printAndExit){
       fprintf(stderr,"\t-> Must supply -fai file\n");
-      exit(0);
+      exit(1);
     }
   }
   if(args->fai){
     if(!(args->hd=getHeadFromFai(args->fai)))
-      exit(0);
+      exit(1);
   }else{
     if(args->nams.size()==0){
       fprintf(stderr,"\t-> Must choose inputfile -bam/-glf/-glf3/-pileup/-i/-vcf-gl/-vcf-gp/-vcf-pl/-glf10_text filename\n");
-      exit(0);
+      exit(1);
     }
     if(args->inputtype==INPUT_BAM){
       htsFile *in=sam_open(args->nams[0],"r");
       if(in==NULL){
 	fprintf(stderr,"\t-> Problems opening file: \'%s\' will exit\n",args->nams[0]);
-	exit(0);
+	exit(1);
       }
       args->hd= sam_hdr_read(in);
       hts_close(in);
+      if(args->hd==NULL){
+	fprintf(stderr,"\t-> Problems reading header from file: \'%s\' will exit\n",args->nams[0]);
+	exit(1);
+      }
     }
-  }
- 
-  if(!(INPUT_VCF_GL|INPUT_VCF_GP)){
-    if(args->hd==NULL){
-      fprintf(stderr,"For non-bams you should include -fai arguments\n");
-      exit(0);
-    } 
   }
 
   if((args->inputtype==INPUT_PILEUP||args->inputtype==INPUT_GLF||args->inputtype==INPUT_GLF3||args->inputtype==INPUT_GLF10_TEXT)){
     if(nInd==0){
       fprintf(stderr,"\t-> Must supply -nInd when using -glf/-glf3/-pileup/-glf10_text files\n");
-      exit(0);
+      exit(1);
     }
     for(int i=0;i<nInd;i++){
       char bufbuf[256];
@@ -235,6 +253,8 @@ multiReader::multiReader(argStruct *args_arg){
 
     
     myvcf = new vcfReader(args->infile,NULL,pl_or_gl,&args->regions);
+    //the contigs are taken from the vcf header, also when -fai is given
+    bam_hdr_destroy(args->hd);
     args->hd=myvcf->bamhdr;
     args->nInd = myvcf->hs->nsamples;
   }
@@ -242,20 +262,6 @@ multiReader::multiReader(argStruct *args_arg){
   revMap = buildRevTable(args->hd);
   args->revMap = revMap;
   setArgsBam(args);
-  if(args->inputtype==INPUT_VCF_GL){
-    if(args->regions.size()==1){
-      char tmp[1024];
-      int start=args->regions[0].start;
-      int stop=args->regions[0].stop;
-      int ref=args->regions[0].refID;
-      snprintf(tmp,1024,"%s:%d-%d",args->hd->target_name[ref],start+1,stop);
-      //    fprintf(stderr,"tmp:%s\n",tmp);
-      //    exit(0);
-      myvcf->seek(tmp);
-    }
-    
-  }
-  
   if(args->inputtype==INPUT_BAM){
     //read bamfiles
     extern int checkBamHeaders;
@@ -267,14 +273,14 @@ multiReader::multiReader(argStruct *args_arg){
   }
 
   
-  if(fname==NULL)
-    return;
-
-  gz=Z_NULL;
-  gz=gzopen(fname,"r");   
-  if(gz==Z_NULL){
-    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);
-    exit(0);
+  //readers below that read through a gzFile
+  int usesGz = args->inputtype==INPUT_PILEUP||args->inputtype==INPUT_GLF||args->inputtype==INPUT_GLF3||args->inputtype==INPUT_GLF10_TEXT||args->inputtype==INPUT_BEAGLE;
+  if(fname!=NULL&&usesGz){
+    gz=gzopen(fname,"r");
+    if(gz==Z_NULL){
+      fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);
+      exit(1);
+    }
   }
   switch(args->inputtype){
   case INPUT_PILEUP:{
@@ -311,7 +317,7 @@ multiReader::multiReader(argStruct *args_arg){
   }
 
   }
-  if(args->inputtype==INPUT_VCF_GL||args->inputtype==INPUT_VCF_GL){
+  if(args->inputtype==INPUT_VCF_GL||args->inputtype==INPUT_VCF_GP){
     fprintf(stderr,"\t-> VCF still beta. Remember that\n");
     fprintf(stderr,"\t   1. indels are are discarded\n");
     fprintf(stderr,"\t   2. will use chrom, pos PL,GL,GP columns and tags\n");
@@ -338,6 +344,8 @@ multiReader::~multiReader(){
     delete myvcf;
   if(myglf)
     delete myglf;
+  if(myglf_text)
+    delete myglf_text;
   if(bglObj)
     delete bglObj;
   if(bgenObj)
@@ -392,18 +400,7 @@ funkyPars *multiReader::fetch(){
     
   default:{
     fprintf(stderr,"Unknown inputformat: %d\n",args->inputtype);
-#if 1
-  fprintf(stderr,"bam:%d\n",INPUT_BAM);
-  fprintf(stderr,"glf:%d\n",INPUT_GLF);
-  fprintf(stderr,"glf3:%d\n",INPUT_GLF3);
-  fprintf(stderr,"blg:%d\n",INPUT_BEAGLE);
-  fprintf(stderr,"plp:%d\n",INPUT_PILEUP);
-  fprintf(stderr,"vcf_GP:%d\n",INPUT_VCF_GP);
-  fprintf(stderr,"vcf_GL:%d\n",INPUT_VCF_GL);
-#endif
-
-    exit(0);
-    break;
+    exit(1);
   }
   }
   if(isSim==1&&fp!=NULL){
@@ -411,11 +408,9 @@ funkyPars *multiReader::fetch(){
     memset(fp->anc,0,fp->numSites);
   }
   
-  if(fp&&0)
-    fprintf(stderr,"numSites:%d\n",fp->numSites);
   if(fp!=NULL && fp->refId==-1){
-    fprintf(stderr,"\n\t-> Unkown refid found will close program refid:%d\n",fp->refId);
-    return NULL;
+    fprintf(stderr,"\n\t-> Unknown reference found (not in header/fai file). Will exit\n");
+    exit(1);
   }
   return fp;
 
