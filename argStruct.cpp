@@ -15,6 +15,9 @@ void whatIsTheInput(int type){
   case INPUT_GLF:
     fprintf(stderr,"\t-> Inputtype is GLF\n");
     break;
+  case INPUT_GLF3:
+    fprintf(stderr,"\t-> Inputtype is GLF3\n");
+    break;
   case INPUT_BEAGLE:
     fprintf(stderr,"\t-> Inputtype is beagle\n");
     break;
