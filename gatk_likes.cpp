@@ -12,58 +12,35 @@
 #include "gatk_likes.h"
 
 extern int refToInt[256];
-static double **probs = NULL;
 
 //e above this would make a base more likely under the other alleles than
 //its own, which happens for quality scores 0 and 1. At 0.75 the base has
 //probability 1/4 under every allele, so it does not change the GLs.
 static const double MAX_ERROR = 0.75;
 
-/*
-  allocate the prob matrix with
-  prob[0][qs] = homohit
-  prob[1][qs] = hethit
-  prob[2][qs] = homoNonhit
-
-  I'm perfecly aware that these are not genotypes, but what should these be called
- */
-static double **genLikes(int len){
-  double **ret = new double*[3];
-  for(int i=0;i<3;i++)
-    ret[i] = new double[256];
-
-  for(int i=0;i<len;i++){
-    double e = pow(10,-i/10.0);
-    if(e>MAX_ERROR)
-      e = MAX_ERROR;
-    double p = 1-e;
-    double p3 = (1-p)/3.0;
-    ret[0][i] = log(p*0.5+p*0.5);
-    ret[1][i] = log(p*0.5+p3*0.5);
-    ret[2][i] = log(0.5*p3+0.5*p3);
-  }
-  return ret;
-}
-
-static int offsets[4][10]={
+//for each observed base, the genotypes homozygous for it, the three
+//heterozygous with it, and the six without it
+static const int offsets[4][10]={
   {0,1,2,3,  4,5,6,7,8,9},//AA,AC,AG,AT,therest
   {4,1,5,6,  0,2,3,7,8,9},//CC,AC,CG,CT,therest
   {7,2,5,8,  0,1,3,4,6,9},//GG,AG,CG,GT,therest
   {9,3,6,8,  0,1,2,4,5,7},//TT,AT,CT,GT,therest
 };
 
-void gatk_init(){
-  probs = genLikes(256);
+gatk_likes::gatk_likes(){
+  for(int i=0;i<256;i++){
+    double e = pow(10,-i/10.0);
+    if(e>MAX_ERROR)
+      e = MAX_ERROR;
+    double p = 1-e;
+    double p3 = (1-p)/3.0;
+    probs[0][i] = log(p*0.5+p*0.5);
+    probs[1][i] = log(p*0.5+p3*0.5);
+    probs[2][i] = log(0.5*p3+0.5*p3);
+  }
 }
 
-void gatk_destroy(){
-  for(int i=0;i<3;i++)
-    delete [] probs[i];
-  delete [] probs;
-  probs=NULL;
-}
-
-void call_gatk(chunkyT *chk,double **lk,int trim,int *keepSites){
+void gatk_likes::run(chunkyT *chk,double **lk,int trim,int *keepSites) const{
   for(int s=0;s<chk->nSites;s++){
     lk[s] = new double[10*chk->nSamples];
     for(int ii=0;ii<10*chk->nSamples;ii++)

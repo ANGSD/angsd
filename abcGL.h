@@ -19,7 +19,8 @@ private:
   double ****errorProbs;
   //below is used for output
   kstring_t bufstr;
-  //soap method is implemented as a class
+  //gatk and soap methods are implemented as classes
+  gatk_likes gatk;
   soap_likes soap;
   // ancestral method is implemented as a class
   anc_likes ancestral_lik;
