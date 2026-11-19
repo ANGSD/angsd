@@ -22,7 +22,6 @@
 #include "abcCovar.h" //calculate covar
 #include "abcMismatch.h" //mismatch matrix used for GL project
 #include "abcFilterSNP.h" //some snp filters, not finished yet
-#include "abcSnpTools.h" //<-implementation of some stuff from snptools, not finished yet 
 #include "abcHetPlas.h" //<-implementation of hetero plasmic
 #include "abcWritePlink.h" //<- dump plink files.
 #include "abcSmartCounts.h"
@@ -66,23 +65,22 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcCovar(outfiles,arguments);
   tskStuff[nit++] = new abcTsk(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcFilterSNP(outfiles,arguments,inputtype);//15
-  tskStuff[nit++] = new abcSnpTools(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcHetPlas(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcWritePlink(outfiles,arguments,inputtype);
-  tskStuff[nit++] = new abcDstat(outfiles,arguments,inputtype);//19
+  tskStuff[nit++] = new abcDstat(outfiles,arguments,inputtype);//18
   tskStuff[nit++] = new abcWriteFasta(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcSmartCounts(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcTemplate(outfiles,arguments,inputtype);
-  tskStuff[nit++] = new abcWriteVcf(outfiles,arguments,inputtype);//23
+  tskStuff[nit++] = new abcWriteVcf(outfiles,arguments,inputtype);//22
   tskStuff[nit++] = new abcHaploCall(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcDstat2(outfiles,arguments,inputtype);
-  tskStuff[nit++] = new abcHWE_F(outfiles,arguments,inputtype); // 26
+  tskStuff[nit++] = new abcHWE_F(outfiles,arguments,inputtype); // 25
   tskStuff[nit++] = new abcIBS(outfiles,arguments,inputtype); // 
   tskStuff[nit++] = new abcPSMC(outfiles,arguments,inputtype); //
   tskStuff[nit++] = new abcScounts(outfiles,arguments,inputtype); //
-  tskStuff[nit++] = new abcWriteBcf(outfiles,arguments,inputtype); // 30
-  tskStuff[nit++] = new abcRAD(outfiles,arguments,inputtype); // 31
-  tskStuff[nit++] = new abcTemplate2(outfiles,arguments,inputtype); // 32
+  tskStuff[nit++] = new abcWriteBcf(outfiles,arguments,inputtype); // 29
+  tskStuff[nit++] = new abcRAD(outfiles,arguments,inputtype); // 30
+  tskStuff[nit++] = new abcTemplate2(outfiles,arguments,inputtype); // 31
   //remember to update changeChr in shared.cpp if order gets changed
   nItem = nit;
   return tskStuff;
