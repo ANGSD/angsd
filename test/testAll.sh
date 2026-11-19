@@ -132,6 +132,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing plink output"
+time ./testPlink.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with plink output exit code: $?"
+    RVAL=1
+fi
+
 
 exit ${RVAL}
 
