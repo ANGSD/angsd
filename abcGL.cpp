@@ -180,6 +180,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   outfileSAFPOS = NULL;
   outfileSAFIDX = NULL;
   errors = NULL;
+  bam = NULL;
   postfix = ".glf.gz";
   beaglepostfix = ".beagle.gz";
   tmpChr = NULL;
@@ -207,7 +208,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   //  if(GL==0) //why?
   //  return;
   if(GL==1)
-    bam_likes_init();
+    bam = new bam_likes();
   else if(GL==3){
     soap.init(arguments->nInd,angsd_tmpdir);
     if(soap.doRecal){
@@ -335,7 +336,7 @@ abcGL::~abcGL(){
   if(GL==0&&doGlf==0)
     return;
   else if(GL==1)
-    bam_likes_destroy();
+    delete bam;
   else if(GL==4)
     abcError::killGlobalErrorProbs(errorProbs);
   else if(GL==5)
@@ -391,7 +392,7 @@ void abcGL::run(funkyPars *pars){
   if(!(GL==3&&soap.doRecal==1) && !(GL==7&&ancestral_lik.doRecal==1))
     likes = new double*[pars->chk->nSites];
   if(GL==1)
-    call_bam(pars->chk,likes,trim,pars->keepSites,seed);
+    bam->run(pars->chk,likes,trim,pars->keepSites,seed);
   else if(GL==2)
     gatk.run(pars->chk,likes,trim,pars->keepSites);
   else if(GL==3){

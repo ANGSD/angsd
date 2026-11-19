@@ -14,6 +14,7 @@
 #include "mUpPile.h"
 
 #include "aio.h"
+#include "bam_likes.h"
 
 extern int refToInt[256];
 #define ERR_DEP 0.83f
@@ -270,17 +271,13 @@ int errmod_cal(const errmod_t *em, int n, int m, uint16_t *bases, float *q)
   return 0;
 }
 #endif
-//this is global this is nasty. It is only read after bam_likes_init,
-//so the threads can share it
-errmod_t *mod = NULL;
-
 //htslib's errmod_cal only uses 255 bases, above that it picks 255 at
 //random with its own unseeded random number generator, shared by all
 //threads. We pick them here instead, so that never happens
 #define MAXDEPTH 255
 
 //err_dep = 0.83
-void bam_likes_init(){
+bam_likes::bam_likes(){
   mod = errmod_init(1-ERR_DEP);
   if(mod==NULL){
     fprintf(stderr,"\t-> Problem initializing the error model for -GL 1\n");
@@ -288,11 +285,10 @@ void bam_likes_init(){
   }
 }
 
-void bam_likes_destroy(){
+bam_likes::~bam_likes(){
   //  fprintf(stderr,"bam_likes_destroy\n");
   if(mod!=NULL)
     errmod_destroy(mod);    
-  mod = NULL;
 }
 
 //random number state for a sample at a site, so the bases picked do not
@@ -308,7 +304,7 @@ static void site_rng(unsigned short xs[3],int seed,int refId,int pos,int sample)
 }
 
 
-void call_bam(chunkyT *chk,double **lk,int trim,int *keepSites,int seed){
+void bam_likes::run(chunkyT *chk,double **lk,int trim,int *keepSites,int seed) const{
   //  fprintf(stderr,"trim=%d\n",trim);
   aio::doAssert(mod!=NULL,1,AT,"");
   for(int s=0;s<chk->nSites;s++){
