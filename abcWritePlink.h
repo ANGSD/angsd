@@ -1,9 +1,12 @@
+#pragma once
+#include "abc.h"
+
 class abcWritePlink:public abc{
 private:
-  FILE *fp1;//tfam/fam/bim
-  FILE *fp2;//tped/bed
-public:
   int doPlink;
+  FILE *fp;//tped
+  kstring_t kstr;
+public:
   abcWritePlink(const char *outfiles,argStruct *arguments,int inputtype);
   ~abcWritePlink();
   void getOptions(argStruct *arguments);

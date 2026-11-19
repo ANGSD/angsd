@@ -40,6 +40,20 @@ for n in 50 3; do
 	done
 done
 
+#invalid options must fail with a non-zero exit code
+BADARGS=("-doGeno -4 -doPlink 1" "-doGeno -4 -doPlink 3" "-doPlink 2")
+for args in "${BADARGS[@]}"; do
+	${ANGSD} -beagle ${TDIR}/test1.beagle -fai hg19.fa.fai ${args} -out ${RESDIR}/bad >> ${LOG} 2>&1
+	if [[ $? -eq 0 ]];then
+		echo "--------------"
+		echo "Problem with plink test: '${args}' did not fail"
+		echo "--------------"
+		cat ${LOG}
+		echo "--------------"
+		RVAL=1
+	fi
+done
+
 echo "==========$0===============" >> ${LOG}
 
 exit $RVAL
