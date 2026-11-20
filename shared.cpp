@@ -66,6 +66,10 @@ void init(void *arg){
   }
   maxThreads=angsd::getArg("-nThreads",maxThreads,arguments);
   maxThreads=angsd::getArg("-P",maxThreads,arguments);
+  if(maxThreads<1){
+    fprintf(stderr,"\t-> -nThreads/-P must be at least 1, got: %d\n",maxThreads);
+    exit(1);
+  }
   const int maxAllowedThreads = 8;
   if(maxThreads>maxAllowedThreads){
     fprintf(stderr,"\t-> You have choosen to supply a very high number of threads. The number of threads will be capped at %d\n",maxAllowedThreads);
@@ -184,7 +188,7 @@ void collapse(funkyPars *p){
     we are in running different threads now, so dont clean up nodes
     but modify keeplist
   */
-  if((p->posi[0]<chk->regStart)||(p->posi[p->numSites-1]>chk->regStop)){
+  if(p->numSites>0&&((p->posi[0]<chk->regStart)||(p->posi[p->numSites-1]>chk->regStop))){
     for(int i=0;i<p->numSites;i++){
       if(p->posi[i]<chk->regStart)
 	p->keepSites[i] = 0;
@@ -291,20 +295,18 @@ void master(funkyPars *p){
   //  fprintf(stderr,"[%s] Number of threads running=%d inqueue=%lu\n",__FUNCTION__,curRunning,printer.contains());
   pthread_mutex_lock( &counterMut );
 
-  curRunning++;
-  if(curRunning==maxThreads||queueStop==1){
+  curRunning++;//counts the thread we are about to start
+  //in a loop, pthread_cond_wait can return without being signalled
+  while(curRunning>=maxThreads||queueStop==1){
     //fprintf(stderr,"We are running max number of threads will wait for finishing threads: %d\n",curRunning);
     pthread_cond_wait(&cvMaxThread, &counterMut);
     //fprintf(stderr,"Done waiting for finishing threads:%d\n",curRunning);
   }
   pthread_mutex_unlock( &counterMut );
-  if(pthread_create( &thread1, &attr, slave, (void*) p)){
-    fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(errno),p->chunkNumber);
-    while(1){
-      fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(errno),p->chunkNumber);
-      
-    }
-    exit(0);
+  int ret = pthread_create( &thread1, &attr, slave, (void*) p);
+  if(ret!=0){
+    fprintf(stderr,"[%s] Problem spawning thread: %s at chunknumber:%d\n",__FUNCTION__,strerror(ret),p->chunkNumber);
+    exit(1);
   }
   // pthread_detach(thread1);
 }
@@ -484,7 +486,7 @@ void printFunky(funkyPars *p){
   //  fprintf(stderr,"printFunky killsig=%d nsites=%d refid:%d\n",p->killSig,p->numSites,p->refId);
   if(p->killSig==0) {//don't print the empty killSig chunk
 
-    if( (howOften>0) && ((p->chunkNumber%howOften)==0) ){
+    if( (howOften>0) && ((p->chunkNumber%howOften)==0) && p->numSites>0 ){
       if(isAtty){
 	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
 	  }else{
