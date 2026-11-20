@@ -14,6 +14,7 @@
 #include <cstdlib> //for exit()
 #include <cstdio> //for fprintf
 #include <signal.h>//for catching ctrl+c, allow threads to finish
+#include <unistd.h>//for write, _exit and unlink
 #include <htslib/hts.h>
 #include "cigstat.h"
 #include "shared.h"
@@ -25,9 +26,8 @@
 extern std::vector <char *> dumpedFiles;
 
 int SIG_COND =1;//if we catch signal then quit program nicely
-int VERBOSE =1;
-
-extern pthread_mutex_t mUpPile_mutex;//mutex for not deleting mUppile data untill end of data
+//set by the signal handler only, SIG_COND is also set to 0 by some errors
+volatile sig_atomic_t gotSignal =0;
 
 void printTime(FILE *fp){
   time_t rawtime;
@@ -54,21 +54,25 @@ void callBack_bambi(fcb *fff){
   }
 }
 
-int really_kill =3;
+//the first signal stops reading new data and lets the running threads finish,
+//the third exits right away. Only async-signal-safe calls are used here (write, _exit)
+volatile sig_atomic_t nSignals =0;
+
+static void sigwrite(const char *msg){
+  ssize_t ret = write(STDERR_FILENO,msg,strlen(msg));
+  (void) ret;
+}
 
 void handler(int s) {
-
-  if(VERBOSE)
-    fprintf(stderr,"\n\t-> Caught SIGNAL: Will try to exit nicely (no more threads are created.\n\t\t\t  We will wait for the current threads to finish)\n");
-  
-  if(--really_kill!=3)
-  fprintf(stderr,"\n\t-> If you really want angsd to exit uncleanly ctrl+c: %d more times\n",really_kill+1);
-  fflush(stderr);
-  if(!really_kill)
-    exit(0);
-  VERBOSE=0;
+  nSignals++;
+  if(nSignals==1)
+    sigwrite("\n\t-> Caught SIGNAL: Will try to exit nicely (no more data is read.\n\t\t\t  We will wait for the current threads to finish)\n\t-> If you really want angsd to exit uncleanly ctrl+c: 2 more times\n");
+  else if(nSignals==2)
+    sigwrite("\n\t-> If you really want angsd to exit uncleanly ctrl+c: 1 more time\n");
+  else
+    _exit(130);
+  gotSignal=1;
   SIG_COND=0;
-  pthread_mutex_unlock(&mUpPile_mutex);
 }
 
  //we are threading so we want make a nice signal handler for ctrl+c
@@ -119,32 +123,43 @@ void printProgInfo(FILE *fp){
 
 
 
-void parseArgStruct(argStruct *arguments){
+//output files are created when the analyses are initialized, remove them again if we exit due to bad arguments
+void removeOutputFiles(){
+  for(size_t i=0;i<dumpedFiles.size();i++)
+    unlink(dumpedFiles[i]);
+}
 
-  //validate that there are no duplicate parameters
+//checks that don't need the analyses, done before they make their output files (only the .arg exists)
+void checkArgs(argStruct *arguments){
   for(int i=0;i<arguments->argc;i++){
     if(strcasecmp("-realSFS",arguments->argv[i])==0){
 	fprintf(stderr,"-realSFS is now called -doSaf\n");
+	removeOutputFiles();
 	exit(1);
     }
     if(strcasecmp("-minLRT",arguments->argv[i])==0){
 	fprintf(stderr,"-minLRT is now called -SNP_pval\n");
+	removeOutputFiles();
 	exit(1);
     }
     if(strcasecmp("-doSNP",arguments->argv[i])==0){
 	fprintf(stderr,"-doSNP is now called -SNP_pval\n");
+	removeOutputFiles();
 	exit(1);
     }  
     if(strcasecmp("-soap",arguments->argv[i])==0){
       fprintf(stderr,"-soap is deprecated, convert soap file to bam\n");
+      removeOutputFiles();
       exit(1);
     }  
     if(strcasecmp("-tglf",arguments->argv[i])==0){
       fprintf(stderr,"-tglf is deprecated, merge files and use -glf\n");
+      removeOutputFiles();
       exit(1);
     }
     if(strcasecmp("-sim1",arguments->argv[i])==0){
       fprintf(stderr,"-sim1 is deprecated, use -glf filename and -isSim 1\n");
+      removeOutputFiles();
       exit(1);
     }  
   }
@@ -154,22 +169,28 @@ void parseArgStruct(argStruct *arguments){
 	if(angsd::isFlag(arguments->argv[ii])){
 	  if(0==strcasecmp(arguments->argv[i],arguments->argv[ii])){
 	    fprintf(stderr,"\t-> Duplicate parameter: %s  supplied, will exit\n",arguments->argv[i]);
+	    removeOutputFiles();
 	    exit(1);
 	  }
 	}
        }
     }
+}
 
+//checks that need the analyses to have read their arguments
+void parseArgStruct(argStruct *arguments){
   for(int i=1;i<arguments->argc;i++){
     if(arguments->usedArgs[i]==0){
       fprintf(stderr,"%d argument \t%s is unknown will exit\n",i,arguments->argv[i]);
       fflush(stderr);
+      removeOutputFiles();
       exit(1);
     }
   }
   if(arguments->hd==NULL){
     fprintf(stderr,"\t-> Error: You must supply a -fai file such that we know the sizes of the genomes (version .4486)\n");
-     exit(1);
+    removeOutputFiles();
+    exit(1);
   }
 
 
@@ -215,6 +236,7 @@ int main(int argc, char** argv){
      //     return 0;
    }
 
+   checkArgs(args);
    multiReader *mr= new multiReader(args);
 
    init(args);
@@ -268,11 +290,16 @@ int main(int argc, char** argv){
   //print out nice messages
   extern size_t total_number_of_sites_unfiltred,total_number_of_sites_filtered;
   fprintf(stderr,"\t-> Arguments and parameters for all analysis are located in .arg file\n");
-  fprintf(stderr,"\t-> Total number of sites analyzed: %lu\n\t-> Number of sites retained after filtering: %lu \n",total_number_of_sites_unfiltred,total_number_of_sites_filtered);
-  fprintf(stderr, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
-  fprintf(stderr, "\t[ALL done] walltime used =  %.2f sec\n", (float)(time(NULL) - t2));  
-  fprintf(args->argumentFile, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
-  fprintf(args->argumentFile, "\t[ALL done] walltime used =  %.2f sec\n", (float)(time(NULL) - t2));  
+  fprintf(stderr,"\t-> Total number of sites analyzed: %zu\n\t-> Number of sites retained after filtering: %zu \n",total_number_of_sites_unfiltred,total_number_of_sites_filtered);
+  if(gotSignal){
+    fprintf(stderr,"\t-> Interrupted by a signal, the output files are incomplete\n");
+    fprintf(args->argumentFile,"\t-> Interrupted by a signal, the output files are incomplete\n");
+  }else{
+    fprintf(stderr, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
+    fprintf(stderr, "\t[ALL done] walltime used =  %.2f sec\n", (float)(time(NULL) - t2));  
+    fprintf(args->argumentFile, "\t[ALL done] cpu-time used =  %.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
+    fprintf(args->argumentFile, "\t[ALL done] walltime used =  %.2f sec\n", (float)(time(NULL) - t2));  
+  }
   
   //make better below
   extern int *bamSortedIds;
@@ -283,5 +310,6 @@ int main(int argc, char** argv){
   extern htsFormat *dingding2;
   free(dingding2);
   destroy_argStruct(args);
-  return 0;
+  //128+SIGINT, the usual exit code after ctrl+c
+  return gotSignal?130:0;
 }
