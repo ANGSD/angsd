@@ -70,6 +70,8 @@ void destroy_argStruct(argStruct *arg);
 argStruct *setArgStruct(int argc,char **argv);
 
 namespace angsd {
+  //1 if s looks like a flag ("-out"), 0 for values such as "-", "-1" or "-0.5"
+  int isFlag(const char *s);
   int getArg(const char* argName,int type,argStruct *arguments);
   float getArg(const char* argName,float type,argStruct *arguments);
   char* getArg(const char* argName,char* type,argStruct *arguments);
