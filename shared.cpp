@@ -34,6 +34,7 @@ extern pthread_mutex_t mUpPile_mutex;
 int maxThreads=1;//this value is given from the commandline -nThreads
 pthread_t thread1;
 pthread_cond_t cvMaxThread;
+pthread_cond_t cvThreadDone;//signalled when a worker thread is done, see waitForThreads
 pthread_mutex_t counterMut;
 
 int currentChr=-1;
@@ -87,6 +88,7 @@ void init(void *arg){
   shouldRun = allMethods[0]->shouldRun;
   pthread_mutex_init(&counterMut, NULL);
   pthread_cond_init (&cvMaxThread, NULL);
+  pthread_cond_init (&cvThreadDone, NULL);
 
 
   header = arguments->hd;
@@ -98,18 +100,20 @@ void init(void *arg){
 
 void join_slave2();
 
+//wait until all worker threads are done and all chunks are printed.
+//A worker prints in printer.prop() before it counts down curRunning and signals cvThreadDone,
+//so we wake up as soon as the last one is done
+void waitForThreads(){
+  join_slave2();//-nThreads 2 worker is not counted in curRunning
+  pthread_mutex_lock(&counterMut);
+  while(curRunning!=0||printer.contains()!=0)
+    pthread_cond_wait(&cvThreadDone,&counterMut);
+  pthread_mutex_unlock(&counterMut);
+}
+
 void destroy_shared(){
   //  fprintf(stderr,"\t-> Calling destroy\n");
-  join_slave2();//-nThreads 2 worker is not counted in curRunning
-  while(1){
-    pthread_mutex_lock(&counterMut);
-    if(curRunning==0&&printer.contains()==0)
-      break;
-    fprintf(stderr,"\t-> Waiting for nThreads:%d\n",curRunning);
-    pthread_mutex_unlock(&counterMut);
-    sleep(1);
-  }
-  pthread_mutex_unlock(&counterMut);
+  waitForThreads();
   fprintf(stderr,"\t-> Done waiting for threads\n");
   for(int i=0;i<andersSux;i++)
     delete allMethods[i];
@@ -225,6 +229,7 @@ void *slave(void *ptr){
 
   pthread_mutex_lock( &counterMut );
   curRunning--;
+  pthread_cond_broadcast(&cvThreadDone);
 
   
   if(nQueueSize==-1){//no limit on queuesize, always signal
@@ -320,25 +325,11 @@ void changeChr(int refId){
 
 
 void waiter(int refId){
-  join_slave2();//-nThreads 2 worker is not counted in curRunning
-  //fprintf(stderr,"_%s_\n",__FUNCTION__);fflush(stderr);
-
-  //change of chr detected wait untill all threads are done
+  //change of chr detected wait untill all threads are done,
+  //the modules change their data for the chromosome below
   if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT)
     fprintf(stderr,"Change of chromo detected Waiting for nThreads:%d\n",curRunning);
-  while(1){
-    pthread_mutex_lock(&counterMut);
-    if(curRunning==0&&printer.contains()==0){
-      pthread_mutex_unlock(&counterMut);//need to do this because rest of while is not used
-      break;
-    }
-    if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT){
-      fprintf(stderr,"Change of chromo detected Waiting for nThreads:%d printer.contains=%lu\n",curRunning,printer.contains());
-      fflush(stderr);
-    }
-    pthread_mutex_unlock(&counterMut);
-    sleep(1);
-  }
+  waitForThreads();
   if(currentChr==-1||refId!=currentChr){
     currentChr=refId;
     changeChr(refId);
