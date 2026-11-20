@@ -40,33 +40,50 @@ void my_bgzf_read(BGZF *fp, void *data, size_t length){
   ASSERT(length==bgzf_read(fp,data,length));
 }
 
+//checks that the index and data files start with the magic number from realSFS saf2theta,
+//exits with a message if a file is missing, empty, truncated or from an old version
 int isok(char *bgzf_name,char *fp_name){
+  const char *rerun = "\t-> Was 'realSFS saf2theta' interrupted (eg. time or memory limit, or a full disk)? Then rerun it\n";
+  const char *old = "\t-> It looks like input files have been generated with an older version of ANGSD. Either use older version of angsd <0.915 or rerun main angsd with later version of angsd >0.917\n";
+  char buf[8];
+
   FILE *fp = NULL;
   fp=fopen(fp_name,"rb");
   if(fp==NULL){
     fprintf(stderr,"\t-> Problems opening file: \'%s\'\n",fp_name);
-    return 0;
+    exit(1);
   }
-  char buf[8];
-  ASSERT(8==fread(buf,sizeof(char),8,fp));
-  if(strcmp(buf,"thetav2")!=0){
-    fprintf(stderr,"\t-> It looks like input files have been generated with an older version of ANGSD. Either use older version of angsd <0.915 or rerun main angsd with later version of angsd >0.917 magicnr:\'%s\'\n",buf);
-    return 0;
-  }
+  size_t nread = fread(buf,sizeof(char),8,fp);
   fclose(fp);
+  if(nread!=8){
+    fprintf(stderr,"\t-> The index file \'%s\' is empty or truncated\n%s",fp_name,rerun);
+    exit(1);
+  }
+  if(memcmp(buf,"thetav2",8)!=0){
+    fprintf(stderr,"\t-> Unknown magic number in \'%s\'\n%s",fp_name,old);
+    exit(1);
+  }
 
   BGZF *bgzf=NULL;
   bgzf=bgzf_open(bgzf_name,"rb");
   if(bgzf==NULL){
     fprintf(stderr,"\t-> Problems opening file: \'%s\'\n",bgzf_name);
-    return 0;
+    exit(1);
   }
-  ASSERT(8==bgzf_read(bgzf,buf,8*sizeof(char)));
-  if(strcmp(buf,"thetav2")!=0){
-    fprintf(stderr,"\t-> It looks like input files have been generated with an older version of ANGSD. Either use older version of angsd <0.915 or rerun main angsd with later version of angsd >0.917 magicnr:\'%s\'\n",buf);
-    return 0;
-  }
+  ssize_t nbg = bgzf_read(bgzf,buf,8*sizeof(char));
   bgzf_close(bgzf);
+  if(nbg<0){
+    fprintf(stderr,"\t-> Problem reading \'%s\', the file is damaged or not a bgzf/gzip file\n%s",bgzf_name,rerun);
+    exit(1);
+  }
+  if(nbg!=8){
+    fprintf(stderr,"\t-> The file \'%s\' is empty or truncated (%zd of the first 8 bytes could be read)\n%s",bgzf_name,nbg,rerun);
+    exit(1);
+  }
+  if(memcmp(buf,"thetav2",8)!=0){
+    fprintf(stderr,"\t-> Unknown magic number in \'%s\'\n%s",bgzf_name,old);
+    exit(1);
+  }
   return 1;
 }
 
