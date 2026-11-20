@@ -125,36 +125,36 @@ void parseArgStruct(argStruct *arguments){
   for(int i=0;i<arguments->argc;i++){
     if(strcasecmp("-realSFS",arguments->argv[i])==0){
 	fprintf(stderr,"-realSFS is now called -doSaf\n");
-	exit(0);
+	exit(1);
     }
     if(strcasecmp("-minLRT",arguments->argv[i])==0){
 	fprintf(stderr,"-minLRT is now called -SNP_pval\n");
-	exit(0);
+	exit(1);
     }
     if(strcasecmp("-doSNP",arguments->argv[i])==0){
 	fprintf(stderr,"-doSNP is now called -SNP_pval\n");
-	exit(0);
+	exit(1);
     }  
     if(strcasecmp("-soap",arguments->argv[i])==0){
-      fprintf(stderr,"-doHWE is deprecated, convert soap file to bam\n");
-      exit(0);
+      fprintf(stderr,"-soap is deprecated, convert soap file to bam\n");
+      exit(1);
     }  
     if(strcasecmp("-tglf",arguments->argv[i])==0){
       fprintf(stderr,"-tglf is deprecated, merge files and use -glf\n");
-      exit(0);
+      exit(1);
     }
     if(strcasecmp("-sim1",arguments->argv[i])==0){
       fprintf(stderr,"-sim1 is deprecated, use -glf filename and -isSim 1\n");
-      exit(0);
+      exit(1);
     }  
   }
   for(int i=0;i<arguments->argc-1;i++)
-    if(arguments->argv[i][0]=='-') {
+    if(angsd::isFlag(arguments->argv[i])) {//negative numbers such as -1 are values, not flags
       for(int ii=i+1;ii<arguments->argc;ii++){
-	if(arguments->argv[ii][0]=='-'){
+	if(angsd::isFlag(arguments->argv[ii])){
 	  if(0==strcasecmp(arguments->argv[i],arguments->argv[ii])){
 	    fprintf(stderr,"\t-> Duplicate parameter: %s  supplied, will exit\n",arguments->argv[i]);
-	    exit(0);
+	    exit(1);
 	  }
 	}
        }
@@ -164,12 +164,12 @@ void parseArgStruct(argStruct *arguments){
     if(arguments->usedArgs[i]==0){
       fprintf(stderr,"%d argument \t%s is unknown will exit\n",i,arguments->argv[i]);
       fflush(stderr);
-      exit(0);
+      exit(1);
     }
   }
   if(arguments->hd==NULL){
     fprintf(stderr,"\t-> Error: You must supply a -fai file such that we know the sizes of the genomes (version .4486)\n");
-     exit(0);
+     exit(1);
   }
 
 
