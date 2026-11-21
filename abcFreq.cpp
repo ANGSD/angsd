@@ -118,8 +118,8 @@ void abcFreq::getOptions(argStruct *arguments){
   //  fprintf(stderr,"%d %d\n",inputtype,INPUT_VCF_GL);
   if((doPost||doMaf) &&doMajorMinor==0 &&inputtype!=INPUT_VCF_GL){
     if(abs(doMaf)!=4){
-      fprintf(stderr,"\t-> Potential problem: You are required to choose a major/minor estimator (-doMajorMinor)\n");
-      exit(0);
+      fprintf(stderr,"\t-> Error: -doMaf and -doPost need a major/minor estimator (-doMajorMinor)\n");
+      exit(1);
     }
   } 
   if((doPost==1||doPost==4) &&doMaf==0){
