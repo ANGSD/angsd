@@ -164,6 +164,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing thetaStat cat"
+time ./testThetaCat.sh $WDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with thetaStat cat exit code: $?"
+    RVAL=1
+fi
+
 
 exit ${RVAL}
 

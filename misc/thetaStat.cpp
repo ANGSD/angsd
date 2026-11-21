@@ -2,6 +2,7 @@
 #include <cstring>
 #include <vector>
 #include <map>
+#include <string>
 #include <zlib.h>
 #include <sys/stat.h>
 #include <htslib/bgzf.h>
@@ -123,7 +124,7 @@ myMap getMap(const char *fname){
   size_t clen;
   if(!fexists(fname)){
     fprintf(stderr,"Problem opening file: %s\n",fname);
-    exit(0);
+    exit(1);
   }
   FILE *fp = fopen(fname,"r");
   char tmp[8];
@@ -136,17 +137,17 @@ myMap getMap(const char *fname){
     datum d;
     if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
 
     if(1!=fread(&d.nChr,sizeof(int),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
 
     if(1!=fread(&d.fpos,sizeof(int64_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
 
     myMap::iterator it = ret.find(chr);
@@ -154,7 +155,7 @@ myMap getMap(const char *fname){
       ret[chr] =d ;
     else{
       fprintf(stderr,"Problem with chr: %s, key already exists\n",chr);
-      exit(0);
+      exit(1);
     }
   }
   fclose(fp);
@@ -357,7 +358,18 @@ char *idxToGz(char *one){
 
 int do_stat(int argc, char**argv){
   if(argc==0){
-    fprintf(stderr,"\n\t./thetaStat do_stat .thetas.idx [-win INT -step INT -r chrName -type [0,1,2] -outnames outputprefix]\n");
+    fprintf(stderr,"\n\t./thetaStat do_stat .thetas.idx [-win INT -step INT -type [0,1,2] -r chrName -nChr INT -outnames outputprefix]\n");
+    fprintf(stderr,"\n\tSums the thetas in windows and calculates Tajima's D, Fu & Li's F and D, Fay's H and Zeng's E.\n");
+    fprintf(stderr,"\tWrites one line per window to outputprefix.pestPG\n");
+    fprintf(stderr,"\n\t-win INT\tWindow size in bases. Without -win and -step there is one window per chromosome\n");
+    fprintf(stderr,"\t-step INT\tStep size in bases\n");
+    fprintf(stderr,"\t-type INT\tWhere the first window starts (default 0)\n");
+    fprintf(stderr,"\t\t\t0: the first multiple of -step after the first position with data\n");
+    fprintf(stderr,"\t\t\t1: the first position with data\n");
+    fprintf(stderr,"\t\t\t2: position 1\n");
+    fprintf(stderr,"\t-r chrName\tOnly use this chromosome\n");
+    fprintf(stderr,"\t-nChr INT\tNumber of chromosomes in the sample (2 x individuals for diploids).\n\t\t\tDefault is the number stored in the thetas file\n");
+    fprintf(stderr,"\t-outnames STR\tOutput prefix, default is the input filename (angsdput.thetas.idx.pestPG)\n");
     fprintf(stderr,"\n\tExamples:\n\t1)./thetaStat do_stat angsdput.thetas.idx\n");
     fprintf(stderr,"\t2)./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000\n");
     fprintf(stderr,"\t3)./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000 -r chr1\n");
@@ -388,9 +400,9 @@ int do_stat(int argc, char**argv){
   int type =0;
   while(argP<argc){
     //   fprintf(stderr,"args=%s\n",argv[argP]);
-    if(argP==argc){
-      fprintf(stderr,"incomplete arguments list\n");
-      exit(0);
+    if(argP+1>=argc){
+      fprintf(stderr,"\t-> %s needs an argument\n",argv[argP]);
+      exit(1);
     }
     if(strcmp("-r",argv[argP])==0)
       chr = argv[argP+1];
@@ -407,7 +419,7 @@ int do_stat(int argc, char**argv){
     
     else {
       fprintf(stderr,"Unknown argument:%s\n",argv[argP]);
-      exit(0);
+      exit(1);
     }
     argP +=2;
   }
@@ -423,7 +435,7 @@ int do_stat(int argc, char**argv){
     myMap::iterator it = mm.find(chr);
     if(it==mm.end()){
       fprintf(stderr,"\tProblem finding chr: %s in index\n",chr);
-      exit(0);
+      exit(1);
     }
     datum d = it->second;
     ASSERT(bgzf_seek(fp,d.fpos,SEEK_SET)==0);
@@ -471,6 +483,9 @@ void print_main(perChr &pc,FILE *fp){
 int print(int argc, char**argv){
   if(argc==0){
     fprintf(stderr,"\n\t./thetaStat print angsdput.thetas.idx [-r chrName]\n");
+    fprintf(stderr,"\n\tPrints the thetas per site to stdout: chromosome, position and the log of the\n");
+    fprintf(stderr,"\tWatterson, pairwise, singleton, H and L thetas\n");
+    fprintf(stderr,"\n\t-r chrName\tOnly print this chromosome\n");
     fprintf(stderr,"\n\tExamples:\n\t1)./thetaStat print angsdput.thetas.idx\n");
     fprintf(stderr,"\t2)./thetaStat print angsdput.thetas.idx -r chr2\n\n");
     return 0;
@@ -494,15 +509,15 @@ int print(int argc, char**argv){
 
   while(argP<argc){
     //   fprintf(stderr,"args=%s\n",argv[argP]);
-    if(argP==argc){
-      fprintf(stderr,"incomplete arguments list\n");
-      exit(0);
+    if(argP+1>=argc){
+      fprintf(stderr,"\t-> %s needs an argument\n",argv[argP]);
+      exit(1);
     }
     if(strcmp("-r",argv[argP])==0)
       chr = argv[argP+1];
     else {
       fprintf(stderr,"Unknown argument:%s\n",argv[argP]);
-      exit(0);
+      exit(1);
 
     }
     argP +=2;
@@ -513,7 +528,7 @@ int print(int argc, char**argv){
     myMap::iterator it = mm.find(chr);
     if(it==mm.end()){
       fprintf(stderr,"Problem finding chr: %s in index\n",chr);
-      exit(0);
+      exit(1);
     }
     datum d = it->second;
     ASSERT(0==bgzf_seek(fp,d.fpos,SEEK_SET));
@@ -536,12 +551,201 @@ int print(int argc, char**argv){
 }
 
 
+//reads exactly length bytes or exits, a damaged or truncated file should not give a partial output
+void cat_read(BGZF *fp,void *data,size_t length,const char *fname){
+  ssize_t nread = bgzf_read(fp,data,length);
+  if(nread<0||(size_t)nread!=length){
+    fprintf(stderr,"\t-> Problem reading \'%s\', the file is damaged or truncated\n",fname);
+    exit(1);
+  }
+}
+
+void cat_write(BGZF *fp,const void *data,size_t length,const char *fname){
+  if(bgzf_write(fp,data,length)!=(ssize_t)length){
+    fprintf(stderr,"\t-> Problem writing \'%s\'\n",fname);
+    exit(1);
+  }
+}
+
+//one filename per line, empty lines are skipped
+std::vector<char*> readFilelist(const char *fname){
+  std::vector<char*> ret;
+  FILE *fp = fopen(fname,"r");
+  if(fp==NULL){
+    fprintf(stderr,"\t-> Problem opening file: \'%s\'\n",fname);
+    exit(1);
+  }
+  char buf[LENS];
+  while(fgets(buf,LENS,fp)){
+    char *tok = strtok(buf," \t\r\n");
+    if(tok)
+      ret.push_back(strdup(tok));
+  }
+  fclose(fp);
+  return ret;
+}
+
+//concatenates .thetas.idx/.thetas.gz files from realSFS saf2theta, the files must have different chromosomes
+int theta_cat(int argc,char **argv){
+  if(argc==0){
+    fprintf(stderr,"\n\t./thetaStat cat file1.thetas.idx file2.thetas.idx [...] -outnames outputprefix\n");
+    fprintf(stderr,"\t./thetaStat cat -b file.list -outnames outputprefix\n");
+    fprintf(stderr,"\n\tMerges .thetas.idx/.thetas.gz files from 'realSFS saf2theta' into one, in the order given.\n");
+    fprintf(stderr,"\tWrites outputprefix.thetas.idx and outputprefix.thetas.gz\n");
+    fprintf(stderr,"\n\tA chromosome can only be in one of the files, and the files must be made from the same\n");
+    fprintf(stderr,"\tnumber of sampled chromosomes (nChr, 2 x individuals for diploids)\n");
+    fprintf(stderr,"\n\t-b file.list\tA file with one .thetas.idx filename per line\n");
+    fprintf(stderr,"\t-outnames STR\tOutput prefix\n\n");
+    return 0;
+  }
+  char *outnames = NULL;
+  std::vector<char*> files;
+  for(int i=0;i<argc;i++){
+    if(strcmp("-outnames",argv[i])==0||strcmp("-b",argv[i])==0){
+      if(i+1==argc){
+	fprintf(stderr,"\t-> %s needs an argument\n",argv[i]);
+	exit(1);
+      }
+      if(strcmp("-outnames",argv[i])==0)
+	outnames = argv[++i];
+      else{
+	std::vector<char*> tmp = readFilelist(argv[++i]);
+	files.insert(files.end(),tmp.begin(),tmp.end());
+      }
+    }else if(argv[i][0]=='-'){
+      fprintf(stderr,"\t-> Unknown argument: %s\n",argv[i]);
+      exit(1);
+    }else
+      files.push_back(strdup(argv[i]));
+  }
+  if(outnames==NULL){
+    fprintf(stderr,"\t-> Must supply -outnames\n");
+    exit(1);
+  }
+  if(files.size()==0){
+    fprintf(stderr,"\t-> Must supply .thetas.idx files\n");
+    exit(1);
+  }
+  char *out_idx_name = append(outnames,".thetas.idx");
+  char *out_bin_name = append(outnames,".thetas.gz");
+  for(size_t f=0;f<files.size();f++){
+    size_t l = strlen(files[f]);
+    if(l<4||strcmp(files[f]+l-4,IDX)!=0){
+      fprintf(stderr,"\t-> \'%s\' is not a .thetas.idx file\n",files[f]);
+      exit(1);
+    }
+    if(strcmp(files[f],out_idx_name)==0){
+      fprintf(stderr,"\t-> The output \'%s\' is also an input file\n",out_idx_name);
+      exit(1);
+    }
+    char *bin = idxToGz(files[f]);
+    isok(bin,files[f]);
+    free(bin);
+  }
+
+  FILE *out_idx = fopen(out_idx_name,"wb");
+  BGZF *out_bin = bgzf_open(out_bin_name,"w");
+  if(out_idx==NULL||out_bin==NULL){
+    fprintf(stderr,"\t-> Problem opening output files: \'%s\' \'%s\'\n",out_idx_name,out_bin_name);
+    exit(1);
+  }
+  char magic[8] = "thetav2";
+  cat_write(out_bin,magic,8,out_bin_name);
+  if(fwrite(magic,1,8,out_idx)!=8){
+    fprintf(stderr,"\t-> Problem writing \'%s\'\n",out_idx_name);
+    exit(1);
+  }
+
+  std::map<std::string,char*> seen;//chromosome -> file it came from
+  int nChrAll = -1;
+  size_t nChromo = 0;
+  size_t bufLen = 1<<20;
+  char *buf = new char[bufLen];
+  for(size_t f=0;f<files.size();f++){
+    char *bin_name = idxToGz(files[f]);
+    BGZF *fp = bgzf_open(bin_name,"r");
+    cat_read(fp,magic,8,bin_name);
+    fprintf(stderr,"\t-> Adding: %s\n",bin_name);
+    while(1){
+      size_t clen;
+      ssize_t nread = bgzf_read(fp,&clen,sizeof(size_t));
+      if(nread==0)
+	break;
+      if(nread!=sizeof(size_t)||clen==0||clen>65536){
+	fprintf(stderr,"\t-> Problem reading \'%s\', the file is damaged or truncated\n",bin_name);
+	exit(1);
+      }
+      char *chr = new char[clen+1];
+      cat_read(fp,chr,clen,bin_name);
+      chr[clen] = '\0';
+      size_t nSites;
+      int nChr;
+      cat_read(fp,&nSites,sizeof(size_t),bin_name);
+      cat_read(fp,&nChr,sizeof(int),bin_name);
+
+      std::map<std::string,char*>::iterator it = seen.find(chr);
+      if(it!=seen.end()){
+	fprintf(stderr,"\t-> Chromosome \'%s\' is in both \'%s\' and \'%s\', the files must have different chromosomes\n",chr,it->second,files[f]);
+	exit(1);
+      }
+      seen[chr] = files[f];
+      if(nChrAll==-1)
+	nChrAll = nChr;
+      else if(nChrAll!=nChr){
+	fprintf(stderr,"\t-> Chromosome \'%s\' in \'%s\' is made from %d sampled chromosomes (nChr), the earlier files from %d\n",chr,files[f],nChr,nChrAll);
+	exit(1);
+      }
+
+      int64_t offs = bgzf_tell(out_bin);
+      cat_write(out_bin,&clen,sizeof(size_t),out_bin_name);
+      cat_write(out_bin,chr,clen,out_bin_name);
+      cat_write(out_bin,&nSites,sizeof(size_t),out_bin_name);
+      cat_write(out_bin,&nChr,sizeof(int),out_bin_name);
+      //positions and the 5 thetas are copied as they are
+      size_t left = nSites*(sizeof(int)+5*sizeof(float));
+      while(left>0){
+	size_t n = left<bufLen?left:bufLen;
+	cat_read(fp,buf,n,bin_name);
+	cat_write(out_bin,buf,n,out_bin_name);
+	left -= n;
+      }
+
+      if(fwrite(&clen,sizeof(size_t),1,out_idx)!=1||fwrite(chr,1,clen,out_idx)!=clen||
+	 fwrite(&nSites,sizeof(size_t),1,out_idx)!=1||fwrite(&nChr,sizeof(int),1,out_idx)!=1||
+	 fwrite(&offs,sizeof(int64_t),1,out_idx)!=1){
+	fprintf(stderr,"\t-> Problem writing \'%s\'\n",out_idx_name);
+	exit(1);
+      }
+      nChromo++;
+      delete [] chr;
+    }
+    bgzf_close(fp);
+    free(bin_name);
+  }
+  delete [] buf;
+  if(bgzf_close(out_bin)!=0||fclose(out_idx)!=0){
+    fprintf(stderr,"\t-> Problem closing output files: \'%s\' \'%s\'\n",out_idx_name,out_bin_name);
+    exit(1);
+  }
+  fprintf(stderr,"\t-> Wrote %zu chromosomes from %zu files to: \'%s\' and \'%s\'\n",nChromo,files.size(),out_idx_name,out_bin_name);
+  for(size_t f=0;f<files.size();f++)
+    free(files[f]);
+  delete [] out_idx_name;
+  delete [] out_bin_name;
+  return 0;
+}
+
+
 int main(int argc,char **argv){
   if(argc==1){
     fprintf(stderr,"\n\t\'./thetaStat\': a program to do neutrality test statistics using thetas.idx output from angsd\n");
+    fprintf(stderr,"\n\tdo_stat\tthetas and neutrality test statistics in windows or per chromosome\n");
+    fprintf(stderr,"\tprint\tprint the thetas per site\n");
+    fprintf(stderr,"\tcat\tmerge thetas files with different chromosomes\n");
     fprintf(stderr,"\n\tExamples:\n\t1) ./thetaStat print angsdput.thetas.idx\n");
     fprintf(stderr,"\t2) ./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000\n");
-    fprintf(stderr,"\n\tType \'./thetaStat do_stat\' or './thetaStat print' for more information\n\n");
+    fprintf(stderr,"\t3) ./thetaStat cat chr1.thetas.idx chr2.thetas.idx -outnames merged\n");
+    fprintf(stderr,"\n\tType \'./thetaStat do_stat\', './thetaStat print' or './thetaStat cat' for more information\n\n");
     return 0;
   }
   for(int i=0;i<argc;i++)
@@ -549,13 +753,15 @@ int main(int argc,char **argv){
   fprintf(stderr,"\n");
 
   --argc,++argv;
-  if(strcmp(*argv,"do_stat")==0){
-    do_stat(--argc,++argv);
-  }else if(strcmp(*argv,"print")==0){
-    print(--argc,++argv);
-  }else{
-    fprintf(stderr,"Unknown argument: \'%s' please supply:\n",*argv);
-    fprintf(stderr,"./thetaStat [do_stat||print]\n");
-  }
+  if(strcmp(*argv,"do_stat")==0)
+    return do_stat(--argc,++argv);
+  else if(strcmp(*argv,"print")==0)
+    return print(--argc,++argv);
+  else if(strcmp(*argv,"cat")==0)
+    return theta_cat(--argc,++argv);
+
+  fprintf(stderr,"Unknown argument: \'%s' please supply:\n",*argv);
+  fprintf(stderr,"./thetaStat [do_stat||print||cat]\n");
+  return 1;
 }
 
