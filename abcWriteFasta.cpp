@@ -15,14 +15,14 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t-doFasta\t%d\n",doFasta);
   fprintf(argFile,"\t1: use a random (non N) base (needs -doCounts 1)\n");
   fprintf(argFile,"\t2: use the most common (non N) base (needs -doCounts 1)\n");
-  fprintf(argFile,"\t3: use the base with highest ebd (under development) \n");
+  fprintf(argFile,"\t3: use the base with highest ebd\n");
   fprintf(argFile,"\t4: output iupac codes (under development) \n");
   fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases perline in output file)\n",NbasesPerLine);
   fprintf(argFile,"\t-explode\t%d\t print chromosome where we have no data (0:no,1:yes)\n",explode);
   fprintf(argFile,"\t-rmTrans\t%d\t remove transitions as different from -ref bases (0:no,1:yes)\n",rmTrans);
   fprintf(argFile,"\t-ref\t%s\t reference fasta, only used with -rmTrans 1\n",ref);
   fprintf(argFile,"\t-iupacRatio\t%.3f\t (Remove nucleotide below total depth ratio for IUPAC assignment)\n",iupacRatio);
-  fprintf(argFile,"\t-seed\t%d\t use non random seed of value 1\n",seed);
+  fprintf(argFile,"\t-seed\t%d\t seed for the random base (-doFasta 1) and ties (-doFasta 2), 0: from the clock\n",seed);
   fprintf(argFile,"\n");
 }
 
@@ -41,28 +41,43 @@ void abcWriteFasta::getOptions(argStruct *arguments){
   seed=angsd::getArg("-seed",seed,arguments);
 
 
+  if(doFasta<0||doFasta>4){
+    fprintf(stderr,"Error: -doFasta must be 1, 2, 3 or 4, got: %d\n",doFasta);
+    exit(1);
+  }
+  if(NbasesPerLine<1){
+    fprintf(stderr,"Error: -basesPerLine must be at least 1, got: %d\n",NbasesPerLine);
+    exit(1);
+  }
   if(doFasta){
     if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
       fprintf(stderr,"Error: bam or soap input needed for -doFasta \n");
-      exit(0);
+      exit(1);
     }
     if(doFasta==3 && arguments->nInd!=1){
       fprintf(stderr,"Error: -doFasta 3 only works for a single individual\n");
-      exit(0);
+      exit(1);
     }
     if((doFasta==2||doFasta==1) && doCount==0){
       fprintf(stderr,"Error: -doFasta 1 or 2 needs allele counts (use -doCounts 1)\n");
-      exit(0);
+      exit(1);
     }
   }
   if(rmTrans && ref==NULL){
     fprintf(stderr,"\t-> Must supply reference with -rmTrans 1\n");
-    exit(0);
+    exit(1);
   }
 
 }
+//only called from changeChr when no threads are running, so the counter needs no lock
 void writeChr(kstring_t *bufstr,size_t len,char *nam,char*d,int nbpl){
-  fprintf(stderr,"\t-> [%s] writing chr:%s\n",__FUNCTION__,nam);
+  static int nWritten = 0;
+  const int maxMessages = 100;//with -explode 1 and many contigs this would print a line per contig
+  if(nWritten<maxMessages)
+    fprintf(stderr,"\t-> [%s] writing chr:%s\n",__FUNCTION__,nam);
+  else if(nWritten==maxMessages)
+    fprintf(stderr,"\t-> [%s] writing chr:%s (written %d chromosomes, will not print this message anymore)\n",__FUNCTION__,nam,maxMessages+1);
+  nWritten++;
   ksprintf(bufstr,">%s",nam);
   for(size_t i=0;i<len;i++){
     if(i % nbpl == 0)
@@ -110,8 +125,9 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   printArg(arguments->argumentFile);
 
 
+  //log of the probability that a base with phred score i is correct, log(1-10^(-i/10))
   for(int i=0;i<256;i++)
-    lphred[i] =log(1.0-pow(i,-1.0*i/10.0));
+    lphred[i] =log(1.0-pow(10.0,-1.0*i/10.0));
   //make output files
   const char* postfix;
   postfix=".fa.gz";
@@ -203,6 +219,8 @@ void abcWriteFasta::run(funkyPars *pars){
     for(int i=0;i<pars->nInd;i++){
       //      fprintf(stderr,"numSites: %d\n",pars->numSites);
       for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
+	if(pars->keepSites[s]==0)
+	  continue;
 	tNode *tn = pars->chk->nd[s][i];
 	if(tn==NULL)
 	  continue;
@@ -239,7 +257,7 @@ void abcWriteFasta::run(funkyPars *pars){
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
 
       int ob = refToInt[myFasta[pars->posi[s]]];
-      int rb = refToInt[pars->ref[pars->posi[s]]];
+      int rb = pars->ref[s];//reference base of site s, already 0-4
       //A <-> G, C <-> T
       if(ob==0&&rb==2)
 	myFasta[pars->posi[s]]=intToRef[4];

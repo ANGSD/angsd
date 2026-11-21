@@ -4,7 +4,7 @@ private:
   kstring_t bufstr;
   int currentChr;
   int NbasesPerLine;
-  double lphred[256];//these are log phread scores log(10^(1:255)/(-10))
+  double lphred[256];//log(1-10^(-i/10)), the probability that a base with phred score i is correct
   char *myFasta;//contains the new fastasequence for the currrent chr
   int hasData;
   int rmTrans;
