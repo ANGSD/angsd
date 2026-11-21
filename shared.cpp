@@ -34,6 +34,7 @@ extern pthread_mutex_t mUpPile_mutex;
 int maxThreads=1;//this value is given from the commandline -nThreads
 pthread_t thread1;
 pthread_cond_t cvMaxThread;
+pthread_cond_t cvThreadDone;//signalled when a worker thread is done, see waitForThreads
 pthread_mutex_t counterMut;
 
 int currentChr=-1;
@@ -65,6 +66,10 @@ void init(void *arg){
   }
   maxThreads=angsd::getArg("-nThreads",maxThreads,arguments);
   maxThreads=angsd::getArg("-P",maxThreads,arguments);
+  if(maxThreads<1){
+    fprintf(stderr,"\t-> -nThreads/-P must be at least 1, got: %d\n",maxThreads);
+    exit(1);
+  }
   const int maxAllowedThreads = 8;
   if(maxThreads>maxAllowedThreads){
     fprintf(stderr,"\t-> You have choosen to supply a very high number of threads. The number of threads will be capped at %d\n",maxAllowedThreads);
@@ -87,6 +92,7 @@ void init(void *arg){
   shouldRun = allMethods[0]->shouldRun;
   pthread_mutex_init(&counterMut, NULL);
   pthread_cond_init (&cvMaxThread, NULL);
+  pthread_cond_init (&cvThreadDone, NULL);
 
 
   header = arguments->hd;
@@ -98,18 +104,20 @@ void init(void *arg){
 
 void join_slave2();
 
+//wait until all worker threads are done and all chunks are printed.
+//A worker prints in printer.prop() before it counts down curRunning and signals cvThreadDone,
+//so we wake up as soon as the last one is done
+void waitForThreads(){
+  join_slave2();//-nThreads 2 worker is not counted in curRunning
+  pthread_mutex_lock(&counterMut);
+  while(curRunning!=0||printer.contains()!=0)
+    pthread_cond_wait(&cvThreadDone,&counterMut);
+  pthread_mutex_unlock(&counterMut);
+}
+
 void destroy_shared(){
   //  fprintf(stderr,"\t-> Calling destroy\n");
-  join_slave2();//-nThreads 2 worker is not counted in curRunning
-  while(1){
-    pthread_mutex_lock(&counterMut);
-    if(curRunning==0&&printer.contains()==0)
-      break;
-    fprintf(stderr,"\t-> Waiting for nThreads:%d\n",curRunning);
-    pthread_mutex_unlock(&counterMut);
-    sleep(1);
-  }
-  pthread_mutex_unlock(&counterMut);
+  waitForThreads();
   fprintf(stderr,"\t-> Done waiting for threads\n");
   for(int i=0;i<andersSux;i++)
     delete allMethods[i];
@@ -180,7 +188,7 @@ void collapse(funkyPars *p){
     we are in running different threads now, so dont clean up nodes
     but modify keeplist
   */
-  if((p->posi[0]<chk->regStart)||(p->posi[p->numSites-1]>chk->regStop)){
+  if(p->numSites>0&&((p->posi[0]<chk->regStart)||(p->posi[p->numSites-1]>chk->regStop))){
     for(int i=0;i<p->numSites;i++){
       if(p->posi[i]<chk->regStart)
 	p->keepSites[i] = 0;
@@ -225,6 +233,7 @@ void *slave(void *ptr){
 
   pthread_mutex_lock( &counterMut );
   curRunning--;
+  pthread_cond_broadcast(&cvThreadDone);
 
   
   if(nQueueSize==-1){//no limit on queuesize, always signal
@@ -286,20 +295,18 @@ void master(funkyPars *p){
   //  fprintf(stderr,"[%s] Number of threads running=%d inqueue=%lu\n",__FUNCTION__,curRunning,printer.contains());
   pthread_mutex_lock( &counterMut );
 
-  curRunning++;
-  if(curRunning==maxThreads||queueStop==1){
+  curRunning++;//counts the thread we are about to start
+  //in a loop, pthread_cond_wait can return without being signalled
+  while(curRunning>=maxThreads||queueStop==1){
     //fprintf(stderr,"We are running max number of threads will wait for finishing threads: %d\n",curRunning);
     pthread_cond_wait(&cvMaxThread, &counterMut);
     //fprintf(stderr,"Done waiting for finishing threads:%d\n",curRunning);
   }
   pthread_mutex_unlock( &counterMut );
-  if(pthread_create( &thread1, &attr, slave, (void*) p)){
-    fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(errno),p->chunkNumber);
-    while(1){
-      fprintf(stderr,"[%s] Problem spawning thread\n%s at chunknumber:%d\n",__FUNCTION__,strerror(errno),p->chunkNumber);
-      
-    }
-    exit(0);
+  int ret = pthread_create( &thread1, &attr, slave, (void*) p);
+  if(ret!=0){
+    fprintf(stderr,"[%s] Problem spawning thread: %s at chunknumber:%d\n",__FUNCTION__,strerror(ret),p->chunkNumber);
+    exit(1);
   }
   // pthread_detach(thread1);
 }
@@ -320,25 +327,11 @@ void changeChr(int refId){
 
 
 void waiter(int refId){
-  join_slave2();//-nThreads 2 worker is not counted in curRunning
-  //fprintf(stderr,"_%s_\n",__FUNCTION__);fflush(stderr);
-
-  //change of chr detected wait untill all threads are done
+  //change of chr detected wait untill all threads are done,
+  //the modules change their data for the chromosome below
   if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT)
     fprintf(stderr,"Change of chromo detected Waiting for nThreads:%d\n",curRunning);
-  while(1){
-    pthread_mutex_lock(&counterMut);
-    if(curRunning==0&&printer.contains()==0){
-      pthread_mutex_unlock(&counterMut);//need to do this because rest of while is not used
-      break;
-    }
-    if(allMethods[0]->header->n_targets<THRESHOLD_FOR_NICEOUTPUT){
-      fprintf(stderr,"Change of chromo detected Waiting for nThreads:%d printer.contains=%lu\n",curRunning,printer.contains());
-      fflush(stderr);
-    }
-    pthread_mutex_unlock(&counterMut);
-    sleep(1);
-  }
+  waitForThreads();
   if(currentChr==-1||refId!=currentChr){
     currentChr=refId;
     changeChr(refId);
@@ -493,7 +486,7 @@ void printFunky(funkyPars *p){
   //  fprintf(stderr,"printFunky killsig=%d nsites=%d refid:%d\n",p->killSig,p->numSites,p->refId);
   if(p->killSig==0) {//don't print the empty killSig chunk
 
-    if( (howOften>0) && ((p->chunkNumber%howOften)==0) ){
+    if( (howOften>0) && ((p->chunkNumber%howOften)==0) && p->numSites>0 ){
       if(isAtty){
 	fprintf(stderr,"\r\t-> Printing at chr: %s pos:%d chunknumber %d contains %d sites",header->target_name[p->refId],p->posi[0]+1,p->chunkNumber,p->numSites);
 	  }else{
