@@ -22,7 +22,7 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t-rmTrans\t%d\t remove transitions as different from -ref bases (0:no,1:yes)\n",rmTrans);
   fprintf(argFile,"\t-ref\t%s\t reference fasta, only used with -rmTrans 1\n",ref);
   fprintf(argFile,"\t-iupacRatio\t%.3f\t (Remove nucleotide below total depth ratio for IUPAC assignment)\n",iupacRatio);
-  fprintf(argFile,"\t-seed\t%d\t use non random seed of value 1\n",seed);
+  fprintf(argFile,"\t-seed\t%d\t seed for the random base (-doFasta 1) and ties (-doFasta 2), 0: from the clock\n",seed);
   fprintf(argFile,"\n");
 }
 
@@ -41,23 +41,31 @@ void abcWriteFasta::getOptions(argStruct *arguments){
   seed=angsd::getArg("-seed",seed,arguments);
 
 
+  if(doFasta<0||doFasta>4){
+    fprintf(stderr,"Error: -doFasta must be 1, 2, 3 or 4, got: %d\n",doFasta);
+    exit(1);
+  }
+  if(NbasesPerLine<1){
+    fprintf(stderr,"Error: -basesPerLine must be at least 1, got: %d\n",NbasesPerLine);
+    exit(1);
+  }
   if(doFasta){
     if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
       fprintf(stderr,"Error: bam or soap input needed for -doFasta \n");
-      exit(0);
+      exit(1);
     }
     if(doFasta==3 && arguments->nInd!=1){
       fprintf(stderr,"Error: -doFasta 3 only works for a single individual\n");
-      exit(0);
+      exit(1);
     }
     if((doFasta==2||doFasta==1) && doCount==0){
       fprintf(stderr,"Error: -doFasta 1 or 2 needs allele counts (use -doCounts 1)\n");
-      exit(0);
+      exit(1);
     }
   }
   if(rmTrans && ref==NULL){
     fprintf(stderr,"\t-> Must supply reference with -rmTrans 1\n");
-    exit(0);
+    exit(1);
   }
 
 }
