@@ -28,7 +28,6 @@
 #include "abcTemplate.h"
 #include "abcRAD.h"
 #include "abcIBS.h"
-#include "abcWriteVcf.h" //<- dump plink files.
 #include "abcPSMC.h"
 #include "abcScounts.h"
 #include "abcWriteBcf.h"
@@ -71,16 +70,15 @@ abc **extra(int &nItem,const char *outfiles,int inputtype,argStruct *arguments){
   tskStuff[nit++] = new abcWriteFasta(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcSmartCounts(outfiles,arguments,inputtype);
   tskStuff[nit++] = new abcTemplate(outfiles,arguments,inputtype);
-  tskStuff[nit++] = new abcWriteVcf(outfiles,arguments,inputtype);//22
-  tskStuff[nit++] = new abcHaploCall(outfiles,arguments,inputtype);
+  tskStuff[nit++] = new abcHaploCall(outfiles,arguments,inputtype);//22
   tskStuff[nit++] = new abcDstat2(outfiles,arguments,inputtype);
-  tskStuff[nit++] = new abcHWE_F(outfiles,arguments,inputtype); // 25
+  tskStuff[nit++] = new abcHWE_F(outfiles,arguments,inputtype); // 24
   tskStuff[nit++] = new abcIBS(outfiles,arguments,inputtype); // 
-  tskStuff[nit++] = new abcPSMC(outfiles,arguments,inputtype); //
+  tskStuff[nit++] = new abcPSMC(outfiles,arguments,inputtype); //26
   tskStuff[nit++] = new abcScounts(outfiles,arguments,inputtype); //
-  tskStuff[nit++] = new abcWriteBcf(outfiles,arguments,inputtype); // 29
-  tskStuff[nit++] = new abcRAD(outfiles,arguments,inputtype); // 30
-  tskStuff[nit++] = new abcTemplate2(outfiles,arguments,inputtype); // 31
+  tskStuff[nit++] = new abcWriteBcf(outfiles,arguments,inputtype); // 28
+  tskStuff[nit++] = new abcRAD(outfiles,arguments,inputtype); // 29
+  tskStuff[nit++] = new abcTemplate2(outfiles,arguments,inputtype); // 30
   //remember to update changeChr in shared.cpp if order gets changed
   nItem = nit;
   return tskStuff;
