@@ -93,6 +93,15 @@ void abcCounts::getOptions(argStruct *arguments){
   setMinDepth = angsd::getArg("-setMinDepth",setMinDepth,arguments);
   setMaxDepthInd = angsd::getArg("-setMaxDepthInd",setMaxDepthInd,arguments);
   setMinDepthInd = angsd::getArg("-setMinDepthInd",setMinDepthInd,arguments);
+  //-1 means no filtering. Other negative values removed all sites (-setMinDepth is compared
+  //with an unsigned depth) or all individuals (-setMaxDepthInd), or did nothing
+  const char *depthNames[4]={"-setMaxDepth","-setMinDepth","-setMaxDepthInd","-setMinDepthInd"};
+  int depthVals[4]={setMaxDepth,setMinDepth,setMaxDepthInd,setMinDepthInd};
+  for(int i=0;i<4;i++)
+    if(depthVals[i]<-1){
+      fprintf(stderr,"\t-> %s must be -1 (no filtering) or at least 0, got: %d\n",depthNames[i],depthVals[i]);
+      exit(1);
+    }
 
   doDepth=angsd::getArg("-doDepth",doDepth,arguments);
   maxDepth=angsd::getArg("-maxDepth",maxDepth,arguments);
