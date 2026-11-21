@@ -59,3 +59,10 @@ commit_message.txt
 # output from the tests (still collected as CI artifacts by git ls-files --others)
 test/**/test_results/
 test/*.log
+test/*/output/
+test/*/input/msout
+test/sfstest/input/
+test/*.sh.dir/
+test/*.arg
+test/tmp.lrt0.gz
+test/smallBam.filelist
