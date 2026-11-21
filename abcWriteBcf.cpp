@@ -16,25 +16,32 @@
 #include "abcMcall.h"
 #include "abcCounts.h"
 
-void error(const char *format, ...)
-{
-    va_list ap;
-    va_start(ap, format);
-    vfprintf(stderr, format, ap);
-    va_end(ap);
-    exit(-1);
-}
+#define MAXPL 1000000 //PL for a genotype with likelihood 0
 
 void abcWriteBcf::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doBcf\t%d\n",doBcf);
-  fprintf(argFile,"\t1:  (still beta, not really working)\n");
-  fprintf(argFile,"\n\tNB This is a wrapper around -gl -domajorminor and -dopost -dogeno\n");
+  fprintf(argFile,"\t1: write the sites to a .bcf file, one sample per input file\n");
+  fprintf(argFile,"\n\tNB This writes what other options calculate, it needs -doMajorMinor and uses\n\t-gl (GL,PL), -doPost (GP), -doGeno (GT), -doMaf (AF) and -doCounts (DP) when they are given\n");
 }
 
 void abcWriteBcf::run(funkyPars *pars){
   if(doBcf==0)
     return ;
+}
+
+//the data has one column per input file, so the header must have the same number of samples.
+//Sample names are made from the bam files (sample.c), the same name twice is only added once
+static void checkSamples(bcf_hdr_t *hdr,int nInd){
+  //bcf_hdr_add_sample(hdr,NULL) no longer syncs the header in newer htslib
+  if(bcf_hdr_sync(hdr)<0){
+    fprintf(stderr,"\t-> Problem making the bcf header\n");
+    exit(1);
+  }
+  if(bcf_hdr_nsamples(hdr)!=nInd){
+    fprintf(stderr,"\t-> The bcf header has %d sample names but the data has %d samples. Is the same file given more than once?\n",bcf_hdr_nsamples(hdr),nInd);
+    exit(1);
+  }
 }
 
 //last is from abc.h
@@ -115,9 +122,11 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
     bcf_hdr_add_sample(hdr, args->sm->smpl[i]);
   }
   bcf_hdr_add_sample(hdr, NULL);      // to update internal structures
-  
-  if ( bcf_hdr_write(fp, hdr)!=0 )
-    fprintf(stderr,"Failed to write bcf\n");
+  checkSamples(hdr,args->nInd);
+  if ( bcf_hdr_write(fp, hdr)!=0 ){
+    fprintf(stderr,"\t-> Failed to write the bcf header\n");
+    exit(1);
+  }
   buf.l=0;
 }
 
@@ -164,8 +173,7 @@ void abcWriteBcf::print(funkyPars *pars){
       char majmin[4]={intToRef[pars->major[s]],',',intToRef[pars->minor[s]],'\0'};
       bcf_update_alleles_str(hdr, rec, majmin);
     }
-    if(freq==NULL&&mcall==NULL)
-      rec->qual = 29;
+    bcf_float_set_missing(rec->qual);//only -doMcall calculates a quality
     // .. FILTER
     int32_t tmpi = bcf_hdr_id2int(hdr, BCF_DT_ID, "PASS");
     bcf_update_filter(hdr, rec, &tmpi, 1);
@@ -262,11 +270,15 @@ void abcWriteBcf::print(funkyPars *pars){
 	//fixed awkward case where all gls are -Inf, should only happen with -gl 6
 	if(std::isinf(val[0])&&std::isinf(val[1])&&std::isinf(val[2]))
 	  val[0]=val[1]=val[2]=0;
-	//angsd::logrescale(val,3);	
+	//scale to the most likely of the 3 genotypes, as the header says (the likes are scaled over all 10)
+	angsd::logrescale(val,3);
 	for(int j=0;j<3;j++){
 	  tmpfa[i*3+j] = val[j]/M_LN10;
-	  double tmptmp = -log10(exp(val[j]))*10.0;
-	  tmpi[i*3+j] = round(tmptmp);
+	  double tmptmp = -10.0*val[j]/M_LN10;
+	  //a likelihood of 0 (-inf) would overflow the integer
+	  if(!(tmptmp<MAXPL))
+	    tmptmp = MAXPL;
+	  tmpi[i*3+j] = (int32_t) round(tmptmp);
 	}
       }
       bcf_update_format_float(hdr, rec, "GL", tmpfa,3*bcf_hdr_nsamples(hdr) );
@@ -317,8 +329,8 @@ void abcWriteBcf::print(funkyPars *pars){
     }
 
     if ( bcf_write1(fp, hdr, rec)!=0 ){
-      fprintf(stderr,"Failed to write %s:%d\n",__FILE__,__LINE__);
-      exit(0);
+      fprintf(stderr,"\t-> Failed to write the bcf record %s:%d\n",__FILE__,__LINE__);
+      exit(1);
     }
     //    fprintf(stderr,"------\n");
     bcf_clear1(rec);
@@ -331,10 +343,7 @@ void abcWriteBcf::getOptions(argStruct *arguments){
   
   if(doBcf==0)
     return;
-  else{
-    fprintf(stderr,"\n[bcfoutput] \tPlease add the following parameters \n\t\t '-gl 1 -dopost 1 -domajorminor 1 -domaf 1 -dobcf 1 --ignore-RG 0 -dogeno 1 -docounts 1'\n\n");
 
-  }
   refName = ancName = NULL;
   gl = doMajorMinor = doCounts = doMaf = doPost = doGeno = 0;
   ancName = angsd::getArg("-anc",ancName,arguments);
@@ -347,9 +356,9 @@ void abcWriteBcf::getOptions(argStruct *arguments){
   doGeno = angsd::getArg("-doGeno",doGeno,arguments);
   domcall = angsd::getArg("-doMcall",domcall,arguments);
 
-  if(doPost==0||doMajorMinor==0||gl==0){
-    fprintf(stderr,"\nPotential problem. -doBcf is a wrapper around -doMajorMinor -doPost and -gl. These values must therefore be set\n\n");
-    //    exit(0);
+  if(doMajorMinor==0){
+    fprintf(stderr,"\t-> -doBcf needs -doMajorMinor, e.g. -doBcf 1 -doMajorMinor 1 -gl 1 -doPost 1 -doMaf 1 -doGeno 1 -doCounts 1\n");
+    exit(1);
   }
   
   
@@ -407,12 +416,13 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
     ksprintf(&buf, "##angsdCommand=%s;Date=%s",args->cmdline,args->datetime);
     bcf_hdr_append(hdr, buf.s);
     buf.l=0;
-    if ( bcf_hdr_write(fp, hdr)!=0 )
-      fprintf(stderr,"Failed to write bcf %s:%d\n",__FILE__,__LINE__);
-    
-    if(buf.s)
-      free(buf.s);
+    checkSamples(hdr,arguments->nInd);
+    if ( bcf_hdr_write(fp, hdr)!=0 ){
+      fprintf(stderr,"\t-> Failed to write the bcf header %s:%d\n",__FILE__,__LINE__);
+      exit(1);
+    }
   }
+  free(buf.s);
   
 }
 
