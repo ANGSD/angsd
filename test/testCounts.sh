@@ -2,7 +2,9 @@
 # -doCounts test on four bams from smallBam, region 1:14000000-14002000.
 # Each case writes the -dumpCounts files (and -doDepth/-doQsDist files), they are checked
 # against the md5 sums in counts/counts.md5. The result must not depend on the number of threads.
-# -dumpCounts without -doCounts must give exit code 1.
+# test5 (-dumpCounts 5 with more than one sample) used to crash, test6 checks that
+# -setMinDepthInd also works with -minQfile (counts/minq.txt has a threshold per individual
+# and base). -dumpCounts without -doCounts must give exit code 1.
 if [[ ! $# -eq 2 ]]
 then
 	echo "Must supply an angsd binary and the folder with smallBam; will exit"
@@ -46,7 +48,9 @@ ARGS=("-dumpCounts 4"
       "-dumpCounts 2 -setMinDepthInd 2 -setMaxDepthInd 10"
       "-dumpCounts 3 -minInd 3 -setMinDepth 5 -setMaxDepth 40"
       "-dumpCounts 1 -doDepth 1 -maxDepth 20 -doQsDist 1 -minQ 0"
-      "-dumpCounts 4 -setMaxDiffObs 1")
+      "-dumpCounts 4 -setMaxDiffObs 1"
+      "-dumpCounts 5"
+      "-dumpCounts 4 -minQfile ${TDIR}/minq.txt -setMinDepthInd 2")
 
 for n in 1 3; do
 	D=${RESDIR}/threads${n}

@@ -21,7 +21,7 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"\t-setMinDepthInd\t%d\t(If depth per sample is smaller then individual is removed from analysis (from site).\n\t\t\t\t -1 indicates no filtering)\n",setMinDepthInd);
 
   fprintf(argFile,"\t-minInd\t\t%d\t(Discard site if effective sample size below value.\n\t\t\t\t 0 indicates no filtering)\n",minInd);
-  fprintf(argFile,"\t-setMaxDiffObs\t%d\t(Discard sites where we observe too many different alleles.\n\t\t\t\t 0 indicates no filtering)\n",setMaxObs);
+  fprintf(argFile,"\t-setMaxDiffObs\t%d\t(Discard sites where we observe too many different alleles in the first sample.\n\t\t\t\t 0 indicates no filtering)\n",setMaxObs);
   fprintf(argFile,"Filedumping:\n");
   fprintf(argFile,"\t-doDepth\t%d\t(dump distribution of seqdepth)\t%s,%s\n",doDepth,postfix4,postfix5);
   fprintf(argFile,"\t  -maxDepth\t%d\t(bin together high depths)\n",maxDepth);
@@ -78,17 +78,29 @@ void abcCounts::getOptions(argStruct *arguments){
 
 
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
-  if(doCounts==0)
+  //these need -doCounts, check them also when it is not given
+  dumpCounts=angsd::getArg("-dumpCounts",dumpCounts,arguments);
+  doQsDist=angsd::getArg("-doQsDist",doQsDist,arguments);
+  doDepth=angsd::getArg("-doDepth",doDepth,arguments);
+  iCounts=angsd::getArg("-iCounts",iCounts,arguments);
+  if(doCounts==0){
+    const char *names[4]={"-dumpCounts","-doQsDist","-doDepth","-iCounts"};
+    int vals[4]={dumpCounts,doQsDist,doDepth,iCounts};
+    for(int i=0;i<4;i++)
+      if(vals[i]!=0){
+	fprintf(stderr,"\t-> %s needs -doCounts 1\n",names[i]);
+	exit(1);
+      }
     return;
+  }
   doebd = angsd::getArg("-doebd",doebd,arguments);
   //from command line
   minQfile=angsd::getArg("-minQfile",minQfile,arguments);
   minQ=angsd::getArg("-minQ",minQ,arguments);
-  dumpCounts=angsd::getArg("-dumpCounts",dumpCounts,arguments);
-  doQsDist=angsd::getArg("-doQsDist",doQsDist,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
 
   setMaxObs = angsd::getArg("-setMaxDiffObs",setMaxObs,arguments);
+
   setMaxDepth = angsd::getArg("-setMaxDepth",setMaxDepth,arguments);
   setMinDepth = angsd::getArg("-setMinDepth",setMinDepth,arguments);
   setMaxDepthInd = angsd::getArg("-setMaxDepthInd",setMaxDepthInd,arguments);
@@ -103,53 +115,33 @@ void abcCounts::getOptions(argStruct *arguments){
       exit(1);
     }
 
-  doDepth=angsd::getArg("-doDepth",doDepth,arguments);
   maxDepth=angsd::getArg("-maxDepth",maxDepth,arguments);
-  iCounts=angsd::getArg("-iCounts",iCounts,arguments);
   
 
   if(doCounts && arguments->inputtype!=INPUT_BAM && arguments->inputtype!=INPUT_PILEUP){
     fprintf(stderr,"\t-> Cannot calculate -doCounts 1 from GL/GP data\n");
-    exit(0);
+    exit(1);
   }
-  if(dumpCounts&&doCounts==0){
-    fprintf(stderr,"\t-> You must supply -doCounts if you want to dumpcounts\n");
-    exit(0);
-  }
-
-  if(doDepth!=0&&doCounts==0){
-    fprintf(stderr,"\t-> Must supply -doCounts 1 if you want depth distribution\n");
-    exit(0);
-  }
-
- if(doQsDist!=0&&doCounts==0){
-    fprintf(stderr,"\t-> Must supply -doCounts 1 if you want qscore distribution\n");
-    exit(0);
-  }
- if(iCounts!=0&&doCounts==0){
-   fprintf(stderr,"\t-> Must supply -doCounts 1 if you want to write iCounts\n");
-   exit(0);
- }
  if(iCounts!=0&&arguments->nInd!=1){
    fprintf(stderr,"\t-> iCounts only for single chromosomes and single samples\n");
-   exit(0);
+   exit(1);
  }
  ffileFname = angsd::getArg("-ffile",ffileFname,arguments);
  qfileFname = angsd::getArg("-qfile",qfileFname,arguments);
  
  if(ffileFname&&iCounts!=2){
    fprintf(stderr,"\t-> -ffile is only used for -iCounts 2\n");
-   exit(0);
+   exit(1);
  }
  if(qfileFname&&iCounts!=2){
    fprintf(stderr,"\t-> -qfile is only used for -iCounts 2\n");
-   exit(0);
+   exit(1);
  }
  int tmp=-1;
  tmp = angsd::getArg("-minQ",tmp,arguments);
  if(iCounts==2 && qfileFname && tmp==-1){
    fprintf(stderr,"\t-> Must fix -minQ 0 when using -qfile \n");
-   exit(0);
+   exit(1);
  }
  if(doQsDist)
    if(minQ>0)
@@ -162,8 +154,8 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   globCount = NULL;
   const char *delim = "\t\n ";
   ffileFname=qfileFname=NULL;
-  for(int i=0;i<255;i++)
-    lookup[i]=-1;
+  for(int i=0;i<256;i++)
+    lookup[i]=255;//not A,C,G,T,N (also lower case)
   lookup['A'] = 0;
   lookup['C'] = 1;
   lookup['G'] = 2;
@@ -225,8 +217,8 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   if(qfileFname){
     FILE *infileP=NULL;
     if(!((infileP=fopen(qfileFname,"r")))){
-      fprintf(stderr,"\t-> Problem openingfile: %s\n",qfileFname);
-      exit(0);
+      fprintf(stderr,"\t-> Problem opening file: %s\n",qfileFname);
+      exit(1);
     }
     int line=0;
     char buf[LENS];
@@ -235,9 +227,12 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
 	qCutoff[line]=0;
 	line++;
       }
+      if(line>=9){
+	fprintf(stderr,"\t-> -qfile: %s has more than 8 lines\n",qfileFname);
+	exit(1);
+      }
       qCutoff[line]=atoi(strtok(buf,delim));
-      fprintf(stdout,"%d\n",qCutoff[line]);
-      fflush(stdout);
+      fprintf(stderr,"\t-> qCutoff[%d]: %d\n",line,qCutoff[line]);
       line++;
     }
     fclose(infileP);
@@ -249,8 +244,8 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   if(ffileFname){
     FILE *infileP=NULL;
     if(!((infileP=fopen(ffileFname,"r")))){
-      fprintf(stderr,"\t-> Problem openingfile: %s\n",qfileFname);
-      exit(0);
+      fprintf(stderr,"\t-> Problem opening file: %s\n",ffileFname);
+      exit(1);
     }
 
     int line=0;
@@ -260,9 +255,12 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
 	fCutoff[line]=1;
 	line++;
       }
+      if(line>=9){
+	fprintf(stderr,"\t-> -ffile: %s has more than 8 lines\n",ffileFname);
+	exit(1);
+      }
       fCutoff[line]=atof(strtok(buf,delim));
-      fprintf(stdout,"%f\n",fCutoff[line]);
-      fflush(stdout);
+      fprintf(stderr,"\t-> fCutoff[%d]: %f\n",line,fCutoff[line]);
       line++;
     }
     fclose(infileP);
@@ -283,7 +281,7 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
     else
       ksprintf(&bufstr,"chr\tpos\tmeanReadLength\tdepth\n");
     aio::bgzf_write(oFileCountsPos,bufstr.s,bufstr.l);bufstr.l=0;
-    if(dumpCounts>1)
+    if(dumpCounts>1&&dumpCounts!=5)//5 only writes the .pos.gz file
       oFileCountsBin = aio::openFileBG(outfiles,postfix2);
     if(dumpCounts==2){
       bufstr.l=0;
@@ -302,7 +300,7 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
 	ksprintf(&bufstr,"ind%d_A\tind%d_C\tind%d_G\tind%d_T\t",i,i,i,i);
       aio::bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
     }
-    if(dumpCounts>1){
+    if(oFileCountsBin){
       bufstr.l=0;ksprintf(&bufstr,"\n");
       aio::bgzf_write(oFileCountsBin,bufstr.s,bufstr.l);bufstr.l=0;
     }
@@ -334,12 +332,12 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   if(minQfile!=NULL){
     minQmat = angsd::getMatrix(minQfile,0,100000);
     if(minQmat.x!=nInd){
-      fprintf(stderr,"Number of lines in the minQfile does not match the number of individuals \n");
-      exit(0);
+      fprintf(stderr,"\t-> Number of lines in the minQfile does not match the number of individuals \n");
+      exit(1);
     }
     if(!(minQmat.y==1||minQmat.y==4)){
-      fprintf(stderr,"Number of colums in the minQfile has to be 1 or 4 \n");
-      exit(0);
+      fprintf(stderr,"\t-> Number of columns in the minQfile has to be 1 or 4 \n");
+      exit(1);
     }
   }
   
@@ -402,7 +400,7 @@ abcCounts::~abcCounts(){
     delete[] depthCount; 
     
     if(oFileSamplDepth) fclose(oFileSamplDepth);
-    if(oFileSamplDepth) fclose(oFileGlobDepth);
+    if(oFileGlobDepth) fclose(oFileGlobDepth);
   }
   
   if(minQfile!=NULL){
@@ -458,7 +456,7 @@ void abcCounts::print(funkyPars *pars){
       for(int n=0;n<chk->nSamples;n++){
 	//loop over persample reads
 	for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
-	  int allele = refToInt[pars->chk->nd[s][0]->seq[l]];
+	  int allele = refToInt[chk->nd[s][n]->seq[l]];
 	  if(allele==4)//skip of 'n'/'N'
 	    continue;
 	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c rg:%d\n",s,n,chk->nd[s][n]->l,l,chk->nd[s][n]->seq[l],chk->nd[s][n]->rgs[l]);
@@ -468,7 +466,7 @@ void abcCounts::print(funkyPars *pars){
 	  nreads++;
 	}
       }
-      ksprintf(&bpos, "%s\t%d\t%.2f\t%d\n",header->target_name[pars->refId],pars->posi[s]+1,readlensSum/nreads,(int)nreads);
+      ksprintf(&bpos, "%s\t%d\t%.2f\t%d\n",header->target_name[pars->refId],pars->posi[s]+1,nreads>0?readlensSum/nreads:0.0,(int)nreads);
       //      fprintf(stderr,"nraads: %f readlenssum: %f\n",nreads,readlensSum);
     }
 
@@ -538,11 +536,11 @@ void abcCounts::print(funkyPars *pars){
       //loop over persample reads
       for(int l=0;pars->chk->nd[s][0]&&l<pars->chk->nd[s][0]->l;l++){
 	int allele = refToInt[pars->chk->nd[s][0]->seq[l]];
-	int tmp=lookup[pars->chk->nd[s][0]->seq[l]];
+	int tmp=lookup[(unsigned char)pars->chk->nd[s][0]->seq[l]];
 #if 0
 	fprintf(stderr,"l:%d b:%c qs:%d\n",l,pars->chk->nd[s][0].seq[l],pars->chk->nd[s][0].qs[l]);
 #endif
-	if(allele==4)//skip of 'n'/'N'
+	if(allele==4||tmp>8)//skip of 'n'/'N' and unknown characters
 	  continue;
 
 	if(qfileFname&&pars->chk->nd[s][0]->qs[l]<=qCutoff[tmp]) //skip if we are using qscores and we are below
@@ -593,84 +591,39 @@ void abcCounts::clean(funkyPars *pars){
 suint **abcCounts::countNucs(const chunkyT *chk,int *keepSites,int mmin,int mmax){
   //  fprintf(stderr,"nsamples:%d\n",chk->nSamples);
   suint **cnts = new suint*[chk->nSites];
-  if(minQfile==NULL) {
-    for(int s=0;s<chk->nSites;s++){
-      cnts[s] = new suint[4*chk->nSamples];
-      if(keepSites[s]==0)
-	continue;
-      memset(cnts[s],0,4*chk->nSamples*sizeof(suint));
-      //loop over samples
-      for(int n=0;n<chk->nSamples;n++){
-	//loop over persample reads
-	for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
-	  //	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c rg:%d\n",s,n,chk->nd[s][n]->l,l,chk->nd[s][n]->seq[l],chk->nd[s][n]->rgs[l]);
-	  int allele = refToInt[chk->nd[s][n]->seq[l]];
-	
-	  if(allele==4){
-	    continue;
-	  }
-	  cnts[s][4*n+allele]++;
-	}
-	if(chk->nd[s][n]&&(mmin!=-1||mmax!=-1)){
-	  int ndep=0;
-	  for(int jj=0;jj<4;jj++) 
-	    ndep += cnts[s][4*n+jj];
-	  if(mmin!=-1&&ndep<mmin){
-	    for(int jj=0;jj<4;jj++)
-	      cnts[s][4*n+jj] = 0;
-	    chk->nd[s][n]->l=0;
-	  }
-	  if(mmax!=-1&&ndep>mmax){
-	    for(int jj=0;jj<4;jj++)
-	      cnts[s][4*n+jj] = 0;
-	    chk->nd[s][n]->l=0;
-	  }    
-	}
-      }
-    }
-  }
-  else if(minQmat.y>1){
-    for(int s=0;s<chk->nSites;s++){
-      cnts[s] = new suint[4*chk->nSamples];
-      if(keepSites[s]==0)
-	continue;
-      memset(cnts[s],0,4*chk->nSamples*sizeof(suint));
-      //loop over samples
-      for(int n=0;n<chk->nSamples;n++){
-	//loop over persample reads
-	for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
-	  int allele = refToInt[chk->nd[s][n]->seq[l]];	  
-	  if(allele==4)
-	    continue;
-	  if(chk->nd[s][n]->qs[l] < minQmat.matrix[n][allele]){
+  for(int s=0;s<chk->nSites;s++){
+    cnts[s] = new suint[4*chk->nSamples];
+    memset(cnts[s],0,4*chk->nSamples*sizeof(suint));
+    if(keepSites[s]==0)
+      continue;
+    //loop over samples
+    for(int n=0;n<chk->nSamples;n++){
+      //loop over persample reads
+      for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
+	//	  fprintf(stderr,"s:%d n:%d ret.l:%d l:%d seq:%c rg:%d\n",s,n,chk->nd[s][n]->l,l,chk->nd[s][n]->seq[l],chk->nd[s][n]->rgs[l]);
+	int allele = refToInt[chk->nd[s][n]->seq[l]];
+	if(allele==4)
 	  continue;
-	  }
-	  cnts[s][4*n+allele]++;
+	//-minQfile: one threshold per individual, or one per individual and base
+	if(minQfile!=NULL){
+	  double thres = minQmat.y>1 ? minQmat.matrix[n][allele] : minQmat.matrix[n][0];
+	  if(chk->nd[s][n]->qs[l] < thres)
+	    continue;
+	}
+	cnts[s][4*n+allele]++;
+      }
+      //-setMinDepthInd/-setMaxDepthInd remove the individual from the site
+      if(chk->nd[s][n]&&(mmin!=-1||mmax!=-1)){
+	int ndep=0;
+	for(int jj=0;jj<4;jj++) 
+	  ndep += cnts[s][4*n+jj];
+	if((mmin!=-1&&ndep<mmin)||(mmax!=-1&&ndep>mmax)){
+	  for(int jj=0;jj<4;jj++)
+	    cnts[s][4*n+jj] = 0;
+	  chk->nd[s][n]->l=0;
 	}
       }
     }
-
-  }
- else{
-    for(int s=0;s<chk->nSites;s++){
-      cnts[s] = new suint[4*chk->nSamples];
-      if(keepSites[s]==0)
-	continue;
-      memset(cnts[s],0,4*chk->nSamples*sizeof(suint));
-      //loop over samples
-      for(int n=0;n<chk->nSamples;n++){
-	//loop over persample reads
-	for(int l=0;chk->nd[s][n]&&l<chk->nd[s][n]->l;l++){
-	  int allele = refToInt[chk->nd[s][n]->seq[l]];
-	  if(chk->nd[s][n]->qs[l] < minQmat.matrix[n][0]||allele==4){
- 
-	  continue;
-	  }
-	  cnts[s][4*n+allele]++;
-	}
-      }
-    }
-
   }
   return cnts;
 }
@@ -704,6 +657,8 @@ void abcCounts::run(funkyPars *pars){
 	  if(nd->qs[j]<minQ)
 	    continue;
 	  int b =refToInt[nd->seq[j]];
+	  if(b==4)//N, EBD only has A,C,G,T
+	    continue;
 	  int q = nd->qs[j];
 	  //block below are adjustments similar to bcftools mpileup parsing
 	  if (q > nd->mapQ[j]) q = nd->mapQ[j];
