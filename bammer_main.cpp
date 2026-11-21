@@ -51,14 +51,14 @@ htsFile *openBAM(const char *fname,int doCheck){
   extern htsFormat *dingding2;//<-externed from abcGetFasta. This is very bad style. Should Fix, dragon
   if((fp=sam_open_format(fname,"r",dingding2))==NULL ){
     fprintf(stderr,"[%s] nonexistant file: %s\n",__FUNCTION__,fname);
-    exit(0);
+    exit(1);
   }
   const char *str = strrchr(fname,'.');
   if(doCheck==1){
     if(str&&strcasecmp(str,".bam")!=0&&str&&strcasecmp(str,".cram")!=0&&strcasecmp(str,".sam")!=0){
-      fprintf(stderr,"\t-> file:\"%s\" should be suffixed with \".bam\" or \".cram\"\n",fname);
-      fprintf(stderr,"\t-> If you know what you are doing you can disable with -doCheck 0\"\n");
-      exit(0);
+      fprintf(stderr,"\t-> file:\"%s\" should be suffixed with \".bam\", \".cram\" or \".sam\"\n",fname);
+      fprintf(stderr,"\t-> If you know what you are doing you can disable with -doCheck 0\n");
+      exit(1);
     }
   }
   return fp;
@@ -219,7 +219,11 @@ bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname,bam_sample
   ret.idx=NULL;
  
   ret.hdr = sam_hdr_read(ret.fp);
-  if(strlen(ret.hdr->text)==0){
+  if(ret.hdr==NULL){
+    fprintf(stderr,"\t-> Could not read the header of: \'%s\', is it a SAM/BAM/CRAM file?\n",fname);
+    exit(1);
+  }
+  if(ret.hdr->text==NULL||strlen(ret.hdr->text)==0){
     fprintf(stderr,"\t-> No header information could be found for BAM/CRAM file: \'%s\' will exit\n",fname);
     exit(1);
   }
