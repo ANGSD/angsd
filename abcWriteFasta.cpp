@@ -15,7 +15,7 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t-doFasta\t%d\n",doFasta);
   fprintf(argFile,"\t1: use a random (non N) base (needs -doCounts 1)\n");
   fprintf(argFile,"\t2: use the most common (non N) base (needs -doCounts 1)\n");
-  fprintf(argFile,"\t3: use the base with highest ebd (under development) \n");
+  fprintf(argFile,"\t3: use the base with highest ebd\n");
   fprintf(argFile,"\t4: output iupac codes (under development) \n");
   fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases perline in output file)\n",NbasesPerLine);
   fprintf(argFile,"\t-explode\t%d\t print chromosome where we have no data (0:no,1:yes)\n",explode);
@@ -110,8 +110,9 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   printArg(arguments->argumentFile);
 
 
+  //log of the probability that a base with phred score i is correct, log(1-10^(-i/10))
   for(int i=0;i<256;i++)
-    lphred[i] =log(1.0-pow(i,-1.0*i/10.0));
+    lphred[i] =log(1.0-pow(10.0,-1.0*i/10.0));
   //make output files
   const char* postfix;
   postfix=".fa.gz";
@@ -203,6 +204,8 @@ void abcWriteFasta::run(funkyPars *pars){
     for(int i=0;i<pars->nInd;i++){
       //      fprintf(stderr,"numSites: %d\n",pars->numSites);
       for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
+	if(pars->keepSites[s]==0)
+	  continue;
 	tNode *tn = pars->chk->nd[s][i];
 	if(tn==NULL)
 	  continue;
