@@ -242,7 +242,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-downSample\t%.3f\tDownsample to the fraction of original data\n",downSample);
   fprintf(argFile,"\t-nReads\t\t%d\tNumber of reads to pop from each BAM/CRAMs\n",ret->nReads);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);
-  fprintf(argFile,"\t--ignore-RG\t%d\t(dev only)\n",MPLP_IGNORE_RG);
+  fprintf(argFile,"\t--ignore-RG\t%d\tSample names in -doBcf output, 1: the filenames, 0: the SM tag of each file (one sample per file)\n",MPLP_IGNORE_RG);
   fprintf(argFile,"\t+RG\t\t%s\tReadgroups to include in analysis(can be filename)\n",rghash_name);
   fprintf(argFile,"\t+LB\t\t%s\tLibraries to include in analysis(can be filename)\n",libname);
   

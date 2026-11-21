@@ -141,6 +141,69 @@ int checkIfSorted(char *str){
 
 
 
+/*
+  The name of the sample for a bam file, used in the bcf header. angsd always has one sample
+  per input file. With --ignore-RG 1 (default) it is the filename, with --ignore-RG 0 the SM
+  tag of the @RG lines if the file has exactly one SM, otherwise the filename.
+  A name that is already used gets _2, _3 ... added, so the number of samples is always the
+  number of files. Returns a new string.
+*/
+static char *sampleName(const char *fname,const char *hdrtext,int ignoreRG,const bam_sample_t *sm){
+  kstring_t name = {0,0,NULL};
+  if(!ignoreRG){
+    char *sm1 = NULL;//the first SM
+    int nDistinct = 0;
+    for(const char *p=hdrtext;p&&*p;){
+      const char *eol = strchr(p,'\n');
+      size_t len = eol?(size_t)(eol-p):strlen(p);
+      if(len>3&&strncmp(p,"@RG\t",4)==0){
+	//find \tSM: within this line
+	for(const char *q=p;q+4<=p+len;q++){
+	  if(strncmp(q,"\tSM:",4)==0){
+	    const char *v = q+4;
+	    size_t vl = 0;
+	    while(v+vl<p+len&&v[vl]!='\t')
+	      vl++;
+	    if(sm1==NULL){
+	      sm1 = strndup(v,vl);
+	      nDistinct = 1;
+	    }else if(strlen(sm1)!=vl||strncmp(sm1,v,vl)!=0)
+	      nDistinct = 2;
+	    break;
+	  }
+	}
+      }
+      p = eol?eol+1:NULL;
+    }
+    if(nDistinct==1&&sm1[0]!='\0')
+      kputs(sm1,&name);
+    else if(nDistinct>1)
+      fprintf(stderr,"\t-> \'%s\' has more than one SM tag, angsd analyses it as one sample called \'%s\'\n",fname,fname);
+    else
+      fprintf(stderr,"\t-> \'%s\' has no SM tag, the sample is called \'%s\'\n",fname,fname);
+    free(sm1);
+  }
+  if(name.l==0)
+    kputs(fname,&name);
+
+  //make the name unique
+  size_t baseLen = name.l;
+  for(int k=2;;k++){
+    int used = 0;
+    for(int i=0;i<sm->n;i++)
+      if(strcmp(sm->smpl[i],name.s)==0)
+	used = 1;
+    if(!used)
+      break;
+    name.l = baseLen;
+    name.s[baseLen] = '\0';
+    ksprintf(&name,"_%d",k);
+  }
+  if(name.l!=baseLen)
+    fprintf(stderr,"\t-> The sample name for \'%s\' is already used, it is called \'%s\'\n",fname,name.s);
+  return name.s;
+}
+
 bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname,bam_sample_t *sm){
   bufReader ret;
   ret.fn = strdup(fname);
@@ -163,7 +226,9 @@ bufReader initBufReader2(const char*fname,int doCheck,char *fai_fname,bam_sample
 
   checkIfSorted(ret.hdr->text);
   extern int MPLP_IGNORE_RG;
-  bam_smpl_add(sm, fname, MPLP_IGNORE_RG? 0 : ret.hdr->text);
+  char *smName = sampleName(fname,ret.hdr->text,MPLP_IGNORE_RG,sm);
+  bam_smpl_add(sm, smName, 0);//one sample per file
+  free(smName);
   //  fprintf(stderr,"sm->smpl[0]:%s\n",sm->smpl[0]);
   if(ret.hdr==NULL) {
     fprintf(stderr, "[main_samview] fail to read the header from \"%s\".\n", ret.fn);
