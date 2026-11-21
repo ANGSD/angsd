@@ -85,7 +85,7 @@ abcTemplate2::abcTemplate2(const char *outfiles,argStruct *arguments,int inputty
   //  ./angsd -doTemplate
   if (arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doTemplate2")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     } else
       return;

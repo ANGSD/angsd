@@ -90,7 +90,7 @@ abcRAD::abcRAD(const char *outfiles,argStruct *arguments,int inputtype){
   //  ./angsd -doRad
   if (arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doRad")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     } else
       return;

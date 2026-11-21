@@ -98,7 +98,7 @@ void abcGetFasta::getOptions(argStruct *arguments){
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-ref")|| !strcasecmp(arguments->argv[1],"-anc") ){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;
@@ -170,7 +170,7 @@ char *abcGetFasta::magic(int refId,int *posi,int numSites,perFasta *f){
   anc=NULL;
    if(arguments->argc==2){
      if(!strcasecmp(arguments->argv[1],"-ref")||!strcasecmp(arguments->argv[1],"-anc")){
-       printArg(stdout);
+       printArg(stderr);
        exit(0);
     }else
        return;

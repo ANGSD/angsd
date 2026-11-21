@@ -91,7 +91,6 @@ void multiReader::printArg(FILE *argFile,argStruct *args){
   fprintf(argFile,"\t-nInd\t%d\t\t(Number of individuals)\n",nInd);
   fprintf(argFile,"\t-minQ\t%d\t(minimum base quality; only used in pileupreader)\n",minQ);
   fprintf(argFile,"\t-fai\t%s\t(fai file)\n",args->fai);
-  fprintf(argFile,"----------------\n%s:\n",__FILE__); 
 }
 
 
@@ -157,7 +156,7 @@ multiReader::multiReader(argStruct *args_arg){
        (!strcasecmp(args->argv[1],"-vcf-pl")) ||
        (!strcasecmp(args->argv[1],"-glf10_text")) ||
        (!strcasecmp(args->argv[1],"-vcf-GP"))) {
-      printArg(stdout,args);
+      printArg(stderr,args);
       exit(0);
     }else if ((!strcasecmp(args->argv[1],"-bam")) ||
 	      (!strcasecmp(args->argv[1],"-b"))){

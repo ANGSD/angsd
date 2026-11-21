@@ -94,7 +94,7 @@ abcDstat2::abcDstat2(const char *outfiles, argStruct *arguments,int inputtype){
   //if you dont use the -doAbbababa2 argument then return
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doAbbababa2")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

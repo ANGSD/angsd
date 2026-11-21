@@ -14,7 +14,7 @@
 
 void abcHWE_F::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
-  fprintf(argFile,"\t-HWE_pval_F\t%f\n",HWE_pval_F);
+  fprintf(argFile,"\t-HWE_pval_F\t%f\t(test F=0 per site and keep sites with a p-value below, writes .hweF.gz, needs -doMaf)\n",HWE_pval_F);
   fprintf(argFile,"\n");
 }
 
@@ -59,7 +59,7 @@ abcHWE_F::abcHWE_F(const char *outfiles,argStruct *arguments,int inputtype){
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-HWE_pval_F")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

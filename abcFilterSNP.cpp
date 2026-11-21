@@ -180,13 +180,13 @@ double sb3(int cnts[4]){
 
 void abcFilterSNP::printArg(FILE *argFile){
    fprintf(argFile,"-----BETA---------------\n%s:\n",__FILE__);
-  fprintf(argFile,"\t-doSnpStat %d\n",doSnpStat);
-  fprintf(argFile,"\t-edge_pval %f\n",edge_pval);
-  fprintf(argFile,"\t-mapQ_pval %f\n",mapQ_pval);
-  fprintf(argFile,"\t-sb_pval %f\n",sb_pval);
-  fprintf(argFile,"\t-hwe_pval %f\n",hwe_pval);
-  fprintf(argFile,"\t-qscore_pval %f\n",qscore_pval);
-  fprintf(argFile,"\t-hetbias_pval %f\n",hetbias_pval);
+  fprintf(argFile,"\t-doSnpStat\t%d\t(write per site statistics to .snpStat.gz)\n",doSnpStat);
+  fprintf(argFile,"\t-edge_pval\t%f\t(remove sites with an edge bias p-value below)\n",edge_pval);
+  fprintf(argFile,"\t-mapQ_pval\t%f\t(remove sites with a mapping quality bias p-value below)\n",mapQ_pval);
+  fprintf(argFile,"\t-sb_pval\t%f\t(remove sites with a strand bias p-value below)\n",sb_pval);
+  fprintf(argFile,"\t-hwe_pval\t%f\t(remove sites with a HWE p-value below)\n",hwe_pval);
+  fprintf(argFile,"\t-qscore_pval\t%f\t(remove sites with a base quality bias p-value below)\n",qscore_pval);
+  fprintf(argFile,"\t-hetbias_pval\t%f\t(remove sites with a heterozygote bias p-value below, needs -doGeno)\n",hetbias_pval);
 
 }
 void abcFilterSNP::run(funkyPars *pars){
@@ -378,10 +378,10 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputtype){
   doSnpStat=0;
   outfileZ = NULL;
-  edge_pval=mapQ_pval=sb_pval=hwe_pval=qscore_pval=hetbias_pval-1;
+  edge_pval=mapQ_pval=sb_pval=hwe_pval=qscore_pval=hetbias_pval=-1;
   if(arguments->argc==2){
-    if(!strcasecmp(arguments->argv[1],"-doSnpStat")||!strcasecmp(arguments->argv[1],"-doPost")){
-      printArg(stdout);
+    if(!strcasecmp(arguments->argv[1],"-doSnpStat")){
+      printArg(stderr);
       exit(0);
     }else
       return;

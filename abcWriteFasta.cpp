@@ -17,7 +17,7 @@ void abcWriteFasta::printArg(FILE *argFile){
   fprintf(argFile,"\t2: use the most common (non N) base (needs -doCounts 1)\n");
   fprintf(argFile,"\t3: use the base with highest ebd\n");
   fprintf(argFile,"\t4: output iupac codes (under development) \n");
-  fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases perline in output file)\n",NbasesPerLine);
+  fprintf(argFile,"\t-basesPerLine\t%d\t(Number of bases per line in output file)\n",NbasesPerLine);
   fprintf(argFile,"\t-explode\t%d\t print chromosome where we have no data (0:no,1:yes)\n",explode);
   fprintf(argFile,"\t-rmTrans\t%d\t remove transitions as different from -ref bases (0:no,1:yes)\n",rmTrans);
   fprintf(argFile,"\t-ref\t%s\t reference fasta, only used with -rmTrans 1\n",ref);
@@ -103,7 +103,7 @@ abcWriteFasta::abcWriteFasta(const char *outfiles,argStruct *arguments,int input
   seed=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doFasta")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

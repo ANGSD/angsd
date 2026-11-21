@@ -72,7 +72,7 @@ void init(void *arg){
   }
   const int maxAllowedThreads = 8;
   if(maxThreads>maxAllowedThreads){
-    fprintf(stderr,"\t-> You have choosen to supply a very high number of threads. The number of threads will be capped at %d\n",maxAllowedThreads);
+    fprintf(stderr,"\t-> You have chosen to supply a very high number of threads. The number of threads will be capped at %d\n",maxAllowedThreads);
     maxThreads = maxAllowedThreads;
   }
   nQueueSize = angsd::getArg("-nQueueSize",nQueueSize,arguments);
@@ -84,7 +84,7 @@ void init(void *arg){
   }
 
   if(!isatty(fileno(arguments->argumentFile)))
-    fprintf(arguments->argumentFile,"--------------------\n[%s:%s()]\n\t-nThreads\t%d\tNumber of threads to use\n\t-nQueueSize\t%d\tMaximum number of queud elements\n\t-howOften\t%d\tHow often should the program show progress\n",__FILE__,__FUNCTION__,maxThreads,nQueueSize,howOften);
+    fprintf(arguments->argumentFile,"--------------------\n[%s:%s()]\n\t-nThreads\t%d\tNumber of threads to use\n\t-nQueueSize\t%d\tMaximum number of queued elements\n\t-howOften\t%d\tHow often should the program show progress\n",__FILE__,__FUNCTION__,maxThreads,nQueueSize,howOften);
   //  fprintf(stderr,"nQueue=%d howOften=%d\n",nQueueSize,howOften);
 
   //these are  analysis that might be performed

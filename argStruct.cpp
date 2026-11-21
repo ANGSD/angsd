@@ -223,7 +223,7 @@ argStruct *setArgStruct(int argc,char **argv) {
   //check output filename
   arguments->outfiles = angsd::getArg("-out",arguments->outfiles,arguments);
   if(arguments->outfiles==NULL){
-    if(argc!=2)
+    if(argc>2)
       fprintf(stderr,"\t-> No \'-out\' argument given, output files will be called \'angsdput\'\n");
     arguments->outfiles = strdup("angsdput");
   }

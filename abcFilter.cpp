@@ -37,7 +37,7 @@ abcFilter::abcFilter(argStruct *arguments){
   capDepth = -1;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-sites")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;
@@ -57,7 +57,7 @@ void abcFilter::printArg(FILE *argFile){
   fprintf(argFile,"\t\t\t\t (chr pos major minor)\n");
   fprintf(argFile,"\t\t\t\t (chr pos major minor af ac an)\n");
   fprintf(argFile,"\t-minInd\t\t%d\tOnly use site if at least minInd of samples has data (requires BAM/CRAM or pileup input)\n",minInd);
-  fprintf(argFile,"\t-setMinDepthInd\t%d\tOnly count a sample as having data if it has at least this depth\n",setMinIndDepth);
+  fprintf(argFile,"\t-setMinDepthInd\t%d\tOnly count a sample as having data if it has at least this depth (same option as in -doCounts, 1 and -1 are the same here)\n",setMinIndDepth);
   fprintf(argFile,"\t-capDepth\t%d\tOnly use the first capDepth reads of each sample at each site, in pileup order (requires BAM/CRAM or pileup input)\n",capDepth);
   fprintf(argFile,"\t-strict\t\t%d\t(experimental) 0: -sites only removes chromosomes that are absent from the file\n",strict);
   fprintf(argFile,"\t1) You can force major/minor by -doMajorMinor 3\n\tAnd make sure file contains 4 columns (chr tab pos tab major tab minor)\n");

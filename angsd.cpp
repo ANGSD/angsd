@@ -4,7 +4,7 @@
   Anders albrechtsen albrecht@binf.ku.dk 
  
   use wiki for updated list of bugfixes and documentation
-  http://www.popgen.dk/angsd
+  https://github.com/ANGSD/angsd
 
 */
 
@@ -88,8 +88,8 @@ void catchkill(){
 
 //print nice info
 void printProgInfo(FILE *fp){
-  fprintf(fp,"\n\t-> angsd version: %s (htslib: %s) build(%s %s)\n",ANGSD_VERSION,hts_version(),__DATE__,__TIME__); 
-  fprintf(fp,"\t-> Please use the website \"http://www.popgen.dk/angsd\" as reference\n");
+  //the version is already printed by setArgStruct
+  fprintf(fp,"\n\t-> Please use the website \"https://github.com/ANGSD/angsd\" as reference\n");
   fprintf(fp,"\t-> Use -nThreads or -P for number of threads allocated to the program\n"); 
   fprintf(fp,"Overview of methods:\n");
   fprintf(fp,"\t-GL\t\tEstimate genotype likelihoods\n");
@@ -98,21 +98,28 @@ void printProgInfo(FILE *fp){
   fprintf(fp,"\t-doMaf\t\tEstimate allele frequencies\n");
   fprintf(fp,"\t-doError\tEstimate the type specific error rates\n");
   fprintf(fp,"\t-doAncError\tEstimate the errorrate based on perfect fastas\n");
-  fprintf(fp,"\t-HWE_pval\tEst inbreedning per site or use as filter\n");
+  fprintf(fp,"\t-doPost\t\tCalculate genotype posteriors (shown with -doMaf)\n");
+  fprintf(fp,"\t-doHWE\t\tEstimate inbreeding per site and test for HWE\n");
+  fprintf(fp,"\t-HWE_pval_F\tFilter sites on a per site inbreeding test\n");
   fprintf(fp,"\t-doGeno\t\tCall genotypes\n");
   fprintf(fp,"\t-doFasta\tGenerate a fasta for a BAM file\n");
   fprintf(fp,"\t-doAbbababa\tPerform an ABBA-BABA test\n");
+  fprintf(fp,"\t-doIBS\t\tSample a single base or the consensus base per individual (IBS/cov matrix)\n");
+  fprintf(fp,"\t-doHaploCall\tCall haploid genotypes\n");
   fprintf(fp,"\t-sites\t\tAnalyse specific sites (can force major/minor)\n");
-  fprintf(fp,"\t-doSaf\t\tEstimate the SFS and/or neutrality tests genotype calling\n");
+  fprintf(fp,"\t-doSaf\t\tEstimate the site allele frequency likelihoods (input for realSFS)\n");
   fprintf(fp,"\t-doHetPlas\tEstimate hetplasmy by calculating a pooled haploid frequency\n");
-  fprintf(fp,"\n\tBelow are options that can be usefull\n");
-  fprintf(fp,"\t-bam\t\tOptions relating to bam reading\n\t-doMajorMinor\tInfer the major/minor using different approaches\n");  
+  fprintf(fp,"\n\tBelow are options that can be useful\n");
+  fprintf(fp,"\t-bam\t\tOptions relating to bam reading (also -cigstat)\n\t-doMajorMinor\tInfer the major/minor using different approaches\n");  
   fprintf(fp,"\t-ref/-anc\tRead reference or ancestral genome\n");
+  fprintf(fp,"\t-beagle\t\tOther input formats (-beagle, -glf, -vcf-GL, -pileup etc)\n");
   fprintf(fp,"\t-doSNPstat\tCalculate various SNPstat\n");
-  fprintf(fp,"\t-cigstat\tPrintout CIGAR stat across readlength\n");
+  fprintf(fp,"\t-doMcall\tCall variants with the bcftools multiallelic model\n");
   fprintf(fp,"\tmany others\n\n");
   fprintf(fp,"Output files:\n\t In general the specific analysis outputs specific files, but we support basic bcf output\n");
   fprintf(fp,"\t-doBcf\t\tWrapper around -dopost -domajorminor -domaf -gl -docounts\n");
+  fprintf(fp,"\t-doGlf\t\tDump genotype likelihoods (shown with -GL)\n");
+  fprintf(fp,"\t-doPlink\tWrite genotypes as tped/tfam\n");
   
   fprintf(fp,"For information of specific options type: \n\t./angsd METHODNAME eg \n\t\t./angsd -GL\n\t\t./angsd -doMaf\n\t\t./angsd -doAsso etc\n");
   fprintf(fp,"\t\t./angsd sites for information about indexing -sites files\n");

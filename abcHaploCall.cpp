@@ -21,7 +21,7 @@ void abcHaploCall::printArg(FILE *argFile){
   fprintf(argFile,"\t(Sampling strategies)\n");
   fprintf(argFile,"\t 0:\t no haploid calling \n"); 
   fprintf(argFile,"\t 1:\t (Sample single base)\n");
-  fprintf(argFile,"\t 2:\t (Concensus base)\n");
+  fprintf(argFile,"\t 2:\t (Consensus base)\n");
   fprintf(argFile,"\t-doCounts\t%d\tMust choose -doCount 1\n",doCount);
   fprintf(argFile,"Optional\n");
   fprintf(argFile,"\t-minMinor\t%d\tMinimum observed minor alleles\n",minMinor);
@@ -68,7 +68,7 @@ abcHaploCall::abcHaploCall(const char *outfiles,argStruct *arguments,int inputty
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doHaploCall")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

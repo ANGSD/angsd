@@ -10,7 +10,7 @@
 
 void abcSmartCounts::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
-  fprintf(argFile,"\t-doSmartCounts\t%d\n",doSmartCounts);
+  fprintf(argFile,"\t-doSmartCounts\t%d\t(deprecated, write A,C,G,T counts for a single sample to .counts.bin/.counts.idx, needs -doCounts 1)\n",doSmartCounts);
   fprintf(argFile,"\n");
 }
 
@@ -93,7 +93,7 @@ abcSmartCounts::abcSmartCounts(const char *outfiles,argStruct *arguments,int inp
   len =-1;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSmartCounts")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

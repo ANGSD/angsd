@@ -11,8 +11,8 @@
 
 void abcPSMC::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
-  fprintf(argFile,"\t-writePSMC\t%d\n",dopsmc);
-  fprintf(argFile,"\t1:  (still beta, not really working)\n");
+  fprintf(argFile,"\t-doPSMC\t%d\t(beta) write .psmc.gz files for PSMC, needs -GL\n",dopsmc);
+  fprintf(argFile,"\t-noTrans\t%d\tremove transitions\n",noTrans);
 }
 
 void abcPSMC::algoJoint(double **liks,int nsites,int *keepSites,psmcRes *r,int noTrans) {
@@ -113,7 +113,7 @@ abcPSMC::abcPSMC(const char *outfiles,argStruct *arguments,int inputtype){
     nnnSites = 0;
     if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-dopsmc")){
-    printArg(stdout);
+    printArg(stderr);
     exit(0);
   }else
       return;

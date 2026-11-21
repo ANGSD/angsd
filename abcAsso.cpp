@@ -40,14 +40,14 @@ void abcAsso::printArg(FILE *argFile){
   fprintf(argFile,"\t-yQuant\t\t%s\t(File containing phenotypes)\n",yfile3);
   fprintf(argFile,"\t-cov\t\t%s\t(File containing additional covariates)\n",covfile);
   fprintf(argFile,"\t-sampleFile\t\t%s\t(.sample File containing phenotypes and covariates)\n",sampleFile);
-  fprintf(argFile,"\t-whichPhe\t%s\tSelect which phenotypes to analyse, write phenos comma seperated ('phe1,phe2,...'), only works with a .sample file\n",whichPhe);
-  fprintf(argFile,"\t-whichCov\t%s\tSelect which covariates to include, write covs comma seperated ('cov1,cov2,...'), only works with a .sample file\n",whichCov);  
+  fprintf(argFile,"\t-whichPhe\t%s\tSelect which phenotypes to analyse, write phenos comma separated ('phe1,phe2,...'), only works with a .sample file\n",whichPhe);
+  fprintf(argFile,"\t-whichCov\t%s\tSelect which covariates to include, write covs comma separated ('cov1,cov2,...'), only works with a .sample file\n",whichCov);  
   
   fprintf(argFile,"\t-model\t%d\n",model);
   fprintf(argFile,"\t1: Additive/Log-Additive (Default)\n");
   fprintf(argFile,"\t2: Dominant\n");
   fprintf(argFile,"\t3: Recessive\n\n");
-  fprintf(argFile,"\t-minHigh\t%d\t(Require atleast minHigh number of high credible genotypes)\n",minHigh);
+  fprintf(argFile,"\t-minHigh\t%d\t(Require at least minHigh number of high credible genotypes)\n",minHigh);
   fprintf(argFile,"\t-minCount\t%d\t(Require this number of minor alleles, estimated from MAF)\n",minCount);
 
   fprintf(argFile,"\t-assoThres\t%f\tThreshold for logistic regression\n",assoThres);
@@ -59,8 +59,8 @@ void abcAsso::printArg(FILE *argFile){
   
   fprintf(argFile,"  Hybrid Test Options:\n");
   fprintf(argFile,"\t-hybridThres\t\t%f\t(p-value value threshold for when to perform latent genotype model)\n",hybridThres);
-  fprintf(argFile,"Examples:\n\tPerform Frequency Test\n\t  \'./angsd -yBin pheno.ybin -doAsso 1 -GL 1 -out out -doMajorMinor 1 -minLRT 24 -doMaf 2 -doSNP 1 -bam bam.filelist'\n");
-  fprintf(argFile,"\tPerform Score Test\n\t  \'./angsd -yBin pheno.ybin -doAsso 2 -GL 1 -doPost 1 -out out -doMajorMinor 1 -minLRT 24 -doMaf 2 -doSNP 1 -bam bam.filelist'\n");
+  fprintf(argFile,"Examples:\n\tPerform Frequency Test\n\t  \'./angsd -yBin pheno.ybin -doAsso 1 -GL 1 -out out -doMajorMinor 1 -SNP_pval 1e-6 -doMaf 2 -bam bam.filelist'\n");
+  fprintf(argFile,"\tPerform Score Test\n\t  \'./angsd -yBin pheno.ybin -doAsso 2 -GL 1 -doPost 1 -out out -doMajorMinor 1 -SNP_pval 1e-6 -doMaf 2 -bam bam.filelist'\n");
   fprintf(argFile,"\n");
 }
 
@@ -192,7 +192,7 @@ abcAsso::abcAsso(const char *outfiles,argStruct *arguments,int inputtype){
   
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doAsso")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     } else{
       return;

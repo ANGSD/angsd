@@ -29,13 +29,13 @@ void abcCallGenotypes::printArg(FILE *argFile){
   fprintf(argFile,"\t4: write the called genotype directly: eg AA,AC etc \n");
   fprintf(argFile,"\t8: write the posterior probability of all possible genotypes\n");
   fprintf(argFile,"\t16: write the posterior probability of called genotype\n");
-  fprintf(argFile,"\t32: write the posterior probabilities of the 3 gentypes as binary\n");
+  fprintf(argFile,"\t32: write the posterior probabilities of the 3 genotypes as binary\n");
   //  fprintf(argFile,"\t64: write the three posterior probability (Beagle style)\n");
-  fprintf(argFile,"\t-> A combination of the above can be choosen by summing the values, EG write 0,1,2 types with majorminor as -doGeno 3\n");
+  fprintf(argFile,"\t-> A combination of the above can be chosen by summing the values, EG write 0,1,2 types with majorminor as -doGeno 3\n");
   fprintf(argFile,"\t-postCutoff=%f (Only genotype to missing if below this threshold)\n",postCutoff);
-  fprintf(argFile,"\t-geno_minDepth=%d\t(-1 indicates no cutof)\n",geno_minDepth);
-  fprintf(argFile,"\t-geno_maxDepth=%d\t(-1 indicates no cutof)\n",geno_maxDepth);
-  fprintf(argFile,"\t-geno_minMM=%f\t(minimum fraction af major-minor bases)\n",geno_minMM);
+  fprintf(argFile,"\t-geno_minDepth=%d\t(-1 indicates no cutoff)\n",geno_minDepth);
+  fprintf(argFile,"\t-geno_maxDepth=%d\t(-1 indicates no cutoff)\n",geno_maxDepth);
+  fprintf(argFile,"\t-geno_minMM=%f\t(minimum fraction of major-minor bases)\n",geno_minMM);
   fprintf(argFile,"\t-minInd=%d\t(only keep sites if you call genotypes from this number of individuals)\n",minInd);
   fprintf(argFile,"\n\tNB When writing the posterior the -postCutoff is not used\n");
   fprintf(argFile,"\tNB geno_minDepth requires -doCounts\n");
@@ -102,7 +102,7 @@ abcCallGenotypes::abcCallGenotypes(const char *outfiles,argStruct *arguments,int
   bufstr.s=NULL;bufstr.l=bufstr.m=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doGeno")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

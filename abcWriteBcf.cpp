@@ -375,7 +375,7 @@ abcWriteBcf::abcWriteBcf(const char *outfiles_a,argStruct *arguments,int inputty
   domcall = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doBcf")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

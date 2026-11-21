@@ -129,7 +129,7 @@ abcTemplate::abcTemplate(const char *outfiles,argStruct *arguments,int inputtype
   //  ./angsd -doTemplate
   if (arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doTemplate")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     } else
       return;

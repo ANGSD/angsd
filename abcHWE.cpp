@@ -8,7 +8,7 @@
   Authors of this file:
   Anders 
 
-  part of ANGSD: http://www.popgen.dk/angsd 
+  part of ANGSD: https://github.com/ANGSD/angsd 
 
   
 
@@ -22,11 +22,11 @@
 
 void abcHWE::printArg(FILE *argFile){
   fprintf(argFile,"-------------\n%s:\n",__FILE__);
-  fprintf(argFile,"\t-doHWE\t%d\n",doHWE);
-  fprintf(argFile,"\t-minHWEpval\t%f\n",minHWEpval);
-  fprintf(argFile,"\t-maxHWEpval\t%f\n",maxHWEpval);
-  fprintf(argFile,"\t-maxHetFreq\t%f\n",maxHetFreq);//nspope;hetFilter
-  fprintf(argFile,"\t-minHetFreq\t%f\n",minHetFreq);//nspope;hetFilter
+  fprintf(argFile,"\t-doHWE\t%d\t(estimate inbreeding per site and test for HWE, writes .hwe.gz, needs -GL and -doMajorMinor)\n",doHWE);
+  fprintf(argFile,"\t-minHWEpval\t%f\t(remove sites with a HWE p-value below)\n",minHWEpval);
+  fprintf(argFile,"\t-maxHWEpval\t%f\t(remove sites with a HWE p-value above)\n",maxHWEpval);
+  fprintf(argFile,"\t-maxHetFreq\t%f\t(remove sites with a heterozygote frequency above)\n",maxHetFreq);//nspope;hetFilter
+  fprintf(argFile,"\t-minHetFreq\t%f\t(remove sites with a heterozygote frequency below)\n",minHetFreq);//nspope;hetFilter
   fprintf(argFile,"\n");
 }
 
@@ -79,7 +79,7 @@ abcHWE::abcHWE(const char *outfiles,argStruct *arguments,int inputtype){
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doHWE")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;
