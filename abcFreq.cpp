@@ -66,7 +66,7 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"\t2: Frequency (fixed major unknown minor)\n");
   fprintf(argFile,"\t4: Frequency from genotype probabilities\n");
   fprintf(argFile,"\t8: AlleleCounts based method (known major minor)\n");
-  fprintf(argFile,"\tNB. Filedumping is supressed if value is negative\n");
+  fprintf(argFile,"\tNB. Filedumping is suppressed if value is negative\n");
   fprintf(argFile,"-doPost\t%d\t(Calculate posterior prob 3xgprob)\n",doPost);
   fprintf(argFile,"\t1: Using frequency as prior\n");
   fprintf(argFile,"\t2: Using uniform prior\n");
@@ -85,8 +85,8 @@ void abcFreq::printArg(FILE *argFile){
   fprintf(argFile,"\t-eps\t%f [Only used for -doMaf &8]\n",eps);
   
   fprintf(argFile,"\t-beagleProb\t%d (Dump beagle style postprobs)\n",beagleProb);
-  fprintf(argFile,"\t-indFname\t%s (file containing individual inbreedcoeficients)\n",indFname);
-  fprintf(argFile,"\t-underFlowProtect\t%d (file containing individual inbreedcoeficients)\n",underflowprotect);
+  fprintf(argFile,"\t-indF\t%s (file containing individual inbreeding coefficients)\n",indFname);
+  fprintf(argFile,"\t-underFlowProtect\t%d (protect against underflow, used by -doPost 3)\n",underflowprotect);
   fprintf(argFile,"NB These frequency estimators requires major/minor -doMajorMinor\n");
 }
 
@@ -299,7 +299,7 @@ abcFreq::abcFreq(const char *outfiles,argStruct *arguments,int inputtype){
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doMaf")||!strcasecmp(arguments->argv[1],"-doPost")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

@@ -146,7 +146,7 @@ abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int input
   doGlf = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doMajorMinor")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

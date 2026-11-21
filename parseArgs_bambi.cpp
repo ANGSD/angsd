@@ -227,9 +227,9 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-show\t\t%d\tMimic 'samtools mpileup' also supply -ref fasta for printing reference column\n",ret->show);
   fprintf(argFile,"\t-minMapQ\t%d\tDiscard reads with mapping quality below\n",minMapQ);
   fprintf(argFile,"\t-minQ\t\t%d\tDiscard bases with base quality below\n",minQ);
-  fprintf(argFile,"\t-trim\t\t%d\tNumber of based to discard at both ends of the reads\n",trim);
-  fprintf(argFile,"\t-trim\t\t%d\tNumber of based to discard at 5' ends of the reads\n",trim5);
-  fprintf(argFile,"\t-trim\t\t%d\tNumber of based to discard at 3' ends of the reads\n",trim3);
+  fprintf(argFile,"\t-trim\t\t%d\tNumber of bases to discard at both ends of the reads\n",trim);
+  fprintf(argFile,"\t-trim5\t\t%d\tNumber of bases to discard at 5' ends of the reads\n",trim5);
+  fprintf(argFile,"\t-trim3\t\t%d\tNumber of bases to discard at 3' ends of the reads\n",trim3);
   fprintf(argFile,"\t-only_proper_pairs %d\tOnly use reads where the mate could be mapped\n",only_proper_pairs);
   fprintf(argFile,"\t-C\t\t%d\tadjust mapQ for excessive mismatches (as SAMtools), supply -ref\n",adjustMapQ);
   fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (1=normal baq 2= extended(as SAMtools)), supply -ref\n",baq);
@@ -238,7 +238,8 @@ void printArg(FILE *argFile,argStruct *ret){
   //  fprintf(argFile,"\t-if\t\t%d\tinclude flags for each read\n",includeflags);
   // fprintf(argFile,"\t-df\t\t%d\tdiscard flags for each read\n",discardflags);
   fprintf(argFile,"\t-checkBamHeaders %d\tExit if difference in BAM headers\n",checkBamHeaders);
-  fprintf(argFile,"\t-doCheck\t%d\tKeep going even if datafile is not suffixed with .bam/.cram\n",doCheck);
+  fprintf(argFile,"\t-cigstat\t%d\tPrint CIGAR stat across read length (.cigstat.gz)\n",cigstat);
+  fprintf(argFile,"\t-doCheck\t%d\tExit if a datafile is not suffixed with .bam/.cram (0: keep going)\n",doCheck);
   fprintf(argFile,"\t-downSample\t%.3f\tDownsample to the fraction of original data\n",downSample);
   fprintf(argFile,"\t-nReads\t\t%d\tNumber of reads to pop from each BAM/CRAMs\n",ret->nReads);
   fprintf(argFile,"\t-minChunkSize\t%d\tMinimum size of chunk sent to analyses\n",MAX_SEQ_LEN);

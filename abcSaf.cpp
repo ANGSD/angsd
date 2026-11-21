@@ -204,7 +204,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   scoreTol = 1.e-9;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSaf")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

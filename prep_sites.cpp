@@ -51,7 +51,7 @@ void filt_readSites(filt*fl,char *chr,size_t hint) {
   std::map<char*,asdf_dats,ltstr> ::iterator it = fl->offs.find(chr);
   if(it==fl->offs.end()){
     fprintf(stderr,"\n\t-> Potential problem: The filereading has reached a chromsome: \'%s\', which is not included in your \'-sites\' file.\n\t-> Please consider limiting your analysis to the chromsomes of interest \n",chr);
-    fprintf(stderr,"\t-> see \'http://www.popgen.dk/angsd/index.php/Sites\' for more information\n");
+    fprintf(stderr,"\t-> run \'./angsd -sites\' or see \'https://github.com/ANGSD/angsd\' for more information\n");
     fprintf(stderr,"\t-> Program will continue reading this chromosome... \n");
     //exit(0);
     free(fl->keeps);

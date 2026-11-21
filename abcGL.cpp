@@ -87,7 +87,7 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t2: beagle likelihood file\t%s\n",beaglepostfix);
   fprintf(argFile,"\t3: binary 3 times likelihood\t%s\n",postfix);
   fprintf(argFile,"\t4: text version (10 log likes)\t%s\n",postfix);
-  fprintf(argFile,"\t5: binary saf files (usefull for realSFS)\t%s\n",postfix);
+  fprintf(argFile,"\t5: binary saf files (useful for realSFS)\t%s\n",postfix);
   fprintf(argFile,"\n");
 
 }
@@ -135,7 +135,7 @@ void abcGL::getOptions(argStruct *arguments){
   }
   
   if(( GL<0||GL>7 )) {
-    fprintf(stderr,"\t-> You've choosen a GL model=%d, only 1,2,3,4,5,6,7 are implemented\n",GL);
+    fprintf(stderr,"\t-> You've chosen a GL model=%d, only 1,2,3,4,5,6,7 are implemented\n",GL);
     exit(0);
   }
   if(GL==4&&(doCounts==0)){
@@ -196,7 +196,7 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-GL")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

@@ -308,7 +308,7 @@ abcHetPlas::abcHetPlas(const char *outfiles,argStruct *arguments,int inputtype){
   outputFile=NULL;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doHetPlas")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

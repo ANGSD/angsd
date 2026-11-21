@@ -83,7 +83,7 @@ abcScounts::abcScounts(const char *outfiles,argStruct *arguments,int inputtype){
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doScounts")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

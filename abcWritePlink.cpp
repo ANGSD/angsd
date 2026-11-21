@@ -85,7 +85,7 @@ abcWritePlink::abcWritePlink(const char *outfiles,argStruct *arguments,int input
 
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doPlink")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

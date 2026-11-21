@@ -23,8 +23,8 @@ void abcAncError::printArg(FILE *argFile){
   fprintf(argFile,"\t 1:\t (Use all bases)\n");
   fprintf(argFile,"\t 2:\t (Sample single base)\n");
   fprintf(argFile,"\t 3:\t (Sample first base)\n");
-  fprintf(argFile,"Required:\n\t-ref\t%s\t(fastafile containg \'perfect\' sample)\n",refName);
-  fprintf(argFile,"\t-anc\t%s\t(fastafile containg outgroup)\n",ancName);
+  fprintf(argFile,"Required:\n\t-ref\t%s\t(fastafile containing \'perfect\' sample)\n",refName);
+  fprintf(argFile,"\t-anc\t%s\t(fastafile containing outgroup)\n",ancName);
   fprintf(argFile,"\nNB: the -ref should be a fasta for a sample where you assume no errors.\nWe measure the difference between the outgroup and your -ref sample.\nThe statistic is then the excess of substitutions between your BAM file and outgroup, compared to the perfect sample. After the ANGSD run use:  Rscript R/estError.R file=angsdput.ancerror\n");
 }
 
@@ -63,7 +63,7 @@ abcAncError::abcAncError(const char *outfiles,argStruct *arguments,int inputtype
   outfile2= NULL;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doAncError")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

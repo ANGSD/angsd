@@ -17,8 +17,9 @@ static inline double logsumexp2(double a, double b)
 
 
 void abcMcall::printArg(FILE *fp){
-  fprintf(fp,"\t-> doMcall=%d\n",domcall);
-  
+  fprintf(fp,"------------------------\n%s:\n",__FILE__);
+  fprintf(fp,"\t-doMcall\t%d\tCall variants with the multiallelic model from bcftools call -m, used with -doBcf 1\n",domcall);
+  fprintf(fp,"\tNB requires -GL and -ref\n");
 }
 
 void offset2allele(int a,int &b,int &c){
@@ -689,13 +690,14 @@ void abcMcall::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> Error, mcall requires reference (-ref)\n");
     exit(0);
   }
-  printArg(arguments->argumentFile);
 
 }
 
 
 abcMcall::abcMcall(const char *outfiles,argStruct *arguments,int inputtype){
   getOptions(arguments);
+  if(arguments->argc==2)//helpbox for another analysis
+    return;
   printArg(arguments->argumentFile);
 }
 

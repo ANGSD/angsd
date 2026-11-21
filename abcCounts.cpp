@@ -14,14 +14,14 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"---------------\n%s:\n",__FILE__);
   fprintf(argFile,"\t-doCounts\t%d\t(Count the number A,C,G,T. All sites, All samples)\n",doCounts);
   fprintf(argFile,"\t-doEBD\t%d\t(Calculate effective basedepth, this will be output in bcffile, beta)\n",doebd);
-  fprintf(argFile,"\t-minQfile\t%s\t file with individual quality score thresholds)\n",minQfile);
+  fprintf(argFile,"\t-minQfile\t%s\t(file with individual quality score thresholds)\n",minQfile);
   fprintf(argFile,"\t-setMaxDepth\t%d\t(If total depth is larger then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMaxDepth);
   fprintf(argFile,"\t-setMinDepth\t%d\t(If total depth is smaller then site is removed from analysis.\n\t\t\t\t -1 indicates no filtering)\n",setMinDepth);
-  fprintf(argFile,"\t-setMaxDepthInd\t%d\t(If depth persample is larger then individual is removed from analysis (from site).\n\t\t\t\t -1 indicates no filtering)\n",setMaxDepthInd);
-  fprintf(argFile,"\t-setMinDepthInd\t%d\t(If depth persample is smaller then individual is removed from analysis (from site).\n\t\t\t\t -1 indicates no filtering)\n",setMinDepthInd);
+  fprintf(argFile,"\t-setMaxDepthInd\t%d\t(If depth per sample is larger then individual is removed from analysis (from site).\n\t\t\t\t -1 indicates no filtering)\n",setMaxDepthInd);
+  fprintf(argFile,"\t-setMinDepthInd\t%d\t(If depth per sample is smaller then individual is removed from analysis (from site).\n\t\t\t\t -1 indicates no filtering)\n",setMinDepthInd);
 
   fprintf(argFile,"\t-minInd\t\t%d\t(Discard site if effective sample size below value.\n\t\t\t\t 0 indicates no filtering)\n",minInd);
-  fprintf(argFile,"\t-setMaxDiffObs\t%d\t(Discard sites where we observe to many different alleles.\n\t\t\t\t 0 indicates no filtering)\n",setMaxObs);
+  fprintf(argFile,"\t-setMaxDiffObs\t%d\t(Discard sites where we observe too many different alleles.\n\t\t\t\t 0 indicates no filtering)\n",setMaxObs);
   fprintf(argFile,"Filedumping:\n");
   fprintf(argFile,"\t-doDepth\t%d\t(dump distribution of seqdepth)\t%s,%s\n",doDepth,postfix4,postfix5);
   fprintf(argFile,"\t  -maxDepth\t%d\t(bin together high depths)\n",maxDepth);
@@ -29,7 +29,7 @@ void abcCounts::printArg(FILE *argFile){
   fprintf(argFile,"\t-minQ\t%d\t(minimumQ)\n",minQ);
   fprintf(argFile,"\t-dumpCounts\t%d\n",dumpCounts);
   fprintf(argFile,"\t  1: total seqdepth for site\t%s\n",postfix1);
-  fprintf(argFile,"\t  2: seqdepth persample\t\t%s,%s\n",postfix1,postfix2);
+  fprintf(argFile,"\t  2: seqdepth per sample\t\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  3: A,C,G,T sum over samples\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  4: A,C,G,T sum every sample\t%s,%s\n",postfix1,postfix2);
   fprintf(argFile,"\t  5: mean read length\t%s,%s\n",postfix1,postfix2);
@@ -206,7 +206,7 @@ abcCounts::abcCounts(const char *outfiles,argStruct *arguments,int inputtype){
   //from command line
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doCounts")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;

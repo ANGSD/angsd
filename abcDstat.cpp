@@ -24,10 +24,10 @@ void abcDstat::printArg(FILE *argFile){
   fprintf(argFile,"\t-rmTrans\t\t%d\tremove transitions\n",rmTrans);
   fprintf(argFile,"\t-blockSize\t\t%d\tsize of each block in bases\n",blockSize);
   fprintf(argFile,"\t-enhance\t\t%d\toutgroup must have same base for all reads\n",enhance);
-  fprintf(argFile,"\t-ans\t\t\t%s\tfasta file with outgroup\n",ancName);
+  fprintf(argFile,"\t-anc\t\t\t%s\tfasta file with outgroup\n",ancName);
   fprintf(argFile,"\t-useLast\t\t%d\tuse the last individuals as outgroup instead of -anc\n",useLast);
   fprintf(argFile,"\t-printEmpty\t\t%d\t print blocks without any ABBA or BABA sites \n",printEmpty);
-  fprintf(argFile,"\t-seed\t%d\t use non random seed of value 1\n",seed);
+  fprintf(argFile,"\t-seed\t\t\t%d\tseed for the random number generator (0: not seeded)\n",seed);
 
   fprintf(argFile,"\n");
 }
@@ -56,7 +56,7 @@ void abcDstat::getOptions(argStruct *arguments){
     exit(0);
   }
   if(arguments->nInd<3+useLast){
-    fprintf(stderr,"Error: -doAbbababa needs atleast 3 individual + outgroup\n");
+    fprintf(stderr,"Error: -doAbbababa needs at least 3 individual + outgroup\n");
     exit(0);
   }
   if( useLast == 0 && enhance == 1){
@@ -93,7 +93,7 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
   block=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doAbbababa")){
-      printArg(stdout);
+      printArg(stderr);
       exit(0);
     }else
       return;
