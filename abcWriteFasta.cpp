@@ -69,8 +69,15 @@ void abcWriteFasta::getOptions(argStruct *arguments){
   }
 
 }
+//only called from changeChr when no threads are running, so the counter needs no lock
 void writeChr(kstring_t *bufstr,size_t len,char *nam,char*d,int nbpl){
-  fprintf(stderr,"\t-> [%s] writing chr:%s\n",__FUNCTION__,nam);
+  static int nWritten = 0;
+  const int maxMessages = 100;//with -explode 1 and many contigs this would print a line per contig
+  if(nWritten<maxMessages)
+    fprintf(stderr,"\t-> [%s] writing chr:%s\n",__FUNCTION__,nam);
+  else if(nWritten==maxMessages)
+    fprintf(stderr,"\t-> [%s] writing chr:%s (written %d chromosomes, will not print this message anymore)\n",__FUNCTION__,nam,maxMessages+1);
+  nWritten++;
   ksprintf(bufstr,">%s",nam);
   for(size_t i=0;i<len;i++){
     if(i % nbpl == 0)
