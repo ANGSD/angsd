@@ -26,22 +26,32 @@ rm -rf ${RES}
 mkdir -p ${RES}
 cp sites/s1 sites/s2 sites/s3 sites/s4 sites/s5 ${RES}/
 
-$ANGSD sites index ${RES}/s1 2>>${LOG}
-$ANGSD -out ${RES}/run1 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 1 -sites ${RES}/s1 2>>${LOG}
+#runs angsd and stops the test with exit code 7 if angsd fails
+runangsd(){
+    ${ANGSD} "$@" 2>>${LOG}
+    ret=$?
+    if [[ ${ret} -ne 0 ]]; then
+	echo "Problem: angsd $* gave exit code ${ret}"
+	exit 7
+    fi
+}
 
-$ANGSD sites index ${RES}/s2 -compl 1 2>>${LOG}
-$ANGSD -out ${RES}/run2 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 1 -sites ${RES}/s2 2>>${LOG}
+runangsd sites index ${RES}/s1
+runangsd -out ${RES}/run1 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 1 -sites ${RES}/s1
 
-$ANGSD sites index ${RES}/s3  2>>${LOG}
-$ANGSD -out ${RES}/run3 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 1 -sites ${RES}/s3 2>>${LOG}
+runangsd sites index ${RES}/s2 -compl 1
+runangsd -out ${RES}/run2 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 1 -sites ${RES}/s2
 
-$ANGSD sites index ${RES}/s4  2>>${LOG}
-$ANGSD -out ${RES}/run4 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 3 -sites ${RES}/s4 2>>${LOG}
+runangsd sites index ${RES}/s3
+runangsd -out ${RES}/run3 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 1 -sites ${RES}/s3
 
-$ANGSD sites index ${RES}/s5  2>>${LOG}
-$ANGSD -out ${RES}/run5 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 3 -sites ${RES}/s5 2>>${LOG}
+runangsd sites index ${RES}/s4
+runangsd -out ${RES}/run4 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 3 -sites ${RES}/s4
 
-$ANGSD -out ${RES}/run6 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 3 -sites ${RES}/s5 -dovcf 1 -dopost 1 2>>${LOG}
+runangsd sites index ${RES}/s5
+runangsd -out ${RES}/run5 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 3 -sites ${RES}/s5
+
+runangsd -out ${RES}/run6 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 3 -sites ${RES}/s5 -dovcf 1 -dopost 1
 
 
 cd ${RES}
