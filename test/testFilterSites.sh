@@ -51,6 +51,10 @@ runangsd -out ${RES}/run4 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -
 runangsd sites index ${RES}/s5
 runangsd -out ${RES}/run5 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 3 -sites ${RES}/s5
 
+#run6 runs -dobcf with -sites, its output is not checked (not in md5orig.orig).
+#The md5 of run6.bcf changes with every run, as the header has the angsd version, the
+#command line and the date. To check it, compare the records without the header,
+#e.g. the md5 of 'bcftools view -H run6.bcf' (needs bcftools in CI)
 runangsd -out ${RES}/run6 -bam smallBam.filelist -nind 3 -minMapQ 30 -minQ 20  -gl 1 -domaf 1 -doglf 2 -domajorminor 3 -sites ${RES}/s5 -dobcf 1 -dopost 1
 
 
