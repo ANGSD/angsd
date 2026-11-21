@@ -7,6 +7,10 @@
   part of angsd using faidx
  
   Actually no need to mutex, except for the first chunk. Lets fix it at some point.
+
+  Thread safety: with BAM/CRAM input the reader thread loads -ref for a new chromosome in mUpPile.cpp
+  only after waiter() has waited for all threads, so magic() normally only reads. -anc, and both
+  fastas for other input types, are loaded by the threads in magic(), which is why it locks aMut.
 */
 
 
@@ -23,16 +27,16 @@ perFasta *init(const char *fname){
 
   fprintf(stderr,"\t-> Reading fasta: %s\n",fname);
   if(aio::fexists(fname)==0){
-    fprintf(stderr,"\t-> fastafile: \'%s\' doesn't exists, will exit\n",fname);
-    exit(0);
+    fprintf(stderr,"\t-> fastafile: \'%s\' doesn't exist, will exit\n",fname);
+    exit(1);
   }
   //check that fa hasn't been updated
   char *strtsk=NULL;
   strtsk = (char*)calloc(strlen(fname) + 5, 1);
-  sprintf(strtsk, "%s.fai", fname);
+  snprintf(strtsk, strlen(fname) + 5, "%s.fai", fname);
   if(aio::isNewer(fname,strtsk)){
     fprintf(stderr,"\t-> fai index file: \'%s\' looks older than corresponding fastafile: \'%s\'.\n\t-> Please reindex fasta file\n",strtsk,fname);
-    exit(0);
+    exit(1);
   }
   free(strtsk);
     
@@ -43,12 +47,12 @@ perFasta *init(const char *fname){
   r->curChr = -1;
   if(pthread_mutex_init(&r->aMut,NULL)){
     fprintf(stderr,"[%s:%s] error initializing mutex \n",__FILE__,__FUNCTION__);
-    exit(0);
+    exit(1);
   }
 
   if(NULL==(r->fai = fai_load(fname))){
-    fprintf(stderr,"[%s:%s] error reading fai file:%s\n",__FILE__,__FUNCTION__,fname);
-    exit(0);
+    fprintf(stderr,"\t-> Problem reading the fasta or its .fai index: %s\n",fname);
+    exit(1);
   }
   r->fastaname=strdup(fname);
   return r;
@@ -96,16 +100,9 @@ void abcGetFasta::getOptions(argStruct *arguments){
     refName = angsd::getArg("-T",refName,arguments);
   //  fprintf(stderr,"refName=%s\tancName=%s\n",refName,ancName);
 
-  if(arguments->argc==2){
-    if(!strcasecmp(arguments->argv[1],"-ref")|| !strcasecmp(arguments->argv[1],"-anc") ){
-      printArg(stderr);
-      exit(0);
-    }else
-      return;
-  }
   if(refName){
     char *ref =(char*) malloc(10 + strlen(refName) + 1);
-    sprintf(ref, "reference=%s", refName);
+    snprintf(ref, 10 + strlen(refName) + 1, "reference=%s", refName);
     hts_opt_add((hts_opt **)&dingding2->specific,ref);
     free(ref);
   }
@@ -119,15 +116,15 @@ char *abcGetFasta::loadChr(perFasta *f, char*chrName,int chrId){
   f->curChr = chrId;
   f->seqs = faidx_fetch_seq(f->fai, chrName, 0, 0x7fffffff, &f->chrLen);
   if(f->seqs==NULL){
-    fprintf(stderr,"\n[%s] Error loading fasta info from chr:\'%s\' \n",__FUNCTION__,chrName);
-    f->chrLen=0;
+    fprintf(stderr,"\t-> Problem loading chromosome: \'%s\' from fasta: %s, is it in the fasta file?\n",chrName,f->fastaname);
+    exit(1);
   }
   //  fprintf(stderr,"[%s] done\n",__FUNCTION__);
-  if(f->chrLen!=header->target_len[chrId]){
+  //the fasta must be the same assembly as the BAM files
+  if(f->chrLen!=(int)header->target_len[chrId]){
     fprintf(stderr,"\t-> Problem with length of fastafile vs length of chr in BAM header\n");
-    fprintf(stderr,"\t-> Chromosome name: \'%s\' length from BAM header:%d length from fai file:%d\n",chrName,header->target_len[chrId],f->chrLen);
-    extern int SIG_COND;
-    SIG_COND = 0;
+    fprintf(stderr,"\t-> Chromosome name: \'%s\' length from BAM header:%d length from fai file:%d (fasta: %s)\n",chrName,header->target_len[chrId],f->chrLen,f->fastaname);
+    exit(1);
   }
   return f->seqs;
 }
@@ -145,14 +142,14 @@ char *abcGetFasta::magic(int refId,int *posi,int numSites,perFasta *f){
   }
   //first check that last position is not to long after.
   if(posi[numSites-1] > f->chrLen+200){
-    fprintf(stderr,"Trying to access fasta efter end of chromsome+200:%s/%s pos=%d ref_len=%d\n",header->target_name[f->curChr],header->target_name[refId],posi[numSites-1],f->chrLen);
+    fprintf(stderr,"\t-> Trying to access fasta after end of chromosome+200: %s/%s pos=%d ref_len=%d\n",header->target_name[f->curChr],header->target_name[refId],posi[numSites-1],f->chrLen);
   }
   //now loop over all positions. We allow +200 since a read might match to the end of a chr
   char *ret=new char[numSites];
     
   for(int i=0;i<numSites;i++){
     if(f->seqs&&posi[i]<f->chrLen)
-      ret[i] = refToInt[f->seqs[posi[i]]];//offseting by one, to make in work like samtools
+      ret[i] = refToInt[f->seqs[posi[i]]];//posi and seqs are both 0-based
     else{
       ret[i] = 4;
     }
@@ -179,7 +176,7 @@ char *abcGetFasta::magic(int refId,int *posi,int numSites,perFasta *f){
    getOptions(arguments);
 
 
-   if(ref!=NULL || anc!=NULL)
+   if(refName!=NULL || ancName!=NULL)
      printArg(arguments->argumentFile);
 
 

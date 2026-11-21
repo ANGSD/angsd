@@ -1466,6 +1466,8 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
     aio::doAssert(theRef>=0 && theRef<rd[0].hdr->n_targets,1,AT,"");//ref should be inrange [0,#nref in header]
 
     //load fasta for this ref if needed
+    //Thread safety: all chunks of the previous chromosome have been sent to the threads and waiter() waits for them,
+    //so no thread uses gf->ref while it is replaced below. After this the threads and this (reader) thread only read gf->ref.
     void waiter(int);
     waiter(theRef);//will wait for exisiting threads and then load stuff relating to the chromosome=theRef;
     if(gf->ref!=NULL && theRef!=gf->ref->curChr)
