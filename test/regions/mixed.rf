@@ -1,0 +1,6 @@
+# the regions in regions.rf, some as BED and some as chr:start-stop
+1:14000001-14020000
+1	14050000	14060000
+2:14010001-14030000
+3	14000000	14005000
+5
