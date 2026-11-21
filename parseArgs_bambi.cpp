@@ -230,7 +230,7 @@ void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"\t-trim\t\t%d\tNumber of bases to discard at both ends of the reads\n",trim);
   fprintf(argFile,"\t-trim5\t\t%d\tNumber of bases to discard at 5' ends of the reads\n",trim5);
   fprintf(argFile,"\t-trim3\t\t%d\tNumber of bases to discard at 3' ends of the reads\n",trim3);
-  fprintf(argFile,"\t-only_proper_pairs %d\tOnly use reads where the mate could be mapped\n",only_proper_pairs);
+  fprintf(argFile,"\t-only_proper_pairs %d\tOnly use reads flagged as properly paired by the aligner (flag 2), single end reads are kept\n",only_proper_pairs);
   fprintf(argFile,"\t-C\t\t%d\tadjust mapQ for excessive mismatches (as SAMtools), supply -ref\n",adjustMapQ);
   fprintf(argFile,"\t-baq\t\t%d\tadjust qscores around indels (1=normal baq 2= extended(as SAMtools)), supply -ref\n",baq);
   fprintf(argFile,"\t-redo-baq\t\t%d (recompute baq, instead of using BQ tag)\n",redo_baq);
@@ -297,7 +297,7 @@ void setArgsBam(argStruct *arguments){
       baq=3;
     else{
       fprintf(stderr,"\t-> only supported options for -baq is: 1 (normal baq) and 2 (extended baq (SAMtools default)). Value supplied:%d\n",baq);
-      exit(0);//ly su
+      exit(1);//ly su
     }
     if(redo_baq==1)
       baq |=4;
@@ -320,11 +320,11 @@ void setArgsBam(argStruct *arguments){
   tmp = angsd::getArg("-ref",tmp,arguments);
   if(tmp==NULL && adjustMapQ!=0){
     fprintf(stderr,"\t-> Must also supply -ref for adjusting the mapping quality\n");
-    exit(0);
+    exit(1);
   }
   if(tmp==NULL&&baq!=0){
     fprintf(stderr,"\t-> Must also supply -ref for adjusting base qualities (baq)\n");
-    exit(0);
+    exit(1);
   }
   free(tmp);
 

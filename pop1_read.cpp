@@ -20,7 +20,7 @@
 #include "from_samtools.h"
 #include "aio.h"
 
-//three externs below are from
+//from parseArgs_bambi.cpp
 extern int uniqueOnly;
 extern int only_proper_pairs;
 extern int remove_bads;
@@ -29,32 +29,19 @@ extern float downSample;
 extern int adjustMapQ;
 extern int baq;
 extern void *rghash;
-int getNumBest(bam1_t *b) {
-  uint8_t *s= bam_get_aux(b);
-  uint8_t *sStop = s+bam_get_l_aux(b);
-  int retVal =1;
-  
-  while (s < sStop) {
-    uint8_t type;
-    int doRet =0;
-    if(s[0]=='X'&&s[1]=='0')
-      doRet = 1;
-
-    s += 2; type = *s; ++s;
-    if (type == 'A') {if(doRet) return (int) *s ;else  ++s; }
-    else if (type == 'C') {if(doRet) return *s;else ++s; }
-    else if (type == 'c') {if(doRet) return *(int8_t*)s; else  ++s; }
-    else if (type == 'S') {if(doRet) return *(uint16_t*)s; else s += 2; }
-    else if (type == 's') {if(doRet) return *(int16_t*)s; else  s += 2; }
-    else if (type == 'I') {if(doRet) return *(uint32_t*)s;else  s += 4; }
-    else if (type == 'i') {if(doRet) return *(int32_t*)s; else  s += 4; }
-    else if (type == 'f') { s += 4; continue; }
-    else if (type == 'd') {s += 8;continue; }
-    else if (type == 'Z' || type == 'H') return retVal;
+//number of best hits from the X0 tag (made by bwa aln), used by -uniqueOnly
+//reads without X0 (eg. mate rescued reads) are kept
+static int getNumBest(bam1_t *b) {
+  static int warned = 0;
+  uint8_t *x0 = bam_aux_get(b,"X0");
+  if(x0==NULL){
+    if(warned==0){
+      fprintf(stderr,"\t-> Warning: -uniqueOnly uses the X0 tag (made by bwa aln), reads without it are kept (first one: \'%s\')\n",bam_get_qname(b));
+      warned = 1;
+    }
+    return 1;
   }
-  fprintf(stderr,"\t-> Need XO tag to calculate the number of best hits\n");
-  exit(0);
-  return retVal; //<- will never happen
+  return (int) bam_aux2i(x0);
 }
 
 //simple function to perform additional analysis, only used when we have to redo a single read when we change chr
@@ -94,6 +81,12 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     r= sam_read1(fp,hdr,b);
   else
     r = sam_itr_next(fp, itr, b);
+
+  //-1 is the end of the file or region, below -1 is an error (eg. a truncated file)
+  if(r<-1){
+    fprintf(stderr,"\t-> Problem reading: \'%s\' (error %d), the file looks truncated or damaged\n",fp->fn,r);
+    exit(1);
+  }
   
   if(r!=-1) {
 
@@ -110,20 +103,11 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     }
     if(hasdata==0)
       	goto bam_iter_reread;
-    if(b->core.n_cigar==1){
 
-      uint32_t *cigs = bam_get_cigar(b);
-      int opCode = cigs[0]&BAM_CIGAR_MASK; //what to do
-      if(opCode==BAM_CINS)
-	goto bam_iter_reread;
-    }
-    
     //extract reads from that has correct RG
     if(rghash){
       uint8_t *rg = bam_aux_get(b, "RG");
       int keep = (rg && khash_str2int_get(rghash, (const char*)(rg+1), NULL)==0);
-      if(0&&keep)
-	fprintf(stderr,"rg:%s keep:%d\n",rg,keep);
       if (keep==0) goto bam_iter_reread;
 
     }
@@ -151,7 +135,8 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
     if(only_proper_pairs&&(b->core.flag%2) ){//only check if pairend
       if(!(b->core.flag&BAM_FPROPER_PAIR))
 	goto bam_iter_reread;
-    }if(uniqueOnly&& getNumBest(b)!=1)
+    }
+    if(uniqueOnly&& getNumBest(b)!=1)
        goto bam_iter_reread;
     
     
@@ -176,7 +161,7 @@ int pop1_read(htsFile *fp, hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr) {
       goto bam_iter_reread;
   }
   // fprintf(stderr,"r:%d\n",r);
-  if(cigstat)
+  if(cigstat&&r>=0)//at the end of the file b is not a new read
     aio::doAssert(cigstat_calc(b)==0,1,AT,"");
   return r; 
 }
