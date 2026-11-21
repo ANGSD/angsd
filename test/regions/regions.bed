@@ -1,0 +1,7 @@
+# the regions in regions.rf as BED (0-based start, end not included)
+1	14000000	14020000
+1	14050000	14060000
+
+2	14010000	14030000	name	0	+
+3	14000000	14005000
+5	0	180915260

@@ -41,6 +41,15 @@ fi
 fi
 
 if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing -r/-rf"
+time ./testRegions.sh $WDIR/angsd $BAMDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -r/-rf exit code: $?"
+    RVAL=1
+fi
+fi
+
+if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing vcfreading"
 time ./testVcf.sh $WDIR/angsd ${BAMDIR}/small2.bcf
 if [ ! $? -eq 0  ]   ;then

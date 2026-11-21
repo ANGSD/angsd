@@ -2,7 +2,9 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <zlib.h>
 #include "abc.h"
+#include "aio.h"
 #include "parseArgs_bambi.h"
 #include "shared.h"
 #include "analysisFunction.h"
@@ -44,7 +46,6 @@ int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,c
     if((it = revMap->find(extra))==revMap->end()){
       fprintf(stderr,"[%s.%s():%d] Problems finding chromosome: \'%s\'\n",__FILE__,__FUNCTION__,__LINE__,extra);
       fflush(stderr);
-      exit(0);
       return -1;
     }
     ref = it->second;
@@ -98,8 +99,7 @@ int parse_region(char *extra,const bam_hdr_t *hd,int &ref,int &start,int &stop,c
   }
   if(stop<start){
     fprintf(stderr,"endpoint:%d is larger than startpoint:%d\n",start,stop);
-    exit(0);
-    
+    return -1;
   }
   if(0){
     fprintf(stderr,"[%s] ref=%d,start=%d,stop=%d\n",__FUNCTION__,ref,start,stop);
@@ -139,12 +139,88 @@ void printFlagInfo(FILE *fp,unsigned int f){
 }
 
 
+/*
+  -rf: one region per line, either 'chr' or 'chr:start-stop' (1-based, both included), or
+  BED 'chr start end ...' (0-based start, end not included), columns after the 3rd are ignored.
+  Everything after '#' is a comment and empty lines are skipped. The file can be gzipped.
+  The regions are 0-based with the end not included, so BED intervals are used as they are.
+*/
+void readRegionFile(const char *fname,argStruct *arguments){
+  gzFile gz = gzopen(fname,"rb");
+  if(gz==Z_NULL){
+    fprintf(stderr,"\t-> Problems opening region file: \'%s\'\n",fname);
+    exit(1);
+  }
+  int l = 1024;
+  char *buf = (char*) malloc(l);
+  int lineNo = 0;
+  int saidBed = 0;
+  size_t nBefore = arguments->regions.size();
+  while(aio::tgets(gz,&buf,&l)){
+    lineNo++;
+    if(strchr(buf,'\r')){
+      fprintf(stderr,"\t-> \'%s\' contains carriage return at line %d. Looks like a windows file please remove hidden \'\\r\'\n",fname,lineNo);
+      exit(1);
+    }
+    char *hash = strchr(buf,'#');
+    if(hash)
+      *hash = '\0';
+    //split into at most 4 columns, we use 3 and need to know if there are more than 1
+    char *col[4];
+    int nCol = 0;
+    for(char *tok=strtok(buf," \t\n");tok&&nCol<4;tok=strtok(NULL," \t\n"))
+      col[nCol++] = tok;
+    if(nCol==0)
+      continue;
+
+    regs r;
+    if(nCol==1){
+      //chr or chr:start-stop, as -r
+      if(parse_region(col[0],arguments->hd,r.refID,r.start,r.stop,arguments->revMap)<0){
+	fprintf(stderr,"\t-> Problem with the region at line %d in \'%s\'\n",lineNo,fname);
+	exit(1);
+      }
+    }else if(nCol==2){
+      fprintf(stderr,"\t-> Line %d in \'%s\' has 2 columns, use chr, chr:start-stop or BED (chr start end)\n",lineNo,fname);
+      exit(1);
+    }else{
+      //BED
+      aMap::const_iterator it = arguments->revMap->find(col[0]);
+      if(it==arguments->revMap->end()){
+	fprintf(stderr,"\t-> Unknown chromosome \'%s\' at line %d in \'%s\'\n",col[0],lineNo,fname);
+	exit(1);
+      }
+      char *end1=NULL,*end2=NULL;
+      long start = strtol(col[1],&end1,10);
+      long stop  = strtol(col[2],&end2,10);
+      if(end1==col[1]||*end1!='\0'||end2==col[2]||*end2!='\0'||start<0||start>=stop||stop>(long)arguments->hd->target_len[it->second]){
+	fprintf(stderr,"\t-> Bad BED interval \'%s %s %s\' at line %d in \'%s\' (0-based start, end not included, at most the length of the chromosome)\n",col[0],col[1],col[2],lineNo,fname);
+	exit(1);
+      }
+      r.refID = it->second;
+      r.start = start;
+      r.stop  = stop;
+      if(!saidBed){
+	fprintf(stderr,"\t-> Reading \'%s\' as BED for lines with 3 or more columns (0-based start, end not included)\n",fname);
+	saidBed = 1;
+      }
+    }
+    arguments->regions.push_back(r);
+  }
+  free(buf);
+  gzclose(gz);
+  if(arguments->regions.size()==nBefore){
+    fprintf(stderr,"\t-> Region file \'%s\' doesn\'t contain any regions\n",fname);
+    exit(1);
+  }
+}
+
 void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"---------------\n%s: bam reader:\n",__FILE__);
   fprintf(argFile,"\t-bam/-b\t\t%s\t(list of BAM/CRAM files)\n",ret->infile);
   fprintf(argFile,"\t-i\t\t%s\t(Single BAM/CRAM file)\n",ret->infile);
   fprintf(argFile,"\t-r\t\t%s\tSupply a single region in commandline (see examples below)\n",regfile);
-  fprintf(argFile,"\t-rf\t\t%s\tSupply multiple regions in a file (see examples below)\n",regfiles);
+  fprintf(argFile,"\t-rf\t\t%s\tSupply multiple regions in a file, one per line: chr, chr:start-stop (1-based) or BED (chr start end, 0-based)\n",regfiles);
   fprintf(argFile,"\t-remove_bads\t%d\tDiscard \'bad\' reads, (flag & 512) \n",remove_bads);
   //  fprintf(argFile,"\t-type\t\t%d\n",ret->type);
   fprintf(argFile,"\t-uniqueOnly\t%d\tDiscards reads that doesn't map uniquely\n",uniqueOnly);
@@ -266,21 +342,17 @@ void setArgsBam(argStruct *arguments){
   }
   if(LBS.size()>0)
     fprintf(stderr,"\t-> Will include: %lu libraries\n",LBS.size());
-  std::vector<char *> regionsRaw;
   if(regfiles)
-    regionsRaw =  angsd::getFilenames(regfiles,0);
-  
-  if(regfile)
-    regionsRaw.push_back(strdup(regfile));
-  //  fprintf(stderr,"\t-> RegionsRaw.size():%lu hd:%p\n",regionsRaw.size(),arguments->hd);
-  for(size_t i=0;i<regionsRaw.size();i++){
+    readRegionFile(regfiles,arguments);
+  if(regfile){
     regs tmpRegs;
-    if(parse_region(regionsRaw[i],arguments->hd,tmpRegs.refID,tmpRegs.start,tmpRegs.stop,arguments->revMap)<0||tmpRegs.stop<tmpRegs.start){
-      fprintf(stderr,"[%s] Problems with indexing: %s\n",__FUNCTION__,regionsRaw[i]);
-      exit(0);
-    }else
-      arguments->regions.push_back(tmpRegs);
-    free(regionsRaw[i]);
+    char *tmpReg = strdup(regfile);//parse_region modifies the string
+    if(parse_region(tmpReg,arguments->hd,tmpRegs.refID,tmpRegs.start,tmpRegs.stop,arguments->revMap)<0){
+      fprintf(stderr,"[%s] Problems with the region: %s\n",__FUNCTION__,regfile);
+      exit(1);
+    }
+    arguments->regions.push_back(tmpRegs);
+    free(tmpReg);
   }
 
 
