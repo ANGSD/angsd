@@ -48,9 +48,9 @@ void dalloc(tary<T> *ta){
 void filt_readSites(filt*fl,char *chr,size_t hint) {
   aio::doAssert(fl!=NULL, 1, AT,"fl is null");
 
-  std::map<char*,asdf_dats,ltstr> ::iterator it = fl->offs.find(chr);
+  std::map<char*,filt_chr,ltstr> ::iterator it = fl->offs.find(chr);
   if(it==fl->offs.end()){
-    fprintf(stderr,"\n\t-> Potential problem: The filereading has reached a chromsome: \'%s\', which is not included in your \'-sites\' file.\n\t-> Please consider limiting your analysis to the chromsomes of interest \n",chr);
+    fprintf(stderr,"\n\t-> Potential problem: The filereading has reached a chromosome: \'%s\', which is not included in your \'-sites\' file.\n\t-> Please consider limiting your analysis to the chromosomes of interest \n",chr);
     fprintf(stderr,"\t-> run \'./angsd -sites\' or see \'https://github.com/ANGSD/angsd\' for more information\n");
     fprintf(stderr,"\t-> Program will continue reading this chromosome... \n");
     //exit(0);
@@ -126,8 +126,12 @@ void set(tary<T> *ta,size_t pos,T val){
 }
 
 void filt_print(FILE *fp,filt*f,char *chr,int onlyHeader){
+  if(chr!=NULL&&f->offs.find(chr)==f->offs.end()){
+    fprintf(stderr,"\t-> Chromosome: \'%s\' is not in the sites file\n",chr);
+    return;
+  }
   fprintf(fp,"@@\tfp:%p\tqbg:%p\thasExtra:%d nchr:%lu\n",f->fp,f->bg,f->hasExtra,f->offs.size());
-  for(std::map<char*,asdf_dats,ltstr>::const_iterator it=f->offs.begin();it!=f->offs.end();++it){
+  for(std::map<char*,filt_chr,ltstr>::const_iterator it=f->offs.begin();it!=f->offs.end();++it){
     if(chr)
       it=f->offs.find(chr);
     if(it==f->offs.end())
@@ -138,7 +142,7 @@ void filt_print(FILE *fp,filt*f,char *chr,int onlyHeader){
     if(chr)
       break;
   }
-  for(std::map<char*,asdf_dats,ltstr>::const_iterator it=f->offs.begin();onlyHeader==0&&it!=f->offs.end();++it){
+  for(std::map<char*,filt_chr,ltstr>::const_iterator it=f->offs.begin();onlyHeader==0&&it!=f->offs.end();++it){
     //if we have supplied a single chr
     if(chr!=NULL)
       filt_readSites(f,chr,0);
@@ -149,7 +153,7 @@ void filt_print(FILE *fp,filt*f,char *chr,int onlyHeader){
       if(f->keeps[s]){
 	fprintf(fp,"%s\t%lu",f->curNam,s+1);
 	if(f->hasExtra>0)
-	  fprintf(fp,"\t%d\t%d",f->major[s],f->minor[s]);
+	  fprintf(fp,"\t%c\t%c",intToRef[(int)f->major[s]],intToRef[(int)f->minor[s]]);
 	if(f->hasExtra>1)
 	  fprintf(fp,"\t%f\t%d\t%d",f->af[s],f->ac[s],f->an[s]);
 	
@@ -177,7 +181,8 @@ void filt_dalloc(filt *f){
     free(it->first);
   f->offs.clear();
   bgzf_close(f->bg);
-  fclose(f->fp);
+  if(f->fp)
+    fclose(f->fp);
   free(f->keeps);
   free(f->major);
   free(f->minor);
@@ -193,7 +198,7 @@ void filt_dalloc(filt *f){
 filt *filt_read(const char *fname){
   if(!fname){
     fprintf(stderr,"\t-> Must supply filename\n");
-    exit(0);
+    exit(1);
   }
   fprintf(stderr,"\t-> [%s] Reading binary representation of \'%s\'\n",__FILE__,fname);
   filt *ret = new filt;
@@ -207,13 +212,14 @@ filt *filt_read(const char *fname){
   char *bin_name=append(fname,BIN);
   char *idx_name=append(fname,IDX);
   if(!angsd::fexists(bin_name)){
-    fprintf(stderr,"\t-> Binary file doesnt exists:%s you should index:%s\n",bin_name,fname);
+    fprintf(stderr,"\t-> Binary file doesn't exist: %s you should index: %s\n",bin_name,fname);
     fprintf(stderr,"\t-> like: \'angsd sites index %s\'\n",fname);
-    exit(0);
+    exit(1);
   }
   if(!angsd::fexists(idx_name)){
-    fprintf(stderr,"Binary file doesnt exists:%s you should index:%s\n",idx_name,fname);
-    exit(0);
+    fprintf(stderr,"\t-> Index file doesn't exist: %s you should index: %s\n",idx_name,fname);
+    fprintf(stderr,"\t-> like: \'angsd sites index %s\'\n",fname);
+    exit(1);
   }
   if(aio::isNewer(fname,bin_name)||aio::isNewer(fname,idx_name)){ 
     fprintf(stderr,"\t-> Warning: File: \'%s\' looks newer than files: \'%s\',\'%s\'\n\t-> Please delete %s/%s files and rerun.\n",fname,bin_name,idx_name,bin_name,idx_name);
@@ -222,32 +228,40 @@ filt *filt_read(const char *fname){
 
   ret->fp= fopen(idx_name,"r");
   ret->bg=bgzf_open(bin_name,"r");
+  if(ret->fp==NULL||ret->bg==NULL){
+    fprintf(stderr,"\t-> Problem opening: \'%s\' or \'%s\'\n",idx_name,bin_name);
+    exit(1);
+  }
 
 
   while(1){
     int clen;
     if(0==fread(&clen,sizeof(int),1,ret->fp))
       break;
-    char chrId[clen];
-    if(clen!=(int)fread(&chrId,sizeof(char),clen,ret->fp)){
-      fprintf(stderr,"[%s.%s:%d]Problem reading chunk from binary file: clen:%s\n",__FILE__,__FUNCTION__,__LINE__,chrId);
-      exit(0);
+    if(clen<=1||clen>65536){
+      fprintf(stderr,"\t-> Problem reading index file: %s, it looks damaged (name length: %d), please index again\n",idx_name,clen);
+      exit(1);
     }
-    asdf_dats tmp;
+    char chrId[clen];
+    if(clen!=(int)fread(&chrId,sizeof(char),clen,ret->fp)||chrId[clen-1]!='\0'){
+      fprintf(stderr,"\t-> Problem reading index file: %s, it looks damaged, please index again\n",idx_name);
+      exit(1);
+    }
+    filt_chr tmp;
     if(1!=fread(&tmp.offs,sizeof(int64_t),1,ret->fp)){
-      fprintf(stderr,"Problem reading chunk from binary file:\n");
-      exit(0);
+      fprintf(stderr,"\t-> Problem reading chunk from index file: %s\n",idx_name);
+      exit(1);
     }
     if(1!=fread(&tmp.len,sizeof(size_t),1,ret->fp)){
-      fprintf(stderr,"Problem reading chunk from binary file:\n");
-      exit(0);
+      fprintf(stderr,"\t-> Problem reading chunk from index file: %s\n",idx_name);
+      exit(1);
     }
 #if 0
     fprintf(stderr,"tmp.len:%lu\n",tmp.len); 
 #endif
     if(1!=fread(&ret->hasExtra,sizeof(int),1,ret->fp)){
-      fprintf(stderr,"Problem reading chunk from binary file:\n");
-      exit(0);
+      fprintf(stderr,"\t-> Problem reading chunk from index file: %s\n",idx_name);
+      exit(1);
     }
 #if 0
     fprintf(stderr,"tmp.hasMajMin:%d\n",ret->hasMajMin); 
@@ -255,6 +269,9 @@ filt *filt_read(const char *fname){
 
     ret->offs[strdup(chrId)]=tmp;
   }
+  //everything in the .idx file has been read
+  fclose(ret->fp);
+  ret->fp=NULL;
   
   fprintf(stderr,"\t-> [%s] nChr: %lu loaded from binary filter file\n",__FILE__,ret->offs.size());
   if(ret->hasExtra>0)
@@ -301,6 +318,7 @@ int writeDat(char *last,mmap &mm,tary<char> *keep,tary<char> *major,tary<char> *
   fprintf(stderr,"\t-> Writing chr:\'%s\' \n",last);
   mmap::iterator it=mm.find(last);
   if(it!=mm.end()){
+    fprintf(stderr,"\t-> Chromosome \'%s\' appears more than once, the file must be sorted by chromosome\n",last);
     return 1;
   }else
     mm[strdup(last)]=1;
@@ -345,8 +363,8 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   int printInfo = 3;
   gzFile gz = Z_NULL;
   if((gz = gzopen(fname,"r"))==Z_NULL){
-    fprintf(stderr,"Problem opening file:%s\n",fname);
-    exit(0);
+    fprintf(stderr,"\t-> Problem opening file: %s\n",fname);
+    exit(1);
   }
 
   char* outnames_bin = append(fname,BIN);
@@ -374,6 +392,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   
   //read a line
   int atline =0;
+  int err =0;//set on errors in the file, then the output files are removed
   while(SIG_COND && aio::tgets(gz,&buf,&l)) {
     atline++;
     if(buf[0]=='#'||buf[0]=='\n')//skip if empty or starts with #
@@ -385,7 +404,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     while(((tok=strtok(NULL,delims)))){
       if(nRead==7){
 	fprintf(stderr,"\t-> Problem with number of columns in file at line %d. Should be 2,3,4 or 7 columns\n",atline);
-	SIG_COND=0;goto cleanup;
+	err=1;goto cleanup;
       }
       parsed[nRead++]=tok;
     }
@@ -403,12 +422,15 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       if(nCols==2)
 	fprintf(stderr,"\t-> Input file has 2 columns, chr pos\n");
       if(nCols==3)
-	fprintf(stderr,"\t-> Input file has 3 columns(bed), chr posStart posStop\n");
+	fprintf(stderr,"\t-> Input file has 3 columns, chr posStart posStop (1-based and inclusive, not BED)\n");
       if(nCols==4)
 	fprintf(stderr,"\t-> Input file has 4 columns, chr pos major minor\n");
       if(nCols==7)
 	fprintf(stderr,"\t-> Input file has 7 columns(vcf)(experimental) \n");
-      
+      if(nCols!=2&&nCols!=3&&nCols!=4&&nCols!=7){
+	fprintf(stderr,"\t-> Problem with number of columns in file at line %d. Should be 2,3,4 or 7 columns, found %d\n",atline,nCols);
+	err=1;goto cleanup;
+      }
       if(nRead==4||nRead==7){
 	hasExtra =1;
 	major= init<char>();
@@ -422,8 +444,8 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
 	
       }
     }else if(nCols!=nRead){
-      fprintf(stderr,"\t-> Problem with number of columns in file. Should be 2,3,4 or 7 for entire file (%d vs %d)\n",nCols,nRead);
-      SIG_COND=0;goto cleanup;
+      fprintf(stderr,"\t-> Problem with number of columns in file at line %d. Should be 2,3,4 or 7 for entire file (%d vs %d)\n",atline,nCols,nRead);
+      err=1;goto cleanup;
     }
     
    
@@ -431,7 +453,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
     if(last!=NULL && strcmp(last,parsed[0])){
       //situation:= we have a change of chr, so we DUMP the data
       if(writeDat(last,mm,keep,major,minor,cfpD,fp,doCompl,af,ac,an)){
-	SIG_COND=0;
+	err=1;
 	goto cleanup;
       }
     }
@@ -443,11 +465,16 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       memset(keep->d,0,keep->m);
       keep->l=0;
       if(hasExtra>0){
-	memset(major->d,4,keep->m);
-	memset(minor->d,4,keep->m);
+	memset(major->d,4,major->m);
+	memset(minor->d,4,minor->m);
 	major->l=minor->l=0;
       }
-      // if(hasExtra>1)
+      if(hasExtra>1){
+	memset(af->d,0,af->m*sizeof(float));
+	memset(ac->d,0,ac->m*sizeof(int));
+	memset(an->d,0,an->m*sizeof(int));
+	af->l=ac->l=an->l=0;
+      }
 
     }
     char *position_in_sites_file = parsed[1];
@@ -467,9 +494,10 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       set<char>(keep,posS,1);
       size_t posE=atol(parsed[2]);
       //posE += posE;
-      if(posS>posE){
-	fprintf(stderr,"Problem parsing bedfile, end position looks before start position: %lu vs %lu\n",posS,posE);
-	exit(0);
+      posE += posi_off;
+      if(posS>=posE){
+	fprintf(stderr,"\t-> Problem at line %d, end position looks before start position: %lu vs %lu\n",atline,posS+1,posE);
+	err=1;goto cleanup;
       }
       for(size_t ii=posS;ii<posE;ii++)
 	set<char>(keep,ii,1);
@@ -477,7 +505,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       //      fprintf(stderr,"This is the maj/min style\n");
       if(strlen(parsed[2])>1||strlen(parsed[3])>1){
 	if(printInfo>0){
-	  fprintf(stderr,"\t-> major and major are not allowed to be insertions chr:%s posS+1:%d will only print this msg three times\n",last,(int)posS+1);
+	  fprintf(stderr,"\t-> major and minor are not allowed to be insertions chr:%s posS+1:%d will only print this msg three times\n",last,(int)posS+1);
 	  printInfo--;
 	}
 	continue;
@@ -488,7 +516,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
       //      fprintf(stderr,"al1:%d al2:%d\n",al1,al2);
       if(al1==al2||al1==4||al2==4){
 	fprintf(stderr,"\t-> major and minor allele should be different, and should be non \'n'/'N' chr:\'%s\' pos:%lu\n",last,posS+1);
-	SIG_COND=0;
+	err=1;
 	goto cleanup;
       }
       set<char>(keep,posS,1);
@@ -512,7 +540,7 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   //now after parsing all files
   if(last!=NULL){
     if(writeDat(last,mm,keep,major,minor,cfpD,fp,doCompl,af,ac,an)){
-	SIG_COND=0;
+	err=1;
 	goto cleanup;
     }
     free(last);
@@ -531,11 +559,17 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
   if(fp) fclose(fp);
   if(cfpD) bgzf_close(cfpD);
   
+  if(err){
+    fprintf(stderr,"\t-> Will delete the incomplete files: \'%s\',\'%s\'\n",outnames_bin,outnames_idx);
+    unlink(outnames_bin);
+    unlink(outnames_idx);
+    exit(1);
+  }
   if(SIG_COND==0){
     fprintf(stderr,"\n\t-> CTRL+C was detected, we will therefore assume that the build of the binary filterfiles are incomplete.\n\t-> Will therefore delete: \'%s\',\'%s\'\n",outnames_bin,outnames_idx);
     unlink(outnames_bin);
     unlink(outnames_idx);
-    exit(0);
+    exit(1);
   }
   delete [] parsed;
   delete [] outnames_idx;delete [] outnames_bin;
@@ -558,8 +592,8 @@ void filt_gen(const char *fname,int posi_off,int doCompl) {
 
 void filt_init(int argc,char**argv){
   if(argc==0){
-    fprintf(stderr,"supply a filename with either 2, 3 or 4 columns\n");
-    exit(0);
+    fprintf(stderr,"\t-> Supply a filename with either 2, 3, 4 or 7 columns\n");
+    exit(1);
   }
 
   char *fname = *argv;
@@ -567,13 +601,17 @@ void filt_init(int argc,char**argv){
   int doCompl =0;
   argv++;argc--;
   while(*argv){
+    if((strcmp(*argv,"-o")==0||strcmp(*argv,"-compl")==0)&&argv[1]==NULL){
+      fprintf(stderr,"\t-> Must supply a value for: %s\n",*argv);
+      exit(1);
+    }
     if(strcmp(*argv,"-o")==0)
       posi_offs =  atoi(*(++argv));
     else if(strcmp(*argv,"-compl")==0){
       doCompl =  atoi(*(++argv));
     }else{
       fprintf(stderr,"\t-> Problem parsing option: \'%s\' will exit. -o -compl is allowed\n",*argv);
-      exit(0);
+      exit(1);
     }
     ++argv;
   }
@@ -591,7 +629,7 @@ void filt_init(int argc,char**argv){
 
 int main_sites(int argc,char **argv){
   if(argc==1){
-    fprintf(stderr,"\tExamples:\n\t1) ./angsd sites index filename.txt [-r offset -compl doCompl]\n");
+    fprintf(stderr,"\tExamples:\n\t1) ./angsd sites index filename.txt [-o offset -compl doCompl]\n");
     fprintf(stderr,"\t2) ./angsd sites print filename.txt [chromosome]\n");
     fprintf(stderr,"\t3) ./angsd sites print_header filename.txt [chromosome]\n");
     return 0;
@@ -613,8 +651,10 @@ int main_sites(int argc,char **argv){
     filt *f = filt_read(*++argv);
     filt_print(stdout,f,chr,1);
     filt_dalloc(f);
-  }else
-    fprintf(stderr,"Unknown option: \'%s\'\n",*argv);
+  }else{
+    fprintf(stderr,"\t-> Unknown option: \'%s\'\n",*argv);
+    return 1;
+  }
 
   return 0;
 }

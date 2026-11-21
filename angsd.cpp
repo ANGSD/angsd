@@ -212,8 +212,7 @@ int main(int argc, char** argv){
   if(argc>1&&!strcasecmp("sites",argv[1])){
     //from prep_sites.* used for indexing -sites files
     int main_sites(int argc,char **argv);
-    main_sites(--argc,++argv);
-    return 0;
+    return main_sites(--argc,++argv);
   }
   //users keep asking about the -fold argument in main angsd. So lets scan and exit with a proper msg
   for(int i=0;i<argc;i++)
