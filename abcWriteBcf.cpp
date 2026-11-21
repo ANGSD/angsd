@@ -90,7 +90,6 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
     bcf_hdr_append(hdr,"##INFO=<ID=Quals_angsd ,Number=R,Type=Float,Description=\"Quality score for alternative and null hypothesis\">");
   }
   bcf_hdr_append(hdr,"##INFO=<ID=AF,Number=A,Type=Float,Description=\"Minor Allele Frequency\">");
-  bcf_hdr_append(hdr,"##INFO=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##INFO=<ID=AD,Number=R,Type=Integer,Description=\"Total allelic depths\">");
   bcf_hdr_append(hdr,"##INFO=<ID=ADF,Number=R,Type=Integer,Description=\"Total allelic depths on the forward strand\">");
   bcf_hdr_append(hdr,"##INFO=<ID=ADR,Number=R,Type=Integer,Description=\"Total allelic depths on the reverse strand\">");
@@ -103,7 +102,6 @@ void print_bcf_header(htsFile *fp,bcf_hdr_t *hdr,argStruct *args,kstring_t &buf,
   bcf_hdr_append(hdr,"##FORMAT=<ID=PL,Number=G,Type=Integer,Description=\"List of Phred-scaled genotype likelihoods\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Number of high-quality bases\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=DV,Number=1,Type=Integer,Description=\"Number of high-quality non-reference bases\">");
-  bcf_hdr_append(hdr,"##FORMAT=<ID=DPR,Number=R,Type=Integer,Description=\"Number of high-quality bases observed for each allele\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"scaled Genotype Likelihoods (loglikeratios to the most likely (in log10))\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype Probabilities\">");
   bcf_hdr_append(hdr,"##FORMAT=<ID=EBD,Number=4,Type=Float,Description=\"The effective basedepth\">");
@@ -253,6 +251,24 @@ void abcWriteBcf::print(funkyPars *pars){
 	tmpfa[i] = ary[i*4+0]+ary[i*4+1]+ary[i*4+2]+ary[i*4+3];
       bcf_update_format_int32(hdr, rec, "DP", tmpfa,bcf_hdr_nsamples(hdr) );
       free(tmpfa);
+
+      //AD: the depth of each allele, in the order of the alleles in the record (REF,ALT)
+      int als[4];
+      int nals = 0;
+      if(mcall!=NULL){
+	als[nals++] = mcall->als[4*s];
+	for(int i=1;i<4&&mcall->als[4*s+i]!=4;i++)
+	  als[nals++] = mcall->als[4*s+i];
+      }else{
+	als[nals++] = pars->major[s];
+	als[nals++] = pars->minor[s];
+      }
+      int32_t *ad = (int32_t*)malloc(sizeof(int32_t)*nals*bcf_hdr_nsamples(hdr));
+      for(int i=0;i<bcf_hdr_nsamples(hdr);i++)
+	for(int a=0;a<nals;a++)
+	  ad[i*nals+a] = als[a]<4 ? ary[i*4+als[a]] : bcf_int32_missing;
+      bcf_update_format_int32(hdr, rec, "AD", ad, nals*bcf_hdr_nsamples(hdr));
+      free(ad);
     }
     if(pars->likes && pars->likes[s]){
       float *tmpfa  =   (float*)malloc(3*bcf_hdr_nsamples(hdr)*sizeof(float  ));

@@ -171,6 +171,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing -doBcf"
+time ./testBcf.sh $WDIR/angsd $BAMDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -doBcf exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing thetaStat cat"
 time ./testThetaCat.sh $WDIR
 if [ ! $? -eq 0  ]   ;then
