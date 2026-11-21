@@ -239,7 +239,7 @@ void abcWriteFasta::run(funkyPars *pars){
     for(int s=0;s<pars->numSites&&pars->posi[s]<header->target_len[pars->refId];s++){
 
       int ob = refToInt[myFasta[pars->posi[s]]];
-      int rb = refToInt[pars->ref[pars->posi[s]]];
+      int rb = pars->ref[s];//reference base of site s, already 0-4
       //A <-> G, C <-> T
       if(ob==0&&rb==2)
 	myFasta[pars->posi[s]]=intToRef[4];
