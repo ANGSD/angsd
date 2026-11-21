@@ -55,3 +55,7 @@ commit_message.txt
 
 # htslib is cloned (newest develop) by make, not tracked
 /htslib/
+
+# output from the tests (still collected as CI artifacts by git ls-files --others)
+test/**/test_results/
+test/*.log
