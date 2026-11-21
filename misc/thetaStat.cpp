@@ -124,7 +124,7 @@ myMap getMap(const char *fname){
   size_t clen;
   if(!fexists(fname)){
     fprintf(stderr,"Problem opening file: %s\n",fname);
-    exit(0);
+    exit(1);
   }
   FILE *fp = fopen(fname,"r");
   char tmp[8];
@@ -137,17 +137,17 @@ myMap getMap(const char *fname){
     datum d;
     if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
 
     if(1!=fread(&d.nChr,sizeof(int),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
 
     if(1!=fread(&d.fpos,sizeof(int64_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
 
     myMap::iterator it = ret.find(chr);
@@ -155,7 +155,7 @@ myMap getMap(const char *fname){
       ret[chr] =d ;
     else{
       fprintf(stderr,"Problem with chr: %s, key already exists\n",chr);
-      exit(0);
+      exit(1);
     }
   }
   fclose(fp);
@@ -358,7 +358,18 @@ char *idxToGz(char *one){
 
 int do_stat(int argc, char**argv){
   if(argc==0){
-    fprintf(stderr,"\n\t./thetaStat do_stat .thetas.idx [-win INT -step INT -r chrName -type [0,1,2] -outnames outputprefix]\n");
+    fprintf(stderr,"\n\t./thetaStat do_stat .thetas.idx [-win INT -step INT -type [0,1,2] -r chrName -nChr INT -outnames outputprefix]\n");
+    fprintf(stderr,"\n\tSums the thetas in windows and calculates Tajima's D, Fu & Li's F and D, Fay's H and Zeng's E.\n");
+    fprintf(stderr,"\tWrites one line per window to outputprefix.pestPG\n");
+    fprintf(stderr,"\n\t-win INT\tWindow size in bases. Without -win and -step there is one window per chromosome\n");
+    fprintf(stderr,"\t-step INT\tStep size in bases\n");
+    fprintf(stderr,"\t-type INT\tWhere the first window starts (default 0)\n");
+    fprintf(stderr,"\t\t\t0: the first multiple of -step after the first position with data\n");
+    fprintf(stderr,"\t\t\t1: the first position with data\n");
+    fprintf(stderr,"\t\t\t2: position 1\n");
+    fprintf(stderr,"\t-r chrName\tOnly use this chromosome\n");
+    fprintf(stderr,"\t-nChr INT\tNumber of chromosomes in the sample (2 x individuals for diploids).\n\t\t\tDefault is the number stored in the thetas file\n");
+    fprintf(stderr,"\t-outnames STR\tOutput prefix, default is the input filename (angsdput.thetas.idx.pestPG)\n");
     fprintf(stderr,"\n\tExamples:\n\t1)./thetaStat do_stat angsdput.thetas.idx\n");
     fprintf(stderr,"\t2)./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000\n");
     fprintf(stderr,"\t3)./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000 -r chr1\n");
@@ -389,9 +400,9 @@ int do_stat(int argc, char**argv){
   int type =0;
   while(argP<argc){
     //   fprintf(stderr,"args=%s\n",argv[argP]);
-    if(argP==argc){
-      fprintf(stderr,"incomplete arguments list\n");
-      exit(0);
+    if(argP+1>=argc){
+      fprintf(stderr,"\t-> %s needs an argument\n",argv[argP]);
+      exit(1);
     }
     if(strcmp("-r",argv[argP])==0)
       chr = argv[argP+1];
@@ -408,7 +419,7 @@ int do_stat(int argc, char**argv){
     
     else {
       fprintf(stderr,"Unknown argument:%s\n",argv[argP]);
-      exit(0);
+      exit(1);
     }
     argP +=2;
   }
@@ -424,7 +435,7 @@ int do_stat(int argc, char**argv){
     myMap::iterator it = mm.find(chr);
     if(it==mm.end()){
       fprintf(stderr,"\tProblem finding chr: %s in index\n",chr);
-      exit(0);
+      exit(1);
     }
     datum d = it->second;
     ASSERT(bgzf_seek(fp,d.fpos,SEEK_SET)==0);
@@ -472,6 +483,9 @@ void print_main(perChr &pc,FILE *fp){
 int print(int argc, char**argv){
   if(argc==0){
     fprintf(stderr,"\n\t./thetaStat print angsdput.thetas.idx [-r chrName]\n");
+    fprintf(stderr,"\n\tPrints the thetas per site to stdout: chromosome, position and the log of the\n");
+    fprintf(stderr,"\tWatterson, pairwise, singleton, H and L thetas\n");
+    fprintf(stderr,"\n\t-r chrName\tOnly print this chromosome\n");
     fprintf(stderr,"\n\tExamples:\n\t1)./thetaStat print angsdput.thetas.idx\n");
     fprintf(stderr,"\t2)./thetaStat print angsdput.thetas.idx -r chr2\n\n");
     return 0;
@@ -495,15 +509,15 @@ int print(int argc, char**argv){
 
   while(argP<argc){
     //   fprintf(stderr,"args=%s\n",argv[argP]);
-    if(argP==argc){
-      fprintf(stderr,"incomplete arguments list\n");
-      exit(0);
+    if(argP+1>=argc){
+      fprintf(stderr,"\t-> %s needs an argument\n",argv[argP]);
+      exit(1);
     }
     if(strcmp("-r",argv[argP])==0)
       chr = argv[argP+1];
     else {
       fprintf(stderr,"Unknown argument:%s\n",argv[argP]);
-      exit(0);
+      exit(1);
 
     }
     argP +=2;
@@ -514,7 +528,7 @@ int print(int argc, char**argv){
     myMap::iterator it = mm.find(chr);
     if(it==mm.end()){
       fprintf(stderr,"Problem finding chr: %s in index\n",chr);
-      exit(0);
+      exit(1);
     }
     datum d = it->second;
     ASSERT(0==bgzf_seek(fp,d.fpos,SEEK_SET));
@@ -725,6 +739,9 @@ int theta_cat(int argc,char **argv){
 int main(int argc,char **argv){
   if(argc==1){
     fprintf(stderr,"\n\t\'./thetaStat\': a program to do neutrality test statistics using thetas.idx output from angsd\n");
+    fprintf(stderr,"\n\tdo_stat\tthetas and neutrality test statistics in windows or per chromosome\n");
+    fprintf(stderr,"\tprint\tprint the thetas per site\n");
+    fprintf(stderr,"\tcat\tmerge thetas files with different chromosomes\n");
     fprintf(stderr,"\n\tExamples:\n\t1) ./thetaStat print angsdput.thetas.idx\n");
     fprintf(stderr,"\t2) ./thetaStat do_stat angsdput.thetas.idx -win 5000 -step 1000\n");
     fprintf(stderr,"\t3) ./thetaStat cat chr1.thetas.idx chr2.thetas.idx -outnames merged\n");
@@ -736,15 +753,15 @@ int main(int argc,char **argv){
   fprintf(stderr,"\n");
 
   --argc,++argv;
-  if(strcmp(*argv,"do_stat")==0){
-    do_stat(--argc,++argv);
-  }else if(strcmp(*argv,"print")==0){
-    print(--argc,++argv);
-  }else if(strcmp(*argv,"cat")==0){
-    theta_cat(--argc,++argv);
-  }else{
-    fprintf(stderr,"Unknown argument: \'%s' please supply:\n",*argv);
-    fprintf(stderr,"./thetaStat [do_stat||print||cat]\n");
-  }
+  if(strcmp(*argv,"do_stat")==0)
+    return do_stat(--argc,++argv);
+  else if(strcmp(*argv,"print")==0)
+    return print(--argc,++argv);
+  else if(strcmp(*argv,"cat")==0)
+    return theta_cat(--argc,++argv);
+
+  fprintf(stderr,"Unknown argument: \'%s' please supply:\n",*argv);
+  fprintf(stderr,"./thetaStat [do_stat||print||cat]\n");
+  return 1;
 }
 
