@@ -8,6 +8,8 @@ class abcFilterSNP:public abc{
   double hwe_pval;
   double qscore_pval;
   double hetbias_pval;
+  int doHWE;
+  int doGeno;
 public:
   int doSnpStat;
   

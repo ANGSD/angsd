@@ -28,26 +28,28 @@
   wilcox manwhitney u test, whatever ,implementation is from wiki
   validated with wilcox.test (qscores of major,qscores of minor,exact=T,correct=F)
   returns Zscore, for some reason...
+  The values are counted in NBIN bins, base and mapping qualities are unsigned char (0-255)
  */
+#define NBIN 256
 
-double mann(int majD[255],int minD[255]){
-  double U[255];
+double mann(int majD[NBIN],int minD[NBIN]){
+  double U[NBIN];
   double cumLess1 =0;
-  for(int i=0;i<255;i++){
+  for(int i=0;i<NBIN;i++){
     U[i]=(double) minD[i]*(majD[i]/2.0+cumLess1);
     cumLess1 += majD[i];
   }
   double U1 =0;
-  for(int i=0;i<255;i++) 
+  for(int i=0;i<NBIN;i++) 
     U1+= U[i];
   //below is a check
   double cumLess2 =0;
-  for(int i=0;i<255;i++){
+  for(int i=0;i<NBIN;i++){
     U[i]=(double) majD[i]*(minD[i]/2.0+cumLess2);
     cumLess2 += minD[i];
   }
   double U2 =0;
-  for(int i=0;i<255;i++) 
+  for(int i=0;i<NBIN;i++) 
     U2+= U[i];
   
 
@@ -66,10 +68,10 @@ double mann(int majD[255],int minD[255]){
 
 double edgebias(tNode **tn,int nInd,int maj,int min){
   //  fprintf(stderr,"phi:%f\n",phi(3));
-  int majD[255];
-  int minD[255];
-  memset(majD,0,sizeof(int)*255);
-  memset(minD,0,sizeof(int)*255);
+  int majD[NBIN];
+  int minD[NBIN];
+  memset(majD,0,sizeof(int)*NBIN);
+  memset(minD,0,sizeof(int)*NBIN);
 
   for(int i=0;i<nInd;i++){
     tNode *nd = tn[i];
@@ -78,13 +80,14 @@ double edgebias(tNode **tn,int nInd,int maj,int min){
     for(int l=0;l<nd->l;l++){
       int obB = refToInt[nd->seq[l]];
 
-      if(obB==maj){
-	majD[std::min(nd->posi[l],nd->isop[l])]++;
-	//	fprintf(stdout,"maj\t%d\n",nd->qs[l]);
-      }else if(obB==min){
-	minD[std::min(nd->isop[l],nd->posi[l])]++;
-	//fprintf(stdout,"min\t%d\n",nd->qs[l]);
-      }
+      //distance to the nearest read end, long reads are put in the last bin
+      int dist = std::min((int)nd->posi[l],(int)nd->isop[l]);
+      if(dist>NBIN-1)
+	dist = NBIN-1;
+      if(obB==maj)
+	majD[dist]++;
+      else if(obB==min)
+	minD[dist]++;
     }
   }
 
@@ -95,10 +98,10 @@ double edgebias(tNode **tn,int nInd,int maj,int min){
 
 double mapQbias(tNode **tn,int nInd,int maj,int min){
   //  fprintf(stderr,"phi:%f\n",phi(3));
-  int majD[255];
-  int minD[255];
-  memset(majD,0,sizeof(int)*255);
-  memset(minD,0,sizeof(int)*255);
+  int majD[NBIN];
+  int minD[NBIN];
+  memset(majD,0,sizeof(int)*NBIN);
+  memset(minD,0,sizeof(int)*NBIN);
 
   for(int i=0;i<nInd;i++){
     tNode *nd = tn[i];
@@ -124,10 +127,10 @@ double mapQbias(tNode **tn,int nInd,int maj,int min){
 
 double baseQbias(tNode **tn,int nInd,int maj,int min){
   //  fprintf(stderr,"phi:%f\n",phi(3));
-  int majD[255];
-  int minD[255];
-  memset(majD,0,sizeof(int)*255);
-  memset(minD,0,sizeof(int)*255);
+  int majD[NBIN];
+  int minD[NBIN];
+  memset(majD,0,sizeof(int)*NBIN);
+  memset(minD,0,sizeof(int)*NBIN);
 
   for(int i=0;i<nInd;i++){
     tNode *nd = tn[i];
@@ -179,15 +182,28 @@ double sb3(int cnts[4]){
 
 
 void abcFilterSNP::printArg(FILE *argFile){
-   fprintf(argFile,"-----BETA---------------\n%s:\n",__FILE__);
-  fprintf(argFile,"\t-doSnpStat\t%d\t(write per site statistics to .snpStat.gz)\n",doSnpStat);
-  fprintf(argFile,"\t-edge_pval\t%f\t(remove sites with an edge bias p-value below)\n",edge_pval);
-  fprintf(argFile,"\t-mapQ_pval\t%f\t(remove sites with a mapping quality bias p-value below)\n",mapQ_pval);
-  fprintf(argFile,"\t-sb_pval\t%f\t(remove sites with a strand bias p-value below)\n",sb_pval);
-  fprintf(argFile,"\t-hwe_pval\t%f\t(remove sites with a HWE p-value below)\n",hwe_pval);
-  fprintf(argFile,"\t-qscore_pval\t%f\t(remove sites with a base quality bias p-value below)\n",qscore_pval);
-  fprintf(argFile,"\t-hetbias_pval\t%f\t(remove sites with a heterozygote bias p-value below, needs -doGeno)\n",hetbias_pval);
-
+  fprintf(argFile,"------------------------\n%s:\n",__FILE__);
+  fprintf(argFile,"\t-doSnpStat\t%d\t(1: write per site statistics to .snpStat.gz)\n",doSnpStat);
+  fprintf(argFile,"\t-edge_pval\t%g\t(remove sites with an edge bias p-value below)\n",edge_pval);
+  fprintf(argFile,"\t-mapQ_pval\t%g\t(remove sites with a mapping quality bias p-value below)\n",mapQ_pval);
+  fprintf(argFile,"\t-sb_pval\t%g\t(remove sites with a strand bias p-value below)\n",sb_pval);
+  fprintf(argFile,"\t-hwe_pval\t%g\t(remove sites with a HWE p-value below, needs -doHWE 1)\n",hwe_pval);
+  fprintf(argFile,"\t-qscore_pval\t%g\t(remove sites with a base quality bias p-value below)\n",qscore_pval);
+  fprintf(argFile,"\t-hetbias_pval\t%g\t(remove sites with a heterozygote bias p-value below, needs -doGeno and -doPost)\n",hetbias_pval);
+  fprintf(argFile,"\n\tA p-value of -1 means the filter is not used.\n");
+  fprintf(argFile,"\tNeeds the reads (bam/cram or -pileup input) and -doMajorMinor. The statistics are\n");
+  fprintf(argFile,"\tcalculated from the bases that are the major or the minor allele.\n");
+  fprintf(argFile,"\n\tThe columns in .snpStat.gz are:\n");
+  fprintf(argFile,"\t  chromosome, position\n");
+  fprintf(argFile,"\t  number of bases: +Major +Minor -Major -Minor (+/- is the strand)\n");
+  fprintf(argFile,"\t  strand bias SB1:SB2:SB3, SB3 is the Fisher exact p-value used by -sb_pval\n");
+  fprintf(argFile,"\t  HWE_LRT:HWE_pval (nan:nan without -doHWE 1)\n");
+  fprintf(argFile,"\t  Z:p-value of the Mann-Whitney tests between major and minor bases for\n");
+  fprintf(argFile,"\t  base quality, mapping quality and distance to the nearest read end (edge).\n");
+  fprintf(argFile,"\t  Distances above 255 are counted as 255.\n");
+  fprintf(argFile,"\t  With -doGeno: the base counts as above but only in the heterozygotes, their sum, and\n");
+  fprintf(argFile,"\t  hetStat:p-value of a chi-square test that the two alleles are 50/50 in the heterozygotes\n");
+  fprintf(argFile,"\tOnly the sites that pass all filters are written.\n");
 }
 void abcFilterSNP::run(funkyPars *pars){
   if(!doSnpStat)
@@ -232,17 +248,20 @@ void abcFilterSNP::run(funkyPars *pars){
       if(sb_pval!=-1 && sb3(cnts)<sb_pval)
 	pars->keepSites[s] = 0;
 
-      funkyHWE *hweStruct = (funkyHWE *) pars->extras[9];//THIS IS VERY NASTY! the ordering within general.cpp is now important
-      double lrt = 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
-      double pval;
-      if(std::isnan(lrt))
-	pval=lrt;
-      else if(lrt<0)
-	pval =1;
-      else
-	pval =1- chi.cdf(lrt);
+      //without -doHWE the HWE column is nan:nan
+      double lrt = NAN;
+      double pval = NAN;
+      if(doHWE){
+	funkyHWE *hweStruct = (funkyHWE *) pars->extras[9];//THIS IS VERY NASTY! the ordering within general.cpp is now important
+	lrt = 2*hweStruct->like0[s]-2*hweStruct->likeF[s];
+	if(std::isnan(lrt))
+	  pval=lrt;
+	else if(lrt<0)
+	  pval =1;
+	else
+	  pval =1- chi.cdf(lrt);
+      }
       ksprintf(&persite,"%f:%e\t",lrt,pval);
-      //   ksprintf(&persite,"%f:%e\t",lrt,pval);
       if(hwe_pval!=-1 && pval<hwe_pval)
 	pars->keepSites[s] = 0;
 
@@ -260,7 +279,7 @@ void abcFilterSNP::run(funkyPars *pars){
 
       Z = edgebias(chk->nd[s],pars->nInd,refToInt[pars->major[s]],refToInt[pars->minor[s]]);
       ksprintf(&persite,"%f:%e",Z,2*phi(Z));
-      if(2*phi(Z)<edge_pval)
+      if(edge_pval!=-1 && 2*phi(Z)<edge_pval)
 	pars->keepSites[s] = 0;
 
       genoCalls *gcw =(genoCalls *) pars->extras[11];
@@ -352,26 +371,39 @@ void abcFilterSNP::getOptions(argStruct *arguments){
 
   if(doSnpStat==0)
     return;
+  if(doSnpStat!=1){
+    fprintf(stderr,"\t-> -doSnpStat %d is not an option, use -doSnpStat 1\n",doSnpStat);
+    exit(1);
+  }
+  //the statistics are calculated from the reads
+  if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
+    fprintf(stderr,"\t-> -doSnpStat needs the reads, so it only works with bam/cram (-bam/-i) or -pileup input\n");
+    exit(1);
+  }
   int domajorminor=0;
   domajorminor = angsd::getArg("-domajorminor",domajorminor,arguments);
   if(domajorminor==0){
     fprintf(stderr,"\t-> Must supply -doMajorMinor for running dosnpstat (needs to look a distributions of major and minor alleles)\n");
-    exit(0);
+    exit(1);
   }
   //from command line
 
-  edge_pval=angsd::getArg("-edge_pval",edge_pval,arguments);      
-  mapQ_pval=angsd::getArg("-mapQ_pval",mapQ_pval,arguments);      
-  sb_pval=angsd::getArg("-sb_pval",sb_pval,arguments);    
-  hwe_pval=angsd::getArg("-hwe_pval",hwe_pval,arguments);    
+  edge_pval=angsd::getArg("-edge_pval",edge_pval,arguments);
+  mapQ_pval=angsd::getArg("-mapQ_pval",mapQ_pval,arguments);
+  sb_pval=angsd::getArg("-sb_pval",sb_pval,arguments);
+  hwe_pval=angsd::getArg("-hwe_pval",hwe_pval,arguments);
   qscore_pval=angsd::getArg("-qscore_pval",qscore_pval,arguments);
-  hetbias_pval=angsd::getArg("-hetbias_pval",hetbias_pval,arguments);    
-  int doHWE=0;
-  doHWE=angsd::getArg("-doHWE",doHWE,arguments);    
-  if(doHWE==0){
-    fprintf(stderr,"must use -doHWE 1, to test for HWE\n");
-    exit(0);
-  }  
+  hetbias_pval=angsd::getArg("-hetbias_pval",hetbias_pval,arguments);
+  doHWE=angsd::getArg("-doHWE",doHWE,arguments);
+  if(hwe_pval!=-1&&doHWE==0){
+    fprintf(stderr,"\t-> -hwe_pval needs -doHWE 1\n");
+    exit(1);
+  }
+  doGeno=angsd::getArg("-doGeno",doGeno,arguments);
+  if(hetbias_pval!=-1&&doGeno==0){
+    fprintf(stderr,"\t-> -hetbias_pval needs the called genotypes from -doGeno\n");
+    exit(1);
+  }
 }
 
 
@@ -379,6 +411,7 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
   doSnpStat=0;
   outfileZ = NULL;
   edge_pval=mapQ_pval=sb_pval=hwe_pval=qscore_pval=hetbias_pval=-1;
+  doHWE=doGeno=0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doSnpStat")){
       printArg(stderr);
@@ -393,16 +426,14 @@ abcFilterSNP::abcFilterSNP(const char *outfiles,argStruct *arguments,int inputty
     shouldRun[index] =0;
     return;
   }
-  printArg(arguments->argumentFile);  
-  int dogeno=0;
-  dogeno=angsd::getArg("-dogeno",dogeno,arguments);
+  printArg(arguments->argumentFile);
   if(doSnpStat){
     //    fprintf(stderr,"running doSnpStat=%d\n",doSnpStat);
     const char *postfix=".snpStat.gz";
     outfileZ = aio::openFileBG(outfiles,postfix);
     kstring_t bufstr;bufstr.s=NULL;bufstr.l=bufstr.m=0;
     ksprintf(&bufstr,"Chromo\tPosition\t+Major +Minor -Major -Minor\tSB1:SB2:SB3\tHWE_LRT:HWE_pval\tbaseQ_Z:baseQ_pval\tmapQ_Z:mapQ_pval\tedge_z:edge_pval");
-    if(dogeno){
+    if(doGeno){
       ksprintf(&bufstr,"\t+MajorHet +MinorHet -MajorHet -MinorHet nHet\thetStat:hetStat_pval");
 
     }
