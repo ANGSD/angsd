@@ -359,7 +359,7 @@ void abcIBS::getHaplo(funkyPars *pars){
     
     //remove low or highfreq (freq = major/total)
 	  
-    if( minFreq  >  siteCounts[whichMax] * 1.0/NnonMis || 1-minFreq < siteCounts[whichMax] * 1.0/NnonMis || maxFreq > siteCounts[whichMax]  * 1.0/NnonMis )
+    if( minFreq  >  siteCounts[whichMax] * 1.0/NnonMis || 1-minFreq < siteCounts[whichMax] * 1.0/NnonMis || 1-maxFreq > siteCounts[whichMax]  * 1.0/NnonMis )
       pars->keepSites[s] = 0;
      
 
@@ -370,13 +370,13 @@ void abcIBS::getHaplo(funkyPars *pars){
 
       // freq = major/(major + minor)
       double freq = siteCounts[haplo->minor[s]] * 1.0/(siteCounts[haplo->major[s]] + siteCounts[haplo->minor[s]]);
-      if( minFreq  >  freq || 1-minFreq < freq || maxFreq  <  freq || (1-maxFreq) > freq )
+      if( minFreq  >  freq || 1-minFreq < freq || ( maxFreq < freq && maxFreq < 1-freq ) )
 	pars->keepSites[s] = 0;
   
 
       if( minMinor > 0 && ( siteCounts[haplo->minor[s]] < minMinor || siteCounts[haplo->major[s]] < minMinor ) )
 	pars->keepSites[s] = 0;
-      if( maxMinor > 0 && ( siteCounts[haplo->minor[s]] > maxMinor || siteCounts[haplo->major[s]] > maxMinor ) )
+      if( maxMinor > 0 && ( siteCounts[haplo->minor[s]] > maxMinor && siteCounts[haplo->major[s]] > maxMinor ) )
 	pars->keepSites[s] = 0;
      
  
