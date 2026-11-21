@@ -14,6 +14,7 @@ class abcDstat:public abc{
 private:
   kstring_t bufstr;
   int currentChr;
+  int warnedUnsorted;//1 when the warning about unsorted regions has been printed
   int NbasesPerLine;
   int nBlocks;
   int block; //the current block number

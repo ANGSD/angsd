@@ -27,7 +27,7 @@ void abcDstat::printArg(FILE *argFile){
   fprintf(argFile,"\t-anc\t\t\t%s\tfasta file with outgroup\n",ancName);
   fprintf(argFile,"\t-useLast\t\t%d\tuse the last individuals as outgroup instead of -anc\n",useLast);
   fprintf(argFile,"\t-printEmpty\t\t%d\t print blocks without any ABBA or BABA sites \n",printEmpty);
-  fprintf(argFile,"\t-seed\t\t\t%d\tseed for the random number generator (0: not seeded)\n",seed);
+  fprintf(argFile,"\t-seed\t\t\t%d\tseed for the random base (0: not seeded), only reproducible with -nThreads 1\n",seed);
 
   fprintf(argFile,"\n");
 }
@@ -86,6 +86,7 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
   printEmpty = 1;
   useLast = 0;
   currentChr=-1;
+  warnedUnsorted=0;
   NbasesPerLine=50;
   blockSize=5000000;
   enhance=0;
@@ -109,8 +110,9 @@ abcDstat::abcDstat(const char *outfiles,argStruct *arguments,int inputtype){
   printArg(arguments->argumentFile);
 
 
+  //the random base is picked with std::rand
   if(seed)
-    srand48(seed);
+    srand(seed);
   //make output files
   const char* postfix;
   postfix=".abbababa";
@@ -304,8 +306,6 @@ void abcDstat::print(funkyPars *pars){
       BABA[j]=0;
     }
     getBlockNum(pars->posi[0]);
-    if(currentChr > pars->refId)
-      fprintf(stdout,"Warning. Your regions are not sorted. Becarefull...\n");
     currentChr=pars->refId;
   }
 
@@ -320,8 +320,16 @@ void abcDstat::print(funkyPars *pars){
   // fprintf(stdout,"nBlocks=%d\t",abbababaStruct->nBlocks);
   for(int b=0; b < abbababaStruct->nBlocks;b++){
     //  fprintf(stdout,"block %d-%d\t",abbababaStruct->blockPos[b],abbababaStruct->ABBABABAblocks[b][0][4]);
+    if(abbababaStruct->blockPos[b]<0)//not used
+      continue;
     
-    if(abbababaStruct->blockPos[b] > block){
+    //a new block. If the regions are not sorted the block can be before the current one,
+    //then it is written as its own line
+    if(abbababaStruct->blockPos[b] != block){
+      if(abbababaStruct->blockPos[b] < block && warnedUnsorted==0){
+	fprintf(stderr,"\t-> Warning: the regions are not sorted, the blocks in the .abbababa file are written in the order of the regions\n");
+	warnedUnsorted=1;
+      }
       printAndEmpty();
       block = abbababaStruct->blockPos[b];
     }
@@ -358,7 +366,7 @@ void abcDstat::run(funkyPars *pars){
   }
   abbababaStruct->blockPos = new int[abbababaStruct->nBlocks];
   for(int b=0;b<abbababaStruct->nBlocks;b++)
-    abbababaStruct->blockPos[b] = 0 ;
+    abbababaStruct->blockPos[b] = -1 ;//-1: not used, getNumBlocks can count more blocks than are filled
   
   
   
