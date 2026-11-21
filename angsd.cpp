@@ -112,7 +112,7 @@ void printProgInfo(FILE *fp){
   fprintf(fp,"\t-cigstat\tPrintout CIGAR stat across readlength\n");
   fprintf(fp,"\tmany others\n\n");
   fprintf(fp,"Output files:\n\t In general the specific analysis outputs specific files, but we support basic bcf output\n");
-  fprintf(fp,"\t-doBcf\t\tWrapper around -dopost -domajorminor -dofreq -gl -dovcf docounts\n");
+  fprintf(fp,"\t-doBcf\t\tWrapper around -dopost -domajorminor -domaf -gl -docounts\n");
   
   fprintf(fp,"For information of specific options type: \n\t./angsd METHODNAME eg \n\t\t./angsd -GL\n\t\t./angsd -doMaf\n\t\t./angsd -doAsso etc\n");
   fprintf(fp,"\t\t./angsd sites for information about indexing -sites files\n");
@@ -154,6 +154,11 @@ void checkArgs(argStruct *arguments){
     }  
     if(strcasecmp("-tglf",arguments->argv[i])==0){
       fprintf(stderr,"-tglf is deprecated, merge files and use -glf\n");
+      removeOutputFiles();
+      exit(1);
+    }
+    if(strcasecmp("-doVcf",arguments->argv[i])==0){
+      fprintf(stderr,"-doVcf has been removed, use -doBcf 1 (eg. -doBcf 1 -doMajorMinor 1 -doPost 1 -gl 1 -doMaf 1 -doCounts 1 -doGeno 1)\n");
       removeOutputFiles();
       exit(1);
     }

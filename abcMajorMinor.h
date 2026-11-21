@@ -14,7 +14,7 @@ class abcMajorMinor:public abc{
   int skipTriallelic;
   void majorMinorGL(funkyPars *pars,int doMajorMinor);
   int majorMinorEBD(funkyPars *pars,int doMajorMinor);
-  int doVcf;
+  int doBcf;
   int doGlf;
   int rmTrans;
 public:

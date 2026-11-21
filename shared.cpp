@@ -319,7 +319,7 @@ void changeChr(int refId){
   ((abcWriteFasta *)allMethods[19])->changeChr(refId);//used when changing chr;
   ((abcSmartCounts *)allMethods[20])->changeChr(refId);//used when changing chr;
   ((abcSaf *)allMethods[12])->changeChr(refId);//used when changing chr;
-  ((abcPSMC *)allMethods[27])->changeChr(refId);//used when changing chr;
+  ((abcPSMC *)allMethods[26])->changeChr(refId);//used when changing chr;
 
   void flush_queue();
   flush_queue();

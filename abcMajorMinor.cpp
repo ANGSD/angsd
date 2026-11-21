@@ -131,7 +131,7 @@ void abcMajorMinor::getOptions(argStruct *arguments){
  doSaf = angsd::getArg("-doSaf",doSaf,arguments);
  pest = angsd::getArg("-pest",pest,arguments);
  skipTriallelic = angsd::getArg("-skipTriallelic",skipTriallelic,arguments);
- doVcf = angsd::getArg("-dobcf",doVcf,arguments);
+ doBcf = angsd::getArg("-dobcf",doBcf,arguments);
  doGlf = angsd::getArg("-doGlf",doGlf,arguments);
 }
 
@@ -142,7 +142,7 @@ abcMajorMinor::abcMajorMinor(const char *outfiles,argStruct *arguments,int input
 
   doSaf = 0;
   pest = NULL;
-  doVcf = 0;
+  doBcf = 0;
   doGlf = 0;
   if(arguments->argc==2){
     if(!strcasecmp(arguments->argv[1],"-doMajorMinor")){
@@ -169,7 +169,7 @@ void abcMajorMinor::clean(funkyPars *pars){
     delete [] pars->minor;
     pars->major=pars->minor=NULL;
 
-    if(doVcf>0||doGlf==2){
+    if(doBcf>0||doGlf==2){
       lh3struct *lh3 =(lh3struct*) pars->extras[index];
       for(int i=0;i<pars->numSites;i++)
 	if(lh3->hasAlloced[i])
@@ -506,7 +506,7 @@ void abcMajorMinor::run(funkyPars *pars){
     if(doMajorMinor==4||doMajorMinor==5)
     modMajorMinor(pars,doMajorMinor);
   */
-  if(doGlf==2||doVcf>0){
+  if(doGlf==2||doBcf>0){
     lh3struct *lh3 = new lh3struct;
     pars->extras[index] = lh3;
     lh3->hasAlloced = new char[pars->numSites];
