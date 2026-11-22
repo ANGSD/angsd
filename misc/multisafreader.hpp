@@ -90,7 +90,7 @@ int readdata(std::vector<persaf *> &saf,
           //	  fprintf(stderr,"s:%d\n",s);
           if(posiG[0][s]!=posiG[i][s]){
             fprintf(stderr,"Mismatch at s:%d which is i=0 vs i=%d with pos1:%d pos2:%d\n",s,i,posiG[0][s],posiG[i][s]);
-            exit(0);
+            exit(1);
           }
         }
       }
