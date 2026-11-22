@@ -1345,16 +1345,23 @@ int printFull(funkyPars *p,
                size_t &sumBand)
 {
   realRes *r = (realRes *) p->extras[index];
+  //pLikes/pBound has an entry for every site with oklist==1. Modules run after
+  //abcSaf can set keepSites to 0 for some of these, so counter must count all
+  //oklist==1 sites and nwritten the ones written
   int counter = 0;
+  int nwritten = 0;
   for(int s=0; s<p->numSites; s++){
     if(r->oklist[s]==3)
       fprintf(stderr,"\t-> Problem with banding algorithm at site chr: \'%s\' position: %d\n",abc::header->target_name[p->refId],p->posi[s]+1);
-    if(r->oklist[s]==1 && p->keepSites[s]){
+    if(r->oklist[s]!=1)
+      continue;
+    if(p->keepSites[s]){
       aio::bgzf_write(outfileSFS, r->pBound[counter], sizeof(int)*2);
       aio::bgzf_write(outfileSFS, r->pLikes[counter], sizeof(float)*r->pBound[counter][1]);
       sumBand += r->pBound[counter][1];
-      counter++;
+      nwritten++;
     }
+    counter++;
   }
 
   for(int i=0; i<p->numSites; i++){
@@ -1369,7 +1376,7 @@ int printFull(funkyPars *p,
 
     }
   }
-  return counter;
+  return nwritten;
 }
 
 void abcSaf::print(funkyPars *p)
