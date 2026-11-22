@@ -46,9 +46,9 @@ void abcSaf::getOptions(argStruct *arguments){
   pest = angsd::getArg("-pest",pest,arguments);
   minInd = angsd::getArg("-minInd",minInd,arguments);
 
-  if(doSaf==3){ //DRAGON
-    fprintf(stderr,"\t-> Please use -doPost 3 instead for -doSaf 3\n");
-    exit(0);
+  if(doSaf==3){
+    fprintf(stderr,"\t-> Error: -doSaf 3 has been removed, use -doPost 3 to call genotypes with a sfs as prior\n");
+    exit(1);
   }
 
   if(doSaf>0||doPost==3){
@@ -101,7 +101,7 @@ void abcSaf::getOptions(argStruct *arguments){
     fprintf(stderr,"\t-> !! You are doing -dosaf incombination with -rf, please make sure that your -rf file is sorted !!\n");
   anc = angsd::getArg("-anc",anc,arguments);
   if(doSaf && (anc==NULL&&isSim==0) ){
-    if(doSaf!=3 && doSaf!=5 ){
+    if(doSaf!=5 ){
       fprintf(stderr,"\t-> Must supply -anc for polarizing the spectrum\n");
       exit(0);
     }
@@ -154,19 +154,6 @@ void abcSaf::getOptions(argStruct *arguments){
     }else
       filipeIndF = angsd::readDouble(indF_name,arguments->nInd);
   }
-  if(doSaf==3){
-    fprintf(stderr,"\t-> Will call genotypes using sample allele frequencies\n");
-    int doMajorMinor =0;
-    doMajorMinor = angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
-    if(doMajorMinor==0){
-      fprintf(stderr,"\t-> Must supply -doMajorMinor for calling genotypes\n");
-      exit(0);
-    }
-    if(pest==NULL){
-      fprintf(stderr,"\t-> You need to supply a sfs as prior (./realSFS output, -pest) to do genotypecalling with saf\n");
-      exit(0);
-    }
-  }
 
 }
 
@@ -184,8 +171,6 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   const char *SAF = ".saf.gz";
   const char *SAFPOS =".saf.pos.gz";
   const char *SAFIDX =".saf.idx";
-  //for use when dumping called genotypes
-  const char *GENO = ".saf.geno.gz";
   //default
   underFlowProtect = 0;
   isSim =0;
@@ -199,7 +184,6 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
   outfileSAF = NULL;
   outfileSAFPOS = NULL;
   outfileSAFIDX = NULL;
-  outfileGprobs = NULL;
   nnnSites = 0;
   scoreTol = 1.e-9;
   if(arguments->argc==2){
@@ -222,10 +206,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
  
   if(isHap)
     newDim = arguments->nInd+1;
-  if(doSaf==3){
-    fprintf(stderr,"\t-> -doSaf 3 Does not work in combination with -snpstat and other snpfilters\n");
-    outfileGprobs = aio::openFileBG(outfiles,GENO);
-  }else if(doSaf!=0){
+  if(doSaf!=0){
     outfileSAF =  aio::openFileBG(outfiles,SAF);
     outfileSAFPOS =  aio::openFileBG(outfiles,SAFPOS);
     outfileSAFIDX = aio::openFile(outfiles,SAFIDX);
@@ -243,7 +224,7 @@ abcSaf::abcSaf(const char *outfiles,argStruct *arguments,int inputtype){
 }
 
 abcSaf::~abcSaf(){
-  if(doSaf&&doSaf!=3)
+  if(doSaf)
     writeAll();
 
   if(pest) free(pest);
@@ -252,7 +233,6 @@ abcSaf::~abcSaf(){
   if(outfileSAFPOS) bgzf_close(outfileSAFPOS);
   if(outfileSAFIDX) fclose(outfileSAFIDX);
 
-  if(outfileGprobs)  bgzf_close(outfileGprobs);
   if(lbicoTab) {
     delete [] lbicoTab;
   }
@@ -1277,7 +1257,7 @@ void print_array(FILE *fp,double *ary,int len,int doLogTransform){
 void abcSaf::run(funkyPars  *p){
   if(p->numSites==0||(doSaf==0 ))
     return;
-  if(doSaf>0&&doSaf!=3) {
+  if(doSaf>0) {
     realRes *r = new realRes;
     r->oklist=new char[p->numSites];
     memset(r->oklist,0,p->numSites);
@@ -1332,18 +1312,10 @@ void abcSaf::run(funkyPars  *p){
 
     p->extras[index] = r;
   }
-  if(doSaf==3){
-    kstring_t *kbuf = new kstring_t;
-    kbuf->s=NULL;kbuf->l=kbuf->m=0;
-    p->extras[index] = kbuf;
-    algoGeno(p->refId,p->likes,p->major,p->minor,p->numSites,p->nInd,kbuf,underFlowProtect,p->posi,p->keepSites,prior);
-  }
 }
 
 void abcSaf::clean(funkyPars *p){
   if(p->numSites==0||(doSaf==0 ))
-    return;
-  if(doSaf==3)
     return;
 
   realRes *r=(realRes *) p->extras[index];
@@ -1405,14 +1377,6 @@ void abcSaf::print(funkyPars *p)
   if(p->numSites==0||(doSaf==0))
     return;
   
-  if(doSaf==3)
-  {
-    kstring_t *buf = (kstring_t *) p->extras[index];
-    aio::bgzf_write(outfileGprobs, buf->s, buf->l);
-    free(buf->s);
-    delete buf;
-  } 
-  else 
   {
     // add prior if this has been supplied
     if(prior != NULL) {
@@ -1457,368 +1421,6 @@ void abcSaf::print(funkyPars *p)
 
 // --- misc stuff --- //
 
-// NSP 3July2020
-// I left this alone when implementing score-limited algorithm. Not sure if it is even used anymore?
-void abcSaf::algoGeno(int refId,double **liks,char *major,char *minor,int nsites,int numInds,kstring_t *sfsfile,int underFlowProtect,int *posi,int *keepSites,double *pest) {
-  aio::doAssert(pest!=NULL);
-  //void algGeno(aMap &asso,int numInds,FILE *sfsfile,int underFlowProtect, double *pest) {
-  //  fprintf(stderr,"UNDERFLOWPROTECT: %d\n",underFlowProtect);
-  double *postp = new double[3*numInds];
-#if 0
-  for(int r=0;r<(2*numInds-1);r++)
-    for(int j=0;j<std::min(3,r);j++){
-      double res =myComb2Tab[r][j];// myComb2(numInds,r,j);
-      fprintf(stderr,"myComb\t(%d,%d,%d) =%f\n",numInds,r,j,res);
-    }
-  exit(0);  
-#endif
-  
-  //algorithm goes on by a site on site basis //pretty much the same as 'algo' without the prior phat
-  
-  //  underFlowProtect = 0;
-  for(int it=0; it<nsites; it++) {//loop over sites
-
-    int minor_offset=refToInt[minor[it]];
-    int major_offset=refToInt[major[it]];
-    //    fprintf(stderr,"%c %c asInt %d %d\n",major[it],minor[it],minor_offset,major_offset);
-    if(keepSites[it]==0)
-      continue;
-
-
-    //    fprintf(sfsfile,"%s %d\t",chrnames[it->first.chromo],it->first.position);
-    //1. first loop through all possible major/minor
-
-    //    fprintf(sfsfile,"%d %d\t0 0 0 0\t",major_offset,minor_offset);
-    int Aa_offset = angsd::majorminor[minor_offset][major_offset];//0-9
-    int AA_offset = angsd::majorminor[minor_offset][minor_offset];//0-9
-    int aa_offset = angsd::majorminor[major_offset][major_offset];//0-9
-    //    fprintf(stderr,"OFFSET_INFO: min=%d\tmaj=%d aa=%d Aa=%d AA=%d\n",minor_offset,major_offset,aa_offset,Aa_offset,AA_offset);
-    //part two
-    double hj[2*numInds+1];
-    for(int index=0;index<(2*numInds+1);index++)
-      if(underFlowProtect==0)
-	hj[index]=0;
-      else
-	hj[index]=log(0);
-    double PAA,PAa,Paa;
-    //    numInds =5;
-    for(int i=0 ; i<numInds ;i++) {
-      //	printf("AA=%f\tAa=%f\taa=%f\n",p.lk[i*3+AA_offset],p.lk[i*3+Aa_offset],p.lk[i*3+aa_offset]);
-      double GAA,GAa,Gaa;
-      GAA = liks[it][i*10+AA_offset];
-      GAa = log(2.0)+liks[it][i*10+Aa_offset];
-      Gaa = liks[it][i*10+aa_offset];
-
-      //fprintf(stderr,"GAA=%f\tGAa=%f\tGaa=%f\n",GAA,GAa,Gaa);
-      if(underFlowProtect==0){
-	GAA=exp(GAA);
-	GAa=exp(GAa);
-	Gaa=exp(Gaa);
-      }
-	  
-      
-      PAA =(GAA);///(MAA+MAa+Maa);
-      PAa =(GAa);///(MAA+MAa+Maa);
-      Paa =(Gaa);///(MAA+MAa+Maa);
-      
-      
-      //check for underflow error, this should only occur once in a blue moon
-      if(std::isnan(Paa)||std::isnan(PAa)||std::isnan(Paa)){
-	printf("PAA=%f\tPAa=%f\tPaa=%f\n",PAA,PAa,Paa);
-      }
-      
-      if(i==0){
-	hj[0] =Paa;
-	hj[1] =PAa;
-	hj[2] =PAA;
-      }else{
-	
-	for(int j=2*(i+1); j>1;j--){
-
-	  double tmp;
-	  if(underFlowProtect==1)
-	    tmp =angsd::addProtect3(PAA+hj[j-2],PAa+hj[j-1],Paa+hj[j]);
-	  else
-	    tmp = PAA*hj[j-2]+PAa*hj[j-1]+Paa*hj[j];
-	      
-	  if(std::isnan(tmp)){
-	    fprintf(stderr,"jis nan:%d\n",j );
-	    hj[j] = 0;
-	    break;
-	  }else
-	    hj[j]  =tmp;
-
-	}
-	if(underFlowProtect==1){
-	  hj[1] = angsd::addProtect2(Paa+hj[1],PAa+hj[0]);
-	  hj[0] = Paa+hj[0];
-	}
-	else{
-	  hj[1] = Paa*hj[1] + PAa*hj[0];
-	  hj[0] = Paa*hj[0];
-	}
-	//	print_array(stdout,hj,2*numInds+1,!underFlowProtect);
-      }
-      
-      
-    }//after recursion
-    //if we are underflowprotecting ht hj is in logspace
-    // print_array(stdout,hj,2*numInds+1,!underFlowProtect);
-    for(int i=0;i<(2*numInds+1);i++){
-      //fprintf(stdout,"BICO: %f\n",log(bico(2*numInds,i)));
-      if(underFlowProtect)
-	hj[i] =  (hj[i]-lbicoTab[i]);
-      else
-	hj[i] =  exp(log(hj[i])-lbicoTab[i]);
-      
-    }
-    //fprintf(stdout,"the full after update hj\n");
-    //  print_array(stdout,hj,2*numInds+1,underFlowProtect);
-    double denominator = 0;
-    if(underFlowProtect)
-      denominator = log(denominator);
-    for(int i=0;i<=2*numInds;i++)
-      if(underFlowProtect)
-	denominator = angsd::addProtect2(denominator,pest[i]+angsd::addProtect2(hj[i],hj[2*numInds-i]));
-      else
-	denominator += exp(pest[i]) * (hj[i] +hj[2*numInds-i]);
-    //    fprintf(stderr,"denom:%e\n",denominator);
-
-    int whichGeno[numInds];
-    double whichProb[numInds];
-
-    for(int select=0;select<numInds;select++) {
-      //      fprintf(stderr,"select:%d\n",select);
-      double *hj = new double[2*numInds-1];
-      for(int index=0;index<(2*numInds-1);index++)
-	if(underFlowProtect==0)
-	  hj[index]=0;
-	else
-	  hj[index]=log(0);
-      double PAA,PAa,Paa;
-      
-      int ishadow =-1;
-      for(int i=0 ; i<numInds ;i++) {
-	//	printf("AA=%f\tAa=%f\taa=%f\n",p.lk[i*3+AA_offset],p.lk[i*3+Aa_offset],p.lk[i*3+aa_offset]);
-	if(i!=select){
-	  ishadow++;
-	}else
-	  continue;
-	double GAA,GAa,Gaa;
-	GAA = liks[it][i*10+AA_offset];
-	GAa = log(2.0)+liks[it][i*10+Aa_offset];
-	Gaa = liks[it][i*10+aa_offset];
-	
-	if(underFlowProtect==0){
-	  GAA=exp(GAA);
-	  GAa=exp(GAa);
-	  Gaa=exp(Gaa);
-	}
-	  
-	
-	PAA =(GAA);///(MAA+MAa+Maa);
-	PAa =(GAa);///(MAA+MAa+Maa);
-	Paa =(Gaa);///(MAA+MAa+Maa);
-
-
-	//check for underflow error, this should only occur once in a blue moon
-	if(std::isnan(Paa)||std::isnan(PAa)||std::isnan(Paa)){
-	  fprintf(stderr,"PAA=%f\tPAa=%f\tPaa=%f\n",PAA,PAa,Paa);
-	}
-	
-	if(ishadow==0){
-	  hj[0] =Paa;
-	  hj[1] =PAa;
-	  hj[2] =PAA;
-	}else{
-	  
-	  for(int j=2*(ishadow+1); j>1;j--){
-	    //	    fprintf(stderr,"j=%d\n",j);
-	    //print_array(hj,2*numInds+1);
-	    double tmp;
-	    if(underFlowProtect==1)
-	      tmp =angsd::addProtect3(PAA+hj[j-2],PAa+hj[j-1],Paa+hj[j]);
-	    else
-	      tmp = PAA*hj[j-2]+PAa*hj[j-1]+Paa*hj[j];
-	    
-	    if(std::isnan(tmp)){
-	      fprintf(stderr,"jis nan:%d\n",j );
-
-	      hj[j] = 0;
-	      break;
-	    }else
-	      hj[j]  =tmp;
-	  }
-	  if(underFlowProtect==1){
-	    hj[1] = angsd::addProtect2(Paa+hj[1],PAa+hj[0]);
-	    hj[0] = Paa+hj[0];
-	  }
-	  else{
-	    hj[1] = Paa*hj[1] + PAa*hj[0];
-	    hj[0] = Paa*hj[0];
-	  }
-	}
-	//ifunderflowprotect then hj is in logspace
-	
-      }//after recursion
-      for(int i=0;i<(2*(numInds-1)+1);i++){
-	//fprintf(stdout,"BICO: %f\n",log(bico(2*numInds,i)));
-	if(underFlowProtect)
-	  hj[i] =  (hj[i]-angsd::lbico(2*(numInds-1),i));
-	else
-	  hj[i] =  exp(log(hj[i])-angsd::lbico(2*(numInds-1),i));
-	
-      }
-       
-      //now do all the genocalling for individual =select
-      // fprintf(stderr,"seelct=%d\tmyMaj=%d\tmyMin=%d\tAA_offset=%d Aa_offset=%d aa_offset=%d\n",select,p.major,p.minor,AA_offset,Aa_offset,aa_offset);
-      double *asdf = hj;
-
-      //print_array(stdout,asdf,2*numInds-1,!underFlowProtect);
-      double *res = postp+3*select; //is always logged
-
-
-      for (int j=0;j<3;j++) {//loop through 3 genotypes
-	//	fprintf(stderr,"jis: %d\n",j);
-	double g;
-	if(j==0)
-	  g=liks[it][10*select+angsd::majorminor[major[it]][major[it]]];
-	else if(j==1)
-	  g=liks[it][10*select+angsd::majorminor[major[it]][minor[it]]];
-	else
-	  g=liks[it][10*select+angsd::majorminor[minor[it]][minor[it]]];
-	
-	double tmp=0;
-	if(underFlowProtect)
-	  tmp = log(tmp);
-	for(int r=0;r<2*numInds-1;r++){
-	  //	  fprintf(stderr,"mycomb2:%f\tpes1: %f\tpes2: %f\n",myComb2(numInds,r+j,j),pest[r+j],pest[2*numInds-r-j]);
-	  if(underFlowProtect)
-	    //tmp = angsd::addProtect2(tmp, log(myComb2(numInds,r+j,j)) + (asdf[r])+pest[r+j]+pest[2*numInds-r-j]);
-	    tmp = angsd::addProtect2(tmp, log(myComb2Tab[r+j][j]) + (asdf[r])+pest[r+j]+pest[2*numInds-r-j]);
-	  else{
-	    //fprintf(stderr,"r+j:%d\tj:%d\nold:%f\nnew:%f",r+j,j,myComb2(numInds,r+j,j), myComb2Tab[r+j][j]);
-	    //exit(0);
-	    //tmp += myComb2(numInds,r+j,j)*(asdf[r])*(exp(pest[r+j])+exp(pest[2*numInds-r-j]));
-	    tmp += myComb2Tab[r+j][j]*(asdf[r])*(exp(pest[r+j])+exp(pest[2*numInds-r-j]));
-	  }
-	}
-	//g is directly from glf file, tmp is in log depending on underflowprotect
-
-	if(underFlowProtect)
-	  res[j]=g+(tmp);
-	else
-	  res[j]=g+log(tmp);
-	//	fprintf(stderr,"j:%d log(g)=%f tmp=%f g*tmp=%f res[%d]=%f logres[%d]=%f \n",j,g,log(tmp),(g*tmp),j,res[j],j,log(res[j]));
-
-	//res is always in log
-	
-	
-
-	//CODE BELOW IS A CHECK
-#if 0
-	double tmp1=0;
-	double tmp2=0;
-	if(underFlowProtect){
-	  tmp1 = log(tmp1);
-	  tmp2 = log(tmp2);
-	}
-	  
-	for(int r=j;r<=2*numInds-2+j;r++) {
-	  // fprintf(stderr,"tmp1: r=%d index: %d\n",r,r-j);
-	    //fprintf(stderr,"logcomb: %f\n",myComb2(numInds,r,j));
-	    //    fprintf(stderr,"tmp1 in preloop: %f\n",tmp1);
-	    if(underFlowProtect)
-	      tmp1 = angsd::addProtect2(tmp1, log(myComb2Tab[r][j])+ asdf[r-j]+pest[r]);
-	    else
-	      tmp1 += myComb2Tab[r][j]*(asdf[r-j])*exp(pest[r]);
-	    //fprintf(stderr,"tmp1 in reloop: %f\n",tmp1);
-	}
-
-	for(int r=2-j;r<=2*numInds-j;r++){
-	  //fprintf(stderr,"tmp2: r=%d index=%d\n",r,r-2+j);
-	  //fprintf(stderr,"logcomb: %f\n",myComb2(numInds,r,2-j));
-	  if(underFlowProtect)
-	    tmp2 = angsd::addProtect2(tmp2,log(myComb2Tab[r][2-j])+ asdf[(2*(numInds-1))-(r-2+j)]+ pest[r]);
-	  else
-	    tmp2 += myComb2Tab[r][2-j]*(asdf[2*(numInds-1)-(r-2+j)])*exp(pest[r]);
-	}
-	//	fprintf(stderr,"tmp1: %f tmp2: %f\n",(tmp1),(tmp2));	
-	double res2;//always log
-
-	if(underFlowProtect)
-	  res2 = g+(angsd::addProtect2(tmp1,tmp2));
-	else
-	  res2 = g+log(tmp1+tmp2);
-	//fprintf(stdout,"%f vs %f\n",res[j],res2);
-	if(1&&!isSame(res[j],res2,0.000001)){
-	  fprintf(stdout,"%f vs %f\n",res[j],res2);
-	}
-	//check that is sums to one according the model
-	 
-	if(underFlowProtect)
-	  fprintf(stdout,"\tASDFASDFASDF: %f\n",log((res2-denominator)));
-	else
-	  fprintf(stdout,"\tASDFASDFASDF: %f\n",log(exp(res2)/denominator));	
-
-	//CODE ABOVE IS CHECK
-
-#endif
-
-      }//after the loop of the tree genoypes
-      
-      
-      double shouldBeOne =0;
-      if(underFlowProtect)
-	shouldBeOne = exp(res[0]-(denominator))+exp(res[1]-(denominator))+exp(res[2]-(denominator));
-      else
-	shouldBeOne = exp(res[0]-log(denominator))+exp(res[1]-log(denominator))+exp(res[2]-log(denominator));
-      //fprintf(stderr,"this should be one: %f\n",shouldBeOne);
-      if((fabs(shouldBeOne-1)>0.000001)){
-	fprintf(stderr,"this should be one: %f at position:(%s,%d)\n",shouldBeOne,header->target_name[refId],posi[it+1]);
-	exit(0);
-      }
-      
-
-
-      //      print_array(stdout,res,3,0);      
-      
-      //logrescale(res,3);
-      double mySum=exp(res[0])+exp(res[1])+exp(res[2]);
-      for(int i=0;i<3;i++)
-	res[i] =exp(res[i])/mySum;
-      int best = angsd::whichMax(res,3);
-      aio::doAssert(best!=-1);
-      //      fprintf(stderr,"best:%d\n",best);
-      whichGeno[select] = best;
-      whichProb[select] = res[best];
-      continue;
-      if(best==0)
-	whichGeno[select] = angsd::majorminor[major[it]][major[it]];
-      if(best==1)
-	whichGeno[select] = angsd::majorminor[major[it]][minor[it]];
-      if(best==2)
-	whichGeno[select] = angsd::majorminor[minor[it]][minor[it]];
-      
-      //print_array(sfsfile,res,3,0);      
-
-    }//after select loop  
-
-    //    print_array(sfsfile,whichGeno,numInds);
-    // print_array(sfsfile,whichProb,numInds,0);
-
-    ksprintf(sfsfile,"%s\t%d\t%c\t%c\t",header->target_name[refId],posi[it]+1,intToRef[major[it]],intToRef[minor[it]]);
-    for(int i=0;i<numInds;i++)
-      ksprintf(sfsfile,"%d ",whichGeno[i]);
-    //ksprintf(sfsfile,"%d\t",whichGeno[numInds]);
-    for(int i=0;i<numInds*3;i++)
-      ksprintf(sfsfile,"%f ",postp[i]);
-    ksprintf(sfsfile,"\n");
-    //    fprintf(sfsfile,"%f\t%f\n",whichProb[numInds-1],it->second.emPhat);
-  }//after all sites
-  
-}
-
 void abcSaf::writeAll(){
   aio::doAssert(outfileSAF!=NULL);
   aio::doAssert(outfileSAFIDX!=NULL);
@@ -1843,7 +1445,7 @@ void abcSaf::writeAll(){
 }
 
 void abcSaf::changeChr(int refId) {
-  if(doSaf&&doSaf!=3)
+  if(doSaf)
     writeAll();
 
   free(tmpChr);
