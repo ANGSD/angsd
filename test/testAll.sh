@@ -115,6 +115,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing realSFS with -sites on some chromosomes"
+time ./testFstSites.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with realSFS and -sites exit code: $?"
+    RVAL=1
+fi
+
 if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing basic mpileup"
 time ./testBam.sh $WDIR/angsd $BAMDIR

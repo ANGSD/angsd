@@ -21,14 +21,34 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
    */
   static int firstTime =1;
   static myMap::iterator it_outer=saf[0]->mm.begin();
+  //if the caller gives the chromosome (-r, or fst index which loops over the chromosomes itself)
+  //we must not go on to another chromosome when this one has no data (no -sites on it, missing in a pop)
+  //but read nothing, like killbreak below. readdata then returns -3 in fst index and -2 (done) otherwise
+  char *givenChr = chooseChr;
+  keep<char> *hit =NULL;
  aGotoHereIsTheEasiest:
+  if(hit){
+    keep_destroy(hit);
+    hit = NULL;
+  }
+  if(givenChr&&chooseChr==NULL){
+    fprintf(stderr,"\t-> No data for chr: \'%s\' (no -sites on it, not in all saf files or no shared sites) will skip it\n",givenChr);
+    for(int i=0;i<saf.size();i++)
+      saf[i]->dontRead =1;
+    return 0;
+  }
   if(chooseChr==NULL){
-    if(it_outer==saf[0]->mm.end())//if we are done
+    //when we are done, a pop can still be set to a chromosome we skipped (no -sites on it), don't read it
+    if(it_outer==saf[0]->mm.end()){//if we are done
+      for(int i=0;i<saf.size();i++)
+	saf[i]->dontRead =1;
       return -2;
-    else if(firstTime==0){
+    }else if(firstTime==0){
       it_outer++;
       if(it_outer==saf[0]->mm.end()){
 	//	fprintf(stderr,"done reading will exit \n");
+	for(int i=0;i<saf.size();i++)
+	  saf[i]->dontRead =1;
 	return -3;
       }
     }else
@@ -53,9 +73,6 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   }
 
   //hit will contain the depth across different populations
-  keep<char> *hit =NULL;
-
-  //  if(saf.size()>1)
   hit =keep_alloc<char>();//
   
   //this loop will populate a 'hit' array containing the effective (differnt pops) depth
@@ -139,8 +156,10 @@ int set_intersect_pos(std::vector<persaf *> &saf,char *chooseChr,int start,int s
   }
   if(hasdata==0){
     fprintf(stderr,"\t-> There is no data for this chr/scaffold lets skip\n");
-    if(from_fst_context==1)
+    if(from_fst_context==1){
+      keep_destroy(hit);
       return 0;
+    }
     chooseChr=NULL;
     goto aGotoHereIsTheEasiest;
   }
