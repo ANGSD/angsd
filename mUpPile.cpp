@@ -655,7 +655,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
     
     if(rd->core.tid!=refID){
       fprintf(stderr,"ReferenceID:(r:%d) for read:%s is not: %d but is:%d\n",r,bam_get_qname(rd),refID,rd->core.tid);
-      exit(0);
+      exit(1);
     }
     int mapQ = rd->core.qual;
     if(mapQ>=255) mapQ = 20;

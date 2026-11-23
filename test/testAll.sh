@@ -122,6 +122,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing unsorted bam files"
+time ./testBamSorted.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with unsorted bam files exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing the read counts"
 time ./testReadCounts.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then

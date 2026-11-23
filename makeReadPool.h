@@ -16,6 +16,8 @@ typedef struct{
   int readIDstop;
   int lowestStart;//the lowestStartacroos an array of sglPool
   bam1_t *bufferedRead;//this is used for buffering a read, in the case of chromosome change
+  int lastTid;//chromosome and position of the last read, to check that the file is sorted
+  int lastPos;
 }readPool;
 
 

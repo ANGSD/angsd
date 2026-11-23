@@ -13,8 +13,26 @@ readPool makePoolb(int l){
   ret.first=(int *)malloc(ret.m*sizeof(int));//new int[ret.m];
   ret.last=(int *)malloc(ret.m*sizeof(int));//new int[ret.m];
   ret.bufferedRead=NULL;
+  ret.lastTid = ret.lastPos = -1;
 
   return ret;
+}
+
+//pop1_read, and without -r/-rf check that the reads are sorted by position. Unsorted reads were
+//put on the wrong chromosome or dropped, or angsd stopped with 'ReferenceID ... is not' or crashed (#377)
+//With -r/-rf the file is indexed, so sorted, and the regions may go back on purpose
+static int read1(htsFile *fp,hts_itr_t *itr,bam1_t *b,bam_hdr_t *hdr,readPool &ret){
+  int r = pop1_read(fp,itr,b,hdr);
+  if(r<0||itr!=NULL)
+    return r;
+  if(b->core.tid<ret.lastTid||(b->core.tid==ret.lastTid&&b->core.pos<ret.lastPos)){
+    fprintf(stderr,"\t-> \'%s\' is not sorted by position: read \'%s\' at %s:%lld comes after a read at %s:%d\n",fp->fn,bam_get_qname(b),hdr->target_name[b->core.tid],(long long)b->core.pos+1,hdr->target_name[ret.lastTid],ret.lastPos+1);
+    fprintf(stderr,"\t-> Sort it with \'samtools sort\'\n");
+    exit(1);
+  }
+  ret.lastTid = b->core.tid;
+  ret.lastPos = b->core.pos;
+  return r;
 }
 
 void dalloc (readPool *ret){
@@ -53,7 +71,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
     bam1_t *b = ret.reads[0];
     int tmp;
 
-    if((tmp=pop1_read(fp,itr,b,hdr))<0){//FIXME
+    if((tmp=read1(fp,itr,b,hdr,ret))<0){//FIXME
       if(tmp==-1){
 	rdObjEof =1;
 	//	ret.isEOF =1;
@@ -95,7 +113,7 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
     }
     
     bam1_t *b = ret.reads[i+ret.l];
-    if((tmp=pop1_read(fp,itr,b,hdr))<0) {
+    if((tmp=read1(fp,itr,b,hdr,ret))<0) {
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -153,7 +171,7 @@ void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,ht
     }
     //fprintf(stderr,"ret.l:%d,i:%d\n",ret.l,i);
     bam1_t *b = ret.reads[i+ret.l];
-    if((tmp=pop1_read(fp,itr,b,hdr))<0) {
+    if((tmp=read1(fp,itr,b,hdr,ret))<0) {
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -204,7 +222,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
   while(ret.l==0){
     bam1_t *b = ret.reads[0];
     int tmp;
-    if((tmp=pop1_read(fp,itr,b,hdr))<0){//FIXME
+    if((tmp=read1(fp,itr,b,hdr,ret))<0){//FIXME
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
@@ -241,7 +259,7 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
   for( i=0;i<nReads;i++){
     bam1_t *b = ret.reads[i+ret.l];
 
-    if((tmp=pop1_read(fp,itr,b,hdr))<0){
+    if((tmp=read1(fp,itr,b,hdr,ret))<0){
       if(tmp==-1){
 	rdObjEof =1;
 	isEof--;
