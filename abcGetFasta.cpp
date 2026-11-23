@@ -122,9 +122,15 @@ char *abcGetFasta::loadChr(perFasta *f, char*chrName,int chrId){
   //  fprintf(stderr,"[%s] done\n",__FUNCTION__);
   //the fasta must be the same assembly as the BAM files
   if(f->chrLen!=(int)header->target_len[chrId]){
-    fprintf(stderr,"\t-> Problem with length of fastafile vs length of chr in BAM header\n");
-    fprintf(stderr,"\t-> Chromosome name: \'%s\' length from BAM header:%d length from fai file:%d (fasta: %s)\n",chrName,header->target_len[chrId],f->chrLen,f->fastaname);
-    exit(1);
+    if(isVcf){
+      //a ##contig line without a length gets length 0, there is nothing to check
+      if(header->target_len[chrId]!=0)
+	fprintf(stderr,"\t-> Warning: chromosome \'%s\' has length %u in the vcf/bcf header and length %d in the fasta: %s. Sites after the end of the fasta get N as the base\n",chrName,header->target_len[chrId],f->chrLen,f->fastaname);
+    }else{
+      fprintf(stderr,"\t-> Problem with length of fastafile vs length of chr in BAM header\n");
+      fprintf(stderr,"\t-> Chromosome name: \'%s\' length from BAM header:%d length from fai file:%d (fasta: %s)\n",chrName,header->target_len[chrId],f->chrLen,f->fastaname);
+      exit(1);
+    }
   }
   return f->seqs;
 }
@@ -165,6 +171,7 @@ char *abcGetFasta::magic(int refId,int *posi,int numSites,perFasta *f){
   ancName = NULL;
   ref=NULL;
   anc=NULL;
+  isVcf = arguments->inputtype==INPUT_VCF_GL||arguments->inputtype==INPUT_VCF_GP;
    if(arguments->argc==2){
      if(!strcasecmp(arguments->argv[1],"-ref")||!strcasecmp(arguments->argv[1],"-anc")){
        printArg(stderr);

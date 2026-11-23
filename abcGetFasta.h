@@ -17,6 +17,7 @@ typedef struct{
 class abcGetFasta : public abc{
   char *ancName;
   char *refName;
+  int isVcf;//input is -vcf-gl/-vcf-gp, its ##contig lengths are not checked as strictly as a BAM header
 public:
   char *loadChr(perFasta *f, char*chrName,int chrId);
   char *magic(int refId,int *posi,int numSites,perFasta *f);
