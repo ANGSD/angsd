@@ -369,8 +369,19 @@ void abcFilterSNP::getOptions(argStruct *arguments){
   doSnpStat=angsd::getArg("-doSnpStat",doSnpStat,arguments);
 
 
-  if(doSnpStat==0)
+  if(doSnpStat==0){
+    //the filters are only read with -doSnpStat 1, without it they were reported as unknown arguments
+    const char *filters[]={"-edge_pval","-mapQ_pval","-sb_pval","-hwe_pval","-qscore_pval","-hetbias_pval"};
+    for(int i=0;i<6;i++){
+      double val=-1;
+      val=angsd::getArg(filters[i],val,arguments);
+      if(val!=-1){
+	fprintf(stderr,"\t-> %s needs -doSnpStat 1\n",filters[i]);
+	exit(1);
+      }
+    }
     return;
+  }
   if(doSnpStat!=1){
     fprintf(stderr,"\t-> -doSnpStat %d is not an option, use -doSnpStat 1\n",doSnpStat);
     exit(1);

@@ -9,8 +9,8 @@
 #    with the minor allele at c:1501 have MAPQ 255. The edge and mapQ Z scores
 #    must be the ones from a Mann-Whitney test done outside angsd (distances
 #    to the read end above 255 put in one bin).
-# 4) Input without reads, options without what they need and -doSnpStat other
-#    than 0/1 must exit with 1.
+# 4) Input without reads, options without what they need (the filters without
+#    -doSnpStat 1, issue #401) and -doSnpStat other than 0/1 must exit with 1.
 #
 # ./testSnpStat.sh angsd [BAMDIR]            runs the test
 # ./testSnpStat.sh angsd BAMDIR expected     remakes snpstat/expected/ with this angsd
@@ -148,7 +148,9 @@ ERRS=("-glf ${GLF} -nInd 20 -fai hg19.fa.fai -isSim 1 -doMajorMinor 1 -doMaf 1 -
       "${SMALL} -hwe_pval 0.05"
       "${SMALL} -doHWE 1 -hetbias_pval 0.05"
       "-bam bamlikes/bam.filelist -GL 1 -doSnpStat 1"
-      "-bam bamlikes/bam.filelist -GL 1 -doMajorMinor 1 -doMaf 1 -doSnpStat 2")
+      "-bam bamlikes/bam.filelist -GL 1 -doMajorMinor 1 -doMaf 1 -doSnpStat 2"
+      "-bam bamlikes/bam.filelist -GL 1 -doMajorMinor 1 -doMaf 1 -sb_pval 0.05"
+      "-bam bamlikes/bam.filelist -GL 1 -doMajorMinor 1 -doMaf 1 -doSnpStat 0 -qscore_pval 0.05")
 for e in "${ERRS[@]}"; do
 	${ANGSD} ${e} -out ${RESDIR}/err >> ${LOG} 2>&1
 	ex=$?
@@ -156,6 +158,12 @@ for e in "${ERRS[@]}"; do
 		problem "exit code ${ex}, should be 1, for: ${e}"
 	fi
 done
+
+#the filters without -doSnpStat 1 used to be reported as unknown arguments
+msg=$(${ANGSD} -bam bamlikes/bam.filelist -GL 1 -doMajorMinor 1 -doMaf 1 -sb_pval 0.05 -out ${RESDIR}/err 2>&1)
+if ! grep -q -- "-sb_pval needs -doSnpStat 1" <<< "${msg}"; then
+	problem "-sb_pval without -doSnpStat 1 does not say it needs -doSnpStat 1"
+fi
 
 echo "==========$0===============" >> ${LOG}
 
