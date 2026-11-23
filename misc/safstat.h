@@ -4,6 +4,8 @@
 
 //estimate coefficient need for fsts
 void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat,int whichFst);
+//weighted fst from a 2d sfs and the coefficients from calcCoef, the same as the weighted fst from 'fst stats' (#247)
+double sfsFst(const double *sfs,const double *aMat,const double *bMat,size_t ndim);
 //use coefficients to estimate persite fsts along with alpha and beta used for multilocus weighted estimator
 void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres,int *remap,int *adjust);
 int choose(int n,int m);

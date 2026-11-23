@@ -84,6 +84,19 @@ void calcCoef(int sfs1,int sfs2,double **aMat,double **bMat,int whichFst){
 
 }
 
+//fst index gives each site a=sum(post*aMat) and b=sum(post*bMat), and the weighted fst is sum(a)/sum(b).
+//At convergence of the em, the 2d sfs is the sum of the posteriors over the sites, so sum(sfs*aMat)/sum(sfs*bMat)
+//is the same weighted fst. The sfs doesn't have to be normalized
+double sfsFst(const double *sfs,const double *aMat,const double *bMat,size_t ndim){
+  double a = 0;
+  double b = 0;
+  for(size_t i=0;i<ndim;i++){
+    a += sfs[i]*aMat[i];
+    b += sfs[i]*bMat[i];
+  }
+  return a/b;
+}
+
 void block_coef(Matrix<float > *gl1,Matrix<float> *gl2,double *prior,double *a1,double *b1,std::vector<double> &ares,std::vector<double> &bres,int *remap,int *rescal){
   if(prior==NULL) exit(1);
 

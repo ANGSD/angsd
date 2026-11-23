@@ -6,6 +6,7 @@
 extern int howOften;
 #include "multisafreader.hpp"
 #include "misc.h"
+#include "safstat.h"
 void readSFS(const char *fname, size_t hint, double *ret);
 
 size_t * foldremapper = NULL;
@@ -476,10 +477,21 @@ int main_opt(args *arg){
     chr[i] = arg->saf[i]->nChr;
 
   make_folder(foldremapper, foldfactors, foldkeep, arg->fold==1, chr, arg->saf.size());
-   
+
   std::vector<persaf *> &saf =arg->saf;
   for(int i=0;i<saf.size();i++)
     ASSERT(saf[i]->pos!=NULL&&saf[i]->saf!=NULL);
+
+  //with 2 pops, also give the weighted fst from each 2d sfs, the same as 'fst stats' gives (#247)
+  double *fstA = NULL;
+  double *fstB = NULL;
+  const char *fstName = arg->whichFst==0?"Reynolds":"Bhatia/Hudson";
+  if(saf.size()==2){
+    if(arg->fold==1)
+      fprintf(stderr,"\t-> The fst from the 2d sfs is not given with -fold 1, use 'realSFS fst index' and 'realSFS fst stats'\n");
+    else if(arg->whichFst==0||arg->whichFst==1)
+      calcCoef((int)saf[0]->nChr,(int)saf[1]->nChr,&fstA,&fstB,arg->whichFst);
+  }
   size_t nSites = arg->nSites;
   if(nSites == 0){//if no -nSites is specified
     nSites=calc_nsites(saf,arg);
@@ -625,18 +637,23 @@ int main_opt(args *arg){
           fprintf(stdout, "%f ", foldkeep[x]*gls[0]->x*sfs[x]);
       fprintf(stdout,"\n");
       fflush(stdout);
+      //on stderr, stdout is the sfs file
+      if(fstA)
+        fprintf(stderr,"\t-> Fst (weighted, %s) from the 2d sfs: %f\n",fstName,sfsFst(sfs,fstA,fstB,ndim));
 
       if(++b<arg->bootstrap)
         goto neverusegoto;
 
       for(int i=0;i<gls.size();i++)
         gls[i]->x =0;
-    
+
       if(ret==-2&&arg->chooseChr!=NULL)
         break;
       if(arg->onlyOnce)
         break;
   }
+  delete [] fstA;
+  delete [] fstB;
   delGloc(saf,nSites);
   destroy(gls,nSites);
   destroy_args(arg);

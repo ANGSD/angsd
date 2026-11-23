@@ -43,9 +43,11 @@ ${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx -seed -1 >${ODIR}/pop1.saf.idx.ml 2>>$
 ${WDIR}/misc/realSFS ${ODIR}/pop2.saf.idx -seed -1 >${ODIR}/pop2.saf.idx.ml 2>>${LOG}
 ${WDIR}/misc/realSFS ${ODIR}/pop3.saf.idx -seed -1 >${ODIR}/pop3.saf.idx.ml 2>>${LOG}
 echo "Calculating parwise 2d sfs" >>${LOG} 2>&1
-${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx -seed -1 >${ODIR}/pop1.pop2.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS ${ODIR}/pop1.saf.idx ${ODIR}/pop3.saf.idx -seed -1 >${ODIR}/pop1.pop3.saf.idx.ml 2>>${LOG}
-${WDIR}/misc/realSFS ${ODIR}/pop2.saf.idx ${ODIR}/pop3.saf.idx -seed -1 >${ODIR}/pop2.pop3.saf.idx.ml 2>>${LOG}
+#stderr is kept to check the fst from the 2d sfs below
+for P in pop1.pop2 pop1.pop3 pop2.pop3; do
+    ${WDIR}/misc/realSFS ${ODIR}/${P%.*}.saf.idx ${ODIR}/${P#*.}.saf.idx -seed -1 >${ODIR}/${P}.saf.idx.ml 2>${ODIR}/${P}.2dsfs.log
+    cat ${ODIR}/${P}.2dsfs.log >>${LOG}
+done
 echo "Calculating fst index for 3 pairwise, and multi fst" >>${LOG} 2>&1
 ${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop2.saf.idx -fstout ${ODIR}/pop1.pop2 -sfs ${ODIR}/pop1.pop2.saf.idx.ml 2>>${LOG}
 ${WDIR}/misc/realSFS fst index ${ODIR}/pop1.saf.idx ${ODIR}/pop3.saf.idx -fstout ${ODIR}/pop1.pop3 -sfs ${ODIR}/pop1.pop3.saf.idx.ml 2>>${LOG}
@@ -59,6 +61,16 @@ ${WDIR}/misc/realSFS fst stats ${ODIR}/pop1.pop2.pop3.fst.idx >${ODIR}/pop1.pop2
 echo "Printing per-site fst as text (compared instead of the binary .fst.gz)" >>${LOG} 2>&1
 for IDX in ${ODIR}*.fst.idx; do
     ${WDIR}/misc/realSFS fst print ${IDX} >${IDX%.idx}.print 2>>${LOG}
+done
+
+#the fst that realSFS gives when it estimates a 2d sfs must be the weighted fst from fst stats (#247)
+for P in pop1.pop2 pop1.pop3 pop2.pop3; do
+    F2D=$(grep "from the 2d sfs:" ${ODIR}/${P}.2dsfs.log | awk '{print $NF}')
+    FST=$(cut -f2 ${ODIR}/${P}.fst.idx.res)
+    if [[ -z "${F2D}" ]] || ! awk -v a=${F2D} -v b=${FST} 'BEGIN{d=a-b;if(d<0)d=-d;exit !(d<1e-5)}'; then
+	echo "Fst from the 2d sfs of ${P}: '${F2D}' is not the weighted fst from fst stats: '${FST}'" >>${LOG}
+	exit 1
+    fi
 done
 
 
