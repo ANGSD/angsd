@@ -100,6 +100,12 @@ void abcSaf::getOptions(argStruct *arguments){
   if(arguments->regions.size()>1)
     fprintf(stderr,"\t-> !! You are doing -dosaf incombination with -rf, please make sure that your -rf file is sorted !!\n");
   anc = angsd::getArg("-anc",anc,arguments);
+  //beagle files have genotype probabilities, not the genotype likelihoods the other -doSaf need.
+  //-doSaf 1 with beagle input used to crash or stop in algoJoint with exit code 0 (#632)
+  if(doSaf&&doSaf!=4&&arguments->inputtype==INPUT_BEAGLE){
+    fprintf(stderr,"\t-> -doSaf %d needs genotype likelihoods, a beagle file has genotype probabilities, use -doSaf 4\n",doSaf);
+    exit(1);
+  }
   if(doSaf && (anc==NULL&&isSim==0) ){
     if(doSaf!=5 ){
       fprintf(stderr,"\t-> Must supply -anc for polarizing the spectrum\n");
@@ -128,7 +134,7 @@ void abcSaf::getOptions(argStruct *arguments){
     }
   }
   if(doSaf==4){
-    if(doPost==0 && ai!=INPUT_VCF_GP){
+    if(doPost==0 && ai!=INPUT_VCF_GP && ai!=INPUT_BEAGLE){
       fprintf(stderr,"\t-> You have requested to do SAF estimation from genotype posteriors (GP), either use input file that contains GP or compute -doPost\n");
     }else
       fprintf(stderr,"\t-> You have requested to do SAF estimation from genotype posteriors, this has not been tested fully\n");

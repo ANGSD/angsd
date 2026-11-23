@@ -62,3 +62,15 @@ $WDIR/angsd -beagle ${BEAG} -ref ${REF} -anc ${REF} -fai ${REF}.fai -out ${ODIR}
 $WDIR/misc/realSFS print ${ODIR}/out.saf.idx 1>${ODIR}/out.saf.print 2>>${LOG}
 
 cmp ${TRUTH} ${ODIR}/out.saf.print >>${LOG} 2>&1 || exit 1
+
+#a beagle file has genotype probabilities, the other -doSaf need genotype likelihoods
+#and must exit with 1 and say to use -doSaf 4. -doSaf 1 used to crash (#632)
+for d in 1 5; do
+    msg=$($WDIR/angsd -beagle ${BEAG} -anc ${REF} -fai ${REF}.fai -out ${ODIR}/bad -dosaf ${d} 2>&1)
+    e=$?
+    echo "${msg}" >>${LOG}
+    if [[ ${e} -ne 1 ]] || ! grep -q "use -doSaf 4" <<< "${msg}"; then
+	echo "-doSaf ${d} with beagle input exited with ${e}, not 1 with a message to use -doSaf 4" >>${LOG}
+	exit 1
+    fi
+done
