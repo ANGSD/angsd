@@ -115,6 +115,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing -doSaf on vcf with threads"
+time ./testVcfThreads.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -doSaf on vcf with threads exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing realSFS with -sites on some chromosomes"
 time ./testFstSites.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then

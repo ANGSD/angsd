@@ -268,8 +268,10 @@ int main(int argc, char** argv){
 	break;
      if(lastRefId==-1||lastRefId!=tmp->refId){
        lastRefId=tmp->refId;
-       void changeChr(int refId);//<-ugly is located in shared.cpp, to force a change of chr, when notusing bamfiles
-       changeChr(lastRefId);
+       //wait for the threads to finish the chunks of the previous chromosome before the modules change chromosome,
+       //otherwise e.g. the last sites of a chromosome end up in the .saf.idx entry of the next (issue 598)
+       void waiter(int refId);//located in shared.cpp
+       waiter(lastRefId);
      }
     
      selector(tmp);
