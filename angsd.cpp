@@ -17,6 +17,7 @@
 #include <unistd.h>//for write, _exit and unlink
 #include <htslib/hts.h>
 #include "cigstat.h"
+#include "pop1_read.h"
 #include "shared.h"
 #include "argStruct.h"
 #include "multiReader.h"
@@ -303,6 +304,9 @@ int main(int argc, char** argv){
   //print out nice messages
   extern size_t total_number_of_sites_unfiltred,total_number_of_sites_filtered;
   fprintf(stderr,"\t-> Arguments and parameters for all analysis are located in .arg file\n");
+  //the read counts also go in the .arg file, which is what people share when something is wrong
+  printReadCounts(stderr);
+  printReadCounts(args->argumentFile);
   fprintf(stderr,"\t-> Total number of sites analyzed: %zu\n\t-> Number of sites retained after filtering: %zu \n",total_number_of_sites_unfiltred,total_number_of_sites_filtered);
   if(gotSignal){
     fprintf(stderr,"\t-> Interrupted by a signal, the output files are incomplete\n");
