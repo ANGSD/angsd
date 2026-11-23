@@ -61,7 +61,7 @@ int safversion(const char *fname)
   gz = gzopen(fname,"r");
   if(gz==Z_NULL){
     fprintf(stderr,"\t-> Problem opening file: \'%s\'",fname);
-    exit(0);
+    exit(1);
   }
   char buf[8];
   gzread(gz,buf,8*sizeof(char));
@@ -92,14 +92,14 @@ persaf * persaf_init(char *fname, int verbose)
   size_t clen;
   if(!fexists(fname)){
     fprintf(stderr, "[persaf::persaf_init] Problem opening file: \'%s\'\n", fname);
-    exit(0);
+    exit(1);
   }
 
   FILE *fp = NULL;
   fp=fopen(fname,"r");
   if(fp==NULL){
     fprintf(stderr, "[persaf::persaf_init] Problem opening file: \'%s\'\n", fname);
-    exit(0);
+    exit(1);
   }
 
   char buf[8];
@@ -110,12 +110,12 @@ persaf * persaf_init(char *fname, int verbose)
     fprintf(stderr, "[persaf::persaf_init] Version of %s is %d\n", fname, ret->version);
   if(!(ret->version==2 || ret->version==3)){
     fprintf(stderr,"[persaf::persaf_init] You are using a version of realSFS that is incompatible with the old binary output from ANGSD. Please recreate the SAF files.\n");
-    exit(0);
+    exit(1);
   }
 
   if(1!=fread(&ret->nChr,sizeof(size_t),1,fp)){
     fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-    exit(0);
+    exit(1);
   }
 
   ret->nSites = 0;
@@ -129,13 +129,13 @@ persaf * persaf_init(char *fname, int verbose)
     d.nSites = d.sumBand=d.pos=d.saf=0;
     if(1!=fread(&d.nSites,sizeof(size_t),1,fp)){
       fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
     ret->nSites += d.nSites;
     if(ret->version==3){
       if(1!=fread(&d.sumBand,sizeof(size_t),1,fp)){
 	fprintf(stderr,"[%s.%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-	exit(0);
+	exit(1);
       }
       //      fprintf(stderr,"d.sumband: %d\n",d.sumBand);
       ret->sumBand += d.sumBand;
@@ -143,11 +143,11 @@ persaf * persaf_init(char *fname, int verbose)
     
     if(1!=fread(&d.pos,sizeof(int64_t),1,fp)){
       fprintf(stderr,"[%s->%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
     if(1!=fread(&d.saf,sizeof(int64_t),1,fp)){
       fprintf(stderr,"[%s->%s():%d] Problem reading data: %s \n",__FILE__,__FUNCTION__,__LINE__,fname);
-      exit(0);
+      exit(1);
     }
 
     myMap::iterator it = ret->mm.find(chr);
@@ -155,7 +155,7 @@ persaf * persaf_init(char *fname, int verbose)
       ret->mm[chr] =d ;
     else{
       fprintf(stderr,"[persaf::persaf_init] Problem with chromosome %s: key already exists, SAF file needs to be sorted (e.g. sort the file -rf that was used to create the SAF)\n",chr);
-      exit(0);
+      exit(1);
     }
   }
 
@@ -173,13 +173,13 @@ persaf * persaf_init(char *fname, int verbose)
   ret->saf = bgzf_open(tmp2,"r");
   if(!ret->saf){
     fprintf(stderr,"[persaf::persaf_init] Problem opening file \'%s\', will exit.\n",tmp2);
-    exit(0);
+    exit(1);
   }
   if(ret->saf)
     my_bgzf_seek(ret->saf,8,SEEK_SET);
   if(ret->saf && ret->version!=safversion(tmp2)){
     fprintf(stderr,"[persaf::persaf_init] Version mismatch between %s and %s (%d and %d)\n",fname,tmp2,ret->version,safversion(tmp2));
-    exit(0);
+    exit(1);
   }
 
   snprintf(tmp2,strlen(fname)+100,"%spos.gz",tmp);
@@ -188,13 +188,13 @@ persaf * persaf_init(char *fname, int verbose)
   ret->pos = bgzf_open(tmp2,"r");
   if(!ret->pos){
     fprintf(stderr,"[persaf::persaf_init] Problem opening file \'%s\', will exit.\n",tmp2);
-    exit(0);
+    exit(1);
   }
   if(ret->pos)
     my_bgzf_seek(ret->pos,8,SEEK_SET);
   if(ret->pos&& ret->version!=safversion(tmp2)){
     fprintf(stderr,"[persaf::persaf_init] Version mismatch between %s and %s (%d and %d)\n",fname,tmp2,ret->version,safversion(tmp2));
-    exit(0);
+    exit(1);
   }
 
   //ASSERT(ret->pos!=NULL&&ret->saf!=NULL);

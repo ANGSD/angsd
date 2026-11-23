@@ -3,7 +3,8 @@
 # given with -sfs used to stop with 'Pxroblem with size of dimension of prior'
 # and exit code 0 (#530). It must now say that the file has several lines,
 # exit with 1, and work when the lines are summed. A file with the wrong number
-# of values or no values must also exit with 1.
+# of values or no values must also exit with 1, and so must saf files that
+# can't be opened (#646).
 # Runs on the two samples in bamlikes/ with -doSaf 1 (thetacat/ref.fa as -anc).
 #
 # ./testSfsLines.sh angsd
@@ -89,6 +90,21 @@ for prog in saf2theta optim; do
 			problem "${prog} with a ${bad} sfs file exited with ${e}, not 1"
 		fi
 	done
+done
+
+#a saf file that can't be opened must exit with 1, it used to exit with 0 (#646)
+cp ${SAF} ${RESDIR}/nogz.saf.idx
+for idx in ${RESDIR}/missing.saf.idx ${RESDIR}/nogz.saf.idx; do
+	${REALSFS} ${idx} > /dev/null 2>>${LOG}
+	e=$?
+	if [[ ${e} -ne 1 ]]; then
+		problem "realSFS with ${idx} (missing saf files) exited with ${e}, not 1"
+	fi
+	${REALSFS} saf2theta ${idx} -sfs ${RESDIR}/sum.sfs -outname ${RESDIR}/theta_missing > /dev/null 2>>${LOG}
+	e=$?
+	if [[ ${e} -ne 1 ]]; then
+		problem "saf2theta with ${idx} (missing saf files) exited with ${e}, not 1"
+	fi
 done
 
 exit ${RVAL}
