@@ -160,7 +160,7 @@ void abcFreq::getOptions(argStruct *arguments){
       SNP_pval = chisq1->invcdf(1-SNP_pval);
     if( nInd <2 ){
       fprintf(stderr,"\t-> Problem: You need more than one individual to call SNPs \n");
-      exit(0);
+      exit(1);
     } 
   
     doSNP =1 ;

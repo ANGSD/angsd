@@ -10,7 +10,8 @@
 #    must be the ones from a Mann-Whitney test done outside angsd (distances
 #    to the read end above 255 put in one bin).
 # 4) Input without reads, options without what they need (the filters without
-#    -doSnpStat 1, issue #401) and -doSnpStat other than 0/1 must exit with 1.
+#    -doSnpStat 1, issue #401, and -SNP_pval with one individual, issue #649)
+#    and -doSnpStat other than 0/1 must exit with 1.
 #
 # ./testSnpStat.sh angsd [BAMDIR]            runs the test
 # ./testSnpStat.sh angsd BAMDIR expected     remakes snpstat/expected/ with this angsd
@@ -144,7 +145,10 @@ if [[ ! -f ${GLF} ]]; then
 	printf '' | gzip > ${GLF}
 fi
 SMALL="-bam bamlikes/bam.filelist -GL 1 -doMajorMinor 1 -doMaf 1 -doCounts 1 -doSnpStat 1"
-ERRS=("-glf ${GLF} -nInd 20 -fai hg19.fa.fai -isSim 1 -doMajorMinor 1 -doMaf 1 -doHWE 1 -doSnpStat 1"
+#-SNP_pval needs more than one individual (#649)
+echo bamlikes/s1.sam > ${RESDIR}/one.filelist
+ERRS=("-bam ${RESDIR}/one.filelist -GL 1 -doMajorMinor 1 -doMaf 1 -SNP_pval 1e-6"
+      "-glf ${GLF} -nInd 20 -fai hg19.fa.fai -isSim 1 -doMajorMinor 1 -doMaf 1 -doHWE 1 -doSnpStat 1"
       "${SMALL} -hwe_pval 0.05"
       "${SMALL} -doHWE 1 -hetbias_pval 0.05"
       "-bam bamlikes/bam.filelist -GL 1 -doSnpStat 1"
