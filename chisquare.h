@@ -48,11 +48,11 @@ struct Chisqdist : chisq::Gamma {
     //    fprintf(stderr,"x2:%f\n",x2);
     if(std::isnan(x2)){
       fprintf(stderr,"\t-> Problem computing cdf for chiseq, input is NaN, will exit\n");
-      exit(0);
+      exit(1);
     }
     if (x2 < 0.) {
       fprintf(stderr,"bad x2 in Chisqdist:%f \n",x2);
-      exit(0);
+      exit(1);
     }
     return gammp(0.5*nu,0.5*x2);
   }

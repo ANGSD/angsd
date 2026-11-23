@@ -34,7 +34,8 @@ private:
   int curChr;
   float pl2ln_f(int32_t & val){
     if(val>=PHREDMAX){
-      return log(pow(10.0,-0.1*val));
+      //not log(pow(10,-0.1*val)), the pow is 0 for PL above ~3080 and the log is then -inf
+      return -0.1*M_LN10*val;
     } else {
       return pl2ln[val];
     }

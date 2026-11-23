@@ -633,9 +633,15 @@ vcfReader::vcfReader(char *fname,char *seek,int pl_or_gl_a,std::vector<regs> *re
   hs=htsstuff_init(fname,seek);
   vcfreader_hs_bcf_hdr = hs->hdr;
   bamhdr = bcf_hdr_2_bam_hdr_t(hs);
+  //without the FORMAT tag every site is skipped and the output is empty, so exit
+  const char *tag = pl_gl_gp==0?"PL":(pl_gl_gp==1?"GL":"GP");
+  if(!bcf_hdr_idinfo_exists(hs->hdr,BCF_HL_FMT,bcf_hdr_id2int(hs->hdr,BCF_DT_ID,tag))){
+    fprintf(stderr,"\t-> No FORMAT/%s in the header of '%s'. Use -vcf-pl, -vcf-gl or -vcf-gp for the tag that is in the file\n",tag,fname);
+    exit(1);
+  }
   acpy=NULL;
   for(int i=0;i<PHREDMAX;i++)
-    pl2ln[i] = log(pow(10.0,-0.1*i));
+    pl2ln[i] = -0.1*M_LN10*i;
   curChr=-1;
   pl=NULL;
   whichRegion=-1;

@@ -115,6 +115,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing vcf with large PL values"
+time ./testVcfPL.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with vcf PL input exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing -doSaf on vcf with threads"
 time ./testVcfThreads.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then
