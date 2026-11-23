@@ -115,6 +115,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing realSFS -sfs files with several lines"
+time ./testSfsLines.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with realSFS -sfs files exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing the read counts"
 time ./testReadCounts.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then

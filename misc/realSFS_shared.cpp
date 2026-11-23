@@ -257,35 +257,42 @@ void readSFS(const char*fname,size_t hint,double *ret){
   fprintf(stderr,"\t-> Reading: %s assuming counts (will normalize to probs internally)\n",fname);
   FILE *fp = NULL;
   if(((fp=fopen(fname,"r")))==NULL){
-    fprintf(stderr,"problems opening file:%s\n",fname);
-    exit(0);
+    fprintf(stderr,"\t-> Problems opening file: \'%s\'\n",fname);
+    exit(1);
   }
-  char buf[fsize(fname)+1];
-  if(fsize(fname)!=fread(buf,sizeof(char),fsize(fname),fp)){
-    fprintf(stderr,"Problems reading file: %s\n will exit\n",fname);
-    exit(0);
+  size_t len = fsize(fname);
+  char *buf = new char[len+1];
+  if(len!=fread(buf,sizeof(char),len,fp)){
+    fprintf(stderr,"\t-> Problems reading file: \'%s\'\n",fname);
+    exit(1);
   }
-  buf[fsize(fname)]='\0';
+  buf[len]='\0';
   std::vector<double> res;
-  char *tok=NULL;
-  tok = strtok(buf,"\t\n ");
-  if(!tok){
-    fprintf(stderr,"File:%s looks empty\n",fname);
-    exit(0);
+  //count the lines with values, realSFS writes one sfs per line
+  size_t nLines = 0;
+  char *saveLine = NULL;
+  for(char *line=strtok_r(buf,"\n",&saveLine);line;line=strtok_r(NULL,"\n",&saveLine)){
+    char *saveTok = NULL;
+    size_t before = res.size();
+    for(char *tok=strtok_r(line,"\t\r ",&saveTok);tok;tok=strtok_r(NULL,"\t\r ",&saveTok))
+      res.push_back(atof(tok));
+    if(res.size()>before)
+      nLines++;
   }
-  res.push_back(atof(tok));
-
-  while((tok=strtok(NULL,"\t\n "))) {  
-    //fprintf(stderr,"%s\n",tok);
-    res.push_back(atof(tok));
-
+  delete [] buf;
+  if(res.size()==0){
+    fprintf(stderr,"\t-> File: \'%s\' looks empty\n",fname);
+    exit(1);
   }
-  //  fprintf(stderr,"size of prior=%lu\n",res.size());
   if(hint!=res.size()){
-    fprintf(stderr,"\t-> Pxroblem with size of dimension of prior %lu vs %lu\n",hint,res.size());
-    for(size_t i=0;0&&i<res.size();i++)
-      fprintf(stderr,"%zu=%f\n",i,res[i]);
-    exit(0);
+    if(nLines>1&&res.size()==nLines*hint){
+      fprintf(stderr,"\t-> \'%s\' has %lu lines with %lu values, but must contain a single sfs\n",fname,nLines,hint);
+      fprintf(stderr,"\t-> realSFS writes one sfs per line with -nSites (one for each block of sites) and with -bootstrap\n");
+      fprintf(stderr,"\t-> With -nSites, sum the lines into one sfs, e.g.:\n");
+      fprintf(stderr,"\t-> awk '{for(i=1;i<=NF;i++)s[i]+=$i}END{for(i=1;i<=NF;i++)printf \"%%f \",s[i];print \"\"}' %s >sum.sfs\n",fname);
+    }else
+      fprintf(stderr,"\t-> \'%s\' has %lu values, but the sfs for these saf files has %lu values\n",fname,res.size(),hint);
+    exit(1);
   }
   for(size_t i=0;i<res.size();i++){
       ret[i] = res[i];
