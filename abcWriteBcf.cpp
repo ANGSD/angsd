@@ -133,6 +133,14 @@ void abcWriteBcf::clean(funkyPars *pars){
     return;
 }
 
+//a sample without data (missing GL in the input, or no reads) has the same likelihood for all 10 genotypes
+static int noData(const double *likes){
+  for(int i=1;i<10;i++)
+    if(likes[i]!=likes[0])
+      return 0;
+  return 1;
+}
+
 void abcWriteBcf::print(funkyPars *pars){
   aio::doAssert(bcf_hdr_nsamples(hdr)>0);
   if(doBcf==0)
@@ -278,6 +286,13 @@ void abcWriteBcf::print(funkyPars *pars){
       int minor = pars->minor[s];
       aio::doAssert(major!=4&&minor!=4);
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++){
+	if(noData(pars->likes[s]+i*10)){
+	  for(int j=0;j<3;j++){
+	    bcf_float_set_missing(tmpfa[i*3+j]);
+	    tmpi[i*3+j] = bcf_int32_missing;
+	  }
+	  continue;
+	}
 	double val[3];
 	val[0] = pars->likes[s][i*10+angsd::majorminor[major][major]];
 	val[1] = pars->likes[s][i*10+angsd::majorminor[major][minor]];
@@ -313,7 +328,7 @@ void abcWriteBcf::print(funkyPars *pars){
 	tmpfa[i] = pars->post[s][i];
       
       for(int i=0;i<bcf_hdr_nsamples(hdr);i++)
-	if(tmpfa[3*i]+tmpfa[3*i+1]+tmpfa[3*i+2]==0){
+	if(tmpfa[3*i]+tmpfa[3*i+1]+tmpfa[3*i+2]==0||(pars->likes&&pars->likes[s]&&noData(pars->likes[s]+i*10))){
 	  bcf_float_set_missing(tmpfa[3*i]);
 	  tmpfa[3*i+1] = tmpfa[3*i+2] = tmpfa[3*i]; 
 

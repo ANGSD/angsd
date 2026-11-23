@@ -97,6 +97,21 @@ ARGS="-GL 1 -doMajorMinor 1 -doMaf 1 -doCounts 1 -dumpCounts 4 -doPost 1 -doGeno
 
 if ${ANGSD} -bam bamlikes/bam.filelist ${ARGS} -out ${RESDIR}/bamlikes >> ${LOG} 2>&1; then
 	checkad bamlikes
+	#a sample without reads has no data, GL, PL and GP must be missing and not 0,0,0 (issue 553)
+	if ! awk -F'\t' '/^#/{next}
+		{
+			nf=split($9,f,":")
+			for(i=1;i<=nf;i++) c[f[i]]=i
+			for(j=10;j<=NF;j++){
+				split($j,v,":")
+				miss=(v[c["GL"]]==".,.,."&&v[c["PL"]]==".,.,."&&v[c["GP"]]==".,.,.")
+				if((v[c["DP"]]==0)!=miss){print $1":"$2" sample "j-10": DP is "v[c["DP"]]" and GL:PL:GP is "v[c["GL"]]":"v[c["PL"]]":"v[c["GP"]]; bad++}
+				if(v[c["DP"]]==0) nodata++
+			}
+		}
+		END{if(nodata==0) print "no samples without reads"; exit (bad>0||nodata==0)}' ${RESDIR}/bamlikes.vcf >> ${LOG} 2>&1; then
+		problem "bamlikes: GL/PL/GP of samples without reads are not missing"
+	fi
 else
 	problem "bamlikes exited with an error"
 fi
