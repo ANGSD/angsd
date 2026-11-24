@@ -59,21 +59,6 @@ void info(){
 }
 
 
-double addProtectN(double a[],int len){
-  //function does: log(sum(exp(a))) while protecting for underflow
-  double maxVal = a[0];
-
-  for(int i=1;i<10;i++)
-    if(maxVal<a[i])
-      maxVal=a[i];
-
-  double sumVal = 0;
-  for(int i=1;i<10;i++)
-    sumVal += exp(a[i]-maxVal);
-
-  return log(sumVal) + maxVal;
-}
-
 std::vector<char *> dumpedFiles;
 FILE *openFile(const char* a,const char* b){
   char *c = new char[strlen(a)+strlen(b)+1];

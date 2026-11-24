@@ -41,9 +41,11 @@ double angsd::addProtectN(double a[],int len){
   for(int i=1;i<len;i++)
     if(maxVal<a[i])
       maxVal=a[i];
+  if(maxVal==-INFINITY)//all terms are log(0), avoid -inf-(-inf)=nan
+    return maxVal;
 
   double sumVal = 0;
-  for(int i=1;i<len;i++)
+  for(int i=0;i<len;i++)
     sumVal += exp(a[i]-maxVal);
 
   return log(sumVal) + maxVal;
