@@ -1368,7 +1368,11 @@ double angsd::sd(double* phe, int size ){
   return ts/(1.0*(size-1.0));
 }
 
+//a test statistic that is NaN, for example when the phenotype has no variance
+//among the individuals with data, gives a NaN p-value instead of exiting (#607)
 double angsd::to_pval(Chisqdist *chisq,double f){
+  if(std::isnan(f))
+    return NAN;
   return f<0?1:1-chisq->cdf(f);
 }
 
