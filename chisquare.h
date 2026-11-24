@@ -54,6 +54,8 @@ struct Chisqdist : chisq::Gamma {
       fprintf(stderr,"bad x2 in Chisqdist:%f \n",x2);
       exit(1);
     }
+    if(std::isinf(x2))//gammp doesn't terminate for an infinite x
+      return 1.0;
     return gammp(0.5*nu,0.5*x2);
   }
   double invcdf(double p) {

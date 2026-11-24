@@ -113,11 +113,11 @@ void abcGL::getOptions(argStruct *arguments){
   int doMajorMinor =0;
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
-  if(GL!=0 && (arguments->inputtype==INPUT_GLF || arguments->inputtype==INPUT_GLF3 || arguments->inputtype==INPUT_VCF_GL)){
-    fprintf(stderr,"Can't calculate genotype likelihoods from -glf/-glf3/VCF files\n");
+  if(GL!=0 && (arguments->inputtype==INPUT_GLF || arguments->inputtype==INPUT_GLF3 || arguments->inputtype==INPUT_VCF_GL || arguments->inputtype==INPUT_BEAGLE_GL)){
+    fprintf(stderr,"Can't calculate genotype likelihoods from -glf/-glf3/VCF/-beagle-GL files\n");
     exit(0);
   }
-  if(arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_VCF_GL||arguments->inputtype==INPUT_GLF10_TEXT)
+  if(arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_VCF_GL||arguments->inputtype==INPUT_GLF10_TEXT||arguments->inputtype==INPUT_BEAGLE_GL)
     return;
   if(doGlf&&GL==0){
     fprintf(stderr,"\t-> You need to choose a genotype likelihood model -GL for dumping genotype likelihoods\n");

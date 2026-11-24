@@ -14,9 +14,10 @@ private:
   int lineNo;
   int positions;//position counter when not intName
   int changed;//buffer holds the first line of the next chromosome
+  int isGL;//the file has genotype likelihoods (e.g. from -doGlf 2), stored as log likelihoods in likes
   int parseLine(int *refId,int *posi,char *major,char *minor,double *post);
 public:
-  beagle_reader(gzFile gz_a,const aMap *revMap_a,int,int&);
+  beagle_reader(gzFile gz_a,const aMap *revMap_a,int,int&,int isGL_a);
   ~beagle_reader();
 
   funkyPars *fetch(int chunkSize);

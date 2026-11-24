@@ -1,5 +1,6 @@
 
 #include <climits>
+#include <cmath>
 #include <cstdarg>
 #include "analysisFunction.h"
 #include "beagleReader.h"
@@ -23,8 +24,9 @@ beagle_reader::~beagle_reader(){
 }
 
 
-beagle_reader::beagle_reader(gzFile gz_a,const aMap *revMap_a,int intName_a,int &nInd_a){
+beagle_reader::beagle_reader(gzFile gz_a,const aMap *revMap_a,int intName_a,int &nInd_a,int isGL_a){
 	gz=gz_a;
+	isGL=isGL_a;
 	revMap=revMap_a;
 	intName = intName_a;
 	lineNo=0;
@@ -102,6 +104,8 @@ int beagle_reader::parseLine(int *refId,int *posi,char *major,char *minor,double
 		post[i]=strtod(tok,&end);
 		if(end==tok||*end!='\0')
 			lineError(lineNo,"genotype probability \'%s\' is not a number",tok);
+		if(isGL&&post[i]<0)
+			lineError(lineNo,"negative genotype likelihood \'%s\'",tok);
 	}
 	if(strtok_r(NULL,delims,&save)!=NULL)
 		lineError(lineNo,"more than the %d genotype probabilities given by the header",3*nInd);
@@ -140,6 +144,8 @@ funkyPars *beagle_reader::fetch(int chunksize){
 			}
 		}else
 			posi=positions++;
+		if(isGL&&(myfunky->major[nSites]>3||myfunky->minor[nSites]>3||myfunky->major[nSites]==myfunky->minor[nSites]))
+			lineError(lineNo,"-beagle-GL needs a major and a minor allele that are different bases (A, C, G, T or 0-3)");
 		myfunky->refId=refId;
 		myfunky->posi[nSites]=posi;
 		nSites++;
@@ -150,8 +156,36 @@ funkyPars *beagle_reader::fetch(int chunksize){
 	for(int s=nSites;s<chunksize;s++)
 		delete[] post[s];
 	myfunky->nInd=nInd;
-	myfunky->post=post;
 	myfunky->numSites = nSites;
+	if(isGL){
+		//the three columns are the likelihoods of major/major, major/minor and minor/minor.
+		//Store them as log likelihoods in the ten genotypes, the other genotypes are impossible
+		double **likes = new double*[chunksize];
+		for(int s=0;s<nSites;s++){
+			likes[s] = new double[10*nInd];
+			int mm[3];
+			mm[0]=angsd::majorminor[(int)myfunky->major[s]][(int)myfunky->major[s]];
+			mm[1]=angsd::majorminor[(int)myfunky->major[s]][(int)myfunky->minor[s]];
+			mm[2]=angsd::majorminor[(int)myfunky->minor[s]][(int)myfunky->minor[s]];
+			for(int i=0;i<nInd;i++){
+				double *gl=post[s]+3*i;
+				for(int g=0;g<10;g++)
+					likes[s][10*i+g]=log(0.0);
+				if(gl[0]==0&&gl[1]==0&&gl[2]==0){
+					//no information, same as missing data
+					for(int g=0;g<3;g++)
+						likes[s][10*i+mm[g]]=0;
+					continue;
+				}
+				for(int g=0;g<3;g++)
+					likes[s][10*i+mm[g]]=log(gl[g]);
+			}
+			delete[] post[s];
+		}
+		delete[] post;
+		myfunky->likes=likes;
+	}else
+		myfunky->post=post;
 
 	if(nSites==0){
 		fprintf(stderr,"\t-> Done reading beagle\n");

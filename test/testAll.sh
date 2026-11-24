@@ -206,6 +206,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing -beagle-GL"
+time ./testBeagleGL.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -beagle-GL exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing -rmTriallelic"
 time ./testTriallelic.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then

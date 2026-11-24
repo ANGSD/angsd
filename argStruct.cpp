@@ -25,6 +25,9 @@ void whatIsTheInput(int type){
   case INPUT_BEAGLE:
     fprintf(stderr,"\t-> Inputtype is beagle\n");
     break;
+  case INPUT_BEAGLE_GL:
+    fprintf(stderr,"\t-> Inputtype is beagle gl\n");
+    break;
   case INPUT_BGEN:
     fprintf(stderr,"\t-> Inputtype is bgen\n");
     break;
@@ -41,7 +44,7 @@ void whatIsTheInput(int type){
     fprintf(stderr,"\t-> Inputtype is GLF10 text\n");
     break;
   default:{
-    fprintf(stderr,"\t-> Unknown input type, must supply one of -b/-bam/-i/-glf/-glf3/-glf10_text/-vcf-GL/-vcf-GP/-vcf-PL/-pileup/-beagle/-bgen\n");
+    fprintf(stderr,"\t-> Unknown input type, must supply one of -b/-bam/-i/-glf/-glf3/-glf10_text/-vcf-GL/-vcf-GP/-vcf-PL/-pileup/-beagle/-beagle-gl/-bgen\n");
     exit(1);
    }
   }
@@ -128,6 +131,7 @@ static const struct{
   {"-vcf-PL",INPUT_VCF_GL},//PL is read by the same vcf reader as GL, multiReader converts PL to GL
   {"-pileup",INPUT_PILEUP},
   {"-beagle",INPUT_BEAGLE},
+  {"-beagle-GL",INPUT_BEAGLE_GL},//beagle file with genotype likelihoods (like -doGlf 2), read as likelihoods
   {"-bgen",INPUT_BGEN},
   {"-i",INPUT_BAM},
 };

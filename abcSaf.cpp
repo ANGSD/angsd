@@ -127,7 +127,7 @@ void abcSaf::getOptions(argStruct *arguments){
   }
   int ai = arguments->inputtype;
   if(doSaf !=4){
-    if(GL==0 &&(ai!=INPUT_GLF && ai !=INPUT_GLF3 && ai !=INPUT_VCF_GL &&ai !=INPUT_BEAGLE&&ai!=INPUT_GLF10_TEXT)){
+    if(GL==0 &&(ai!=INPUT_GLF && ai !=INPUT_GLF3 && ai !=INPUT_VCF_GL &&ai !=INPUT_BEAGLE&&ai!=INPUT_GLF10_TEXT&&ai!=INPUT_BEAGLE_GL)){
       fprintf(stderr,"\t-> Must supply genotype likelihoods (-GL [INT])\n");
       printArg(arguments->argumentFile);
       exit(0);

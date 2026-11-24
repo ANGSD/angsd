@@ -16,6 +16,8 @@ double angsd::addProtect2(double a,double b){
 
   else
     maxVal=b;
+  if(maxVal==-INFINITY)//all terms are log(0), avoid -inf-(-inf)=nan
+    return maxVal;
   double sumVal = exp(a-maxVal)+exp(b-maxVal);
   return log(sumVal) + maxVal;
 }
@@ -30,6 +32,8 @@ double angsd::addProtect3(double a,double b, double c){
     maxVal=b;
   else
     maxVal=c;
+  if(maxVal==-INFINITY)//all terms are log(0), avoid -inf-(-inf)=nan
+    return maxVal;
   double sumVal = exp(a-maxVal)+exp(b-maxVal)+exp(c-maxVal);
   return log(sumVal) + maxVal;
 }
