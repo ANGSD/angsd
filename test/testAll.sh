@@ -136,6 +136,13 @@ fi
 #    RVAL=1
 #fi
 
+echo "Testing the strand with -pileup"
+time ./testPileupStrand.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with the strand with -pileup exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing the read counts"
 time ./testReadCounts.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then

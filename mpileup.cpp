@@ -117,8 +117,10 @@ tNode **mpileup::parseNd(char ref){
       char base;
       if(isalpha(*b))
 	base=*b;
-      else if(*b=='.'||*b==',')
-	base=ref;
+      else if(*b=='.')//reference base on the forward strand
+	base=toupper(ref);
+      else if(*b==',')//reference base on the reverse strand, lower case like a bam read (-sb_pval uses the case)
+	base=tolower(ref);
       else if(*b=='*'||*b=='#'||*b=='>'||*b=='<')//deletion or reference skip
 	base='N';
       else{
