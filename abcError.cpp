@@ -45,7 +45,12 @@ void abcError::printArg(FILE *argFile){
 }
 
 
+//Called from run(): the sites of this chunk, with the major and minor of run() (later modules,
+//e.g. -doMajorMinor, replace pars->major/minor), are kept in pars->extras[index]. print(), which
+//runs one chunk at a time in order, moves them to aList. The sites used to be added to aList
+//here, by the threads at the same time, which could crash the program (#603)
 void abcError::consolidate(funkyPars *p) {
+  myList *chunk = new myList;
   for(int s=0;s<p->numSites;s++)
     if(p->keepSites[s]){
       point pp;
@@ -53,28 +58,35 @@ void abcError::consolidate(funkyPars *p) {
       pp.minor = p->minor[s];
       pp.aLine = new suint[p->nInd*4];
       memcpy(pp.aLine,p->counts[s],4*sizeof(suint)*p->nInd);
-      aList.push_back(pp);
+      chunk->push_back(pp);
     }
-  
-  //  fprintf(stderr,"sizeof alist=%lu\n",aList.size());
-  if(aList.size()>minSites||(p->killSig==1)){
-    fprintf(stderr,"\t Triggering error estimation with nsites=%lu\n",aList.size());
-    int numSites = aList.size();
-    int *major = new int[aList.size()];
-    int *minor = new int[aList.size()];
-    suint **counts = new suint*[aList.size()];
-    int pos = 0;
-    for(myList::iterator it=aList.begin();it!=aList.end();it++){
-      major[pos] = it->major;
-      minor[pos] = it->minor;
-      counts[pos] = it->aLine;
-      pos++;
-    }
-    aList.clear();
-    //trigger optimiztion
-    likeFixedMinorError_bfgs_tsk2(errors,numSites,p->nInd,major,minor,counts,emIter,EM_START); //this should be the same but faster
+  p->extras[index] = chunk;
+}
 
+//estimate the error rates from sites, write them to fp, and empty sites
+static void estimate(myList &sites,int nInd,FILE *fp){
+  if(sites.empty())
+    return;
+  fprintf(stderr,"\t Triggering error estimation with nsites=%lu\n",sites.size());
+  int numSites = sites.size();
+  int *major = new int[numSites];
+  int *minor = new int[numSites];
+  suint **counts = new suint*[numSites];
+  int pos = 0;
+  for(myList::iterator it=sites.begin();it!=sites.end();it++){
+    major[pos] = it->major;
+    minor[pos] = it->minor;
+    counts[pos] = it->aLine;
+    pos++;
   }
+  sites.clear();
+  //trigger optimiztion
+  abcError::likeFixedMinorError_bfgs_tsk2(numSites,nInd,major,minor,counts,fp);
+  for(int s=0;s<numSites;s++)
+    delete [] counts[s];
+  delete [] counts;
+  delete [] major;
+  delete [] minor;
 }
 
 
@@ -248,7 +260,7 @@ float *abcError::logfact(int len )
 {
   if(len<2){
     fprintf(stderr,"\t-> You should give a larger value\n");
-    exit(0);
+    exit(1);
   }
   float *res = new float[len];
   res[0]=res[1]=0.0;
@@ -298,17 +310,17 @@ void abcError::getOptions(argStruct *arguments){
   int it = arguments->inputtype;
   if(doError && doCounts==0){
     fprintf(stderr,"\t-> Must supply -doCounts to use syk error estimator\n");
-    exit(0);
+    exit(1);
   }
 
   if((doError &&(it!=INPUT_BAM) )&& (doError && it!=INPUT_PILEUP) ){
     fprintf(stderr,"Error rates can be estimated based on either \n 1) BAM files or pileup files\n");
-    exit(0);
+    exit(1);
   }
   
   if(doError && doMajorMinor!=2){
     fprintf(stderr,"You must infer the major and minor genotypes from the sequencing data (-doMajorMinor 2)\n");
-    exit(0);
+    exit(1);
 
   }
 
@@ -318,6 +330,7 @@ void abcError::getOptions(argStruct *arguments){
 abcError::abcError(const char *outfiles,argStruct *arguments,int inputtype){
   //  outfile1 = outfile2 = NULL;
   outfile2 = NULL;
+  nInd = 0;
   minPhat = 0.005;
   eps = 0.001;
   doError=0;
@@ -380,6 +393,9 @@ abcError::abcError(const char *outfiles,argStruct *arguments,int inputtype){
 abcError::~abcError(){
   if(doError==0)
     return;
+  //the sites left after the last block of -minSites sites, all sites if there are fewer.
+  //They were never used before
+  estimate(aList,nInd,outfile2);
   //  if(outfile1) fclose(outfile1);
   if(outfile2) fclose(outfile2);
 }
@@ -389,6 +405,13 @@ abcError::~abcError(){
 void abcError::print(funkyPars *pars){
   if(doError==0)
     return;
+  //move the sites of this chunk to aList, and estimate when there are -minSites sites
+  myList *chunk = (myList *) pars->extras[index];
+  if(chunk!=NULL)
+    aList.splice(aList.end(),*chunk);
+  nInd = pars->nInd;
+  if(aList.size()>=(size_t)minSites)
+    estimate(aList,nInd,outfile2);
 
   /*
   for(int i=0;i<4;i++)
@@ -404,6 +427,14 @@ void abcError::print(funkyPars *pars){
 void abcError::clean(funkyPars *pars){
   if(doError==0)
     return;
+  //empty after print(), but not if the chunk wasn't printed
+  myList *chunk = (myList *) pars->extras[index];
+  if(chunk!=NULL){
+    for(myList::iterator it=chunk->begin();it!=chunk->end();it++)
+      delete [] it->aLine;
+    delete chunk;
+    pars->extras[index] = NULL;
+  }
 
   /*
   for(int i=0;i<4;i++)
@@ -434,16 +465,11 @@ void abcError::run(funkyPars *pars){
 	pars->keepSites[i] =0;
     //fprintf(stderr,"%d %d\n",pars->major[i],pars->minor[i]);
   }
-  
-
- 
-  consolidate(pars); //this function will merge data, and maybe trigger optimization
- 
-
+  consolidate(pars); //keeps the sites of this chunk for print()
 }
 
-//the errors parameter is not used for now but can be used for supplying the start point
-void abcError::likeFixedMinorError_bfgs_tsk2(double **errors,int numSites,int nInd,int *major,int *minor,suint **counts,int emIter,double EM_start){ //est error
+//estimates the error rates of the sites and writes them to fp
+void abcError::likeFixedMinorError_bfgs_tsk2(int numSites,int nInd,int *major,int *minor,suint **counts,FILE *fp){ //est error
   double start[12];
   double lbound[12];
   double ubound[12];
@@ -492,12 +518,12 @@ void abcError::likeFixedMinorError_bfgs_tsk2(double **errors,int numSites,int nI
   
   for(int i=0;i<4;i++)
     for(int j=0;j<4;j++)
-      fprintf(outfile2,"%f\t",es->errors[i][j]);
-  fprintf(outfile2,"\n");
-  fflush(outfile2);
+      fprintf(fp,"%f\t",es->errors[i][j]);
+  fprintf(fp,"\n");
+  fflush(fp);
   //cleanup
   killGlobalErrorProbs(es->errorProbs);
-  for(int i=0;i<3;i++)
+  for(int i=0;i<es->numSites;i++)
     delete [] es->loglike3[i];
   delete [] es->loglike3;
   delete [] es->logfact;

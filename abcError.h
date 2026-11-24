@@ -22,6 +22,7 @@ private:
   
   int minSites;
   myList aList;
+  int nInd;//number of individuals of the sites in aList
   int doError;
   void consolidate(funkyPars *p);
   char *errorFname;
@@ -45,7 +46,7 @@ public:
   //other stuff 
   
   void setMajorMinor(suint **counts,char *major,char *minor,int nInd,int nSites);
-  void likeFixedMinorError_bfgs_tsk2(double **errors,int numSites,int nInd,int *major,int *minor,suint **counts,int emIter,double EM_start);// same as above but only uses the parameters in function.
+  static void likeFixedMinorError_bfgs_tsk2(int numSites,int nInd,int *major,int *minor,suint **counts,FILE *fp);
   static double **** generateErrorPointers(double **error,int nG,int nA);
   static float *logfact(int len ) ;
   static void killGlobalErrorProbs(double ****errorProbs);
