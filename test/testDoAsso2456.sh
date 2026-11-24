@@ -210,12 +210,13 @@ fi
 
 #a phenotype without variance gives a NaN score statistic. -doAsso 5 and -Pvalue 1
 #used to exit with "input is NaN" when computing the p-value (#607), it must give nan
+#(glibc prints a nan with the sign bit set as -nan, macOS prints nan)
 awk '{print 1}' ${ASSODIR}/test.phe > tmp.const.phe
 for a in "-doAsso 5" "-doAsso 2 -Pvalue 1"; do
     $WDIR/angsd -doMaf 4 -beagle ${ASSODIR}/test.beagle -fai hg19.fa.fai -yQuant tmp.const.phe ${a} -out tmp -minCount 0 -minHigh 0 -seed 123 2>>${LOG}
     e=$?
     lrt=`gzip -dc tmp.lrt0.gz | tail -n +2 | cut -f7`
-    if [ ! ${e} -eq 0 ] || [ ! "$lrt" = "nan" ] ;then
+    if [ ! ${e} -eq 0 ] || [[ ! "$lrt" =~ ^-?nan$ ]] ;then
 	echo "--------------"
 	echo "Problem with a phenotype without variance and ${a}: exit code ${e}, LRT '${lrt}'"
 	echo "--------------"
