@@ -1257,8 +1257,8 @@ void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,hts_idx_t **idx,hts_itr
     *idx = sam_index_load(fp,fn);
 
   if (*idx == NULL) { // index is unavailable
-    fprintf(stderr, "[main_samview] random alignment retrieval only works for indexed BAM or CRAM files. (file: \'%s\' )\n",fn);
-    exit(0);
+    fprintf(stderr, "\t-> -r/-rf only works for indexed BAM or CRAM files, could not load the index of \'%s\'. Will exit\n",fn);
+    exit(1);
   }
   char tmp[1024];
   snprintf(tmp,1024,"%s:%d-%d",hd->target_name[ref],start+1,stop);
@@ -1266,8 +1266,8 @@ void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,hts_idx_t **idx,hts_itr
     hts_itr_destroy(*itr);
   *itr = sam_itr_querys(*idx, hdr, tmp);
   if (*itr == NULL) { // reference name is not found
-    fprintf(stderr, "[main_samview] region \"%s\" specifies an unknown reference name. Continue anyway.\n",tmp);
-    exit(0);
+    fprintf(stderr, "\t-> region \"%s\" specifies a reference name that is not in \'%s\'. Will exit\n",tmp,fn);
+    exit(1);
   }
 
 }

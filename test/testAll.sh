@@ -136,6 +136,13 @@ fi
 #    RVAL=1
 #fi
 
+echo "Testing -r/-rf without an index"
+time ./testRegionNoIndex.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -r/-rf without an index exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing the strand with -pileup"
 time ./testPileupStrand.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then
