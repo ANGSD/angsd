@@ -1,5 +1,6 @@
 
 #include <ctime>
+#include <unistd.h>
 #include "realSFS_args.h"
 
 args * getArgs(int argc,char **argv){
@@ -20,7 +21,7 @@ args * getArgs(int argc,char **argv){
   p->win=p->step=-1;
   p->type =0;
   p->oldout =0;
-  p->seed = -1;;
+  p->seed = 0;
   p->fl = NULL;
   p->whichFst = 0;
   p->fold=0;
@@ -99,8 +100,13 @@ args * getArgs(int argc,char **argv){
     }
     argv++;
   }
-  if(p->seed==0)
-    p->seed = time(NULL);
+  //-seed 0: new start values and bootstrap samples every run, -seed -1: flat start values and a fixed seed
+  if(p->seed==0){
+    p->seed = time(NULL)^((long)getpid()<<16);
+    fprintf(stderr,"\t-> Using %ld as seed, use -seed %ld to get the same result again\n",p->seed,p->seed);
+  }
+  if(p->seed==-1&&p->bootstrap)
+    fprintf(stderr,"\t-> -seed -1 uses the same seed every run, so every run gives the same bootstrap replicates. Use -seed 0 or a different seed for each run\n");
   srand48(p->seed);
   for(int i=0;(p->saf.size()>1||p->fl!=NULL)&&(i<p->saf.size());i++)
     p->saf[i]->kind =2;

@@ -564,10 +564,7 @@ int main_opt(args *arg){
 	  sfs[i] = 1;
       }else{
 	for(int i=0;i<ndim;i++){
-	  double r=drand48();
-	  while(r==0.0)
-	    r = drand48();
-	  sfs[i] = r;
+	  sfs[i] = 0.5+drand48();//random start values, but not close to 0
 	}
       }
     }
@@ -772,10 +769,7 @@ int main_opt2(args *arg){
 	    sfs[i] = 1;
 	}else{
 	  for(int i=0;i<ndim;i++){
-	    double r=drand48();
-	    while(r==0.0)
-	      r = drand48();
-	    sfs[i] = r;
+	    sfs[i] = 0.5+drand48();//random start values, but not close to 0
 	  }
 	}
 	//firstrun = 0;

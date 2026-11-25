@@ -220,6 +220,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing realSFS -bootstrap seed"
+time ./testBootstrapSeed.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with realSFS -bootstrap seed exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing -rmTriallelic"
 time ./testTriallelic.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then

@@ -1061,7 +1061,7 @@ int main(int argc,char **argv)
     fprintf(stderr, "\t-emaccl 1\t\t(0 = regular EM; 1 = accelerated EM)\n");
     fprintf(stderr, "\t-fold 0\t\t\t(0 = unfolded SFS; 1 = folded SFS)\n");
     fprintf(stderr, "\t-nsites 0\t\t(number of sites to use in calculation; 0 = all sites)\n");
-    fprintf(stderr, "\t-seed -1\t\t(random seed for start values; -1 = machine noise)\n");
+    fprintf(stderr, "\t-seed 0\t\t\t(random seed for start values and bootstrap; 0 = from the clock; -1 = flat start values and a fixed seed)\n");
     fprintf(stderr, "Subcommands:\n");
     fprintf(stderr, "\tbins\t\t\t(print SFS bins corresponding to flattened output)\n");
     fprintf(stderr, "\tcat\t\t\t(concatenate two SAF files)\n");
