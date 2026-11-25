@@ -253,7 +253,9 @@ int main(int argc, char** argv){
 
    init(args);
    parseArgStruct(args);
-   
+   //write the options to the .arg file now, otherwise it stays empty until the end of a long run
+   fflush(args->argumentFile);
+
    //Below is main loop which will run until nomore data
    aio::doAssert(args->hd!=NULL,AT);
    aio::doAssert(args->revMap!=NULL,AT);
