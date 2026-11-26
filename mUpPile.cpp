@@ -716,7 +716,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	  tmpNode->insert[tmpNode->l2] = ins; 
 	  for(int ii=0;ii<opLen;ii++){
 	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
-	    tmpNode->insert[tmpNode->l2]->seq[ii] = bam_is_rev(rd)? tolower(c) : toupper(c);
+	    tmpNode->insert[tmpNode->l2]->seq[ii] = bam_is_rev(rd)? (char)(c|0x20) : c;//as below
 	    tmpNode->insert[tmpNode->l2]->posi[ii] = seq_pos + 1;
 	    tmpNode->insert[tmpNode->l2]->isop[ii] =rd->core.l_qseq- seq_pos - 1;
 	    tmpNode->insert[tmpNode->l2]->qs[ii] = quals[seq_pos];
@@ -728,7 +728,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	      tmpNode->insert[tmpNode->l2]->seq[ii] ='n';
 
 	    if( quals[seq_pos]<minQ || seq_pos + 1 < trim || rd->core.l_qseq- seq_pos - 1 < trim)  
-	      tmpNode->insert[tmpNode->l2]->seq[ii] =  bam_is_rev(rd)? tolower('n') : toupper('N');
+	      tmpNode->insert[tmpNode->l2]->seq[ii] =  bam_is_rev(rd)? 'n' : 'N';
 	    tmpNode->insert[tmpNode->l2]->mapQ[ii] = mapQ;
 	    seq_pos++;// <- important, must be after macro
 	  }
@@ -773,7 +773,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	  
 
 	  char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
-	  tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower(c) : toupper(c);
+	  tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? (char)(c|0x20) : c;//c is an upper case letter (or =) from seq_nt16_str, |0x20 is tolower
 	  tmpNode->qs[tmpNode->l] =  quals[seq_pos];
 	  if(thisrg!=-1){
 	    //	    fprintf(stderr,"%p %p\n",tmpNode,tmpNode->rgs);
@@ -789,7 +789,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	    tmpNode->seq[tmpNode->l] ='n';
 	  
 	  if( quals[seq_pos]<minQ || seq_pos  < trim || rd->core.l_qseq - seq_pos - 1 < trim )
-	    tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower('n') : toupper('N');
+	    tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? 'n' : 'N';
 	  
 	  tmpNode->l++;
 	  seq_pos++;
