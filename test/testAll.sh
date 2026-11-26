@@ -150,6 +150,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing -show with indels at the start of reads"
+time ./testShowIndel.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -show and indels exit code: $?"
+    RVAL=1
+fi
+
 echo "Testing the strand with -pileup"
 time ./testPileupStrand.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then

@@ -454,7 +454,9 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
       int opLen = cigs[i]>>BAM_CIGAR_SHIFT; //length of what to do
 
       if(opCode==BAM_CINS||opCode==BAM_CDEL){//handle insertions and deletions
-	if(i==0){ //skip indels if beginning of a read, print mapQ
+	//indels before the first aligned base (also after a clip or another indel) start the read: print mapQ.
+	//They were bound to the position before the read, which wrote outside the nodes when no read covered it
+	if(hasInfo==0&&hasPrintedMaq==0){
 	  tmpNode = &nds[wpos];
 	  kputc('^', &tmpNode->seq);
 	  if(rd->core.qual!=255)
@@ -471,7 +473,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  seq_pos += opLen;	  
 	  continue;
 	}
-	if(i!=0){
+	if(hasInfo>0){
 	  wpos--; //insertion/deletion is bound to the last position of the read
 	  tmpNode = &nds[wpos];
 	  kputc(opCode&BAM_CINS?'+':'-',&tmpNode->seq);
@@ -488,7 +490,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  }
 	  wpos++;
 	}else {//this is the deletion part
-	  if(i!=0){
+	  if(hasInfo>0){
 	    if(gf->ref==NULL)
 	      for(int ii=0;ii<opLen;ii++)
 		kputc(bam_is_rev(rd)? tolower('N') : toupper('N'),&tmpNode->seq);
@@ -519,6 +521,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	    kputc(rd->core.qual+33, &tmpNode->seq);
 	  else
 	    kputc('~', &tmpNode->seq);
+	  hasPrintedMaq =1;
 	  seq_pos += opLen;
 	  //	  wpos -= opLen;
 	}else//we are at the end of read, then break CIGAR loop
@@ -594,7 +597,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
   
   if(regionLen-lastSecureIndex+4>np->m){
     delete [] np->nds;
-    np->m=regionLen;
+    np->m=regionLen+4;//regionLen alone could be too small for the assert below, as in mkNodes_one_sampleTb
     kroundup32(np->m);
     np->nds = new node[np->m];
   }
