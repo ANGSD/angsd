@@ -319,7 +319,8 @@ tNode *initNodeT(int l){
     tnode_realloc(d,l);
   }
   d->l = d->l2 =d->m2 =0;
-  //d->l = d->l2 = d->m2 = 0;
+  //nodes are reused from the pool, a reused node kept the deletions of its last site and -iCounts 2 skipped the site
+  d->deletion = 0;
   d->refPos= -999;
   d->insert = NULL;
   currentnodes++;
@@ -795,7 +796,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	}
       }else if(opCode==BAM_CREF_SKIP) {
 	for(int fix=wpos;wpos<fix+opLen;wpos++){
-	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN)); 
+	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN));
 	  //	    tmpNode = dn.nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	}

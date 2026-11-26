@@ -59,6 +59,15 @@ fi
 fi
 
 if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing -iCounts 2"
+time ./testICounts2.sh $WDIR/angsd $BAMDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -iCounts 2 exit code: $?"
+    RVAL=1
+fi
+fi
+
+if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing vcfreading"
 time ./testVcf.sh $WDIR/angsd ${BAMDIR}/small2.bcf
 if [ ! $? -eq 0  ]   ;then
