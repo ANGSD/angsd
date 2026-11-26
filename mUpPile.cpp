@@ -128,8 +128,8 @@ typedef struct{
 void printChunky2(const chunky* chk,FILE *fp,char *refStr,abcGetFasta *gf) {
   //  fprintf(stderr,"[%s] nsites=%d region=(%d,%d) itrReg=(%d,%d)\n",__FUNCTION__,chk->nSites,chk->refPos[0],chk->refPos[chk->nSites-1],chk->regStart,chk->regStop);
   if(chk->refPos[0]>chk->regStop){
-    fprintf(stderr,"\t->Problems with stuff\n");
-    exit(0);
+    fprintf(stderr,"\t-> [%s] the first site (%d) is after the end of the region (%d), please report this\n",__FUNCTION__,chk->refPos[0]+1,chk->regStop);
+    exit(1);
   }
   int refId = chk->refId;
   for(int s=0;s<chk->nSites;s++) {
@@ -1260,13 +1260,12 @@ void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,hts_idx_t **idx,hts_itr
     fprintf(stderr, "\t-> -r/-rf only works for indexed BAM or CRAM files, could not load the index of \'%s\'. Will exit\n",fn);
     exit(1);
   }
-  char tmp[1024];
-  snprintf(tmp,1024,"%s:%d-%d",hd->target_name[ref],start+1,stop);
   if(*itr)
     hts_itr_destroy(*itr);
-  *itr = sam_itr_querys(*idx, hdr, tmp);
-  if (*itr == NULL) { // reference name is not found
-    fprintf(stderr, "\t-> region \"%s\" specifies a reference name that is not in \'%s\'. Will exit\n",tmp,fn);
+  //query with the numbers, a region string was parsed again, which breaks on long names or names with ':'
+  *itr = sam_itr_queryi(*idx, ref, start, stop);
+  if (*itr == NULL) {
+    fprintf(stderr, "\t-> could not make an iterator for the region %s:%d-%d in \'%s\'. Will exit\n",hd->target_name[ref],start+1,stop,fn);
     exit(1);
   }
 
@@ -1426,13 +1425,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
 	theRef = rd[0].itr->tid; 
 	//	fprintf(stderr,"theRef:%d %p %p\n",theRef,rd[0].it.off,rd[0].it.hts_itr->off);
-	//validate we have offsets;
-	int gotData = 0;
-	for(int i=0;i<nFiles;i++)
-	  if((rd[i].itr &&(rd[i].itr->off!=NULL))){
-	    gotData =1;
-	    break;
-	  }
 	//reset eof and region donepointers.
 	for(int i=0;i<nFiles;i++){
 	  rd[i].isEOF = 0;

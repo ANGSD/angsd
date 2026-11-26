@@ -129,6 +129,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing the read pools (files without reads)"
+time ./testReadPool.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with the read pools exit code: $?"
+    RVAL=1
+fi
+
 #echo "Testing -doError"
 #time ./testError.sh $WDIR/angsd $BAMDIR
 #if [ ! $? -eq 0  ]   ;then

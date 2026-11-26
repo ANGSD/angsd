@@ -311,23 +311,16 @@ bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,
       printHd(ret[i].hdr,stderr);
       fprintf(stderr,"Difference in BAM headers for \'%s\' and \'%s\'\n",vec[0],vec[i]);
       if(exitOnError)
-	exit(0);
+	exit(1);
     }
  
   
   pair *val_keys = new pair[vec.size()];
-  size_t fsize(const char* fname);
   for(size_t i=0;i<vec.size();i++){
-    pair p;
-    if (strstr(vec[i], "ftp://") == vec[i] || strstr(vec[i], "http://") == vec[i]){
-      p.val = 100+i;//doesntmatter
-      p.key = i;
-
-    }else{
-      p.val = aio::fsize(vec[i]);
-      p.key = i;
-      val_keys[i]=p;
-    }
+    //the largest file is tried first when picking how far to read. fsize is 0 for urls (ftp, http, https, s3, ...),
+    //they were not put in val_keys before, so the order had uninitialized file ids
+    val_keys[i].val = aio::fsize(vec[i]);
+    val_keys[i].key = i;
   }
   std::sort(val_keys,val_keys+vec.size());
 

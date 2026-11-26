@@ -71,14 +71,16 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
     bam1_t *b = ret.reads[0];
     int tmp;
 
-    if((tmp=read1(fp,itr,b,hdr,ret))<0){//FIXME
+    if((tmp=read1(fp,itr,b,hdr,ret))<0){
       if(tmp==-1){
 	rdObjEof =1;
 	//	ret.isEOF =1;
 	isEof--;
       }else
 	rdObjRegionDone =1;
-      break;
+      //return, the loop below would read again and count the end of the file twice. Then the chromosome/region
+      //was stopped while the other files still had reads, when a file had no reads (in the region) or all were filtered
+      return;
     }
     if(b->core.tid>refToRead){
       //buffed=1;
@@ -138,9 +140,8 @@ void read_reads_usingStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int re
       rdObjRegionDone =1;
       break;
     }else if(ret.first[ret.l+i-1]>b->core.pos){
-      fprintf(stderr,"unsorted file detected will exit\n");
-      fflush(stderr);
-      exit(0);
+      fprintf(stderr,"\t-> \'%s\' is not sorted by position, sort it with \'samtools sort\'\n",fp->fn);
+      exit(1);
     }
     i++;
   }
@@ -199,10 +200,6 @@ void read_reads(htsFile *fp,int nReads,int &isEof,readPool &ret,int refToRead,ht
       break;
   }
   ret.l += i;
-  if(ret.l>0){
-    // fprintf(stderr,"asdf:%d\n",ret.first[ret.l-1]);
-    stop=ret.first[ret.l-1];
-  }
 }
 
 
@@ -279,8 +276,8 @@ void read_reads_noStop(htsFile *fp,int nReads,int &isEof,readPool &ret,int refTo
       rdObjRegionDone =1;
       break;
     }else if(ret.first[ret.l+i-1]>b->core.pos){
-      fprintf(stderr,"\t-> [%s] unsorted file detected will exit new(-1)=%d new=%ld,ret.l=%d i=%d\n",__FUNCTION__,ret.first[ret.l+i-1],b->core.pos,ret.l,i);
-      exit(0);
+      fprintf(stderr,"\t-> \'%s\' is not sorted by position, sort it with \'samtools sort\'\n",fp->fn);
+      exit(1);
     }
     
   }
@@ -339,6 +336,7 @@ int collect_reads(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readN
 
 int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &readNlines,int ref,int &pickStop) {
   int usedPicker=-1;
+  const int stopOffset = pickStop;//each picker candidate reads until stopOffset past its last read
   for(int ii=0;ii<nFiles;ii++) {
     //    fprintf(stderr,"read reads[%d]\n",ii);
     extern int *bamSortedIds;
@@ -350,6 +348,8 @@ int collect_reads2(bufReader *rd,int nFiles,int &notDone,readPool *ret,int &read
     
     int pre=ret[i].l;//number of elements before
     //function reads readNlines reads, from rd[i].fp and modifies isEOF and regionDone
+    //from the offset, it was added to the stop of the files before that had no reads, so a file could read far ahead
+    pickStop = stopOffset;
     if(ret[i].l>0)
       pickStop += ret[i].first[ret[i].l-1];
     // fprintf(stderr,"reading until:%d\n",pickStop);
