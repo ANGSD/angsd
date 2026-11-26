@@ -4,6 +4,7 @@
 # without indels (320 of 92962 sites on chr 1 of the file below).
 # The sites of -iCounts 2 must be the sites of -iCounts 1 without the sites with a '*'
 # (deletion) or a '+' (insertion after the base) in -show 1, which is the same as samtools.
+# -iCounts other than 0, 1 and 2 must exit with 1.
 #
 # ./testICounts2.sh angsd BAMDIR
 if [[ ! $# -eq 2 ]]
@@ -46,4 +47,14 @@ elif ! cmp ${RESDIR}/expected.pos ${RESDIR}/i2.pos >> ${LOG} 2>&1; then
 	echo "Problem with -iCounts 2: the sites are not the sites of -iCounts 1 without indels ($(comm -23 ${RESDIR}/expected.pos ${RESDIR}/i2.pos | wc -l) sites missing)"
 	RVAL=1
 fi
+
+#other values than 0, 1 and 2 made an empty .icnts.gz and exit code 0, they must exit with 1
+for v in 3 -1; do
+	${ANGSD} ${ARGS} -doCounts 1 -iCounts ${v} -out ${RESDIR}/bad >> ${LOG} 2>&1
+	e=$?
+	if [[ ${e} -ne 1 ]]; then
+		echo "Problem with -iCounts ${v}: exit code ${e}, not 1"
+		RVAL=1
+	fi
+done
 exit ${RVAL}
