@@ -41,6 +41,11 @@ void dalloc (readPool *ret){
   free(ret->reads);
   free(ret->first);
   free(ret->last);
+  //not needed: bufferedRead is freed when changing region and is NULL at the end of the files,
+  //so it should always be NULL here, we could assert that instead
+  if(ret->bufferedRead)
+    bam_destroy1(ret->bufferedRead);
+  ret->bufferedRead = NULL;
 }
 
 void realloc(readPool *ret,int l){
