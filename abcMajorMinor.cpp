@@ -191,57 +191,15 @@ void abcMajorMinor::clean(funkyPars *pars){
 void abcMajorMinor::print(funkyPars *pars){
 }
 
-// Function to swap major/minor reference/ancestral
-void modMajorMinor(funkyPars *pars,int doMajorMinor){
-  for(int s=0;s<pars->numSites;s++) {
-    if(pars->keepSites[s]==0)
-      continue;
-    
-    if((doMajorMinor==4 &&pars->ref[s]==4)||(doMajorMinor==5 &&pars->anc[s]==4)){
-      pars->keepSites[s]=0;
-      continue;
-    }
-    int maj = pars->major[s];
-    int mmin = pars->minor[s];
-    
-
-    if(doMajorMinor==4){
-      if(pars->ref[s]!=maj&&pars->ref[s]!=mmin){
-	//inferred major and minor is not part of the ref;
-	pars->keepSites[s] =0;
-	continue;
-      }
-      if(pars->ref[s]==mmin){
-	//if reference is the inferre3d minor, then swap
-	pars->major[s] = mmin;
-	pars->minor[s] = maj;
-      }
-      //otherwise don't do anything
-    }
-    if(doMajorMinor==5){
-      if(pars->anc[s]!=maj&&pars->anc[s]!=mmin){
-	//inferred major and minor is not part of the anc;
-	pars->keepSites[s] =0;
-	continue;
-      }
-      if(pars->anc[s]==mmin){
-	//if reference is the inferre3d minor, then swap
-	pars->major[s] = mmin;
-	pars->minor[s] = maj;
-      }
-      //otherwise don't do anything
-    }    
-  }
- 
-}
-
 void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
   
   float lmax;
   float totalLike;
-  int choiceMajor=-1;
-  int choiceMinor=-1;
   for(int s=0;s<pars->numSites;s++)  {
+    //reset for each site: when no pair had a finite likelihood (eg. nan GLs) the alleles of the
+    //previous site were used, or -1 for the first site which read outside majorminor (crash)
+    int choiceMajor=-1;
+    int choiceMinor=-1;
 
     if(pars->keepSites[s]==0){
       pars->major[s] = 4;
@@ -281,10 +239,10 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
       float W2;
       float sum=0;
       if(choiceMajor==-1 || choiceMinor==-1){
-	fprintf(stdout,"\t-> Something has gone wrong trying to infer major/minor from GLS at \'%s\' %d will discard site from analysis\n",header->target_name[pars->refId],pars->posi[s]+1);
+	fprintf(stderr,"\t-> Something has gone wrong trying to infer major/minor from GLS at \'%s\' %d will discard site from analysis\n",header->target_name[pars->refId],pars->posi[s]+1);
 	pars->keepSites[s]=0;
+	continue;
       }
-      // aio::doAssert(choiceMajor!=-1&&choiceMinor!=-1);
       for(int i=0;i<pars->nInd;i++){
 	W0=exp(pars->likes[s][i*10+angsd::majorminor[choiceMajor][choiceMajor]])*0.25;
 	W1=exp(pars->likes[s][i*10+angsd::majorminor[choiceMajor][choiceMinor]])*0.5;
@@ -317,6 +275,11 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
 	  choiceMinor=Iminor;
 	}
       }
+      if(choiceMinor==-1){
+	fprintf(stderr,"\t-> Something has gone wrong trying to infer the minor from GLS at \'%s\' %d will discard site from analysis\n",header->target_name[pars->refId],pars->posi[s]+1);
+	pars->keepSites[s]=0;
+	continue;
+      }
       pars->major[s]=choiceMajor;
       pars->minor[s]=choiceMinor;
 
@@ -325,7 +288,7 @@ void abcMajorMinor::majorMinorGL(funkyPars *pars,int doMajorMinor){
   }
 }
 
-extern int minQ;//<- I think this is from multireader but should be checked
+extern int minQ;//from parseArgs_bambi.cpp
 int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
    for(int s=0;s<pars->numSites;s++){
      if(pars->keepSites[s]==0)
@@ -395,11 +358,12 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
    return 0;
 }
 
-void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *minor,int *keepSites,int doMajorMinor,char *ref,char *anc) {
+//-doMajorMinor 2: the major is the most common base and the minor the second most common
+void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *minor,int *keepSites) {
   aio::doAssert(counts!=NULL,1,AT,"");
 
   for(int s=0;s<nSites;s++){
-    if(keepSites==0)
+    if(keepSites[s]==0)//it checked the pointer, so all sites were done
       continue;
 
     //part one
@@ -420,13 +384,6 @@ void majorMinorCounts(suint **counts,int nFiles,int nSites,char *major,char *min
       if (bases[i]>bases[majorA])
         majorA = i;
     //maj is now the major allele (most frequent)
-
-    //should it be fixed to ancestral or reference?
-    if(doMajorMinor==4)
-      majorA =refToInt[ref[s]];
-    if(doMajorMinor==4)
-      majorA =refToInt[anc[s]];
-
 
     int temp=0;
     int minorA= majorA;
@@ -465,7 +422,7 @@ void abcMajorMinor::run(funkyPars *pars){
   else if(doMajorMinor!=2 && doMajorMinor!=3)
     majorMinorGL(pars,doMajorMinor);
   else if(doMajorMinor==2)
-    majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites,doMajorMinor,pars->ref,pars->anc);
+    majorMinorCounts(pars->counts,pars->nInd,pars->numSites,pars->major,pars->minor,pars->keepSites);
   else if(doMajorMinor==3){
     for(int s=0;s<pars->numSites;s++){
       //      fprintf(stderr,"MMposi:%d keeps:%d\n",pars->posi[s]+1,pars->keepSites[s]);
@@ -507,11 +464,7 @@ void abcMajorMinor::run(funkyPars *pars){
     
   }
   
-  //if user has requested reference/ancestral then it is done in majorMinorGL and majorMinorCounts 0.585
-  /*
-    if(doMajorMinor==4||doMajorMinor==5)
-    modMajorMinor(pars,doMajorMinor);
-  */
+  //-doMajorMinor 4/5 (reference/ancestral as major) is done in majorMinorGL
   if(doGlf==2||doBcf>0){
     lh3struct *lh3 = new lh3struct;
     pars->extras[index] = lh3;
