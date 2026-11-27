@@ -83,6 +83,11 @@ void abcCounts::getOptions(argStruct *arguments){
   doQsDist=angsd::getArg("-doQsDist",doQsDist,arguments);
   doDepth=angsd::getArg("-doDepth",doDepth,arguments);
   iCounts=angsd::getArg("-iCounts",iCounts,arguments);
+  //other values made an empty .icnts.gz and exit code 0
+  if(iCounts<0||iCounts>2){
+    fprintf(stderr,"\t-> -iCounts must be 0, 1 or 2, not %d\n",iCounts);
+    exit(1);
+  }
   if(doCounts==0){
     const char *names[4]={"-dumpCounts","-doQsDist","-doDepth","-iCounts"};
     int vals[4]={dumpCounts,doQsDist,doDepth,iCounts};

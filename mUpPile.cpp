@@ -128,8 +128,8 @@ typedef struct{
 void printChunky2(const chunky* chk,FILE *fp,char *refStr,abcGetFasta *gf) {
   //  fprintf(stderr,"[%s] nsites=%d region=(%d,%d) itrReg=(%d,%d)\n",__FUNCTION__,chk->nSites,chk->refPos[0],chk->refPos[chk->nSites-1],chk->regStart,chk->regStop);
   if(chk->refPos[0]>chk->regStop){
-    fprintf(stderr,"\t->Problems with stuff\n");
-    exit(0);
+    fprintf(stderr,"\t-> [%s] the first site (%d) is after the end of the region (%d), please report this\n",__FUNCTION__,chk->refPos[0]+1,chk->regStop);
+    exit(1);
   }
   int refId = chk->refId;
   for(int s=0;s<chk->nSites;s++) {
@@ -319,7 +319,8 @@ tNode *initNodeT(int l){
     tnode_realloc(d,l);
   }
   d->l = d->l2 =d->m2 =0;
-  //d->l = d->l2 = d->m2 = 0;
+  //nodes are reused from the pool, a reused node kept the deletions of its last site and -iCounts 2 skipped the site
+  d->deletion = 0;
   d->refPos= -999;
   d->insert = NULL;
   currentnodes++;
@@ -454,7 +455,9 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
       int opLen = cigs[i]>>BAM_CIGAR_SHIFT; //length of what to do
 
       if(opCode==BAM_CINS||opCode==BAM_CDEL){//handle insertions and deletions
-	if(i==0){ //skip indels if beginning of a read, print mapQ
+	//indels before the first aligned base (also after a clip or another indel) start the read: print mapQ.
+	//They were bound to the position before the read, which wrote outside the nodes when no read covered it
+	if(hasInfo==0&&hasPrintedMaq==0){
 	  tmpNode = &nds[wpos];
 	  kputc('^', &tmpNode->seq);
 	  if(rd->core.qual!=255)
@@ -471,7 +474,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  seq_pos += opLen;	  
 	  continue;
 	}
-	if(i!=0){
+	if(hasInfo>0){
 	  wpos--; //insertion/deletion is bound to the last position of the read
 	  tmpNode = &nds[wpos];
 	  kputc(opCode&BAM_CINS?'+':'-',&tmpNode->seq);
@@ -488,7 +491,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	  }
 	  wpos++;
 	}else {//this is the deletion part
-	  if(i!=0){
+	  if(hasInfo>0){
 	    if(gf->ref==NULL)
 	      for(int ii=0;ii<opLen;ii++)
 		kputc(bam_is_rev(rd)? tolower('N') : toupper('N'),&tmpNode->seq);
@@ -519,6 +522,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
 	    kputc(rd->core.qual+33, &tmpNode->seq);
 	  else
 	    kputc('~', &tmpNode->seq);
+	  hasPrintedMaq =1;
 	  seq_pos += opLen;
 	  //	  wpos -= opLen;
 	}else//we are at the end of read, then break CIGAR loop
@@ -594,7 +598,7 @@ nodePool mkNodes_one_sampleb(readPool *sgl,nodePool *np,abcGetFasta *gf) {
   
   if(regionLen-lastSecureIndex+4>np->m){
     delete [] np->nds;
-    np->m=regionLen;
+    np->m=regionLen+4;//regionLen alone could be too small for the assert below, as in mkNodes_one_sampleTb
     kroundup32(np->m);
     np->nds = new node[np->m];
   }
@@ -712,7 +716,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	  tmpNode->insert[tmpNode->l2] = ins; 
 	  for(int ii=0;ii<opLen;ii++){
 	    char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
-	    tmpNode->insert[tmpNode->l2]->seq[ii] = bam_is_rev(rd)? tolower(c) : toupper(c);
+	    tmpNode->insert[tmpNode->l2]->seq[ii] = bam_is_rev(rd)? (char)(c|0x20) : c;//as below
 	    tmpNode->insert[tmpNode->l2]->posi[ii] = seq_pos + 1;
 	    tmpNode->insert[tmpNode->l2]->isop[ii] =rd->core.l_qseq- seq_pos - 1;
 	    tmpNode->insert[tmpNode->l2]->qs[ii] = quals[seq_pos];
@@ -724,7 +728,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	      tmpNode->insert[tmpNode->l2]->seq[ii] ='n';
 
 	    if( quals[seq_pos]<minQ || seq_pos + 1 < trim || rd->core.l_qseq- seq_pos - 1 < trim)  
-	      tmpNode->insert[tmpNode->l2]->seq[ii] =  bam_is_rev(rd)? tolower('n') : toupper('N');
+	      tmpNode->insert[tmpNode->l2]->seq[ii] =  bam_is_rev(rd)? 'n' : 'N';
 	    tmpNode->insert[tmpNode->l2]->mapQ[ii] = mapQ;
 	    seq_pos++;// <- important, must be after macro
 	  }
@@ -769,7 +773,7 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	  
 
 	  char c = bam_nt16_rev_table[bam_seqi(seq, seq_pos)];
-	  tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower(c) : toupper(c);
+	  tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? (char)(c|0x20) : c;//c is an upper case letter (or =) from seq_nt16_str, |0x20 is tolower
 	  tmpNode->qs[tmpNode->l] =  quals[seq_pos];
 	  if(thisrg!=-1){
 	    //	    fprintf(stderr,"%p %p\n",tmpNode,tmpNode->rgs);
@@ -785,14 +789,14 @@ nodePoolT mkNodes_one_sampleTb(readPool *sgl,nodePoolT *np,int refID) {
 	    tmpNode->seq[tmpNode->l] ='n';
 	  
 	  if( quals[seq_pos]<minQ || seq_pos  < trim || rd->core.l_qseq - seq_pos - 1 < trim )
-	    tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? tolower('n') : toupper('N');
+	    tmpNode->seq[tmpNode->l] = bam_is_rev(rd)? 'n' : 'N';
 	  
 	  tmpNode->l++;
 	  seq_pos++;
 	}
       }else if(opCode==BAM_CREF_SKIP) {
 	for(int fix=wpos;wpos<fix+opLen;wpos++){
-	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN)); 
+	  tmpNode = dn.nds[wpos]?dn.nds[wpos]:(dn.nds[wpos]=initNodeT(UPPILE_LEN));
 	  //	    tmpNode = dn.nds[wpos];
 	  tmpNode->refPos=wpos+offs;
 	}
@@ -1260,13 +1264,12 @@ void getOffsets(htsFile *fp,char *fn,const bam_hdr_t *hd,hts_idx_t **idx,hts_itr
     fprintf(stderr, "\t-> -r/-rf only works for indexed BAM or CRAM files, could not load the index of \'%s\'. Will exit\n",fn);
     exit(1);
   }
-  char tmp[1024];
-  snprintf(tmp,1024,"%s:%d-%d",hd->target_name[ref],start+1,stop);
   if(*itr)
     hts_itr_destroy(*itr);
-  *itr = sam_itr_querys(*idx, hdr, tmp);
-  if (*itr == NULL) { // reference name is not found
-    fprintf(stderr, "\t-> region \"%s\" specifies a reference name that is not in \'%s\'. Will exit\n",tmp,fn);
+  //query with the numbers, a region string was parsed again, which breaks on long names or names with ':'
+  *itr = sam_itr_queryi(*idx, ref, start, stop);
+  if (*itr == NULL) {
+    fprintf(stderr, "\t-> could not make an iterator for the region %s:%d-%d in \'%s\'. Will exit\n",hd->target_name[ref],start+1,stop,fn);
     exit(1);
   }
 
@@ -1426,13 +1429,6 @@ int uppile(int show,int nThreads,bufReader *rd,int nLines,int nFiles,std::vector
 
 	theRef = rd[0].itr->tid; 
 	//	fprintf(stderr,"theRef:%d %p %p\n",theRef,rd[0].it.off,rd[0].it.hts_itr->off);
-	//validate we have offsets;
-	int gotData = 0;
-	for(int i=0;i<nFiles;i++)
-	  if((rd[i].itr &&(rd[i].itr->off!=NULL))){
-	    gotData =1;
-	    break;
-	  }
 	//reset eof and region donepointers.
 	for(int i=0;i<nFiles;i++){
 	  rd[i].isEOF = 0;

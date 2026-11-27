@@ -59,6 +59,15 @@ fi
 fi
 
 if [[ ! -z "$BAMDIR" ]]; then
+echo "Testing -iCounts 2"
+time ./testICounts2.sh $WDIR/angsd $BAMDIR
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -iCounts 2 exit code: $?"
+    RVAL=1
+fi
+fi
+
+if [[ ! -z "$BAMDIR" ]]; then
 echo "Testing vcfreading"
 time ./testVcf.sh $WDIR/angsd ${BAMDIR}/small2.bcf
 if [ ! $? -eq 0  ]   ;then
@@ -129,6 +138,13 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
+echo "Testing the read pools (files without reads)"
+time ./testReadPool.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with the read pools exit code: $?"
+    RVAL=1
+fi
+
 #echo "Testing -doError"
 #time ./testError.sh $WDIR/angsd $BAMDIR
 #if [ ! $? -eq 0  ]   ;then
@@ -140,6 +156,13 @@ echo "Testing -r/-rf without an index"
 time ./testRegionNoIndex.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then
     echo "Problem with -r/-rf without an index exit code: $?"
+    RVAL=1
+fi
+
+echo "Testing -show with indels at the start of reads"
+time ./testShowIndel.sh $WDIR/angsd
+if [ ! $? -eq 0  ]   ;then
+    echo "Problem with -show and indels exit code: $?"
     RVAL=1
 fi
 

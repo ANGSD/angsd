@@ -99,6 +99,20 @@ if [[ ${e} -ne 1 ]]; then
 	fail "-r chrNotThere gave exit code ${e}, not 1"
 fi
 
+#overlapping regions (also with -r) are used as they are, but must give a warning with the number
+#of overlapping regions. 1:14025001-14026000 only touches the region before it, which is not an overlap
+printf '1:14000001-14010000\n3:14000001-14005000\n1:14005001-14020000\n1\t14015000\t14025000\n1\t14025000\t14026000\n' > ${RESDIR}/overlap.rf
+printf '1:14000001-14025000\n3:14000001-14006000\n1:14025001-14026000\n' > ${RESDIR}/touch.rf
+${ANGSD} ${ARGS} -rf ${RESDIR}/overlap.rf -r 3:14004001-14006000 -out ${RESDIR}/overlap > ${RESDIR}/overlap.log 2>&1 || fail "-rf overlap.rf exit code $?"
+${ANGSD} ${ARGS} -rf ${RESDIR}/touch.rf -out ${RESDIR}/touch > ${RESDIR}/touch.log 2>&1 || fail "-rf touch.rf exit code $?"
+cat ${RESDIR}/overlap.log ${RESDIR}/touch.log >> ${LOG}
+if ! grep -q "Warning: 3 regions overlap other regions" ${RESDIR}/overlap.log; then
+	fail "no warning (or a wrong number) for 3 overlapping regions"
+fi
+if grep -q "regions overlap" ${RESDIR}/touch.log; then
+	fail "warning for regions that don't overlap"
+fi
+
 #no site twice
 ndup=$(cut -f1,2 ${RESDIR}/rf1.pos | sort | uniq -d | wc -l)
 if [[ ${ndup} -ne 0 ]]; then

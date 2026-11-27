@@ -9,6 +9,7 @@
 #include <htslib/hts.h>
 #include <htslib/khash.h>
 #include <htslib/khash_str2int.h>
+#include <htslib/thread_pool.h>
 #include "mUpPile.h"
 #include "parseArgs_bambi.h"
 #include "abc.h"
@@ -311,23 +312,16 @@ bufReader *initializeBufReaders2(const std::vector<char *> &vec,int exitOnError,
       printHd(ret[i].hdr,stderr);
       fprintf(stderr,"Difference in BAM headers for \'%s\' and \'%s\'\n",vec[0],vec[i]);
       if(exitOnError)
-	exit(0);
+	exit(1);
     }
  
   
   pair *val_keys = new pair[vec.size()];
-  size_t fsize(const char* fname);
   for(size_t i=0;i<vec.size();i++){
-    pair p;
-    if (strstr(vec[i], "ftp://") == vec[i] || strstr(vec[i], "http://") == vec[i]){
-      p.val = 100+i;//doesntmatter
-      p.key = i;
-
-    }else{
-      p.val = aio::fsize(vec[i]);
-      p.key = i;
-      val_keys[i]=p;
-    }
+    //the largest file is tried first when picking how far to read. fsize is 0 for urls (ftp, http, https, s3, ...),
+    //they were not put in val_keys before, so the order had uninitialized file ids
+    val_keys[i].val = aio::fsize(vec[i]);
+    val_keys[i].key = i;
   }
   std::sort(val_keys,val_keys+vec.size());
 
@@ -366,12 +360,32 @@ void init_bamreaders(argStruct *args){
 int bammer_main(argStruct *args){
   gf=(abcGetFasta *) allMethods[1];
   extern int maxThreads;
+
+  //with -P >1 the files are decompressed by a htslib thread pool shared by all files,
+  //decompression was done by the reading thread and was a large part of its time.
+  //Each file gets a queue of 2 blocks, the htslib default (2*threads) used ~3.5MB per file with -P 8, this ~0.6MB
+  htsThreadPool tpool = {NULL, 2};
+  if(maxThreads>1){
+    tpool.pool = hts_tpool_init(maxThreads);
+    if(tpool.pool==NULL){
+      fprintf(stderr,"\t-> Could not make a thread pool for reading the files, will exit\n");
+      exit(1);
+    }
+    for(unsigned i=0;i<args->nams.size();i++)
+      if(hts_set_opt(args->rd[i].fp,HTS_OPT_THREAD_POOL,&tpool)!=0){
+	fprintf(stderr,"\t-> Could not use the thread pool for reading \'%s\', will exit\n",args->rd[i].fn);
+	exit(1);
+      }
+  }
+
   uppile(args->show,maxThreads,args->rd,args->nReads,args->nams.size(),args->regions,gf);
 
   //cleanup stuff
   for(unsigned i=0;i<args->nams.size();i++)
     dalloc_bufReader(args->rd[i]);
-  
+  if(tpool.pool)
+    hts_tpool_destroy(tpool.pool);//after the files are closed
+
   delete [] args->rd;
   return 0;
 }

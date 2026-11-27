@@ -1,4 +1,5 @@
 #include <vector>
+#include <algorithm>
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -215,6 +216,57 @@ void readRegionFile(const char *fname,argStruct *arguments){
   }
 }
 
+//sorts region indices by chromosome and start, ties by the order in the input
+struct regionLess{
+  const std::vector<regs> &r;
+  regionLess(const std::vector<regs> &r_a) : r(r_a) {}
+  bool operator()(size_t a,size_t b) const {
+    if(r[a].refID!=r[b].refID)
+      return r[a].refID<r[b].refID;
+    if(r[a].start!=r[b].start)
+      return r[a].start<r[b].start;
+    return a<b;
+  }
+};
+
+/*
+  Overlapping regions (-rf and -r) give the sites in the overlap more than once, eg. twice in the saf
+  or counts files. The regions are used as they are, but we warn and show the first overlap.
+  Regions that only touch (end of one is the start of the next) don't overlap.
+*/
+void warnOverlappingRegions(const std::vector<regs> &regions,const bam_hdr_t *hd){
+  size_t n = regions.size();
+  if(n<2)
+    return;
+  std::vector<size_t> idx(n);
+  for(size_t i=0;i<n;i++)
+    idx[i] = i;
+  std::sort(idx.begin(),idx.end(),regionLess(regions));
+
+  size_t nOverlap = 0;
+  size_t prev = idx[0];//the region with the largest stop so far on this chromosome
+  int ex1 = -1, ex2 = -1;//first overlapping pair
+  for(size_t i=1;i<n;i++){
+    const regs &r = regions[idx[i]];
+    const regs &p = regions[prev];
+    if(p.refID==r.refID&&r.start<p.stop){
+      nOverlap++;
+      if(ex1==-1){
+	ex1 = std::min(prev,idx[i]);
+	ex2 = std::max(prev,idx[i]);
+      }
+    }
+    if(p.refID!=r.refID||r.stop>p.stop)
+      prev = idx[i];
+  }
+  if(nOverlap==0)
+    return;
+  const regs &a = regions[ex1];
+  const regs &b = regions[ex2];
+  fprintf(stderr,"\t-> Warning: %zu regions overlap other regions, sites in the overlaps are used more than once (first overlap: %s:%d-%d and %s:%d-%d)\n",
+	  nOverlap,hd->target_name[a.refID],a.start+1,a.stop,hd->target_name[b.refID],b.start+1,b.stop);
+}
+
 void printArg(FILE *argFile,argStruct *ret){
   fprintf(argFile,"---------------\n%s: bam reader:\n",__FILE__);
   fprintf(argFile,"\t-bam/-b\t\t%s\t(list of BAM/CRAM files)\n",ret->infile);
@@ -355,7 +407,7 @@ void setArgsBam(argStruct *arguments){
     arguments->regions.push_back(tmpRegs);
     free(tmpReg);
   }
-
+  warnOverlappingRegions(arguments->regions,arguments->hd);
 
 
   printArg(arguments->argumentFile,arguments);
