@@ -102,17 +102,22 @@ void abcFreq::getOptions(argStruct *arguments){
   skipMissing=angsd::getArg("-skipMissing",skipMissing,arguments);
   doMaf=angsd::getArg("-doMaf",doMaf,arguments);
   doPost=angsd::getArg("-doPost",doPost,arguments);
-  
+
   if(doMaf==0 && doPost ==0)
     return;
-  
+  //the errors in getOptions used to exit with 0, an unknown -doPost stopped while reading the data
+  if(doPost<0||doPost>4){
+    fprintf(stderr,"\t-> Error: -doPost must be 1, 2, 3 or 4, not %d\n",doPost);
+    exit(1);
+  }
+
   rmTriallelic=angsd::getArg("-rmTriallelic",rmTriallelic,arguments);
   forceMaf=angsd::getArg("-forceMaf",forceMaf,arguments);
   
   GL=angsd::getArg("-GL",GL,arguments);
   if(inputtype!=INPUT_VCF_GL && inputtype!=INPUT_BEAGLE_GL && inputtype!=INPUT_GLF && inputtype!=INPUT_GLF3 && doPost && GL==0){
-    fprintf(stderr,"\t-> Potential problem: You are required to choose a genotype likelihood model (-GL) for estimating genotypes posteriors.\n");
-    exit(0);
+    fprintf(stderr,"\t-> Error: You are required to choose a genotype likelihood model (-GL) for estimating genotypes posteriors.\n");
+    exit(1);
   } 
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
   //  fprintf(stderr,"%d %d\n",inputtype,INPUT_VCF_GL);
@@ -123,8 +128,8 @@ void abcFreq::getOptions(argStruct *arguments){
     }
   } 
   if((doPost==1||doPost==4) &&doMaf==0){
-    fprintf(stderr,"\t-> Potential problem: You are required to choose a maf estimator (-doMaf) with -doPost %d\n",doPost);
-    exit(0);
+    fprintf(stderr,"\t-> Error: -doPost %d needs a maf estimator (-doMaf)\n",doPost);
+    exit(1);
   } 
 
   indFname = angsd::getArg("-indF",indFname,arguments);
@@ -148,7 +153,7 @@ void abcFreq::getOptions(argStruct *arguments){
   tmp=angsd::getArg("-SNP_pval",tmp,arguments);
   if(tmp!=-1 && tmp<0){
     fprintf(stderr,"\t-> (-SNP_pval) p-values must be positive\n");
-    exit(0);
+    exit(1);
   } 
  
   if(tmp!=-1){ 
@@ -170,7 +175,7 @@ void abcFreq::getOptions(argStruct *arguments){
   rmSNPs=angsd::getArg("-rmSNPs",rmSNPs,arguments);
   if( rmSNPs>0 && doSNP==0 ){
     fprintf(stderr,"\t-> Problem: You are required to choose a pvalue threshold for SNP calling (e.g. -SNP_pval 1e-6 ) with -rmSNP 1\n");
-    exit(0);
+    exit(1);
   } 
 
   if(rmTriallelic)
@@ -187,24 +192,24 @@ void abcFreq::getOptions(argStruct *arguments){
   }
   if(doSNP && abs(doMaf)&8){
     fprintf(stderr,"\t-> LRT based snp calling is not defined for count based maf estimates\n");
-    exit(0);
+    exit(1);
   }
   if(doSNP&&abs(doMaf)==0){
     fprintf(stderr,"You've selected SNP-calling but no maf estimator please select -doMaf INT\n");
-    exit(0);
+    exit(1);
   }
 
   if(doSNP==1 && abs(doMaf)==0){
     fprintf(stderr,"You've selected SNP_pval threshold please also select -doMaf \n");
-    exit(0);
+    exit(1);
   }
   if(minMaf>0.0 &&(abs(doMaf)==0)){
     fprintf(stderr,"\nYou've selected minMaf but no MAF estimator, choose -doMaf\n\n");
-    exit(0);
+    exit(1);
   }
   if(rmTriallelic>0.0 &&(abs(doMaf)!=1)){
     fprintf(stderr,"\n rmTriallelic only works with -doMaf 1 \n\n");
-    exit(0);
+    exit(1);
   }
 
   int doCounts =0;
@@ -217,47 +222,47 @@ void abcFreq::getOptions(argStruct *arguments){
     return;
   if(inputtype!=INPUT_VCF_GP&&inputtype!=INPUT_BEAGLE&&inputtype!=INPUT_BGEN&&inputtype!=0&&doMajorMinor==0&&inputtype!=INPUT_VCF_GL&&inputtype!=INPUT_BEAGLE_GL){
     fprintf(stderr,"You must specify \'-doMajorMinor\' to infer major/minor \n");
-    exit(0);
+    exit(1);
   }
 
   if((inputtype==INPUT_BEAGLE||inputtype==INPUT_BGEN)&&abs(doMaf)!=4){
     fprintf(stderr,"\t-> Only \'-doMaf 4\' can be performed on posterior input\n");
-    exit(0);
+    exit(1);
   }
   if(abs(doMaf) & 4){
 
     if(inputtype!=INPUT_BEAGLE && inputtype!=INPUT_BGEN && inputtype!=INPUT_VCF_GP ){
       fprintf(stderr,"\t-> \'-doMaf 4\' can only be performed on genotype probabilities -dopost, -vcf-gp, -beagle \n");
-      exit(0);
+      exit(1);
     }
   }
 
   if((inputtype==INPUT_BAM || inputtype==INPUT_PILEUP )&& GL==0 &&abs(doMaf)!=8){
     fprintf(stderr,"Error: For sequence data (BAM,pileups) likehoods (-GL) must be specified for frequency estimation\n");
-    exit(0);
+    exit(1);
   }
 
   if(doSNP&&abs(doMaf) &4){
     fprintf(stderr,"Error: -doMaf 4 cannot be used for a likelihood ratio test (doSNP) \n");
-    exit(0);
+    exit(1);
   }
   if((inputtype==INPUT_BEAGLE||inputtype==INPUT_BGEN)&&doPost){
     fprintf(stderr,"Error: Cannot estimate post (doPost) based on posterior probabilites\n");
-    exit(0);
+    exit(1);
   }
   if(abs(doMaf)&8&&doCounts==0){
     fprintf(stderr,"Must supply -doCounts for MAF estimator based on counts\n");
-    exit(0);
+    exit(1);
   }
 
   if(beagleProb && doPost==0 &&inputtype!=INPUT_VCF_GP){
     fprintf(stderr,"Must supply -doPost 1 to write beaglestyle postprobs\n");
-    exit(0);
+    exit(1);
   }
 
   if(doPost!=0 && doMajorMinor==0 &&INPUT_VCF_GL!=inputtype&&INPUT_BEAGLE_GL!=inputtype){
     fprintf(stderr,"Do post requires major and minor: supply -doMajorMinor \n");
-    exit(0);
+    exit(1);
   }
 
 }
@@ -653,7 +658,7 @@ void abcFreq::run(funkyPars *pars) {
       }
       else{
 	fprintf(stderr,"[%s] doPost must be 1, 2, 3 or 4\n",__FUNCTION__);
-	exit(0);
+	exit(1);
       
       }
       delete [] like[s];

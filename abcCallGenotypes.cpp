@@ -67,25 +67,22 @@ void abcCallGenotypes::getOptions(argStruct *arguments){
   
   int doCounts=0;
   doCounts = angsd::getArg("-doCounts",doCounts,arguments);
+  //the errors below used to exit with 0
   if((geno_minDepth!=-1 || geno_maxDepth!=-1 || geno_minMM!=-1 ) &&doCounts==0){
-    fprintf(stderr,"Must supply -doCounts to use a minimum depth for GC calling\n");
-    exit(0);
-  }
-  if(geno_maxDepth!=-1&&doCounts==0){
-    fprintf(stderr,"Must supply -doCounts to use a maximum depth for GC calling\n");
-    exit(0);
+    fprintf(stderr,"\t-> -geno_minDepth, -geno_maxDepth and -geno_minMM need -doCounts 1\n");
+    exit(1);
   }
   
 
   if(arguments->inputtype!=INPUT_BEAGLE&&doPost==0&&arguments->inputtype!=INPUT_VCF_GP){
     fprintf(stderr,"\n\t-> You need -doPost to call genotypes \n");
-    exit(0);
+    exit(1);
 
   }
 
   if(doPost==1&&doMaf==0){
     fprintf(stderr,"\n\t-> You need -doMaf inorder to get posterior probabilities when using freq as prior\n");
-    exit(0);
+    exit(1);
   }
   minInd=angsd::getArg("-minInd",minInd,arguments);
 
