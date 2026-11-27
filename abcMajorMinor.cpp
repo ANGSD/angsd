@@ -330,10 +330,14 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
    for(int s=0;s<pars->numSites;s++){
      if(pars->keepSites[s]==0)
        continue;
+     //-doMajorMinor 7 uses the reference as major, a site where it is N is removed as with -doMajorMinor 4
+     if(doMajorMinor==7&&refToInt[pars->ref[s]]==4){
+       pars->keepSites[s]=0;
+       continue;
+     }
      float EBD[4*pars->nInd];
      float qsum[5] = {0,0,0,0,0};
      for(int i=0;i<pars->nInd;i++){
-       fprintf(stderr,"i:%d nd:%p\n",i,pars->chk->nd[s][i]);
        tNode *nd = pars->chk->nd[s][i];
        EBD[i*4]=EBD[i*4+1]=EBD[i*4+2]=EBD[i*4+3]=0.0;
        float tmpsum = 0;
@@ -342,6 +346,8 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
 	 if(nd->qs[j]<minQ)
 	   continue;
 	 int b =refToInt[nd->seq[j]];
+	 if(b==4)//N, EBD has 4 values per individual: it wrote into the next individual or past the array (crash)
+	   continue;
 	 int q = nd->qs[j];
 	 //block below are adjustments similar to bcftools mpileup parsing
 	 if (q > nd->mapQ[j]) q = nd->mapQ[j];
@@ -352,7 +358,6 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
 	 //fprintf(stderr,"ebd: %f\n",EBD[4*i+refToInt[nd->seq[j]]]);
 	 tmpsum += q;
        }
-       fprintf(stderr,"tmpsum: %f\n",tmpsum);
        for(int j=0;j<4;j++){
 	 if(tmpsum>0){
 	   qsum[j] += EBD[4*i+j]/tmpsum;
@@ -368,8 +373,6 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
      for (i=1; i<4; i++)
        for (j=i; j>0 && *ptr[j] < *ptr[j-1]; j--)
 	 tmp = ptr[j], ptr[j] = ptr[j-1], ptr[j-1] = tmp;
-     for(int i=0;i<4;i++)
-       fprintf(stderr,"%d) %f %f\n",i,*ptr[i],*ptr[i]-qsum[i]);
      if(doMajorMinor==6){
        int first = ptr[3]-qsum;
        int second = ptr[2]-qsum;
@@ -378,10 +381,8 @@ int abcMajorMinor::majorMinorEBD(funkyPars *pars,int doMajorMinor){
        pars->minor[s]=second;
      }else if(doMajorMinor==7){
        pars->major[s] = refToInt[pars->ref[s]];
-       fprintf(stderr,"major is: %d\n",pars->major[s]);
        for(int j=3;j>0;j--){
 	 int whichbase=ptr[j]-qsum;
-	 fprintf(stderr,"ptr[%d]: %f wb:%d\n",j,*ptr[j],whichbase);
 	 if(whichbase==pars->major[s])
 	   continue;
 	 pars->minor[s] = ptr[j]-qsum;
