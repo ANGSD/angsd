@@ -4,7 +4,6 @@
 class abcRAD:public abc{
 private:
   int doRad;
-  char *refName;
   FILE *outfile;
 public:
   void run(funkyPars  *pars);

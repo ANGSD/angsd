@@ -1,29 +1,18 @@
 /*
- 
-
-  generally angsd will send the data for a genomic region through all analysis classes (abc*).
-  the data is encapsulated in a 'funkyPars' struct (found in shared.h)
-  
-  For each abcClass it will do
-  1) ::run
-  2) ::print
-  3) ::clean
-  
-  below are some toy example that will show
-  a) how the class system works ()
-  b) how to access the internal datastructure
+  DEPRECATED: -doRad is not maintained and may be removed. It was made from abcTemplate as
+  a small example. Use -doCounts 1 -dumpCounts 4 for the base counts of each sample, or
+  -doSnpStat 1 for the counts by strand and a strand bias test.
 
   -doRad 1:
-  Will simply count the number of A, C, G, T, N's for both strand
+  Counts the A, C, G, T and N of all samples for each strand at each site and writes them
+  to the .results file. The strand is from the case of the bases (upper case is forward).
+  N includes bases masked because of a low quality (-minQ).
 
-  We will put all analysis in the ::print function. therefore it will NOT be threaded
-  the raw analysis should be put into ::run (this is threaded in angsd)
-  but we wont do this in case of simplicity
+  The counting is in ::print, so it is not threaded.
 
-  Run command examples:
+  Run command example:
   ---------------------
-  ./angsd -i YanaRef.bam -doTemplate 2 -r 3:100000-50000000 -ref ../ProbabilisticAncientDNA/HumanGenomeReference/hs.build37.1.fa  
-
+  ./angsd -bam bam.filelist -doRad 1 -out out
  */
 
 #include <ctype.h> //<-used for isupper/islower
@@ -35,17 +24,13 @@
 #include "abcRAD.h"//contains the analysis class defition associated with this file
 
 
-
-
-
 //this msg is shown on screen if you type
 // ./angsd -doRad
 //otherwise this is printet to the file .arg
 void abcRAD::printArg(FILE *argFile){
   fprintf(argFile,"------------------------\n%s:\n",__FILE__);
-  fprintf(argFile,"-doRad\t%d (Which analysis should we perform?)\n",doRad);
-  fprintf(argFile,"\t\t1: Count and print basetypes in combination with strand\n");
-  if (doRad == 2) fprintf(argFile,"-ref\t%s\n",refName);
+  fprintf(argFile,"-doRad\t%d (Deprecated, use -doCounts 1 -dumpCounts 4 or -doSnpStat 1)\n",doRad);
+  fprintf(argFile,"\t\t1: Count and print basetypes in combination with strand (BAM/CRAM or pileup input)\n");
 }
 
 //this is the function that parses the parameters used for this analysis class
@@ -53,38 +38,28 @@ void abcRAD::getOptions(argStruct *arguments){
   //from command line
   doRad=angsd::getArg("-doRad",doRad,arguments);
 
-  
-  if (doRad == 2) refName = angsd::getArg("-ref", refName, arguments);
-
-  if ((doRad == 2) && (refName==NULL)) {
-    fprintf(stderr, "\t-> Must supply -ref \n");
-    printArg(stderr);
-    exit(0);
-  }
-
   if(doRad==0){
-    /*
-      if this class shouldnt do any analysis,
-      then setting this to zero will make sure nothing is run (apart from destructor)
-    
-      this could also have been accomplished by
-      if(doRad==0) return
-      in ::run ::clean ::print
-    */
-    
+    //nothing is run for this class (apart from the destructor)
     shouldRun[index]=0;
     return;
   }
+  //-doRad 2 needed -ref but did nothing, other values made an empty file with exit code 0
+  if(doRad!=1){
+    fprintf(stderr,"\t-> -doRad must be 1, not %d\n",doRad);
+    exit(1);
+  }
+  //the reads are only there for bam and pileup input, other input crashed
+  if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
+    fprintf(stderr,"\t-> -doRad needs BAM/CRAM or pileup input\n");
+    exit(1);
+  }
+  fprintf(stderr,"\t-> -doRad is deprecated, use -doCounts 1 -dumpCounts 4 or -doSnpStat 1\n");
 }
 
 //constructor
 abcRAD::abcRAD(const char *outfiles,argStruct *arguments,int inputtype){
   doRad = 0; //defaults= dont do analysis
-  refName = NULL;
   outfile = NULL;
-
-  char *empty;
-  //like_calc = new phys_genolike_calc( empty );
 
   //first a hook for the interactive help:
   //  ./angsd -doRad
@@ -95,7 +70,7 @@ abcRAD::abcRAD(const char *outfiles,argStruct *arguments,int inputtype){
     } else
       return;
   }
-  
+
   //now parse the arguments
   getOptions(arguments);
   //now print the arguments
@@ -106,9 +81,7 @@ abcRAD::abcRAD(const char *outfiles,argStruct *arguments,int inputtype){
   printArg(arguments->argumentFile);
   //initalize outputfile
   outfile = aio::openFile(outfiles,".results");
-  // fprintf(outfile,"Chromo\tPosition\t+A\t+C\t+G\t+T\t-A\t-C\t-G\t-T\n");
-
-
+  fprintf(outfile,"chromo\tposition\t+A\t+C\t+G\t+T\t+N\t-A\t-C\t-G\t-T\t-N\n");
 }
 
 
@@ -117,9 +90,8 @@ abcRAD::abcRAD(const char *outfiles,argStruct *arguments,int inputtype){
 abcRAD::~abcRAD(){
   if(doRad==0)
     return;
- 
 
-  if(outfile!=NULL) 
+  if(outfile!=NULL)
     fclose(outfile);
 }
 
@@ -133,7 +105,7 @@ void abcRAD::clean(funkyPars *pars){
 
 
 void abcRAD::print(funkyPars *pars){
-  
+
   if(doRad==1){
     //count bases by strand
 
@@ -142,38 +114,37 @@ void abcRAD::print(funkyPars *pars){
 
     //loop over sites;
     for(int s=0;s<pars->numSites;s++){
-      int bases[2][5] = {{0,0,0,0,0},{0,0,0,0,0}};      
-      
+      //sites removed by the filters were printed
+      if(pars->keepSites[s]==0)
+	continue;
+      int bases[2][5] = {{0,0,0,0,0},{0,0,0,0,0}};
+
       //loop over samples
       for(int i=0;i<pars->nInd;i++){
-	//all seqdata associated with single bamfile is in a tNode
+	//all seqdata associated with single bamfile is in a tNode, NULL if the sample has no reads here (it crashed)
 	tNode *nd = chk->nd[s][i];
+	if(nd==NULL)
+	  continue;
 	//loop over the individual bases
 	for(int l=0;l<nd->l;l++){
-	  char c = nd->seq[l]; //this is the base
-	  char q = nd->qs[l]; //this is the associated qscore, fancy shit
-	  int strand = isupper(nd->seq[l])==0; //strand is defined as either small/big letters
-	  
+	  unsigned char c = nd->seq[l]; //this is the base
+	  int strand = isupper(c)==0; //strand is defined as either small/big letters
+
 	  //there is a lookuptable called refToInt which maps
-	  //a->0,A->0,c->1,C->1,g->2,G->2,t->3,T=>3,n->4,N->5
+	  //a->0,A->0,c->1,C->1,g->2,G->2,t->3,T=>3,n->4,N->4
 	  bases[strand][refToInt[c]]++;
 	}
-
-	//print chr and position
-	fprintf(outfile,"%s\t%d",header->target_name[pars->refId],pars->posi[s]+1);//position is zero index internally
-	
-	//print the basecount
-	for(int i=0;i<2;i++)
-	  for(int j=0;j<5;j++)
-	    fprintf(outfile,"\t%d",bases[i][j]);
-	fprintf(outfile,"\n");
-	
-
       }
-      
+      //one line for each site with the counts of all samples, it was a line for each sample
+      //with the counts of the samples so far
+      fprintf(outfile,"%s\t%d",header->target_name[pars->refId],pars->posi[s]+1);//position is zero index internally
+      for(int i=0;i<2;i++)
+	for(int j=0;j<5;j++)
+	  fprintf(outfile,"\t%d",bases[i][j]);
+      fprintf(outfile,"\n");
     }
   }
-  
+
 }
 
 void abcRAD::run(funkyPars *pars){
@@ -181,5 +152,3 @@ void abcRAD::run(funkyPars *pars){
     return;
   //this functions runs for each block
 }
-
-
