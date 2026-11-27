@@ -3,20 +3,22 @@
   part of angsd
 
   
-  This class will calculate the GL in 4 differnt ways
+  This class calculates the genotype likelihoods (-GL) in 7 different ways
 
-  1) SAMtools 0.1.16+ version 
-  2) Simple GATK model
-  3) SOAPsnp
-  4) SYK
-  5) new fancy method
-  6) simple sample gls
-  4 different output formats are supplied
-  
-  1) binary 10xdouble persample
-  2) beagle output (requires estimation of major/minor)\
-  3) binary beagle
-  4) text output of the 10 llhs persample
+  1) SAMtools 0.1.16+ version (bam_likes)
+  2) Simple GATK model (gatk_likes)
+  3) SOAPsnp (soap_likes)
+  4) SYK (from the allele counts and an error matrix, -errors)
+  5) phys (phys_likes, deprecated)
+  6) simple sample gls (simple_likes)
+  7) outgroup gls (ancestral_likes, beta)
+
+  and writes them (-doGlf) in 4 different formats
+
+  1) binary, 10 log likelihoods (double) per sample
+  2) beagle likelihood file (requires estimation of major/minor)
+  3) binary, the 3 log likelihoods (double) of major/minor per sample, and the sites in .glf.pos.gz
+  4) text, the 10 log likelihoods per sample
 */
 
 #include <cmath>
@@ -87,7 +89,6 @@ void abcGL::printArg(FILE *argFile){
   fprintf(argFile,"\t2: beagle likelihood file\t%s\n",beaglepostfix);
   fprintf(argFile,"\t3: binary 3 times likelihood\t%s\n",postfix);
   fprintf(argFile,"\t4: text version (10 log likes)\t%s\n",postfix);
-  fprintf(argFile,"\t5: binary saf files (useful for realSFS)\t%s\n",postfix);
   fprintf(argFile,"\n");
 
 }
@@ -97,9 +98,6 @@ void abcGL::getOptions(argStruct *arguments){
   //parse all parameters that this class could use
   GL=angsd::getArg("-GL",GL,arguments);
 
-  if(0&&GL==0)//DRAGON
-    return;
-  
   trim = angsd::getArg("-trim",trim,arguments);
   angsd_tmpdir = angsd::getArg("-tmpdir",angsd_tmpdir,arguments);
   doGlf=angsd::getArg("-doGlf",doGlf,arguments);
@@ -119,6 +117,15 @@ void abcGL::getOptions(argStruct *arguments){
   }
   if(arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_VCF_GL||arguments->inputtype==INPUT_GLF10_TEXT||arguments->inputtype==INPUT_BEAGLE_GL)
     return;
+  //-doGlf 5 wrote the 10 GLs in the saf file format, only right for one individual and not used by anything
+  if(doGlf==5){
+    fprintf(stderr,"\t-> -doGlf 5 has been removed, use -doGlf 1 (binary) or -doGlf 4 (text) for the 10 genotype likelihoods\n");
+    exit(1);
+  }
+  if(doGlf<0||doGlf>4){
+    fprintf(stderr,"\t-> -doGlf must be 1, 2, 3 or 4, not %d\n",doGlf);
+    exit(1);
+  }
   if(doGlf&&GL==0){
     fprintf(stderr,"\t-> You need to choose a genotype likelihood model -GL for dumping genotype likelihoods\n");
     exit(0);
@@ -149,16 +156,6 @@ void abcGL::getOptions(argStruct *arguments){
   //without -seed, sample new bases every run
   if((GL==1||GL==6)&&seed==0)
     seed=time(NULL);
-  /*
-  if(doGlf==2){
-    fprintf(stderr,"\t-> BEAGLE format 3.0 is deprecated\n\t-> Consider using -doVCF 1\n");
-    for(int j=3;j>0;j--){
-      fprintf(stderr,"\t-> Program will continue in %d seconds    \n",j);fflush(stderr);
-      sleep(1);
-    }
-
-  }
-  */
   if((doGlf==2||doGlf==3) && doMajorMinor==0){
     fprintf(stderr,"\t-> For dumping beaglestyle output you need to estimate major/minor: -doMajorMinor\n");
     exit(0);
@@ -175,21 +172,15 @@ void abcGL::getOptions(argStruct *arguments){
 }
 
 abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
-  nnnSites =0;
-  outfileSAF = NULL;
-  outfileSAFPOS = NULL;
-  outfileSAFIDX = NULL;
   errors = NULL;
   bam = NULL;
   postfix = ".glf.gz";
   beaglepostfix = ".beagle.gz";
-  tmpChr = NULL;
   trim =0;
   GL=0;
   doGlf=0;
   errorFname = NULL;
   errorProbs = NULL;
-  GL=0;
   minInd=0;
   seed=0;
   angsd_tmpdir = strdup("angsd_tmpdir");
@@ -205,8 +196,6 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   getOptions(arguments);
   printArg(arguments->argumentFile);
 
-  //  if(GL==0) //why?
-  //  return;
   if(GL==1)
     bam = new bam_likes();
   else if(GL==3){
@@ -264,24 +253,6 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
   
   gzoutfile = gzoutfile2 = NULL;
   bufstr.s=NULL; bufstr.l=bufstr.m=0;// <- used for buffered output 
-  const char *SAF = ".saf.gz";
-  const char *SAFPOS =".saf.pos.gz";
-  const char *SAFIDX =".saf.idx";
-
-  if(doGlf==5){
-    outfileSAF =  aio::openFileBG(outfiles,SAF);
-    outfileSAFPOS =  aio::openFileBG(outfiles,SAFPOS);
-    outfileSAFIDX = aio::openFile(outfiles,SAFIDX);
-    char buf[8]="safv3";
-    aio::bgzf_write(outfileSAF,buf,8);
-    aio::bgzf_write(outfileSAFPOS,buf,8);
-    fwrite(buf,1,8,outfileSAFIDX);
-    offs[0] = bgzf_tell(outfileSAFPOS);
-    offs[1] = bgzf_tell(outfileSAF);
-    size_t tt = 9;
-    fwrite(&tt,sizeof(tt),1,outfileSAFIDX);
-  }
-  
   
   if(doGlf){
  
@@ -311,26 +282,6 @@ abcGL::abcGL(const char *outfiles,argStruct *arguments,int inputtype){
 
 
 abcGL::~abcGL(){
-  if(GL>0&&doGlf==5){
-      aio::doAssert(outfileSAF!=NULL,AT);
-    aio::doAssert(outfileSAFIDX!=NULL,AT);
-    aio::doAssert(outfileSAFPOS!=NULL,AT);
-    //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
-    if(nnnSites!=0&&tmpChr!=NULL){
-      size_t clen = strlen(tmpChr);
-      fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);
-      fwrite(tmpChr,1,clen,outfileSAFIDX);
-      size_t tt = nnnSites;
-      fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
-      fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
-    }//else
-    // fprintf(stderr,"enpty chr\n");
-    //reset
-    offs[0] = bgzf_tell(outfileSAFPOS);
-    offs[1] = bgzf_tell(outfileSAF);
-    nnnSites=0;
-  }
-  
   free(angsd_tmpdir);
   
   if(GL==0&&doGlf==0)
@@ -344,7 +295,7 @@ abcGL::~abcGL(){
 
   if(doGlf)    bgzf_close(gzoutfile);
     
-  if(gzoutfile!=NULL)
+  if(gzoutfile2!=NULL)
     bgzf_close(gzoutfile2);
 
   if(bufstr.s!=NULL)
@@ -356,11 +307,6 @@ abcGL::~abcGL(){
     delete [] errors;
   }
   delete [] logfactorial;
-  if(doGlf==5){
-    if(outfileSAF) bgzf_close(outfileSAF);;
-    if(outfileSAFPOS) bgzf_close(outfileSAFPOS);
-    if(outfileSAFIDX) fclose(outfileSAFIDX);
-  }
 }
 
 void abcGL::clean(funkyPars *pars){
@@ -386,7 +332,6 @@ void abcGL::run(funkyPars *pars){
   
   if(GL==0)
     return;
-  //aio::doAssert(pars->chk!=NULL);
   double **likes = NULL;
   //no likelihoods when -GL 3 or -GL 7 only calculate their calibration
   if(!(GL==3&&soap.doRecal==1) && !(GL==7&&ancestral_lik.doRecal==1))
@@ -585,49 +530,6 @@ void abcGL::printLike(funkyPars *pars) {
       kputc('\n',&bufstr);
     }
     aio::bgzf_write(gzoutfile,bufstr.s,bufstr.l);bufstr.l=0;
-  }else if(doGlf==5){
-    for(int s=0;s<pars->numSites;s++){
-      if(pars->keepSites[s]==0)
-	continue;
-      nnnSites++;
-      float tmp[10*pars->nInd];
-      for(int i=0;i<10;i++)
-	tmp[i] = pars->likes[s][i];
-      aio::bgzf_write(outfileSAF,tmp,sizeof(float)*10*pars->nInd);
-      int mypos = pars->posi[s];
-      aio::bgzf_write(outfileSAFPOS,&mypos,sizeof(int));
-    }
-
-
   }
 
-
-}
-
-void abcGL::changeChr(int refId) {
-  //  fprintf(stderr,"Charnge chr:%d\n",refId);
-  if(GL>0&&doGlf==5){
-    aio::doAssert(outfileSAF!=NULL,AT);
-    aio::doAssert(outfileSAFIDX!=NULL,AT);
-    aio::doAssert(outfileSAFPOS!=NULL,AT);
-    //  fprintf(stderr,"nnnSites:%d\n",nnnSites);
-    if(nnnSites!=0&&tmpChr!=NULL){
-      size_t clen = strlen(tmpChr);
-      fwrite(&clen,sizeof(size_t),1,outfileSAFIDX);
-      fwrite(tmpChr,1,clen,outfileSAFIDX);
-      size_t tt = nnnSites;
-      fwrite(&tt,sizeof(size_t),1,outfileSAFIDX);
-      fwrite(offs,sizeof(int64_t),2,outfileSAFIDX);
-    }//else
-    // fprintf(stderr,"enpty chr\n");
-    //reset
-    offs[0] = bgzf_tell(outfileSAFPOS);
-    offs[1] = bgzf_tell(outfileSAF);
-    nnnSites=0;
-    
-    free(tmpChr);
-    tmpChr = strdup(header->target_name[refId]);
-
-
-  }
 }
