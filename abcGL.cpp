@@ -41,7 +41,7 @@ void readError(double **errors,const char *fname){
   FILE *fp=NULL;
   if(NULL==(fp=fopen(fname,"r"))){
     fprintf(stderr,"Error opening file: %s\n",fname);
-    exit(0);
+    exit(1);
   }
   
   char buf[LENS];
@@ -113,7 +113,7 @@ void abcGL::getOptions(argStruct *arguments){
   doMajorMinor=angsd::getArg("-doMajorMinor",doMajorMinor,arguments);
   if(GL!=0 && (arguments->inputtype==INPUT_GLF || arguments->inputtype==INPUT_GLF3 || arguments->inputtype==INPUT_VCF_GL || arguments->inputtype==INPUT_BEAGLE_GL)){
     fprintf(stderr,"Can't calculate genotype likelihoods from -glf/-glf3/VCF/-beagle-GL files\n");
-    exit(0);
+    exit(1);
   }
   if(arguments->inputtype==INPUT_GLF||arguments->inputtype==INPUT_GLF3||arguments->inputtype==INPUT_VCF_GL||arguments->inputtype==INPUT_GLF10_TEXT||arguments->inputtype==INPUT_BEAGLE_GL)
     return;
@@ -128,7 +128,7 @@ void abcGL::getOptions(argStruct *arguments){
   }
   if(doGlf&&GL==0){
     fprintf(stderr,"\t-> You need to choose a genotype likelihood model -GL for dumping genotype likelihoods\n");
-    exit(0);
+    exit(1);
   }
   if(GL==0&&doGlf==0){
     shouldRun[index] =0;
@@ -143,31 +143,31 @@ void abcGL::getOptions(argStruct *arguments){
   
   if(( GL<0||GL>7 )) {
     fprintf(stderr,"\t-> You've chosen a GL model=%d, only 1,2,3,4,5,6,7 are implemented\n",GL);
-    exit(0);
+    exit(1);
   }
   if(GL==4&&(doCounts==0)){
     fprintf(stderr,"\t-> Must supply -doCounts 1 for SYK model\n");
-    exit(0);
+    exit(1);
   }
   if(GL==6&&(doCounts==0)){
     fprintf(stderr,"\t-> Must supply -doCounts 1 for -gl 6\n");
-    exit(0);
+    exit(1);
   }
   //without -seed, sample new bases every run
   if((GL==1||GL==6)&&seed==0)
     seed=time(NULL);
   if((doGlf==2||doGlf==3) && doMajorMinor==0){
     fprintf(stderr,"\t-> For dumping beaglestyle output you need to estimate major/minor: -doMajorMinor\n");
-    exit(0);
+    exit(1);
   }
   if(arguments->inputtype==INPUT_BEAGLE&&doGlf){
     fprintf(stderr,"\t-> cannot output likelihoods (doGlf) when input is beagle\n");
-    exit(0);
+    exit(1);
   }
  
   if(arguments->inputtype!=INPUT_BAM&&arguments->inputtype!=INPUT_PILEUP){
     fprintf(stderr,"Error: Likelihoods can only be estimated based on BAM input and uppile input\n");
-    exit(0);
+    exit(1);
   }
 }
 
@@ -417,6 +417,14 @@ void abcGL::getLikesFullError10Genotypes(int numSites,int nInd,suint **counts,do
     loglikes[s] = new double [10*nInd];
     if(keepSites[s]==0)
       continue;
+    //logfactorial has LOGMAX values, a larger depth read outside of it
+    for(int i=0;i<nInd;i++){
+      size_t depth = (size_t)counts[s][i*4+0]+counts[s][i*4+1]+counts[s][i*4+2]+counts[s][i*4+3];
+      if(depth>=LOGMAX){
+	fprintf(stderr,"\t-> Error: sample %d has a depth of %zu at a site, -GL 4 only works below a depth of %d per sample. Use another -GL or remove the high depth sites (eg. -setMaxDepthInd)\n",i,depth,LOGMAX);
+	exit(1);
+      }
+    }
     for(int allele1=0;allele1<4;allele1++) {
       for(int allele2=allele1;allele2<4;allele2++){
 	int Gindex=angsd::majorminor[allele1][allele2];

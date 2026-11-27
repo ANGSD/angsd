@@ -7,6 +7,7 @@
 # -ref and 5 without -anc, and an unknown -doMajorMinor and 7 without -ref crashed (segfault).
 # An individual without reads has the same posterior for the 3 genotypes and must not be
 # called, also with -postCutoff below 1/3 (it was called as major/major).
+# -GL and -doGlf errors also exited with 0.
 #
 # ./testGenoArgs.sh angsd
 if [[ $# -lt 1 ]]
@@ -48,6 +49,16 @@ check1 ${BAM} -GL 1 -doMajorMinor 2 -doMaf 1
 for m in 3 4 5 7 9 -1; do
 	check1 ${BAM} -GL 1 -doMajorMinor ${m} -doMaf 1
 done
+#-GL/-doGlf: unknown -GL, -doGlf without -GL, -GL 4/6 without -doCounts, -doGlf 2 without
+#-doMajorMinor, a missing -errors file, the removed -doGlf 5 and an unknown -doGlf
+check1 ${BAM} -GL 9
+check1 ${BAM} -doGlf 1
+check1 ${BAM} -GL 4
+check1 ${BAM} -GL 6
+check1 ${BAM} -GL 1 -doGlf 2
+check1 ${BAM} -GL 4 -doCounts 1 -errors ${RESDIR}/notthere.errors
+check1 ${BAM} -GL 1 -doGlf 5
+check1 ${BAM} -GL 1 -doGlf 7
 
 #and with everything needed it must work
 ${ANGSD} ${IN} -doMaf 1 -doPost 1 -doGeno 2 -doCounts 1 -geno_minDepth 2 -out ${RESDIR}/ok >> ${LOG} 2>&1
