@@ -166,10 +166,10 @@ if [ ! $? -eq 0  ]   ;then
     RVAL=1
 fi
 
-echo "Testing missing -doGeno/-doPost arguments"
+echo "Testing missing -doGeno/-doPost/-doMaf/-doMajorMinor arguments"
 time ./testGenoArgs.sh $WDIR/angsd
 if [ ! $? -eq 0  ]   ;then
-    echo "Problem with missing -doGeno/-doPost arguments exit code: $?"
+    echo "Problem with missing -doGeno/-doPost/-doMaf/-doMajorMinor arguments exit code: $?"
     RVAL=1
 fi
 

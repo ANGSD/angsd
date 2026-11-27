@@ -76,6 +76,11 @@ void abcMajorMinor::getOptions(argStruct *arguments){
 
   if(doMajorMinor==0)
     return;
+  //an unknown value crashed (segfault), the errors below used to exit with 0
+  if(doMajorMinor<0||doMajorMinor>7){
+    fprintf(stderr,"\t-> Error: -doMajorMinor must be 1 to 7, not %d\n",doMajorMinor);
+    exit(1);
+  }
   
   doCounts=angsd::getArg("-doCounts",doCounts,arguments);
   rmTrans=angsd::getArg("-rmTrans",rmTrans,arguments);
@@ -88,44 +93,44 @@ void abcMajorMinor::getOptions(argStruct *arguments){
   sites = angsd::getArg("-sites",sites,arguments);
   if(sites==NULL&&doMajorMinor==3){
     fprintf(stderr,"\t-> You need to supply -sites for -domajorminor 3 to work. These have to have either 4 or 7 columns\n");
-    exit(0);
+    exit(1);
   }
   free(sites);
-  if(doMajorMinor==4&&ref==NULL){
-    fprintf(stderr,"\t-> Must supply reference (-ref) when -doMajorMinor 4\n");
-    exit(0);
+  if((doMajorMinor==4||doMajorMinor==7)&&ref==NULL){//7 crashed without -ref
+    fprintf(stderr,"\t-> Must supply reference (-ref) when -doMajorMinor %d\n",doMajorMinor);
+    exit(1);
   }
   if(doMajorMinor==5&&anc==NULL){
     fprintf(stderr,"\t-> Must supply ancestral (-anc) when -doMajorMinor 5\n");
-    exit(0);
+    exit(1);
   }
   free(ref);
   free(anc);
   GL=angsd::getArg("-GL",GL,arguments);
 
   if((doMajorMinor==6||doMajorMinor==7)&&(inputtype!=INPUT_BAM&&inputtype!=INPUT_PILEUP)){
-    fprintf(stderr,"\t-> Potential problem: EBD based major minor analyses requires read data BAM/CRAM or pileup\n");
-    exit(0);
+    fprintf(stderr,"\t-> Error: EBD based major minor analyses requires read data BAM/CRAM or pileup\n");
+    exit(1);
   }
 
   if(inputtype==INPUT_BEAGLE&&doMajorMinor){
-    fprintf(stderr,"\t-> Potential problem: Cannot estimate the major and minor based on posterior probabilities\n");
-    exit(0);
+    fprintf(stderr,"\t-> Error: Cannot estimate the major and minor based on posterior probabilities\n");
+    exit(1);
   }
  if(inputtype!=INPUT_GLF && inputtype!=INPUT_GLF3 && inputtype!=INPUT_VCF_GL && doMajorMinor==1 && GL==0 &&inputtype!=INPUT_GLF10_TEXT&&inputtype!=INPUT_BEAGLE_GL){
-   fprintf(stderr,"\t-> Potential problem: -doMajorMinor 1 is based on genotype likelihoods, you must specify a genotype likelihood model -GL \n");
-   exit(0);
+   fprintf(stderr,"\t-> Error: -doMajorMinor 1 is based on genotype likelihoods, you must specify a genotype likelihood model -GL \n");
+   exit(1);
  }
 
  if((doMajorMinor==4 || doMajorMinor==5) && GL==0){
    if(inputtype!=INPUT_GLF3 && inputtype!=INPUT_VCF_GL && inputtype!=INPUT_GLF && inputtype!=INPUT_BEAGLE_GL){
-     fprintf(stderr,"\t-> Potential problem: -doMajorMinor 4/5 use the genotype likelihoods to infer the minor allele, you must specify a genotype likelihood model -GL \n");
-     exit(0);
+     fprintf(stderr,"\t-> Error: -doMajorMinor 4/5 use the genotype likelihoods to infer the minor allele, you must specify a genotype likelihood model -GL \n");
+     exit(1);
    }
  }
  if(doMajorMinor==2&&doCounts==0){
-   fprintf(stderr,"\t-> Potential problem: -doMajorMinor 2 is based on allele counts, you must specify -doCounts 1\n");
-   exit(0);
+   fprintf(stderr,"\t-> Error: -doMajorMinor 2 is based on allele counts, you must specify -doCounts 1\n");
+   exit(1);
    
  }
  doSaf = angsd::getArg("-doSaf",doSaf,arguments);
@@ -444,7 +449,7 @@ void abcMajorMinor::run(funkyPars *pars){
     return;
   if(doMajorMinor==1 && pars->likes==NULL){
     fprintf(stderr,"[%s.%s():%d] Problem here: you need genotype likelihoods for -gl 1\n",__FILE__,__FUNCTION__,__LINE__);
-    exit(0);
+    exit(1);
   }
   extern abc **allMethods;
   filt *fl = ((abcFilter *) allMethods[0])->fl;
