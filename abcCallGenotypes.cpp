@@ -151,6 +151,10 @@ void abcCallGenotypes::getGeno(funkyPars *pars){
       }
       if(maxPP<=postCutoff)
 	maxGeno=-1;
+      //the same posterior for the 3 genotypes is no information (eg. no reads with -skipMissing 1),
+      //with -postCutoff below 1/3 these were called as major/major
+      if(pars->post[s][i*3+0]==pars->post[s][i*3+1]&&pars->post[s][i*3+0]==pars->post[s][i*3+2])
+	maxGeno=-1;
       if(geno_minDepth!=-1) {
 	int geno_Depth = pars->counts[s][i*4] + pars->counts[s][i*4+1] + pars->counts[s][i*4+2] + pars->counts[s][i*4+3];
 	if(geno_Depth<geno_minDepth)
