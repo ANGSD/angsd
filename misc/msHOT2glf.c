@@ -275,7 +275,6 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffil
 
   int i, b, numreads;
   numreads = Poisson(meandepth);
-  char res[numreads]; // char alleles for all the reads
   if(numreads<1024)
     adepth[numreads]++;
   else
@@ -295,8 +294,7 @@ int print_ind_site(double errate, double meandepth, int genotype[2],BGZF *glffil
   
   for (i=0; i<numreads; i++){
     b = pick_a_base(errate,genotype);
-    res[i] = int_to_base(b); 
-    
+
     calclike(b, errate, like);
   }
 
@@ -377,7 +375,7 @@ void test (int *positInt,BGZF *gz,double errate,double meandepth, int regLen,BGZ
     int at=0;
     for(int i=0;i<regLen;i+=block) {
       int isHet =0;
-      for(int b=0;b<block;b++)
+      for(int b=0;b<block&&i+b<regLen;b++)
 	if(positInt[i+b])
 	  isHet++;
       if(at==NBASE_PER_LINE){
@@ -494,13 +492,15 @@ int main(int argc,char **argv){
   int ss;
   if(NULL==fgets( line, 1000, pfin))
     fprintf(stderr,"Problem reading from file:\n");
+  //use the last "msHOT-lite" in the line, the path to the program can contain it
   char *pch = strstr(line,"msHOT-lite");
-  while(1){
-    char *tmppch=strstr(pch+1,"msHOT-lite");
-    if(tmppch[0]=='\0')
-      break;
-    pch=tmppch;
+  if(pch==NULL){
+    fprintf(stderr,"\t-> First line of %s should be the msHOT-lite command line\n",inS);
+    return 1;
   }
+  char *tmppch;
+  while((tmppch=strstr(pch+1,"msHOT-lite")))
+    pch=tmppch;
   ss=sscanf(pch,"msHOT-lite %d %d -t %d -r %d %d\n", &nsam, &howmany,&theta,&rho,&regLen);
   ASSERT(ss==5);
   fprintf(stderr,"\t-> Number of samples:%d (haploids)\n",nsam);
@@ -584,7 +584,10 @@ int main(int argc,char **argv){
       }      
       int at;
       ss=sscanf(line,"%d ",&at);
-      ASSERT(ss=1);
+      if(ss!=1||at<0||at>=regLen){
+	fprintf(stderr,"\t-> Position should be between 0 and %d, line: %s",regLen-1,line);
+	return 1;
+      }
       positInt[at]=1;
     }
     
