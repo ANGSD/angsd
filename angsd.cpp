@@ -221,6 +221,16 @@ int main(int argc, char** argv){
       fprintf(stderr,"\t-> The folding has been moved from main angsd to realSFS subfunction.\n\t-> Remove -fold when doing -dosaf but apply it in realSFS\n\t-> Will exit\n");
       return 1;
     }
+  //same for -doThetas, which was moved to realSFS saf2theta in 0.934
+  for(int i=0;i<argc;i++)
+    if(!strcasecmp(argv[i],"-doThetas")){
+      fprintf(stderr,"\t-> -doThetas has been removed from main angsd, thetas are now made from the saf file\n");
+      fprintf(stderr,"\t-> Run -doSaf 1 without -doThetas and -pest, estimate the sfs with realSFS and then run:\n");
+      fprintf(stderr,"\t->   realSFS saf2theta out.saf.idx -sfs out.sfs -outname out\n");
+      fprintf(stderr,"\t->   thetaStat do_stat out.thetas.idx\n");
+      fprintf(stderr,"\t-> Will exit\n");
+      return 1;
+    }
   
   argStruct *args=setArgStruct(argc,argv);  
 
